@@ -465,12 +465,12 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 <div className="flex w-full flex-wrap items-stretch gap-2 rounded-2xl border border-[#DCE7D9] bg-gradient-to-br from-white via-[#FAFCF9] to-[#F1F6EF] p-3 shadow-[0_4px_16px_rgba(23,76,44,0.06)]">
 
   {[
-    { id: 'VOLUME', label: 'Business Provided', sub: 'Volume & Rate', icon: '📦' },
-    { id: 'DEDUCTION', label: 'All Types Deduction', sub: 'Moisture & Grade Down', icon: '✂️' },
-    { id: 'CHECKPOINTS', label: 'Checkpoints Pipeline', sub: 'Sauda to Settlement', icon: '🚚' },
-    { id: 'PREMIUM', label: 'Premium Given', sub: 'Premium Analysis', icon: '💰' },
-    { id: 'RANKING', label: 'Ranking Cards', sub: 'Best, Medium, Lower', icon: '🏆' },
-    { id: 'ABNORMAL', label: 'Abnormal Data', sub: 'Vs Top Performers', icon: '⚠️' },
+    { id: 'VOLUME' as const, label: 'Business Provided', sub: 'Volume & Rate', icon: '📦' },
+    { id: 'DEDUCTION' as const, label: 'All Types Deduction', sub: 'Moisture & Grade Down', icon: '✂️' },
+    { id: 'CHECKPOINTS' as const, label: 'Checkpoints Pipeline', sub: 'Sauda to Settlement', icon: '🚚' },
+    { id: 'PREMIUM' as const, label: 'Premium Given', sub: 'Premium Analysis', icon: '💰' },
+    { id: 'RANKING' as const, label: 'Ranking Cards', sub: 'Best, Medium, Lower', icon: '🏆' },
+    { id: 'ABNORMAL' as const, label: 'Abnormal Data', sub: 'Vs Top Performers', icon: '⚠️' },
   ].map((item) => {
     const isActive = subAnalysisMode === item.id;
 

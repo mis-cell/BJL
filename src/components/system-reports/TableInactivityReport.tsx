@@ -7,73 +7,206 @@ import {
   Search,
   RefreshCcw,
   Download,
-  Filter,
-  Layers,
   ShieldAlert,
   Inbox,
   ArrowUpDown,
   Calendar,
-  FileText
+  Layers,
+  Activity,
+  FileSpreadsheet,
+  AlertCircle,
+  HelpCircle,
+  CheckCircle
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { TABLES, TableDef } from '../admin-desk/adminDeskTypes';
 
-export interface TableInactivityStatus {
+export interface ModuleInactivityStatus {
   tableName: string;
-  label: string;
+  moduleName: string;
   category: string;
+  description: string;
   pk: string;
   totalRows: number;
   lastInsertDate: Date | null;
   lastInsertFormatted: string;
   recentInsertsLast3Days: number;
-  isInactive: boolean; // True if no insertion in last 3 days
-  daysInactive: number | null; // Number of days since last insert
+  isInactive: boolean; // True if no user activity in last 3 days
+  daysInactive: number | null; // Number of days since last insert/activity
   status: 'INACTIVE_3DAYS' | 'ACTIVE_3DAYS' | 'EMPTY';
   isRequired16: boolean;
 }
 
-export const TARGET_REQUIRED_TABLES = [
-  'final_arrival',
-  'imap_emails',
-  'inspection_master',
-  'lorry_weighments',
-  'm_r_settlement',
-  'mail_logs',
-  'material_inspection',
-  'material_mismatch',
-  'purchase_master',
-  'satta_base_rates',
-  'satta_master',
-  'satta_mismatch',
-  'sauda_check_point',
-  'sauda_master',
-  'sms_sauda',
-  'temporary_material_received'
-];
+export interface ModuleDefinition {
+  tableName: string;
+  moduleName: string;
+  category: string;
+  description: string;
+  isCore: boolean;
+}
+
+// Map database tables to friendly user-facing Application Modules
+export const USER_MODULE_MAP: Record<string, ModuleDefinition> = {
+  sauda_master: {
+    tableName: 'sauda_master',
+    moduleName: 'Sauda Contract Desk',
+    category: 'Procurement & Sauda',
+    description: 'Master purchase contract creation and supplier trade agreements',
+    isCore: true
+  },
+  sauda_check_point: {
+    tableName: 'sauda_check_point',
+    moduleName: 'Sauda Checkpoint Verification',
+    category: 'Procurement & Sauda',
+    description: 'Contract validation, quantity limits, and approval checkpoints',
+    isCore: true
+  },
+  purchase_master: {
+    tableName: 'purchase_master',
+    moduleName: 'Purchase Order (P.O.) Generation',
+    category: 'Purchase Orders',
+    description: 'Official P.O. issuance, rates, and purchasing terms',
+    isCore: true
+  },
+  temporary_material_received: {
+    tableName: 'temporary_material_received',
+    moduleName: 'Temporary Material Arrival (Amad Gate-In)',
+    category: 'Material Inward & Gate',
+    description: 'Initial truck inward registration and temporary gate slip issue',
+    isCore: true
+  },
+  final_arrival: {
+    tableName: 'final_arrival',
+    moduleName: 'Final Material Arrival & Gate Pass',
+    category: 'Material Inward & Gate',
+    description: 'Vehicle inward confirmation, gross weighment link, and gate pass',
+    isCore: true
+  },
+  lorry_weighments: {
+    tableName: 'lorry_weighments',
+    moduleName: 'Weighbridge & Lorry Operations',
+    category: 'Weighbridge & Logistics',
+    description: 'Electric weighbridge gross, tare, and net weighment records',
+    isCore: true
+  },
+  inspection_master: {
+    tableName: 'inspection_master',
+    moduleName: 'Quality Inspection Parameters & Setup',
+    category: 'Quality Control',
+    description: 'Quality standards, moisture thresholds, and deduction master rules',
+    isCore: true
+  },
+  material_inspection: {
+    tableName: 'material_inspection',
+    moduleName: 'Material Quality Testing & Deductions',
+    category: 'Quality Control',
+    description: 'Lab test result entry, moisture, oil content, and claim slips',
+    isCore: true
+  },
+  material_mismatch: {
+    tableName: 'material_mismatch',
+    moduleName: 'Material Discrepancy & Claims Resolution',
+    category: 'Quality Control',
+    description: 'Quality / quantity discrepancy logging and claim settlements',
+    isCore: true
+  },
+  m_r_settlement: {
+    tableName: 'm_r_settlement',
+    moduleName: 'MR Settlement & Accounts Payment Desk',
+    category: 'Settlements & Accounts',
+    description: 'Material receipt bill settlement, debit/credit notes, and vouchers',
+    isCore: true
+  },
+  satta_master: {
+    tableName: 'satta_master',
+    moduleName: 'Satta Trade Contract Master',
+    category: 'Satta Trading',
+    description: 'Satta trade register, party contracts, and transaction logs',
+    isCore: true
+  },
+  satta_base_rates: {
+    tableName: 'satta_base_rates',
+    moduleName: 'Satta Daily Base Rate Maintenance',
+    category: 'Satta Trading',
+    description: 'Daily benchmark base market rate updates for price variance',
+    isCore: true
+  },
+  satta_mismatch: {
+    tableName: 'satta_mismatch',
+    moduleName: 'Satta Rate Mismatch Resolution',
+    category: 'Satta Trading',
+    description: 'Discrepancy resolution between agreed Satta rates vs market rates',
+    isCore: true
+  },
+  sms_sauda: {
+    tableName: 'sms_sauda',
+    moduleName: 'SMS Sauda Mobile Integration',
+    category: 'Automation & Mobile',
+    description: 'Automated trade contract parsing received via mobile SMS',
+    isCore: true
+  },
+  imap_emails: {
+    tableName: 'imap_emails',
+    moduleName: 'IMAP Automated Email Ingestion',
+    category: 'Automation & Mobile',
+    description: 'Automatic email ingestion for trade advice and purchase advice',
+    isCore: true
+  },
+  mail_logs: {
+    tableName: 'mail_logs',
+    moduleName: 'Mail & Communication Audit Logs',
+    category: 'Automation & Mobile',
+    description: 'Outbound email notifications, dispatch slips, and delivery logs',
+    isCore: true
+  },
+  user_activity_logs: {
+    tableName: 'user_activity_logs',
+    moduleName: 'User Activity & Audit Tracker',
+    category: 'System & Governance',
+    description: 'Tracks user actions, field-level changes, and module access',
+    isCore: false
+  },
+  user_master: {
+    tableName: 'user_master',
+    moduleName: 'User Management & Access Control',
+    category: 'System & Governance',
+    description: 'System user accounts, roles, permissions, and status',
+    isCore: false
+  },
+  app_audit_logs: {
+    tableName: 'app_audit_logs',
+    moduleName: 'Application System Audit Logs',
+    category: 'System & Governance',
+    description: 'System security events, login attempts, and error logs',
+    isCore: false
+  }
+};
+
+export const TARGET_REQUIRED_TABLES = Object.keys(USER_MODULE_MAP).filter(
+  key => USER_MODULE_MAP[key].isCore
+);
 
 export const TableInactivityReport: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
-  const [statuses, setStatuses] = useState<TableInactivityStatus[]>([]);
+  const [statuses, setStatuses] = useState<ModuleInactivityStatus[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'INACTIVE' | 'ACTIVE' | 'EMPTY' | 'REQUIRED_16'>('INACTIVE');
-  const [sortField, setSortField] = useState<'tableName' | 'lastInsert' | 'daysInactive' | 'totalRows'>('daysInactive');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'INACTIVE' | 'ACTIVE' | 'EMPTY' | 'CORE_16'>('INACTIVE');
+  const [sortField, setSortField] = useState<'moduleName' | 'lastInsert' | 'daysInactive' | 'totalRows'>('daysInactive');
   const [sortAsc, setSortAsc] = useState<boolean>(false);
   const [lastScanTime, setLastScanTime] = useState<Date | null>(null);
 
-  // Scan all database tables for inactivity
-  const scanTablesInactivity = async () => {
+  // Scan all application modules for inactivity
+  const scanModulesInactivity = async () => {
     setLoading(true);
     try {
-      // 1. Gather master list of tables (Predefined + dynamic from Supabase)
       let allTableDefs: TableDef[] = [...TABLES];
 
-      // Ensure all 16 required tables exist in allTableDefs
+      // Ensure all core modules exist in definition list
       TARGET_REQUIRED_TABLES.forEach(reqName => {
         if (!allTableDefs.some(t => t.name === reqName)) {
           allTableDefs.push({
             name: reqName,
-            label: reqName.replace(/_/g, ' ').toUpperCase(),
+            label: USER_MODULE_MAP[reqName]?.moduleName || reqName.replace(/_/g, ' ').toUpperCase(),
             icon: Database,
             pk: reqName.endsWith('_id') ? reqName : 'id'
           });
@@ -102,16 +235,15 @@ export const TableInactivityReport: React.FC = () => {
             });
           }
         } catch (e) {
-          // Ignore RPC missing error
+          // Ignore missing RPC
         }
       }
 
       const threeDaysAgo = new Date();
       threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
-      const results: TableInactivityStatus[] = [];
+      const results: ModuleInactivityStatus[] = [];
 
-      // Helper function to inspect a single table
       for (const tDef of allTableDefs) {
         let totalCount = 0;
         let maxDate: Date | null = null;
@@ -119,14 +251,12 @@ export const TableInactivityReport: React.FC = () => {
 
         if (supabase) {
           try {
-            // Check total count
             const { count } = await supabase
               .from(tDef.name)
               .select('*', { count: 'exact', head: true });
             totalCount = count || 0;
 
             if (totalCount > 0) {
-              // Try fetching most recent records with various date candidate columns
               const candidateCols = [
                 'created_at',
                 'timestamp',
@@ -157,7 +287,6 @@ export const TableInactivityReport: React.FC = () => {
                         maxDate = d;
                         dateFound = true;
 
-                        // Count records in last 3 days for this date column
                         try {
                           const { count: c3 } = await supabase
                             .from(tDef.name)
@@ -172,11 +301,11 @@ export const TableInactivityReport: React.FC = () => {
                     }
                   }
                 } catch (e) {
-                  // Column doesn't exist on table, try next candidate
+                  // Column not present, check next
                 }
               }
 
-              // Fallback: If no explicit date column exists, check user_activity_logs or app_audit_logs for this table
+              // Fallback to user_activity_logs
               if (!dateFound) {
                 try {
                   const { data: actLogs } = await supabase
@@ -199,30 +328,36 @@ export const TableInactivityReport: React.FC = () => {
               }
             }
           } catch (err) {
-            // Table might not exist in Supabase yet or permission issue
+            // Permission or missing table
           }
         }
 
-        // Categorize table module
-        let category = 'Master / System';
-        if (tDef.name.includes('sauda')) category = 'Sauda Desk';
-        else if (tDef.name.includes('satta')) category = 'Satta Desk';
-        else if (tDef.name.includes('purchase') || tDef.name.includes('po')) category = 'P.O. Desk';
-        else if (tDef.name.includes('material') || tDef.name.includes('amad') || tDef.name.includes('arrival')) category = 'Material Inward';
-        else if (tDef.name.includes('inspection') || tDef.name.includes('mill')) category = 'Inspection';
-        else if (tDef.name.includes('settlement') || tDef.name.includes('payment') || tDef.name.includes('ledger')) category = 'Settlement & Accounts';
-        else if (tDef.name.includes('godown') || tDef.name.includes('stock') || tDef.name.includes('issue')) category = 'Godown & Inventory';
-        else if (tDef.name.includes('user') || tDef.name.includes('audit') || tDef.name.includes('log')) category = 'Auth & Activity';
+        // Get friendly module info or generate intelligent defaults
+        const mapped = USER_MODULE_MAP[tDef.name];
+        const moduleName = mapped?.moduleName || tDef.label || tDef.name.replace(/_/g, ' ').toUpperCase();
+        let category = mapped?.category || 'General Operations';
+        const description = mapped?.description || `Operations & transactions managed in ${moduleName}`;
 
-        // Calculate days inactive
+        if (!mapped) {
+          if (tDef.name.includes('sauda')) category = 'Procurement & Sauda';
+          else if (tDef.name.includes('satta')) category = 'Satta Trading';
+          else if (tDef.name.includes('purchase') || tDef.name.includes('po')) category = 'Purchase Orders';
+          else if (tDef.name.includes('material') || tDef.name.includes('amad') || tDef.name.includes('arrival')) category = 'Material Inward & Gate';
+          else if (tDef.name.includes('inspection') || tDef.name.includes('mill')) category = 'Quality Control';
+          else if (tDef.name.includes('settlement') || tDef.name.includes('payment') || tDef.name.includes('ledger')) category = 'Settlements & Accounts';
+          else if (tDef.name.includes('godown') || tDef.name.includes('stock') || tDef.name.includes('issue')) category = 'Inventory & Stock';
+          else if (tDef.name.includes('user') || tDef.name.includes('audit') || tDef.name.includes('log')) category = 'System & Governance';
+        }
+
+        // Calculate inactivity metrics
         let daysInactive: number | null = null;
         let isInactive = false;
-        let status: TableInactivityStatus['status'] = 'INACTIVE_3DAYS';
+        let status: ModuleInactivityStatus['status'] = 'INACTIVE_3DAYS';
 
         if (totalCount === 0) {
           status = 'EMPTY';
           isInactive = true;
-          daysInactive = 999; // Represents never inserted
+          daysInactive = 999;
         } else if (!maxDate) {
           status = 'INACTIVE_3DAYS';
           isInactive = true;
@@ -240,8 +375,7 @@ export const TableInactivityReport: React.FC = () => {
           }
         }
 
-        // Format date string
-        let lastInsertFormatted = 'No Data Inserted';
+        let lastInsertFormatted = 'No User Activity Recorded';
         if (maxDate) {
           lastInsertFormatted = maxDate.toLocaleString('en-IN', {
             day: '2-digit',
@@ -257,8 +391,9 @@ export const TableInactivityReport: React.FC = () => {
 
         results.push({
           tableName: tDef.name,
-          label: tDef.label,
+          moduleName,
           category,
+          description,
           pk: tDef.pk,
           totalRows: totalCount,
           lastInsertDate: maxDate,
@@ -274,32 +409,31 @@ export const TableInactivityReport: React.FC = () => {
       setStatuses(results);
       setLastScanTime(new Date());
     } catch (err) {
-      console.error('Error scanning table inactivity:', err);
+      console.error('Error scanning module inactivity:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    scanTablesInactivity();
+    scanModulesInactivity();
   }, []);
 
   // Filter & Search
   const filteredStatuses = useMemo(() => {
     return statuses.filter(item => {
-      // Status filter
       if (statusFilter === 'INACTIVE' && !item.isInactive) return false;
       if (statusFilter === 'ACTIVE' && item.isInactive) return false;
       if (statusFilter === 'EMPTY' && item.status !== 'EMPTY') return false;
-      if (statusFilter === 'REQUIRED_16' && !item.isRequired16) return false;
+      if (statusFilter === 'CORE_16' && !item.isRequired16) return false;
 
-      // Search term
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
-        const matchesName = item.tableName.toLowerCase().includes(q);
-        const matchesLabel = item.label.toLowerCase().includes(q);
+        const matchesName = item.moduleName.toLowerCase().includes(q);
         const matchesCategory = item.category.toLowerCase().includes(q);
-        return matchesName || matchesLabel || matchesCategory;
+        const matchesDesc = item.description.toLowerCase().includes(q);
+        const matchesTable = item.tableName.toLowerCase().includes(q);
+        return matchesName || matchesCategory || matchesDesc || matchesTable;
       }
 
       return true;
@@ -318,15 +452,21 @@ export const TableInactivityReport: React.FC = () => {
     });
   }, [statuses, statusFilter, searchTerm, sortField, sortAsc]);
 
-  // Metrics
+  // Key Metrics
   const metrics = useMemo(() => {
     const total = statuses.length;
     const inactive = statuses.filter(s => s.isInactive).length;
     const active = statuses.filter(s => !s.isInactive).length;
     const empty = statuses.filter(s => s.status === 'EMPTY').length;
-    const req16Total = statuses.filter(s => s.isRequired16).length;
-    const req16Inactive = statuses.filter(s => s.isRequired16 && s.isInactive).length;
-    return { total, inactive, active, empty, req16Total, req16Inactive };
+    const coreTotal = statuses.filter(s => s.isRequired16).length;
+    const coreInactive = statuses.filter(s => s.isRequired16 && s.isInactive).length;
+
+    // List of core inactive module names
+    const inactiveModuleNames = statuses
+      .filter(s => s.isInactive)
+      .map(s => s.moduleName);
+
+    return { total, inactive, active, empty, coreTotal, coreInactive, inactiveModuleNames };
   }, [statuses]);
 
   // Export CSV
@@ -334,38 +474,40 @@ export const TableInactivityReport: React.FC = () => {
     if (statuses.length === 0) return;
 
     const headers = [
-      'Table Name',
-      'Display Label',
+      'User Module Name',
       'Category',
+      'Functional Description',
       'Status (Last 3 Days)',
-      'Total Rows',
-      'Last Data Inserted',
+      'Last User Activity Date',
       'Days Inactive',
-      'Last 3 Days Inserts Count'
+      '3-Day Operations Count',
+      'Total Records',
+      'System Table Name'
     ];
 
     const rows = filteredStatuses.map(s => [
-      `"${s.tableName}"`,
-      `"${s.label}"`,
+      `"${s.moduleName}"`,
       `"${s.category}"`,
-      `"${s.isInactive ? 'INACTIVE (No insert in 3+ days)' : 'ACTIVE (Inserted recently)'}"`,
-      s.totalRows,
+      `"${s.description}"`,
+      `"${s.isInactive ? 'INACTIVE (No activity in 3+ days)' : 'ACTIVE (Used recently)'}"`,
       `"${s.lastInsertFormatted}"`,
       s.daysInactive === 999 ? 'Never / N/A' : `${s.daysInactive} days`,
-      s.recentInsertsLast3Days
+      s.recentInsertsLast3Days,
+      s.totalRows,
+      `"${s.tableName}"`
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Table_Inactivity_Audit_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `Module_Inactivity_Report_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const toggleSort = (field: 'tableName' | 'lastInsert' | 'daysInactive' | 'totalRows') => {
+  const toggleSort = (field: 'moduleName' | 'lastInsert' | 'daysInactive' | 'totalRows') => {
     if (sortField === field) {
       setSortAsc(!sortAsc);
     } else {
@@ -383,25 +525,25 @@ export const TableInactivityReport: React.FC = () => {
             <span className="px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
               <ShieldAlert className="w-3 h-3 text-rose-400" /> Management Analysis #10
             </span>
-            <span className="text-xs text-slate-400">Database Audit & Health</span>
+            <span className="text-xs text-slate-400">User Module Governance</span>
           </div>
           <h2 className="text-2xl font-black text-white flex items-center gap-2">
             <Clock className="w-6 h-6 text-rose-400" />
-            Table Inactivity Report (Last 3 Days Inactivity)
+            User Module Inactivity Analysis (Last 3 Days)
           </h2>
           <p className="text-xs text-rose-200/80 max-w-2xl">
-            Identifies all system database tables where <strong className="text-white">NO new data has been inserted in the last 3 days (72 hours)</strong>. Use this audit log to track dormant modules, unrecorded operations, or offline data pipelines.
+            Monitors all <strong className="text-white">user-facing application modules</strong> to detect which modules have had <strong className="text-amber-300">NO user activity, entries, or operations in the last 3 days (72 hours)</strong>.
           </p>
         </div>
 
         <div className="flex items-center gap-2 self-start md:self-auto">
           <button
-            onClick={scanTablesInactivity}
+            onClick={scanModulesInactivity}
             disabled={loading}
             className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-2xl border border-rose-400/40 transition flex items-center gap-2 shadow-lg cursor-pointer"
           >
             <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>{loading ? 'Scanning Tables...' : 'Re-Scan Database'}</span>
+            <span>{loading ? 'Scanning Modules...' : 'Re-Scan System'}</span>
           </button>
 
           <button
@@ -415,25 +557,61 @@ export const TableInactivityReport: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI METRIC SUMMARY CARDS */}
+      {/* EXECUTIVE ALERT BANNER FOR INACTIVE MODULES */}
+      {!loading && metrics.inactive > 0 && (
+        <div className="bg-rose-950/90 border border-rose-700/60 rounded-3xl p-5 text-rose-100 shadow-md space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 font-black text-sm text-rose-300">
+              <AlertTriangle className="w-5 h-5 text-rose-400 animate-pulse" />
+              <span>🚨 INACTIVE MODULES DETECTED (NO USER ACTIVITY IN 3 DAYS)</span>
+            </div>
+            <span className="px-3 py-1 bg-rose-900/80 rounded-full text-xs font-mono font-bold text-rose-200 border border-rose-600">
+              {metrics.inactive} Modules Inactive
+            </span>
+          </div>
+
+          <p className="text-xs text-rose-200/90">
+            The following functional modules have not recorded any user activity or transaction entries in the last 72 hours:
+          </p>
+
+          <div className="flex flex-wrap gap-2 pt-1">
+            {metrics.inactiveModuleNames.slice(0, 10).map((mName, idx) => (
+              <span
+                key={idx}
+                className="px-3 py-1 bg-black/40 border border-rose-500/40 text-rose-200 text-xs font-bold rounded-xl flex items-center gap-1.5"
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                {mName}
+              </span>
+            ))}
+            {metrics.inactiveModuleNames.length > 10 && (
+              <span className="px-2.5 py-1 bg-rose-900/50 text-rose-300 text-xs font-bold rounded-xl">
+                +{metrics.inactiveModuleNames.length - 10} more
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* KPI METRIC CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {/* TOTAL TABLES */}
+        {/* TOTAL MODULES */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-white shadow-sm flex items-center justify-between">
           <div>
             <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">
-              Total Tables Analyzed
+              Total Application Modules
             </span>
             <span className="text-2xl font-black text-white font-mono mt-0.5 block">
               {metrics.total}
             </span>
-            <span className="text-[10px] text-slate-500">System Database Tables</span>
+            <span className="text-[10px] text-slate-500">Tracked Application Features</span>
           </div>
           <div className="p-3 bg-slate-800 rounded-xl border border-slate-700">
-            <Database className="w-6 h-6 text-slate-300" />
+            <Layers className="w-6 h-6 text-slate-300" />
           </div>
         </div>
 
-        {/* INACTIVE TABLES */}
+        {/* INACTIVE MODULES */}
         <div
           onClick={() => setStatusFilter('INACTIVE')}
           className={`cursor-pointer transition border rounded-2xl p-4 shadow-sm flex items-center justify-between ${
@@ -444,19 +622,19 @@ export const TableInactivityReport: React.FC = () => {
         >
           <div>
             <span className="text-[11px] text-rose-300 font-bold uppercase tracking-wider block flex items-center gap-1">
-              🔴 Inactive (No Insert 3d)
+              🔴 Inactive Modules (3d+)
             </span>
             <span className="text-2xl font-black text-rose-400 font-mono mt-0.5 block">
               {metrics.inactive}
             </span>
-            <span className="text-[10px] text-rose-300/80">No activity in last 72 hours</span>
+            <span className="text-[10px] text-rose-300/80">No user work in 72 hours</span>
           </div>
           <div className="p-3 bg-rose-900/40 rounded-xl border border-rose-700/50">
             <AlertTriangle className="w-6 h-6 text-rose-400" />
           </div>
         </div>
 
-        {/* ACTIVE TABLES */}
+        {/* ACTIVE MODULES */}
         <div
           onClick={() => setStatusFilter('ACTIVE')}
           className={`cursor-pointer transition border rounded-2xl p-4 shadow-sm flex items-center justify-between ${
@@ -467,19 +645,19 @@ export const TableInactivityReport: React.FC = () => {
         >
           <div>
             <span className="text-[11px] text-emerald-300 font-bold uppercase tracking-wider block flex items-center gap-1">
-              🟢 Active (Inserted in 3d)
+              🟢 Active Modules (3d)
             </span>
             <span className="text-2xl font-black text-emerald-400 font-mono mt-0.5 block">
               {metrics.active}
             </span>
-            <span className="text-[10px] text-emerald-300/80">Active in last 72 hours</span>
+            <span className="text-[10px] text-emerald-300/80">Active work in last 3 days</span>
           </div>
           <div className="p-3 bg-emerald-900/40 rounded-xl border border-emerald-700/50">
             <CheckCircle2 className="w-6 h-6 text-emerald-400" />
           </div>
         </div>
 
-        {/* EMPTY TABLES */}
+        {/* UNUSED / EMPTY MODULES */}
         <div
           onClick={() => setStatusFilter('EMPTY')}
           className={`cursor-pointer transition border rounded-2xl p-4 shadow-sm flex items-center justify-between ${
@@ -490,12 +668,12 @@ export const TableInactivityReport: React.FC = () => {
         >
           <div>
             <span className="text-[11px] text-amber-300 font-bold uppercase tracking-wider block flex items-center gap-1">
-              ⚠️ Empty Tables (0 Rows)
+              ⚠️ Unused / Empty Modules
             </span>
             <span className="text-2xl font-black text-amber-400 font-mono mt-0.5 block">
               {metrics.empty}
             </span>
-            <span className="text-[10px] text-amber-300/80">Never inserted / 0 records</span>
+            <span className="text-[10px] text-amber-300/80">0 records in database</span>
           </div>
           <div className="p-3 bg-amber-900/40 rounded-xl border border-amber-700/50">
             <Inbox className="w-6 h-6 text-amber-400" />
@@ -508,11 +686,11 @@ export const TableInactivityReport: React.FC = () => {
         {/* Status Tabs */}
         <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-slate-800 text-xs w-full md:w-auto overflow-x-auto">
           {[
-            { id: 'INACTIVE' as const, label: `🔴 Inactive Tables (${metrics.inactive})`, activeBg: 'bg-rose-600 text-white' },
-            { id: 'REQUIRED_16' as const, label: `🎯 Required 16 Tables (${metrics.req16Inactive}/${metrics.req16Total} Inactive)`, activeBg: 'bg-indigo-600 text-white' },
-            { id: 'ACTIVE' as const, label: `🟢 Active Tables (${metrics.active})`, activeBg: 'bg-emerald-600 text-white' },
-            { id: 'EMPTY' as const, label: `⚠️ Empty Tables (${metrics.empty})`, activeBg: 'bg-amber-500 text-slate-950' },
-            { id: 'ALL' as const, label: `📋 All Tables (${metrics.total})`, activeBg: 'bg-slate-700 text-white' }
+            { id: 'INACTIVE' as const, label: `🔴 Inactive Modules (${metrics.inactive})`, activeBg: 'bg-rose-600 text-white' },
+            { id: 'CORE_16' as const, label: `🎯 16 Core Modules (${metrics.coreInactive}/${metrics.coreTotal} Inactive)`, activeBg: 'bg-indigo-600 text-white' },
+            { id: 'ACTIVE' as const, label: `🟢 Active Modules (${metrics.active})`, activeBg: 'bg-emerald-600 text-white' },
+            { id: 'EMPTY' as const, label: `⚠️ Unused Modules (${metrics.empty})`, activeBg: 'bg-amber-500 text-slate-950' },
+            { id: 'ALL' as const, label: `📋 All Modules (${metrics.total})`, activeBg: 'bg-slate-700 text-white' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -535,28 +713,28 @@ export const TableInactivityReport: React.FC = () => {
             type="text"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search table name or category..."
+            placeholder="Search module name or category..."
             className="w-full bg-slate-950 border border-slate-800 text-white text-xs pl-8 pr-3 py-2 rounded-xl focus:outline-none focus:border-rose-500 transition placeholder-slate-500"
           />
         </div>
       </div>
 
-      {/* DETAILED TABLES INACTIVITY AUDIT GRID */}
+      {/* DETAILED USER MODULE INACTIVITY GRID */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-lg overflow-hidden">
         {loading ? (
           <div className="p-16 text-center text-slate-400 space-y-3">
             <RefreshCcw className="w-10 h-10 animate-spin text-rose-600 mx-auto" />
             <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
-              Auditing Database Tables for Inactivity...
+              Analyzing Application Modules for User Inactivity...
             </h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Scanning record timestamps across all master tables, transaction logs, and inspection details to identify non-active modules.
+              Checking user transaction timestamps across all core business modules, quality inspections, and settlement desks.
             </p>
           </div>
         ) : filteredStatuses.length === 0 ? (
           <div className="p-16 text-center text-slate-400 space-y-2">
             <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-            <h3 className="text-base font-bold text-slate-800">No Matching Tables Found</h3>
+            <h3 className="text-base font-bold text-slate-800">No Matching Modules Found</h3>
             <p className="text-xs text-slate-500">
               Try clearing your search term or selecting a different status filter above.
             </p>
@@ -569,20 +747,20 @@ export const TableInactivityReport: React.FC = () => {
                   <th className="p-3.5 text-center w-12">#</th>
                   <th
                     className="p-3.5 cursor-pointer hover:text-white"
-                    onClick={() => toggleSort('tableName')}
+                    onClick={() => toggleSort('moduleName')}
                   >
                     <div className="flex items-center gap-1">
-                      <span>Database Table Name</span>
+                      <span>User Application Module</span>
                       <ArrowUpDown className="w-3 h-3 text-slate-500" />
                     </div>
                   </th>
-                  <th className="p-3.5">Category / Module</th>
+                  <th className="p-3.5">Category / Function</th>
                   <th
-                    className="p-3.5 text-right cursor-pointer hover:text-white"
-                    onClick={() => toggleSort('totalRows')}
+                    className="p-3.5 text-center cursor-pointer hover:text-white"
+                    onClick={() => toggleSort('daysInactive')}
                   >
-                    <div className="flex items-center justify-end gap-1">
-                      <span>Total Rows</span>
+                    <div className="flex items-center justify-center gap-1">
+                      <span>Activity Status (Last 3 Days)</span>
                       <ArrowUpDown className="w-3 h-3 text-slate-500" />
                     </div>
                   </th>
@@ -592,107 +770,105 @@ export const TableInactivityReport: React.FC = () => {
                   >
                     <div className="flex items-center gap-1">
                       <Calendar className="w-3 h-3 text-slate-400" />
-                      <span>Last Data Insertion Date</span>
+                      <span>Last User Activity Date</span>
                       <ArrowUpDown className="w-3 h-3 text-slate-500" />
                     </div>
                   </th>
                   <th
-                    className="p-3.5 text-center cursor-pointer hover:text-white"
-                    onClick={() => toggleSort('daysInactive')}
+                    className="p-3.5 text-right cursor-pointer hover:text-white"
+                    onClick={() => toggleSort('totalRows')}
                   >
-                    <div className="flex items-center justify-center gap-1">
-                      <span>Inactivity Duration</span>
+                    <div className="flex items-center justify-end gap-1">
+                      <span>Total Records</span>
                       <ArrowUpDown className="w-3 h-3 text-slate-500" />
                     </div>
                   </th>
-                  <th className="p-3.5 text-center">Inactivity Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredStatuses.map((row, idx) => {
+              <tbody className="divide-y divide-slate-100">
+                {filteredStatuses.map((item, idx) => {
                   return (
                     <tr
-                      key={row.tableName}
-                      className={`hover:bg-slate-50 transition-colors ${
-                        row.isInactive ? 'bg-rose-50/20' : 'bg-white'
+                      key={item.tableName}
+                      className={`transition ${
+                        item.isInactive
+                          ? 'bg-rose-50/40 hover:bg-rose-50/90'
+                          : 'hover:bg-slate-50/80'
                       }`}
                     >
-                      <td className="p-3.5 text-center font-mono text-slate-400 text-[10px]">
+                      {/* Index */}
+                      <td className="p-3.5 text-center font-mono text-slate-400 font-bold text-[11px]">
                         {idx + 1}
                       </td>
 
+                      {/* Module Name & Description */}
                       <td className="p-3.5">
-                        <div className="font-mono font-bold text-slate-900 text-xs flex items-center gap-1.5 flex-wrap">
-                          <Layers className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{row.tableName}</span>
-                          {row.isRequired16 && (
-                            <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[9px] font-black uppercase border border-indigo-200">
-                              🎯 Required
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-slate-900 text-sm">
+                              {item.moduleName}
+                            </span>
+                            {item.isRequired16 && (
+                              <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 border border-indigo-200 text-[9px] font-extrabold rounded-md uppercase">
+                                Core Module
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 line-clamp-1">
+                            {item.description}
+                          </p>
+                          <div className="text-[9px] text-slate-400 font-mono">
+                            System Table: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">{item.tableName}</code>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Category */}
+                      <td className="p-3.5">
+                        <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-700 rounded-xl font-bold text-[10px] inline-block">
+                          {item.category}
+                        </span>
+                      </td>
+
+                      {/* Activity Status */}
+                      <td className="p-3.5 text-center">
+                        {item.status === 'EMPTY' ? (
+                          <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300 font-extrabold text-[10px] inline-flex items-center gap-1">
+                            <Inbox className="w-3 h-3 text-amber-600" />
+                            Unused (0 Records)
+                          </span>
+                        ) : item.isInactive ? (
+                          <span className="px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-300 font-extrabold text-[10px] inline-flex items-center gap-1 shadow-2xs">
+                            <AlertTriangle className="w-3 h-3 text-rose-600" />
+                            🔴 Inactive ({item.daysInactive === 999 ? '3+ Days' : `${item.daysInactive}d Inactive`})
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-[10px] inline-flex items-center gap-1 shadow-2xs">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            🟢 Active ({item.recentInsertsLast3Days} ops in 3d)
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Last User Activity Date */}
+                      <td className="p-3.5">
+                        <div className="space-y-0.5">
+                          <span className={`font-mono font-bold block text-[11px] ${
+                            item.lastInsertDate ? 'text-slate-800' : 'text-slate-400 italic'
+                          }`}>
+                            {item.lastInsertFormatted}
+                          </span>
+                          {item.lastInsertDate && (
+                            <span className="text-[10px] text-slate-400 block">
+                              {item.daysInactive === 0 ? 'Today' : item.daysInactive === 1 ? 'Yesterday' : `${item.daysInactive} days ago`}
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] text-slate-500 block pl-5">
-                          {row.label}
-                        </span>
                       </td>
 
-                      <td className="p-3.5">
-                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
-                          {row.category}
-                        </span>
-                      </td>
-
-                      <td className="p-3.5 text-right font-mono font-black text-slate-900">
-                        {row.totalRows.toLocaleString()}
-                      </td>
-
-                      <td className="p-3.5">
-                        <span
-                          className={`font-mono text-xs font-semibold ${
-                            row.lastInsertDate ? 'text-slate-800' : 'text-slate-400 italic'
-                          }`}
-                        >
-                          {row.lastInsertFormatted}
-                        </span>
-                        {row.recentInsertsLast3Days > 0 && (
-                          <span className="text-[10px] text-emerald-700 font-bold block">
-                            +{row.recentInsertsLast3Days} rows added in last 3 days
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="p-3.5 text-center font-mono">
-                        {row.status === 'EMPTY' ? (
-                          <span className="text-amber-800 text-[10px] font-bold bg-amber-100 px-2 py-0.5 rounded-full">
-                            Never Inserted
-                          </span>
-                        ) : row.daysInactive === 0 ? (
-                          <span className="text-emerald-800 text-[10px] font-bold bg-emerald-100 px-2 py-0.5 rounded-full">
-                            Active Today
-                          </span>
-                        ) : row.daysInactive && row.daysInactive < 3 ? (
-                          <span className="text-emerald-800 text-[10px] font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
-                            {row.daysInactive} {row.daysInactive === 1 ? 'day' : 'days'} ago
-                          </span>
-                        ) : (
-                          <span className="text-rose-900 text-[10px] font-black bg-rose-100 px-2.5 py-0.5 rounded-full border border-rose-300">
-                            {row.daysInactive === 999 ? '3+ Days Inactive' : `${row.daysInactive} days inactive`}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="p-3.5 text-center">
-                        {row.isInactive ? (
-                          <span className="inline-flex items-center gap-1 bg-rose-600 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-xs">
-                            <AlertTriangle className="w-3 h-3" />
-                            🔴 INACTIVE (3+ Days)
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 bg-emerald-600 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-xs">
-                            <CheckCircle2 className="w-3 h-3" />
-                            🟢 ACTIVE
-                          </span>
-                        )}
+                      {/* Total Records */}
+                      <td className="p-3.5 text-right font-mono font-black text-slate-800 text-xs">
+                        {item.totalRows.toLocaleString()}
                       </td>
                     </tr>
                   );
@@ -702,19 +878,20 @@ export const TableInactivityReport: React.FC = () => {
           </div>
         )}
 
-        {/* FOOTER STATS */}
-        <div className="bg-slate-50 p-3.5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+        {/* FOOTER SUMMARY */}
+        <div className="p-4 bg-slate-50 border-t border-slate-200 text-slate-500 text-xs flex flex-col md:flex-row items-center justify-between gap-2">
           <span>
             Showing <strong className="text-slate-800">{filteredStatuses.length}</strong> of{' '}
-            <strong className="text-slate-800">{statuses.length}</strong> database tables
+            <strong className="text-slate-800">{statuses.length}</strong> modules
           </span>
-          {lastScanTime && (
-            <span className="text-[11px] italic">
-              Last Database Scan: {lastScanTime.toLocaleTimeString()}
-            </span>
-          )}
+
+          <span className="text-[10px] text-slate-400">
+            Audit scanned at: {lastScanTime ? lastScanTime.toLocaleTimeString('en-IN') : '-'}
+          </span>
         </div>
       </div>
     </div>
   );
 };
+
+export default TableInactivityReport;

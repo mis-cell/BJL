@@ -491,10 +491,10 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
     const pendingpaymentByPo = new Map<string, number>();
     (settlements || []).forEach((p: any) => {
-      const pndngamt = Number(p.payable_amt ||  0);
-      if (p.po_no) pendingpaymentByPo.set(p.po_no, (pendingpaymentByPo.get(p.po_no) || 0) + amt);
-      if (p.mr_no) pendingpaymentByPo.set(p.mr_no, (paymentByPo.get(p.mr_no) || 0) + amt);
-      if (p.voucher_no) pendingpaymentByPo.set(p.voucher_no, (pendingpaymentByPo.get(p.voucher_no) || 0) + amt);
+      const pndngamt = Number(p.payable_amt || 0);
+      if (p.po_no) pendingpaymentByPo.set(p.po_no, (pendingpaymentByPo.get(p.po_no) || 0) + pndngamt);
+      if (p.mr_no) pendingpaymentByPo.set(p.mr_no, (pendingpaymentByPo.get(p.mr_no) || 0) + pndngamt);
+      if (p.voucher_no) pendingpaymentByPo.set(p.voucher_no, (pendingpaymentByPo.get(p.voucher_no) || 0) + pndngamt);
     });
     //alert()
 
