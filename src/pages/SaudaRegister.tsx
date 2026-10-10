@@ -323,6 +323,35 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     }
   };
 
+  const handleEditRejectorName = async (entry: Sauda) => {
+    const userCtx = getCurrentUserContext();
+    const currentName = (entry.rejected_by && entry.rejected_by.toUpperCase() !== 'ADMIN') 
+      ? entry.rejected_by 
+      : (userCtx.userName && userCtx.userName.toUpperCase() !== 'ADMIN' ? userCtx.userName : 'User 2');
+
+    const entered = window.prompt(
+      `Update Rejector User Name for Sauda Contract #${entry.sauda_no}:\n\nPlease enter the User Name who rejected this Sauda:`,
+      currentName
+    );
+
+    if (entered === null) return;
+    const newRejectorName = entered.trim() || currentName || 'User';
+
+    const updatePayload = {
+      rejected_by: newRejectorName
+    };
+
+    setSaudaList(prev => prev.map(s => s.sauda_id === entry.sauda_id ? { ...s, rejected_by: newRejectorName } : s));
+
+    if (entry.sauda_id) {
+      try {
+        await dbModule.update('sauda_master', 'sauda_id', entry.sauda_id, updatePayload);
+      } catch (err) {
+        console.error("Error updating rejector name in Supabase:", err);
+      }
+    }
+  };
+
   const handleMarkReject = async (entry: Sauda) => {
     const userCtx = getCurrentUserContext();
     const canReject = isUserAdmin() || isL5OrAdmin() || isUserId2() || userCtx.userRole === 'ADMIN';
@@ -333,17 +362,66 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     }
 
     const currentlyRejected = isRejectedSauda(entry);
-    const nextRejected = !currentlyRejected;
-    const rejectorName = userCtx.userName || userCtx.username || userCtx.userId || 'User';
+
+    if (currentlyRejected) {
+      const confirmUnreject = window.confirm(
+        `Sauda #${entry.sauda_no} is currently REJECTED by "${entry.rejected_by || 'User'}".\n\nClick "OK" to UN-REJECT this Sauda contract (move back to Pending).\nClick "Cancel" to edit the Rejector User Name instead.`
+      );
+
+      if (confirmUnreject) {
+        const updatePayload = {
+          is_checked: false,
+          checked_by: null,
+          checked_at: null,
+          status: 'PENDING',
+          approval_status: 'PENDING',
+          rejected_by: null,
+          rejected_at: null
+        };
+
+        setSaudaList(prev => prev.map(s => s.sauda_id === entry.sauda_id ? { ...s, ...updatePayload } : s));
+
+        if (entry.sauda_id) {
+          try {
+            await dbModule.update('sauda_master', 'sauda_id', entry.sauda_id, updatePayload);
+          } catch (err) {
+            console.error("Error un-rejecting sauda in Supabase:", err);
+          }
+        }
+        return;
+      } else {
+        await handleEditRejectorName(entry);
+        return;
+      }
+    }
+
+    let defaultName = (userCtx.userName && userCtx.userName.toUpperCase() !== 'ADMIN')
+      ? userCtx.userName
+      : (userCtx.username && userCtx.username.toUpperCase() !== 'ADMIN' ? userCtx.username : '');
+
+    if (!defaultName) {
+      defaultName = 'User 2';
+    }
+
+    const enteredName = window.prompt(
+      `Rejecting Sauda Contract #${entry.sauda_no}:\n\nPlease enter the User Name who is rejecting this contract:`,
+      defaultName
+    );
+
+    if (enteredName === null) {
+      return;
+    }
+
+    const rejectorName = enteredName.trim() || defaultName || 'User';
 
     const updatePayload = {
       is_checked: false,
       checked_by: null,
       checked_at: null,
-      status: nextRejected ? 'REJECTED' : 'PENDING',
-      approval_status: nextRejected ? 'REJECTED' : 'PENDING',
-      rejected_by: nextRejected ? rejectorName : null,
-      rejected_at: nextRejected ? new Date().toISOString() : null
+      status: 'REJECTED',
+      approval_status: 'REJECTED',
+      rejected_by: rejectorName,
+      rejected_at: new Date().toISOString()
     };
 
     setSaudaList(prev => prev.map(s => s.sauda_id === entry.sauda_id ? { ...s, ...updatePayload } : s));
@@ -1229,7 +1307,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                   );
                   const userCtx = getCurrentUserContext();
                   const checkerName = entry.checked_by || entry.approved_by || (isChecked ? 'User 10' : '');
-                  const rejectorName = entry.rejected_by || (isRejected ? (userCtx.userName || userCtx.username || 'User') : '');
+                  const rejectorName = (entry.rejected_by && entry.rejected_by.toUpperCase() !== 'ADMIN')
+                    ? entry.rejected_by
+                    : (entry.rejected_by || (isRejected ? (userCtx.userName && userCtx.userName.toUpperCase() !== 'ADMIN' ? userCtx.userName : 'User 2') : ''));
 
                   return (
                     <tr 
@@ -1337,13 +1417,22 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                             </span>
                           )}
 
-                          {isRejected && rejectorName && (
-                            <span className={cn(
-                              "text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight text-center truncate max-w-[120px]",
-                              isSelected ? "bg-rose-900 text-rose-200" : "bg-rose-100 text-rose-900 border border-rose-200"
-                            )}>
-                              ✗ {rejectorName}
-                            </span>
+                          {isRejected && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditRejectorName(entry);
+                              }}
+                              className={cn(
+                                "text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight text-center truncate max-w-[120px] cursor-pointer hover:scale-105 transition-all flex items-center justify-center gap-0.5 shadow-2xs",
+                                isSelected ? "bg-rose-900 text-rose-200 hover:bg-rose-800" : "bg-rose-100 text-rose-900 border border-rose-200 hover:bg-rose-200"
+                              )}
+                              title="Click to edit/update Rejector User Name"
+                            >
+                              <span>✗</span>
+                              <span>{rejectorName || 'User'}</span>
+                            </button>
                           )}
                         </div>
                       </td>
