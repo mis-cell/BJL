@@ -1639,7 +1639,7 @@ export function getCanonicalPoKey(raw: any): string {
   if (!clean) return '';
   const suffix = getPoSuffix(clean);
   const numOnly = suffix.replace(/[^0-9]/g, '');
-  if (numOnly && numOnly.length >= 3) {
+  if (numOnly && numOnly.length >= 1) {
     return numOnly.padStart(4, '0');
   }
   return clean;
