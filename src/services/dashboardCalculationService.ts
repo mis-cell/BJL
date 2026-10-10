@@ -1671,6 +1671,25 @@ export function parseRecordDate(rawDate: any): { dateObj: Date; dateStr: string;
     };
   }
   
+  // Handle YYYY-MM-DD or YYYY/MM/DD or ISO prefix
+  if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(str)) {
+    const cleanDatePart = str.split('T')[0];
+    const parts = cleanDatePart.split(/[-/]/);
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // 0-indexed
+    const day = parseInt(parts[2], 10);
+    const d = new Date(year, month, day);
+    if (!isNaN(d.getTime())) {
+      return {
+        dateObj: d,
+        dateStr: `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+        year,
+        month,
+        isValid: true
+      };
+    }
+  }
+
   // Handle DD-MM-YYYY or DD/MM/YYYY
   if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(str)) {
     const parts = str.split(/[-/]/);
