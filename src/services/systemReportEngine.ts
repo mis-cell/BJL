@@ -643,19 +643,53 @@ export async function loadAndProcessSystemReportData(): Promise<{
     const allPosMap = new Map<string, any>();
     const seenCanonKeys = new Set<string>();
 
-    const addPoToMap = (p: any) => {
-      const rawPNo = String(p.po_no || p.ptf_no || p.sauda_no || '').trim().toUpperCase();
-      if (!rawPNo) return;
-      const cleanNo = normalizeToISODate ? rawPNo.replace(/^p\.?o\.?\s*[:\-]?\s*/i, '').trim() : rawPNo;
-      const parts = cleanNo.split('/');
-      const suffix = parts[parts.length - 1].trim();
-      const numOnly = suffix.replace(/[^0-9]/g, '');
-      const canonKey = (numOnly && numOnly.length >= 3) ? numOnly.padStart(4, '0') : cleanNo;
+    const getAllRecordKeys = (item: any): string[] => {
+      if (!item) return [];
+      const keys: string[] = [];
+      const add = (val: any) => {
+        if (!val) return;
+        const str = String(val).trim();
+        if (!str || /^n\/?a$/i.test(str) || /^undefined$/i.test(str) || /^null$/i.test(str) || str === '-') return;
+        
+        const clean = str.replace(/^p\.?o\.?\s*[:\-]?\s*/i, '').trim().toUpperCase();
+        if (clean) {
+          keys.push(clean);
+          const parts = clean.split('/');
+          const suffix = parts[parts.length - 1].trim();
+          const numOnly = suffix.replace(/[^0-9]/g, '');
+          if (numOnly) {
+            keys.push(numOnly);
+            keys.push(numOnly.padStart(4, '0'));
+          }
+        }
+      };
 
-      if (!allPosMap.has(cleanNo) && !seenCanonKeys.has(canonKey)) {
-        allPosMap.set(cleanNo, p);
-        if (canonKey) seenCanonKeys.add(canonKey);
+      add(item.po_no);
+      add(item.contract_po_no);
+      add(item.sauda_no);
+      add(item.ptf_no);
+      add(item.reference_no);
+      add(item.bill_challan_no);
+      if (item.id) {
+        add(`SCP-${item.id}`);
+        add(`PO-${item.id}`);
       }
+      return Array.from(new Set(keys));
+    };
+
+    const addPoToMap = (p: any) => {
+      const itemKeys = getAllRecordKeys(p);
+      if (itemKeys.length > 0 && itemKeys.some(k => seenCanonKeys.has(k))) {
+        return;
+      }
+
+      const rawPNo = String(p.po_no || p.ptf_no || p.sauda_no || '').trim().toUpperCase();
+      const cleanNo = rawPNo ? rawPNo.replace(/^p\.?o\.?\s*[:\-]?\s*/i, '').trim() : (itemKeys[0] || '');
+      if (!cleanNo) return;
+
+      allPosMap.set(cleanNo, p);
+      itemKeys.forEach(k => seenCanonKeys.add(k));
+      seenCanonKeys.add(cleanNo);
     };
 
     (scps || []).forEach(addPoToMap);
