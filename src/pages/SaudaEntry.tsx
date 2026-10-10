@@ -5,6 +5,7 @@ import { Sauda } from '../types';
 import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, getCurrentUserContext, isUserId10 } from '../lib/permissions';
+import { resolveDisplayName } from '../lib/userResolver';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { resolveSattaRate } from '../services/sattaRateService';
 
@@ -976,7 +977,7 @@ export default function SaudaEntry({
       }
 
       if (!isEditMode && !saudaPayload.created_by) {
-        saudaPayload.created_by = userCtx.userName || userCtx.username || userCtx.userId || 'Rahul (002)';
+        saudaPayload.created_by = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Rahul');
       }
 
       if (saudaPayload.sauda_id) {
