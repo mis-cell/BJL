@@ -39,6 +39,7 @@ import { dbModule, flushOfflineQueue } from '../services/dbModule';
 import { Sauda, SaudaQualityDetail } from '../types';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isUserId10, isUserId2, isUserAdmin, isL5OrAdmin, getCurrentUserContext } from '../lib/permissions';
+import { initUserMap, resolveDisplayName } from '../lib/userResolver';
 import { PaginationControls } from '../components/PaginationControls';
 import { generateSaudaPdfBase64 } from '../lib/saudaPdf';
 
@@ -300,7 +301,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
     const currentlyChecked = isCheckedSauda(entry);
     const nextChecked = !currentlyChecked;
-    const checkerName = userCtx.userName || userCtx.username || userCtx.userId || (isUserAdmin() ? 'ADMIN' : 'User 10');
+    const checkerName = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Checker');
 
     const updatePayload = {
       is_checked: nextChecked,
@@ -325,9 +326,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
   const handleEditRejectorName = async (entry: Sauda) => {
     const userCtx = getCurrentUserContext();
-    const currentName = (entry.rejected_by && entry.rejected_by.toUpperCase() !== 'ADMIN') 
-      ? entry.rejected_by 
-      : (userCtx.userName && userCtx.userName.toUpperCase() !== 'ADMIN' ? userCtx.userName : 'User 2');
+    const currentName = resolveDisplayName(entry.rejected_by || userCtx.userName || userCtx.username || userCtx.userId, 'Rahul');
 
     const entered = window.prompt(
       `Update Rejector User Name for Sauda Contract #${entry.sauda_no}:\n\nPlease enter the User Name who rejected this Sauda:`,
@@ -335,7 +334,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     );
 
     if (entered === null) return;
-    const newRejectorName = entered.trim() || currentName || 'User';
+    const newRejectorName = resolveDisplayName(entered.trim() || currentName, 'Rahul');
 
     const updatePayload = {
       rejected_by: newRejectorName
@@ -365,7 +364,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
     if (currentlyRejected) {
       const confirmUnreject = window.confirm(
-        `Sauda #${entry.sauda_no} is currently REJECTED by "${entry.rejected_by || 'User'}".\n\nClick "OK" to UN-REJECT this Sauda contract (move back to Pending).\nClick "Cancel" to edit the Rejector User Name instead.`
+        `Sauda #${entry.sauda_no} is currently REJECTED by "${resolveDisplayName(entry.rejected_by, 'Rahul')}".\n\nClick "OK" to UN-REJECT this Sauda contract (move back to Pending).\nClick "Cancel" to edit the Rejector User Name instead.`
       );
 
       if (confirmUnreject) {
@@ -395,13 +394,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       }
     }
 
-    let defaultName = (userCtx.userName && userCtx.userName.toUpperCase() !== 'ADMIN')
-      ? userCtx.userName
-      : (userCtx.username && userCtx.username.toUpperCase() !== 'ADMIN' ? userCtx.username : '');
-
-    if (!defaultName) {
-      defaultName = 'User 2';
-    }
+    const defaultName = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Rahul');
 
     const enteredName = window.prompt(
       `Rejecting Sauda Contract #${entry.sauda_no}:\n\nPlease enter the User Name who is rejecting this contract:`,
@@ -412,7 +405,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       return;
     }
 
-    const rejectorName = enteredName.trim() || defaultName || 'User';
+    const rejectorName = resolveDisplayName(enteredName.trim() || defaultName, 'Rahul');
 
     const updatePayload = {
       is_checked: false,
@@ -617,6 +610,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   }, [isActive], { tables: ['sauda_master', 'sms_sauda', 'purchase_master', 'temporary_material_received', 'sauda_check_point', 'sauda_check_point_details'] });
 
   useEffect(() => {
+    initUserMap();
     if (isActive) {
       fetchSaudas();
     }
@@ -1306,10 +1300,8 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                     Boolean(entry.rejected_by)
                   );
                   const userCtx = getCurrentUserContext();
-                  const checkerName = entry.checked_by || entry.approved_by || (isChecked ? 'User 10' : '');
-                  const rejectorName = (entry.rejected_by && entry.rejected_by.toUpperCase() !== 'ADMIN')
-                    ? entry.rejected_by
-                    : (entry.rejected_by || (isRejected ? (userCtx.userName && userCtx.userName.toUpperCase() !== 'ADMIN' ? userCtx.userName : 'User 2') : ''));
+                  const checkerName = resolveDisplayName(entry.checked_by || entry.approved_by || (isChecked ? userCtx.userName : null), 'Checker');
+                  const rejectorName = resolveDisplayName(entry.rejected_by || (isRejected ? userCtx.userName : null), 'Rahul');
 
                   return (
                     <tr 
@@ -1400,7 +1392,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleMarkReject(entry); }}
                                 className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 hover:bg-rose-600 hover:text-white border border-rose-300 transition-all cursor-pointer shadow-2xs"
-                                title="Click to Reject (Admin, Level 4, or User 2)"
+                                title="Click to Reject Sauda"
                               >
                                 <X className="w-3 h-3 text-rose-600 hover:text-white" />
                                 <span>Reject</span>

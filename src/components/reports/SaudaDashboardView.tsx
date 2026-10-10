@@ -32,6 +32,7 @@ import { MONTHS } from './types';
 import { isUserId10, getCurrentUserContext } from '../../lib/permissions';
 import { supabase } from '../../lib/supabase';
 import { dbModule } from '../../services/dbModule';
+import { initUserMap, resolveDisplayName } from '../../lib/userResolver';
 import SaudaPrintSlip from '../SaudaPrintSlip';
 
 interface SaudaDashboardViewProps {
@@ -47,9 +48,10 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
 
   const isUser10 = isUserId10();
   const userCtx = getCurrentUserContext();
-  const currentUsername = String(userCtx?.username || userCtx?.userName || userCtx?.userId || 'USER 10').toUpperCase();
+  const currentUsername = resolveDisplayName(userCtx?.username || userCtx?.userName || userCtx?.userId, 'ADMIN');
 
   useEffect(() => {
+    initUserMap();
     setSaudaList(initialSaudaData || []);
   }, [initialSaudaData]);
 
@@ -567,7 +569,7 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
                         {isRejected ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-100 text-rose-800 border border-rose-300 rounded-xl text-[11px] font-black">
                             <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                            Rejected
+                            <span>Rejected ({resolveDisplayName(entry.rejected_by, 'Unknown User')})</span>
                           </span>
                         ) : (
                           <button
