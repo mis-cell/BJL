@@ -488,6 +488,16 @@ export async function loadAndProcessSystemReportData(): Promise<{
       }
     });
 
+
+    const pendingpaymentByPo = new Map<string, number>();
+    (settlements || []).forEach((p: any) => {
+      const pndngamt = Number(p.payable_amt ||  0);
+      if (p.po_no) pendingpaymentByPo.set(p.po_no, (pendingpaymentByPo.get(p.po_no) || 0) + amt);
+      if (p.mr_no) pendingpaymentByPo.set(p.mr_no, (paymentByPo.get(p.mr_no) || 0) + amt);
+      if (p.voucher_no) pendingpaymentByPo.set(p.voucher_no, (pendingpaymentByPo.get(p.voucher_no) || 0) + amt);
+    });
+    //alert()
+
     // Helper to generate normalized keys for robust PO detail linking
     const getPoKeys = (raw: string | number | undefined | null): string[] => {
       if (!raw) return [];
@@ -743,6 +753,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
           const pendingWeightMT = Math.max(0, quantityMT - arrivedWeightMT);
           const paidAmount = paymentByPo.get(poNo) || paymentByPo.get(saudaNo) || 0;
           const pendingPayable = Math.max(0, effectiveCost - paidAmount - deductionAmount);
+          //const pendingPayable = pendingpaymentByPo.get(poNo) || pendingpaymentByPo.get(saudaNo) || 0;
 
           const deliveryToDate = po.delivery_to;
           const isDelayed = deliveryToDate ? new Date() > new Date(deliveryToDate) && pendingWeightMT > 0 : false;

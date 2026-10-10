@@ -447,44 +447,74 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                 {activeTab === 'SUPPLIER' && 'Supplier / Party Wise Report & Analytics'}
                 {activeTab === 'MONTH' && 'Monthly Progress & Analytics'}
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              {/* <p className="text-xs text-slate-500 mt-0.5">
                 Toggle below to analyze Deductions, Pipeline Checkpoints, Premium, Performance Rankings, or Abnormal Data.
-              </p>
+              </p> */}
             </div>
-            {onOpenManagementView && (
+            {/* {onOpenManagementView && (
               <button
                 onClick={onOpenManagementView}
                 className="text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer self-start md:self-auto"
               >
-                Full Management Matrix (P1-P4) →
+                Full Management Matrix (P1-P4) →1
               </button>
-            )}
+            )} */}
           </div>
 
           {/* Sub-Analysis Filter Bar */}
-          <div className="flex items-center gap-1.5 flex-wrap bg-slate-100 p-1.5 rounded-xl border border-slate-200 text-xs font-bold">
-            <span className="text-slate-500 text-[10px] uppercase tracking-wider px-2">Sub Report View:</span>
-            {[
-              { id: 'VOLUME' as const, label: '📦 Business Provided (Volume & Rate)', icon: '📊' },
-              { id: 'DEDUCTION' as const, label: '✂️ All Types Deduction (Moisture & Grade Down)', icon: '✂️' },
-              { id: 'CHECKPOINTS' as const, label: '🚚 Checkpoints Pipeline (Sauda to Sett)', icon: '🚚' },
-              { id: 'PREMIUM' as const, label: '💰 Premium Given', icon: '💰' },
-              { id: 'RANKING' as const, label: '🏆 Ranking Cards (Best, Medium, Lower)', icon: '🏆' },
-              { id: 'ABNORMAL' as const, label: '⚠️ Abnormal Data vs Top Performers', icon: '⚠️' },
-            ].map(sub => (
-              <button
-                key={sub.id}
-                onClick={() => setSubAnalysisMode(sub.id)}
-                className={`px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 ${
-                  subAnalysisMode === sub.id
-                    ? 'bg-emerald-800 text-white shadow-sm font-black'
-                    : 'text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                <span>{sub.label}</span>
-              </button>
-            ))}
-          </div>
+<div className="flex w-full flex-wrap items-stretch gap-2 rounded-2xl border border-[#DCE7D9] bg-gradient-to-br from-white via-[#FAFCF9] to-[#F1F6EF] p-3 shadow-[0_4px_16px_rgba(23,76,44,0.06)]">
+
+  {[
+    { id: 'VOLUME', label: 'Business Provided', sub: 'Volume & Rate', icon: '📦' },
+    { id: 'DEDUCTION', label: 'All Types Deduction', sub: 'Moisture & Grade Down', icon: '✂️' },
+    { id: 'CHECKPOINTS', label: 'Checkpoints Pipeline', sub: 'Sauda to Settlement', icon: '🚚' },
+    { id: 'PREMIUM', label: 'Premium Given', sub: 'Premium Analysis', icon: '💰' },
+    { id: 'RANKING', label: 'Ranking Cards', sub: 'Best, Medium, Lower', icon: '🏆' },
+    { id: 'ABNORMAL', label: 'Abnormal Data', sub: 'Vs Top Performers', icon: '⚠️' },
+  ].map((item) => {
+    const isActive = subAnalysisMode === item.id;
+
+    return (
+      <button
+        key={item.id}
+        onClick={() => setSubAnalysisMode(item.id)}
+        className={` group relative flex flex-1 min-w-[220px] items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/50 ${ isActive ? 'border-[#174C2C] bg-gradient-to-br from-[#1E5A32] to-[#123D25] text-white shadow-md' : 'border-[#E2E9DF] bg-white text-[#334536] hover:border-[#B7CDB5] hover:bg-[#F4F8F1] hover:shadow-sm' } `}
+      >
+        <span
+          className={`
+            flex h-9 w-9 shrink-0 items-center justify-center
+            rounded-lg text-base transition-colors
+            ${
+              isActive
+                ? 'bg-white/15 shadow-inner'
+                : 'bg-[#EEF4EA] group-hover:bg-[#E3EEDF]'
+            }
+          `}
+        >
+          {item.icon}
+        </span>
+
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="whitespace-nowrap text-xs font-extrabold tracking-wide">
+            {item.label}
+          </span>
+          <span
+            className={`whitespace-nowrap text-[10px] font-medium ${
+              isActive ? 'text-green-100' : 'text-slate-500'
+            }`}
+          >
+            {item.sub}
+          </span>
+        </span>
+
+        {isActive && (
+          <span className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-[#D4AF37]" />
+        )}
+      </button>
+    );
+  })}
+</div>
+
 
           {/* Render Active Sub-View Data */}
           {(() => {

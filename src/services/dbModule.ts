@@ -26,7 +26,8 @@ function getModuleFromTable(table: string): string {
     supply_master: "Supplier Master",
     godown_master: "Godown Master",
     material_mismatch: "Mismatch Section",
-    satta_mismatch: "Satta Mismatch"
+    satta_mismatch: "Satta Mismatch",
+    settlement_master: "settlement master"
   };
   return map[table] || table.replace(/_/g, ' ').toUpperCase();
 }
@@ -79,7 +80,8 @@ export type EntityType =
   | 'unit_master'
   | 'lorry_weighments'
   | 'payment_master'
-  | 'payment_details';
+  | 'payment_details'
+  | 'mr_settlement_master';
 
 function extractMissingColumn(msg?: string): string | null {
   if (!msg) return null;
