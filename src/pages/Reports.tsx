@@ -217,7 +217,7 @@ export default function Reports({ onClose }: ReportsProps) {
                     : 'text-emerald-100 hover:text-white'
                 }`}
               >
-                <span>🟢 Executive Summary</span>
+                <span>Summary</span>
               </button>
               <button
                 onClick={() => setViewMode('management')}
@@ -227,7 +227,7 @@ export default function Reports({ onClose }: ReportsProps) {
                     : 'text-emerald-100 hover:text-white'
                 }`}
               >
-                <span>📊 Management Analysis (P1-P4)</span>
+                <span>Analysis</span>
               </button>
             </div>
 

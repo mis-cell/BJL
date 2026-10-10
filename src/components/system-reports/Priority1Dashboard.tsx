@@ -25,7 +25,7 @@ export const Priority1Dashboard: React.FC<Priority1DashboardProps> = ({
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
             <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">
-              Sourcing Footprint
+              Sourcing
             </h3>
           </div>
           <span className="text-[10px] text-slate-400 font-mono">SAUDA CHECK POINT // PRIORITY 1</span>
@@ -217,7 +217,7 @@ export const Priority1Dashboard: React.FC<Priority1DashboardProps> = ({
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-600"></span>
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
-              Pipeline & Gate Status
+              Pipline
             </h3>
           </div>
           <span className="text-[10px] text-slate-400 font-mono">FLOW: SAUDA → AMAD → INSP → PAY</span>
