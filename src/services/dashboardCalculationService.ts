@@ -1885,14 +1885,50 @@ export function computeDashboardMetrics(params: {
   const unifiedContracts: UnifiedContractRecord[] = [];
   const processedContractKeys = new Set<string>();
 
+  const getAllRecordKeys = (item: any): string[] => {
+    if (!item) return [];
+    const keys: string[] = [];
+    const add = (val: any) => {
+      if (!val) return;
+      const str = String(val).trim();
+      if (!str || /^n\/?a$/i.test(str) || /^undefined$/i.test(str) || /^null$/i.test(str) || str === '-') return;
+      
+      const clean = normalizePoRef(str);
+      if (clean) {
+        keys.push(clean);
+        const canon = getCanonicalPoKey(str);
+        if (canon) keys.push(canon);
+        const suffix = getPoSuffix(clean);
+        if (suffix) keys.push(suffix);
+        const numOnly = suffix.replace(/[^0-9]/g, '');
+        if (numOnly) keys.push(numOnly.padStart(4, '0'));
+      }
+    };
+
+    add(item.po_no);
+    add(item.contract_po_no);
+    add(item.sauda_no);
+    add(item.ptf_no);
+    add(item.reference_no);
+    add(item.bill_challan_no);
+    if (item.id) {
+      add(`SCP-${item.id}`);
+      add(`PO-${item.id}`);
+    }
+    return Array.from(new Set(keys));
+  };
+
   // A. Process Sauda Check Point Records
   (saudaCheckPoints || []).forEach(scp => {
+    const itemKeys = getAllRecordKeys(scp);
+    if (itemKeys.length > 0 && itemKeys.some(k => processedContractKeys.has(k))) {
+      return;
+    }
+
     const rawNo = scp.po_no || scp.contract_po_no || scp.sauda_no || scp.session || `SCP-${scp.id}`;
-    const cleanNo = normalizePoRef(rawNo);
-    const canonKey = getCanonicalPoKey(rawNo);
-    if (!cleanNo || processedContractKeys.has(cleanNo) || (canonKey && processedContractKeys.has(canonKey))) return;
-    processedContractKeys.add(cleanNo);
-    if (canonKey) processedContractKeys.add(canonKey);
+    const cleanNo = normalizePoRef(rawNo) || itemKeys[0] || `SCP-${scp.id}`;
+    itemKeys.forEach(k => processedContractKeys.add(k));
+    if (cleanNo) processedContractKeys.add(cleanNo);
 
     // Month & Date Rule: Use Contract Date from Sauda Check Point
     const rawDate = scp.contract_date || scp.date || scp.s_date || scp.b_date || scp.created_at;
@@ -2003,12 +2039,15 @@ export function computeDashboardMetrics(params: {
 
   // B. Process Final P.O. / P.T.F Records (`purchase_master`)
   (purchaseOrders || []).forEach(po => {
+    const itemKeys = getAllRecordKeys(po);
+    if (itemKeys.length > 0 && itemKeys.some(k => processedContractKeys.has(k))) {
+      return;
+    }
+
     const rawNo = po.po_no || po.ptf_no || po.contract_po_no || `PO-${po.id}`;
-    const cleanNo = normalizePoRef(rawNo);
-    const canonKey = getCanonicalPoKey(rawNo);
-    if (!cleanNo || processedContractKeys.has(cleanNo) || (canonKey && processedContractKeys.has(canonKey))) return;
-    processedContractKeys.add(cleanNo);
-    if (canonKey) processedContractKeys.add(canonKey);
+    const cleanNo = normalizePoRef(rawNo) || itemKeys[0] || `PO-${po.id}`;
+    itemKeys.forEach(k => processedContractKeys.add(k));
+    if (cleanNo) processedContractKeys.add(cleanNo);
 
     // Month & Date Rule: Use P.O. Date from Final P.O.
     const rawDate = po.po_date || po.date || po.contract_date || po.created_at;
