@@ -47,13 +47,22 @@ export const PREDEFINED_RANKS: Record<string, number> = {
 
 export const formatPoNumber = (sauda: any) => {
   if (!sauda) return '';
-  if (sauda.sauda_no) {
-    const numPart = parseInt(sauda.sauda_no, 10);
-    const val = isNaN(numPart) ? sauda.sauda_no : numPart;
-    const cleanNo = String(val).replace(/^(PO|SAUDA)[-\s]*/i, '');
-    return `PO-${cleanNo}`;
+  if (sauda.session && sauda.session.trim()) {
+    const s = sauda.session.trim();
+    if (s.includes('/') && s.toUpperCase().startsWith('BJCL')) {
+      return s;
+    }
   }
-  return '';
+  const rawNo = sauda.sauda_no || sauda.no || sauda.contract_no || '';
+  if (!rawNo) return sauda.session || '';
+
+  const cleanDigits = String(rawNo).replace(/[^0-9]/g, '');
+  if (cleanDigits) {
+    const padded = cleanDigits.padStart(4, '0');
+    const finYear = sauda.financial_year || '2026-2027';
+    return `BJCL/${finYear}/${padded}`;
+  }
+  return String(rawNo);
 };
 
 export const compareQualities = (aStr: string, bStr: string): number => {
