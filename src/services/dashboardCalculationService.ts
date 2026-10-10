@@ -1631,6 +1631,21 @@ export function getPoSuffix(poStr: string): string {
 }
 
 /**
+ * Gets canonical PO key for reliable deduplication across formats (e.g. BJCL/2026-2027/0401 and 0401)
+ */
+export function getCanonicalPoKey(raw: any): string {
+  if (!raw) return '';
+  const clean = normalizePoRef(raw);
+  if (!clean) return '';
+  const suffix = getPoSuffix(clean);
+  const numOnly = suffix.replace(/[^0-9]/g, '');
+  if (numOnly && numOnly.length >= 3) {
+    return numOnly.padStart(4, '0');
+  }
+  return clean;
+}
+
+/**
  * Robust date parser returning standard date object and parts
  */
 export function parseRecordDate(rawDate: any): { dateObj: Date; dateStr: string; year: number; month: number; isValid: boolean } {
@@ -1855,8 +1870,10 @@ export function computeDashboardMetrics(params: {
   (saudaCheckPoints || []).forEach(scp => {
     const rawNo = scp.po_no || scp.contract_po_no || scp.sauda_no || scp.session || `SCP-${scp.id}`;
     const cleanNo = normalizePoRef(rawNo);
-    if (!cleanNo || processedContractKeys.has(cleanNo)) return;
+    const canonKey = getCanonicalPoKey(rawNo);
+    if (!cleanNo || processedContractKeys.has(cleanNo) || (canonKey && processedContractKeys.has(canonKey))) return;
     processedContractKeys.add(cleanNo);
+    if (canonKey) processedContractKeys.add(canonKey);
 
     // Month & Date Rule: Use Contract Date from Sauda Check Point
     const rawDate = scp.contract_date || scp.date || scp.s_date || scp.b_date || scp.created_at;
@@ -1969,8 +1986,10 @@ export function computeDashboardMetrics(params: {
   (purchaseOrders || []).forEach(po => {
     const rawNo = po.po_no || po.ptf_no || po.contract_po_no || `PO-${po.id}`;
     const cleanNo = normalizePoRef(rawNo);
-    if (!cleanNo || processedContractKeys.has(cleanNo)) return;
+    const canonKey = getCanonicalPoKey(rawNo);
+    if (!cleanNo || processedContractKeys.has(cleanNo) || (canonKey && processedContractKeys.has(canonKey))) return;
     processedContractKeys.add(cleanNo);
+    if (canonKey) processedContractKeys.add(canonKey);
 
     // Month & Date Rule: Use P.O. Date from Final P.O.
     const rawDate = po.po_date || po.date || po.contract_date || po.created_at;

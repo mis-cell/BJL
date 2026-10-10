@@ -641,14 +641,25 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
     // Merge Sauda Check Point & Purchase Master records
     const allPosMap = new Map<string, any>();
-    (pos || []).forEach((p: any) => {
-      const pNo = String(p.po_no || p.ptf_no || '').trim().toUpperCase();
-      if (pNo) allPosMap.set(pNo, p);
-    });
-    (scps || []).forEach((p: any) => {
-      const pNo = String(p.po_no || p.ptf_no || '').trim().toUpperCase();
-      if (pNo) allPosMap.set(pNo, p);
-    });
+    const seenCanonKeys = new Set<string>();
+
+    const addPoToMap = (p: any) => {
+      const rawPNo = String(p.po_no || p.ptf_no || p.sauda_no || '').trim().toUpperCase();
+      if (!rawPNo) return;
+      const cleanNo = normalizeToISODate ? rawPNo.replace(/^p\.?o\.?\s*[:\-]?\s*/i, '').trim() : rawPNo;
+      const parts = cleanNo.split('/');
+      const suffix = parts[parts.length - 1].trim();
+      const numOnly = suffix.replace(/[^0-9]/g, '');
+      const canonKey = (numOnly && numOnly.length >= 3) ? numOnly.padStart(4, '0') : cleanNo;
+
+      if (!allPosMap.has(cleanNo) && !seenCanonKeys.has(canonKey)) {
+        allPosMap.set(cleanNo, p);
+        if (canonKey) seenCanonKeys.add(canonKey);
+      }
+    };
+
+    (scps || []).forEach(addPoToMap);
+    (pos || []).forEach(addPoToMap);
 
     const uniquePosList = Array.from(allPosMap.values());
     const transactionLines: ReportTransactionLine[] = [];
