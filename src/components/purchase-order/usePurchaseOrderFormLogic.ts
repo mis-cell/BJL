@@ -348,6 +348,7 @@ export function usePurchaseOrderFormLogic({
     const autoBRate = lookupSattaBaseRate(sDate, sattaBaseRates);
     const selectedBRate = (sauda.b_rate && Number(sauda.b_rate) > 0) ? sauda.b_rate.toString() : autoBRate;
 
+    let qDetailsToProcess: any[] = [];
     if (supabase) {
       try {
         const { data: qDetails } = await supabase
@@ -356,50 +357,68 @@ export function usePurchaseOrderFormLogic({
           .eq('sauda_id', sauda.sauda_id);
 
         if (qDetails && qDetails.length > 0) {
-          const sortedDetails = [...qDetails].sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
-          mappedItems = sortedDetails.map((item: any, index: number) => {
-            const matchingGrade = gradeList.find(g => {
-              const clean = (s: string) => (s || '').trim().replace(/\.$/, '').toUpperCase();
-              return clean(g.grade_name) === clean(item.quality) || clean(g.grade_code) === clean(item.quality);
-            });
-            const itemWt = isBales 
-              ? (item.qty * 147.5) / 1000 
-              : (sauda.total_unit > 0 ? (item.qty / sauda.total_unit) * sauda.total_wt_in_ton : 0);
-            const rowAgency = item.agency || sauda.agency || '';
-            const agencyObj = agencyList.find(ag => ag.agency_name === rowAgency || ag.agency_code === rowAgency);
-            const rowMarka = item.marka || sauda.marks || '';
-            const markaObj = markaList.find(m => m.marka_name === rowMarka || m.marka_code === rowMarka);
-
-            const rowGradeName = matchingGrade?.grade_name || item.quality || '';
-            const rowAgencyName = agencyObj?.agency_name || rowAgency;
-
-            const computedSattaRate = getSattaRateForRow(rowAgencyName, rowGradeName, sDate, selectedBRate, sattaBaseRates, sattaCalculatedRates, sattaDifferentials, sauda.area);
-            const saudaItemRate = (item.rs !== undefined && item.rs !== null && Number(item.rs) > 0) ? Number(item.rs) : 0;
-
-            return {
-              srl: index + 1,
-              crop: sauda.crop_year || getCropYear(),
-              grade_code: matchingGrade ? matchingGrade.grade_code : (item.quality || ''),
-              grade_name: matchingGrade ? matchingGrade.grade_name : (item.quality || ''),
-              agency_code: agencyObj ? agencyObj.agency_code : (item.agency || sauda.agency || ''),
-              agency_name: agencyObj ? agencyObj.agency_name : (item.agency || sauda.agency || ''),
-              marka_code: markaObj ? markaObj.marka_code : (item.marka || sauda.marks || ''),
-              marka_name: markaObj ? markaObj.marka_name : (item.marka || sauda.marks || ''),
-              qty: item.qty || 0,
-              weight: parseFloat(itemWt.toFixed(3)),
-              rate: computedSattaRate !== null ? computedSattaRate : saudaItemRate,
-              premium: item.premium || 0
-            };
-          });
+          qDetailsToProcess = qDetails;
         }
       } catch (err) {
         console.warn("Failed to query sauda_quality_details", err);
       }
     }
+    if (qDetailsToProcess.length === 0 && Array.isArray(sauda.quality_details) && sauda.quality_details.length > 0) {
+      qDetailsToProcess = sauda.quality_details;
+    }
+
+    if (qDetailsToProcess.length > 0) {
+      const sortedDetails = [...qDetailsToProcess].sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
+      mappedItems = sortedDetails.map((item: any, index: number) => {
+        const matchingGrade = gradeList.find(g => {
+          const clean = (s: string) => (s || '').trim().replace(/\.$/, '').toUpperCase();
+          return clean(g.grade_name) === clean(item.quality) || clean(g.grade_code) === clean(item.quality);
+        });
+        const itemWt = isBales 
+          ? (item.qty * 147.5) / 1000 
+          : (sauda.total_unit > 0 ? (item.qty / sauda.total_unit) * sauda.total_wt_in_ton : 0);
+        const rowAgency = item.agency || sauda.agency || '';
+        const agencyObj = agencyList.find(ag => ag.agency_name === rowAgency || ag.agency_code === rowAgency);
+        const rowMarka = item.marka || sauda.marks || '';
+        const markaObj = markaList.find(m => m.marka_name === rowMarka || m.marka_code === rowMarka);
+
+        const rowGradeName = matchingGrade?.grade_name || item.quality || '';
+        const rowAgencyName = agencyObj?.agency_name || rowAgency;
+
+        const computedSattaRate = getSattaRateForRow(rowAgencyName, rowGradeName, sDate, selectedBRate, sattaBaseRates, sattaCalculatedRates, sattaDifferentials, sauda.area);
+        const saudaItemRate = (item.rs !== undefined && item.rs !== null && Number(item.rs) > 0) 
+          ? Number(item.rs) 
+          : ((item.rate !== undefined && item.rate !== null && Number(item.rate) > 0) ? Number(item.rate) : 0);
+        const fallbackSaudaRate = (sauda.b_rate && Number(sauda.b_rate) > 0) ? Number(sauda.b_rate) : ((sauda.rate && Number(sauda.rate) > 0) ? Number(sauda.rate) : 0);
+
+        // Workflow B: Preserve exact saved rate from Sauda Desk
+        const finalRate = saudaItemRate > 0 
+          ? saudaItemRate 
+          : (fallbackSaudaRate > 0 ? fallbackSaudaRate : (computedSattaRate !== null ? computedSattaRate : 0));
+
+        return {
+          srl: index + 1,
+          crop: sauda.crop_year || getCropYear(),
+          grade_code: matchingGrade ? matchingGrade.grade_code : (item.quality || ''),
+          grade_name: matchingGrade ? matchingGrade.grade_name : (item.quality || ''),
+          agency_code: agencyObj ? agencyObj.agency_code : (item.agency || sauda.agency || ''),
+          agency_name: agencyObj ? agencyObj.agency_name : (item.agency || sauda.agency || ''),
+          marka_code: markaObj ? markaObj.marka_code : (item.marka || sauda.marks || ''),
+          marka_name: markaObj ? markaObj.marka_name : (item.marka || sauda.marks || ''),
+          qty: item.qty || 0,
+          weight: parseFloat(itemWt.toFixed(3)),
+          rate: finalRate,
+          premium: item.premium || 0
+        };
+      });
+    }
 
     if (mappedItems.length === 0) {
       const computedSattaRate = getSattaRateForRow(sauda.agency || '', sauda.quality || '', sDate, selectedBRate, sattaBaseRates, sattaCalculatedRates, sattaDifferentials, sauda.area);
-      const saudaItemRate = (sauda.rate !== undefined && sauda.rate !== null && Number(sauda.rate) > 0) ? Number(sauda.rate) : 0;
+      const saudaItemRate = (sauda.rate !== undefined && sauda.rate !== null && Number(sauda.rate) > 0) 
+        ? Number(sauda.rate) 
+        : ((sauda.b_rate !== undefined && sauda.b_rate !== null && Number(sauda.b_rate) > 0) ? Number(sauda.b_rate) : 0);
+      const finalRate = saudaItemRate > 0 ? saudaItemRate : (computedSattaRate !== null ? computedSattaRate : 0);
       mappedItems = [
         {
           srl: 1,
@@ -412,7 +431,7 @@ export function usePurchaseOrderFormLogic({
           marka_name: sauda.marks || '',
           qty: sauda.total_unit || 0,
           weight: sauda.total_wt_in_ton || 0,
-          rate: computedSattaRate !== null ? computedSattaRate : saudaItemRate,
+          rate: finalRate,
           premium: 0
         }
       ];
@@ -551,6 +570,14 @@ export function usePurchaseOrderFormLogic({
             const rowGradeName = matchingGrade?.grade_name || item.quality || '';
             const rowAgencyName = agencyObj?.agency_name || rowAgency;
             const computedSattaRate = getSattaRateForRow(rowAgencyName, rowGradeName, sauda.date || todayStr, formData.b_rate || sauda.b_rate || '0', sattaBaseRates, sattaCalculatedRates, sattaDifferentials, sauda.area);
+            const saudaItemRate = (item.rs !== undefined && item.rs !== null && Number(item.rs) > 0) 
+              ? Number(item.rs) 
+              : ((item.rate !== undefined && item.rate !== null && Number(item.rate) > 0) ? Number(item.rate) : 0);
+            const fallbackSaudaRate = (sauda.b_rate && Number(sauda.b_rate) > 0) ? Number(sauda.b_rate) : ((sauda.rate && Number(sauda.rate) > 0) ? Number(sauda.rate) : 0);
+
+            const finalRate = saudaItemRate > 0 
+              ? saudaItemRate 
+              : (fallbackSaudaRate > 0 ? fallbackSaudaRate : (computedSattaRate !== null ? computedSattaRate : 0));
 
             return {
               srl: index + 1,
@@ -563,7 +590,7 @@ export function usePurchaseOrderFormLogic({
               marka_name: markaObj ? markaObj.marka_name : (item.marka || sauda.marks || ''),
               qty: item.qty || 0,
               weight: parseFloat(itemWt.toFixed(3)),
-              rate: computedSattaRate !== null ? computedSattaRate : (Number(item.rs) || 0),
+              rate: finalRate,
               premium: item.premium || 0
             };
           });

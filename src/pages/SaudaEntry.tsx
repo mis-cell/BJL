@@ -984,6 +984,7 @@ export default function SaudaEntry({
       }
 
       alert("Sauda Contract saved successfully!");
+      window.dispatchEvent(new CustomEvent('app-data-updated'));
       onSave?.(saudaData);
     } catch (err: any) {
       console.error(err);
