@@ -409,7 +409,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       <div className="bg-slate-900 p-2 rounded-2xl border border-slate-800 flex items-center gap-1.5 flex-wrap text-xs shadow-inner">
         {[
           /* { id: 'OVERVIEW' as const, label: 'Overview & Charts', icon: BarChart3 }, */
-          { id: 'ALL_DEALS' as const, label: 'All Transactions', icon: FileText, count: filteredList.length },
+          /* { id: 'ALL_DEALS' as const, label: 'All Transactions', icon: FileText, count: filteredList.length }, */
           { id: 'BROKER' as const, label: 'Broker Wise', icon: Users, count: brokerData.length },
           { id: 'AGENCY' as const, label: 'Agency Wise', icon: Building2, count: agencyData.length },
           { id: 'AREA' as const, label: 'Area Wise', icon: Package, count: areaData.length },
@@ -1041,22 +1041,17 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       )}
 
       {/* ================= MAIN TRANSACTIONS LEDGER VIEW ================= */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+      {/* <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
         
-        {/* Header & Controls */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-3">
           <div>
             <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
               <FileText className="w-4 h-4 text-emerald-700" />
               Complete Transaction Ledger ({filteredList.length} Records)
             </h3>
-            {/* <p className="text-xs text-slate-500">
-              Click any transaction row to open the complete Executive Sauda Deal Slip.
-            </p> */}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Search Input */}
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -1067,8 +1062,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                 className="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded-xl w-60 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
             </div>
-
-            {/* Date Quick Filter */}
             <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
               <button
                 onClick={() => setDateFilter('ALL')}
@@ -1099,8 +1092,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             </button>
           </div>
         </div>
-
-        {/* Quick Filter Pill Buttons */}
         <div className="flex items-center gap-2 flex-wrap text-xs">
           <span className="font-bold text-slate-500 text-[11px] uppercase tracking-wider">Filter:</span>
           
@@ -1148,17 +1139,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             <span>✓ Completed ({tabCounts.completed})</span>
           </button>
 
-          {/* <button
-            onClick={() => setQuickFilter('ALERTS')}
-            className={`px-3 py-1 rounded-xl font-bold transition flex items-center gap-1 cursor-pointer ${
-              quickFilter === 'ALERTS'
-                ? 'bg-red-700 text-white'
-                : 'bg-red-50 text-red-900 border border-red-200 hover:bg-red-100'
-            }`}
-          >
-            <span>⚠️ Issues & Alerts ({tabCounts.alerts})</span>
-          </button> */}
-
           {(searchQuery || quickFilter !== 'ALL' || dateFilter !== 'ALL') && (
             <button
               onClick={() => {
@@ -1172,8 +1152,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             </button>
           )}
         </div>
-
-        {/* Master Transaction Table */}
         <div className="overflow-x-auto border border-slate-200 rounded-2xl">
           <table className="w-full text-xs text-left border-collapse">
             <thead>
@@ -1319,12 +1297,10 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
           </table>
         </div>
       </div>
-
-      {/* Single Deal Slip Modal */}
       <SimpleDealSlipModal
         transaction={selectedTxn}
         onClose={() => setSelectedTxn(null)}
-      />
+      /> */}
 
     </div>
   );
