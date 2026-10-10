@@ -1017,7 +1017,7 @@ export default function ExecutiveBiDashboard({
                               className="text-[9.5px] font-sans font-bold text-emerald-950 bg-emerald-100 px-1 py-0.2 rounded border border-emerald-300 block hover:bg-emerald-200 cursor-pointer mt-0.5" 
                               title={`Click to view ${m.pendingPaymentPoCount} P.O.s (${m.pendingPaymentList.length} MRs) pending payment`}
                             >
-                              ⏳ {m.pendingPaymentPoCount} POs Pending
+                              {/* ⏳ {m.pendingPaymentPoCount} POs Pending */}
                             </span>
                           ) : m.paymentPaidAmount > 0 ? (
                             <span className="text-[9.5px] font-bold text-emerald-700 block">
@@ -1053,7 +1053,7 @@ export default function ExecutiveBiDashboard({
                               className="text-[9.5px] font-sans font-bold text-purple-950 bg-purple-100 px-1 py-0.2 rounded border border-purple-300 block hover:bg-purple-200 cursor-pointer mt-0.5" 
                               title={`Click to view ${m.pendingSettlementPoCount} P.O.s (${m.pendingSettlementList.length} MRs) pending settlement`}
                             >
-                              ⏳ {m.pendingSettlementPoCount} POs Pending
+                              {/* ⏳ {m.pendingSettlementPoCount} POs Pending */}
                             </span>
                           ) : m.settlementAmount > 0 ? (
                             <span className="text-[9.5px] font-bold text-purple-700 block">
