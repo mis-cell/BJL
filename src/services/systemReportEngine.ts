@@ -683,7 +683,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
         return;
       }
 
-      const rawPNo = String(p.po_no || p.ptf_no || p.sauda_no || '').trim().toUpperCase();
+      const rawPNo = String(p.po_no || p.contract_po_no || p.ptf_no || p.sauda_no || p.session || (p.id ? `PO-${p.id}` : '')).trim().toUpperCase();
       const cleanNo = rawPNo ? rawPNo.replace(/^p\.?o\.?\s*[:\-]?\s*/i, '').trim() : (itemKeys[0] || '');
       if (!cleanNo) return;
 
@@ -700,10 +700,10 @@ export async function loadAndProcessSystemReportData(): Promise<{
     let txnCounter = 1;
 
     uniquePosList.forEach((po: any) => {
-      const poNo = String(po.po_no || po.ptf_no || '').trim();
+      const poNo = String(po.po_no || po.contract_po_no || po.ptf_no || po.sauda_no || (po.id ? `PO-${po.id}` : '')).trim();
       if (!poNo) return;
       const saudaNo = String(po.sauda_no || po.contract_po_no || po.po_contract || poNo).trim();
-      const date = po.po_date || po.date || po.contract_date || po.s_date || po.created_at?.split('T')[0] || '';
+      const date = po.contract_date || po.po_date || po.date || po.s_date || po.b_date || po.created_at?.split('T')[0] || '';
 
       const rawSup = String(po.supplier || po.party_name || po.challan_supplier || '').trim();
       const supplier = supplyMap.get(rawSup.toUpperCase()) || rawSup || 'Direct Supplier';
