@@ -12,7 +12,8 @@ import {
   FileSpreadsheet,
   RefreshCcw,
   Download,
-  Printer
+  Printer,
+  Clock
 } from 'lucide-react';
 import LegacyLayout from '../components/LegacyLayout';
 import {
@@ -30,6 +31,7 @@ import { Priority3Operations } from '../components/system-reports/Priority3Opera
 import { Priority4Detailed } from '../components/system-reports/Priority4Detailed';
 import { ExceptionAuditView } from '../components/system-reports/ExceptionAuditView';
 import { ContributionView } from '../components/system-reports/ContributionView';
+import { TableInactivityReport } from '../components/system-reports/TableInactivityReport';
 import { DrillDownModal, DrillDownViewMode } from '../components/system-reports/DrillDownModal';
 import { SimpleReportView } from '../components/system-reports/SimpleReportView';
 
@@ -42,7 +44,8 @@ export type ReportNavSection =
   | 'performance_ranking'
   | 'exception_abnormal'
   | 'business_contribution'
-  | 'detailed_reports';
+  | 'detailed_reports'
+  | 'inactivity';
 
 interface ReportsProps {
   onClose?: () => void;
@@ -288,6 +291,7 @@ export default function Reports({ onClose }: ReportsProps) {
                 { id: 'exception_abnormal' as const, label: '7. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
                 { id: 'business_contribution' as const, label: '8. Contribution & Pareto', icon: PieChart, badge: 'P9' },
                 { id: 'detailed_reports' as const, label: '9. Detailed Registers', icon: FileSpreadsheet, badge: 'Grain' },
+                { id: 'inactivity' as const, label: '10. Inactivity', icon: Clock, badge: '3 Days' },
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeSection === tab.id;
@@ -366,6 +370,11 @@ export default function Reports({ onClose }: ReportsProps) {
             {/* 10. Detailed Reports (Priority 4) */}
             {activeSection === 'detailed_reports' && (
               <Priority4Detailed dataset={dataset} onDrillDown={handleOpenDrillDown} />
+            )}
+
+            {/* 11. Table Inactivity Audit (Priority P1-P4) */}
+            {activeSection === 'inactivity' && (
+              <TableInactivityReport />
             )}
 
           </div>
