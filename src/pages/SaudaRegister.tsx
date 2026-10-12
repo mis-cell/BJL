@@ -40,6 +40,7 @@ import { Sauda, SaudaQualityDetail } from '../types';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isUserId10, isUserId2, isUserAdmin, isL5OrAdmin, getCurrentUserContext } from '../lib/permissions';
 import { initUserMap, resolveDisplayName } from '../lib/userResolver';
+import { logChange } from '../services/auditLogService';
 import { PaginationControls } from '../components/PaginationControls';
 import { generateSaudaPdfBase64 } from '../lib/saudaPdf';
 
@@ -303,6 +304,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     const nextApproved = !currentlyChecked;
     const approverName = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Checker');
 
+    const targetId = entry.sauda_id || (entry as any).id;
+    const saudaNo = entry.sauda_no;
+    const fYear = entry.financial_year || '2026-2027';
+
     const updatePayload = {
       is_checked: nextApproved,
       checked_by: nextApproved ? approverName : null,
@@ -315,20 +320,47 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       rejected_at: null
     };
 
-    setSaudaList(prev => prev.map(s => s.sauda_id === entry.sauda_id ? { ...s, ...updatePayload } : s));
+    setSaudaList(prev => prev.map(s => {
+      const match = (s.sauda_id && targetId && s.sauda_id === targetId) || (s.sauda_no === saudaNo && (s.financial_year || '2026-2027') === fYear);
+      return match ? { ...s, ...updatePayload } : s;
+    }));
 
-    if (entry.sauda_id) {
-      try {
-        await dbModule.update('sauda_master', 'sauda_id', entry.sauda_id, updatePayload);
-      } catch (err) {
-        console.error("Error updating approval status in Supabase:", err);
+    try {
+      if (supabase) {
+        let updateRes = null;
+        if (targetId) {
+          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', targetId).select();
+          if (!error && data && data.length > 0) updateRes = data;
+        }
+        if (!updateRes && saudaNo) {
+          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', saudaNo).eq('financial_year', fYear).select();
+          if (!error && data && data.length > 0) updateRes = data;
+        }
       }
+      if (targetId) {
+        await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload).catch(() => {});
+      }
+
+      logChange({
+        module: 'Sauda Desk',
+        entity_name: 'Sauda Contract Approval',
+        record_id: String(targetId || saudaNo),
+        action: 'UPDATE',
+        field_name: 'status',
+        field_label: 'Approval Status',
+        old_value: entry.status || 'PENDING',
+        new_value: nextApproved ? 'APPROVED' : 'PENDING',
+        user_name: approverName,
+        remarks: nextApproved ? `Approved by ${approverName}` : `Moved back to Pending by ${approverName}`
+      }).catch(() => {});
+    } catch (err) {
+      console.error("Error updating approval status in Supabase:", err);
     }
   };
 
   const handleEditRejectorName = async (entry: Sauda) => {
     const userCtx = getCurrentUserContext();
-    const currentName = resolveDisplayName(entry.rejected_by || userCtx.userName || userCtx.username || userCtx.userId, 'Rahul');
+    const currentName = resolveDisplayName(entry.rejected_by || userCtx.userName || userCtx.username || userCtx.userId, 'Unknown User');
 
     const entered = window.prompt(
       `Update Rejector User Name for Sauda Contract #${entry.sauda_no}:\n\nPlease enter the User Name who rejected this Sauda:`,
@@ -336,20 +368,37 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     );
 
     if (entered === null) return;
-    const newRejectorName = resolveDisplayName(entered.trim() || currentName, 'Rahul');
+    const newRejectorName = resolveDisplayName(entered.trim() || currentName, 'Unknown User');
+    const targetId = entry.sauda_id || (entry as any).id;
+    const saudaNo = entry.sauda_no;
+    const fYear = entry.financial_year || '2026-2027';
 
     const updatePayload = {
       rejected_by: newRejectorName
     };
 
-    setSaudaList(prev => prev.map(s => s.sauda_id === entry.sauda_id ? { ...s, rejected_by: newRejectorName } : s));
+    setSaudaList(prev => prev.map(s => {
+      const match = (s.sauda_id && targetId && s.sauda_id === targetId) || (s.sauda_no === saudaNo && (s.financial_year || '2026-2027') === fYear);
+      return match ? { ...s, ...updatePayload } : s;
+    }));
 
-    if (entry.sauda_id) {
-      try {
-        await dbModule.update('sauda_master', 'sauda_id', entry.sauda_id, updatePayload);
-      } catch (err) {
-        console.error("Error updating rejector name in Supabase:", err);
+    try {
+      if (supabase) {
+        let updateRes = null;
+        if (targetId) {
+          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', targetId).select();
+          if (!error && data && data.length > 0) updateRes = data;
+        }
+        if (!updateRes && saudaNo) {
+          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', saudaNo).eq('financial_year', fYear).select();
+          if (!error && data && data.length > 0) updateRes = data;
+        }
       }
+      if (targetId) {
+        await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload).catch(() => {});
+      }
+    } catch (err) {
+      console.error("Error updating rejector name in Supabase:", err);
     }
   };
 
@@ -363,10 +412,13 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     }
 
     const currentlyRejected = isRejectedSauda(entry);
+    const targetId = entry.sauda_id || (entry as any).id;
+    const saudaNo = entry.sauda_no;
+    const fYear = entry.financial_year || '2026-2027';
 
     if (currentlyRejected) {
       const confirmUnreject = window.confirm(
-        `Sauda #${entry.sauda_no} is currently REJECTED by "${resolveDisplayName(entry.rejected_by, 'Rahul')}".\n\nClick "OK" to UN-REJECT this Sauda contract (move back to Pending).\nClick "Cancel" to edit the Rejector User Name instead.`
+        `Sauda #${entry.sauda_no} is currently REJECTED by "${resolveDisplayName(entry.rejected_by, 'Unknown User')}".\n\nClick "OK" to UN-REJECT this Sauda contract (move back to Pending).\nClick "Cancel" to edit the Rejector User Name instead.`
       );
 
       if (confirmUnreject) {
@@ -382,14 +434,28 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           rejected_at: null
         };
 
-        setSaudaList(prev => prev.map(s => s.sauda_id === entry.sauda_id ? { ...s, ...updatePayload } : s));
+        setSaudaList(prev => prev.map(s => {
+          const match = (s.sauda_id && targetId && s.sauda_id === targetId) || (s.sauda_no === saudaNo && (s.financial_year || '2026-2027') === fYear);
+          return match ? { ...s, ...updatePayload } : s;
+        }));
 
-        if (entry.sauda_id) {
-          try {
-            await dbModule.update('sauda_master', 'sauda_id', entry.sauda_id, updatePayload);
-          } catch (err) {
-            console.error("Error un-rejecting sauda in Supabase:", err);
+        try {
+          if (supabase) {
+            let updateRes = null;
+            if (targetId) {
+              const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', targetId).select();
+              if (!error && data && data.length > 0) updateRes = data;
+            }
+            if (!updateRes && saudaNo) {
+              const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', saudaNo).eq('financial_year', fYear).select();
+              if (!error && data && data.length > 0) updateRes = data;
+            }
           }
+          if (targetId) {
+            await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload).catch(() => {});
+          }
+        } catch (err) {
+          console.error("Error un-rejecting sauda in Supabase:", err);
         }
         return;
       } else {
@@ -398,7 +464,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       }
     }
 
-    const defaultName = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Rahul');
+    const defaultName = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Unknown User');
 
     const enteredName = window.prompt(
       `Rejecting Sauda Contract #${entry.sauda_no}:\n\nPlease enter the User Name who is rejecting this contract:`,
@@ -409,7 +475,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       return;
     }
 
-    const rejectorName = resolveDisplayName(enteredName.trim() || defaultName, 'Rahul');
+    const rejectorName = resolveDisplayName(enteredName.trim() || defaultName, 'Unknown User');
 
     const updatePayload = {
       is_checked: false,
@@ -423,14 +489,41 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       rejected_at: new Date().toISOString()
     };
 
-    setSaudaList(prev => prev.map(s => s.sauda_id === entry.sauda_id ? { ...s, ...updatePayload } : s));
+    setSaudaList(prev => prev.map(s => {
+      const match = (s.sauda_id && targetId && s.sauda_id === targetId) || (s.sauda_no === saudaNo && (s.financial_year || '2026-2027') === fYear);
+      return match ? { ...s, ...updatePayload } : s;
+    }));
 
-    if (entry.sauda_id) {
-      try {
-        await dbModule.update('sauda_master', 'sauda_id', entry.sauda_id, updatePayload);
-      } catch (err) {
-        console.error("Error updating reject status in Supabase:", err);
+    try {
+      if (supabase) {
+        let updateRes = null;
+        if (targetId) {
+          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', targetId).select();
+          if (!error && data && data.length > 0) updateRes = data;
+        }
+        if (!updateRes && saudaNo) {
+          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', saudaNo).eq('financial_year', fYear).select();
+          if (!error && data && data.length > 0) updateRes = data;
+        }
       }
+      if (targetId) {
+        await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload).catch(() => {});
+      }
+
+      logChange({
+        module: 'Sauda Desk',
+        entity_name: 'Sauda Contract Rejection',
+        record_id: String(targetId || saudaNo),
+        action: 'UPDATE',
+        field_name: 'status',
+        field_label: 'Rejection Status',
+        old_value: entry.status || 'PENDING',
+        new_value: 'REJECTED',
+        user_name: rejectorName,
+        remarks: `Rejected by ${rejectorName}`
+      }).catch(() => {});
+    } catch (err) {
+      console.error("Error updating reject status in Supabase:", err);
     }
   };
 
@@ -1307,7 +1400,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                   );
                   const userCtx = getCurrentUserContext();
                   const checkerName = resolveDisplayName(entry.checked_by || entry.approved_by || (isChecked ? userCtx.userName : null), 'Checker');
-                  const rejectorName = resolveDisplayName(entry.rejected_by || (isRejected ? userCtx.userName : null), 'Rahul');
+                  const rejectorName = resolveDisplayName(entry.rejected_by || (isRejected ? userCtx.userName : null), 'Unknown User');
 
                   return (
                     <tr 
@@ -1428,8 +1521,8 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                               )}
                               title="Click to edit/update Rejector User Name"
                             >
-                              <span>✗</span>
-                              <span>{rejectorName || 'User'}</span>
+                              <span>✕</span>
+                              <span>{rejectorName || 'Unknown User'}</span>
                             </button>
                           )}
                         </div>

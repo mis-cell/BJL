@@ -1893,6 +1893,22 @@ if (supabase) {
       `ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS rejected_by TEXT;`,
       `ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMP WITH TIME ZONE;`,
       `ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approval_status TEXT DEFAULT 'pending';`,
+      `ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS resubmission_count INTEGER DEFAULT 0;`,
+      `CREATE TABLE IF NOT EXISTS sauda_approval_history (
+          history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          sauda_id TEXT,
+          sauda_no TEXT,
+          financial_year TEXT,
+          action TEXT NOT NULL,
+          action_by_user_id TEXT,
+          action_by_username TEXT NOT NULL,
+          action_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          previous_status TEXT,
+          new_status TEXT,
+          rejection_reason TEXT,
+          revision_details TEXT
+      );`,
+      `ALTER TABLE IF EXISTS sauda_approval_history DISABLE ROW LEVEL SECURITY;`,
       `ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS open_remarks JSONB;`,
       `CREATE TABLE IF NOT EXISTS sauda_check_point_details (
           item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

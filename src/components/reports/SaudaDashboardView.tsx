@@ -33,6 +33,7 @@ import { isUserId10, getCurrentUserContext } from '../../lib/permissions';
 import { supabase } from '../../lib/supabase';
 import { dbModule } from '../../services/dbModule';
 import { initUserMap, resolveDisplayName } from '../../lib/userResolver';
+import { logChange } from '../../services/auditLogService';
 import SaudaPrintSlip from '../SaudaPrintSlip';
 
 interface SaudaDashboardViewProps {
@@ -66,38 +67,55 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
 
   const handleApprove = async (sauda: any) => {
     const sId = sauda.sauda_id || sauda.id;
-    if (!sId) return;
-    setActionLoading(sId);
+    const sNo = sauda.sauda_no;
+    const fYear = sauda.financial_year || '2026-2027';
+    if (!sId && !sNo) return;
+
+    setActionLoading(sId || sNo);
+    const updatePayload = {
+      status: 'APPROVED',
+      approval_status: 'APPROVED',
+      is_checked: true,
+      checked_by: currentUsername,
+      approved_by: currentUsername,
+      approved_at: new Date().toISOString(),
+      checked_at: new Date().toISOString(),
+      rejected_by: null,
+      rejected_at: null
+    };
+
     try {
       if (supabase) {
-        const { error } = await supabase
-          .from('sauda_master')
-          .update({
-            status: 'approved',
-            approval_status: 'approved',
-            approved_by: currentUsername,
-            approved_at: new Date().toISOString(),
-            rejected_by: null,
-            rejected_at: null
-          })
-          .eq('sauda_id', sId);
-        if (error) throw error;
+        let updateRes = null;
+        if (sId) {
+          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', sId).select();
+          if (!error && data && data.length > 0) updateRes = data;
+        }
+        if (!updateRes && sNo) {
+          await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', sNo).eq('financial_year', fYear);
+        }
+      }
+      if (sId) {
+        await dbModule.update('sauda_master', 'sauda_id', sId, updatePayload).catch(() => {});
       }
 
       setSaudaList(prev => prev.map(s => {
-        if ((s.sauda_id || s.id) === sId) {
-          return {
-            ...s,
-            status: 'approved',
-            approval_status: 'approved',
-            approved_by: currentUsername,
-            approved_at: new Date().toISOString(),
-            rejected_by: null,
-            rejected_at: null
-          };
-        }
-        return s;
+        const match = (sId && (s.sauda_id === sId || s.id === sId)) || (sNo && s.sauda_no === sNo && (s.financial_year || '2026-2027') === fYear);
+        return match ? { ...s, ...updatePayload } : s;
       }));
+
+      logChange({
+        module: 'Sauda Desk',
+        entity_name: 'Sauda Contract Approval',
+        record_id: String(sId || sNo),
+        action: 'UPDATE',
+        field_name: 'status',
+        field_label: 'Approval Status',
+        old_value: sauda.status || 'PENDING',
+        new_value: 'APPROVED',
+        user_name: currentUsername,
+        remarks: `Sauda #${sNo} approved by ${currentUsername}`
+      }).catch(() => {});
 
       window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sauda_master' } }));
       alert(`Order #${sauda.sauda_no} has been APPROVED! It is now available in Sauda Check Point under P.O Contract.`);
@@ -111,37 +129,56 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
 
   const handleReject = async (sauda: any) => {
     const sId = sauda.sauda_id || sauda.id;
-    if (!sId) return;
+    const sNo = sauda.sauda_no;
+    const fYear = sauda.financial_year || '2026-2027';
+    if (!sId && !sNo) return;
+
     const confirmReject = window.confirm(`Are you sure you want to REJECT Sauda Order #${sauda.sauda_no}? It will NOT appear in Sauda Check Point.`);
     if (!confirmReject) return;
 
-    setActionLoading(sId);
+    setActionLoading(sId || sNo);
+    const updatePayload = {
+      status: 'REJECTED',
+      approval_status: 'REJECTED',
+      is_checked: false,
+      checked_by: null,
+      approved_by: null,
+      rejected_by: currentUsername,
+      rejected_at: new Date().toISOString()
+    };
+
     try {
       if (supabase) {
-        const { error } = await supabase
-          .from('sauda_master')
-          .update({
-            status: 'rejected',
-            approval_status: 'rejected',
-            rejected_by: currentUsername,
-            rejected_at: new Date().toISOString()
-          })
-          .eq('sauda_id', sId);
-        if (error) throw error;
+        let updateRes = null;
+        if (sId) {
+          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', sId).select();
+          if (!error && data && data.length > 0) updateRes = data;
+        }
+        if (!updateRes && sNo) {
+          await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', sNo).eq('financial_year', fYear);
+        }
+      }
+      if (sId) {
+        await dbModule.update('sauda_master', 'sauda_id', sId, updatePayload).catch(() => {});
       }
 
       setSaudaList(prev => prev.map(s => {
-        if ((s.sauda_id || s.id) === sId) {
-          return {
-            ...s,
-            status: 'rejected',
-            approval_status: 'rejected',
-            rejected_by: currentUsername,
-            rejected_at: new Date().toISOString()
-          };
-        }
-        return s;
+        const match = (sId && (s.sauda_id === sId || s.id === sId)) || (sNo && s.sauda_no === sNo && (s.financial_year || '2026-2027') === fYear);
+        return match ? { ...s, ...updatePayload } : s;
       }));
+
+      logChange({
+        module: 'Sauda Desk',
+        entity_name: 'Sauda Contract Rejection',
+        record_id: String(sId || sNo),
+        action: 'UPDATE',
+        field_name: 'status',
+        field_label: 'Rejection Status',
+        old_value: sauda.status || 'PENDING',
+        new_value: 'REJECTED',
+        user_name: currentUsername,
+        remarks: `Sauda #${sNo} rejected by ${currentUsername}`
+      }).catch(() => {});
 
       window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sauda_master' } }));
       alert(`Order #${sauda.sauda_no} has been REJECTED. It will not appear in Sauda Check Point.`);
@@ -567,9 +604,12 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
                       {/* 7. Reject */}
                       <td className="px-4 text-center">
                         {isRejected ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-100 text-rose-800 border border-rose-300 rounded-xl text-[11px] font-black">
+                          <span 
+                            title={`Rejected by ${resolveDisplayName(entry.rejected_by, 'Unknown User')}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-100 text-rose-800 border border-rose-300 rounded-xl text-[11px] font-black"
+                          >
                             <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                            <span>Rejected ({resolveDisplayName(entry.rejected_by, 'Unknown User')})</span>
+                            <span>✕ {resolveDisplayName(entry.rejected_by, 'Unknown User')}</span>
                           </span>
                         ) : (
                           <button
