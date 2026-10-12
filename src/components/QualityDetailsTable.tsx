@@ -385,12 +385,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                             id={`agency_${i}`}
                             name="agency"
                             selectedValues={currentAgencies}
-                            onChange={(vals) => {
-                              onQualityChange(i, 'agencies', vals);
-                              onQualityChange(i, 'agency', vals[0] || '');
-                              // Reset custom combinations so they regenerate for the new agency selection
-                              onQualityChange(i, 'applicableCombinations', undefined);
-                            }}
+                            onChange={(vals) => onQualityChange(i, 'agencies', vals)}
                             options={agencyOptions}
                             placeholder="Select / search Agencies..."
                             badgeTheme="emerald"
@@ -403,12 +398,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                             id={`marka_${i}`}
                             name="marka"
                             selectedValues={currentMarkas}
-                            onChange={(vals) => {
-                              onQualityChange(i, 'markas', vals);
-                              onQualityChange(i, 'marka', vals[0] || '');
-                              // Reset custom combinations so they regenerate for the new marka selection
-                              onQualityChange(i, 'applicableCombinations', undefined);
-                            }}
+                            onChange={(vals) => onQualityChange(i, 'markas', vals)}
                             options={markaOptions}
                             placeholder="Select / search Markas..."
                             badgeTheme="amber"
@@ -467,6 +457,60 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
             </tbody>
           </table>
       </div>
+
+      {/* Generated Combinations Breakdown Matrix */}
+      {allCombinations.length > 0 && (
+        <div className="bg-[#F8FAF8] rounded-xl border border-[#D5E5D9] p-3.5 sm:p-4 shadow-2xs">
+          <div className="flex items-center justify-between gap-2 mb-2.5 pb-2 border-b border-[#E1EFE4]">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-[#174C2C] text-amber-300 flex items-center justify-center font-bold text-xs shadow-2xs">
+                <Layers className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-[#174C2C] tracking-wide uppercase">
+                  Active Combinations Matrix ({allCombinations.length})
+                </h4>
+                <p className="text-[10px] text-slate-500 font-medium">
+                  Automatically generated from selected Agencies, Markas &amp; Quality Grades
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] bg-emerald-100 text-emerald-900 border border-emerald-300 font-extrabold px-2 py-0.5 rounded-md">
+              {allCombinations.length} Active {allCombinations.length === 1 ? 'Pair' : 'Pairs'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[220px] overflow-y-auto pr-1">
+            {allCombinations.map((comb, idx) => (
+              <div 
+                key={idx}
+                className="bg-white border border-[#DCE8DF] rounded-lg p-2.5 flex items-center justify-between text-xs shadow-2xs hover:border-[#174C2C]/50 transition-all"
+              >
+                <div className="flex flex-col min-w-0 pr-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-extrabold text-emerald-950 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 text-[11px] truncate max-w-[120px]" title={`Agency: ${comb.agency}`}>
+                      {comb.agency || 'ANY AGENCY'}
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="font-extrabold text-amber-950 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 text-[11px] truncate max-w-[120px]" title={`Marka: ${comb.marka}`}>
+                      {comb.marka || 'ANY MARKA'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-500 font-medium">
+                    <span>Quality Grade:</span>
+                    <strong className="font-bold text-slate-800">{comb.quality || 'TD5'}</strong>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="block font-mono font-black text-xs text-rose-700 bg-rose-50 px-2 py-1 rounded border border-rose-200">
+                    ₹{comb.rs.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -150,22 +150,32 @@ export default function SaudaEntry({
       if (existingCount < 1) {
         const fallbackAgencies = copy.agency ? copy.agency.split(',').map((x: string) => x.trim()).filter(Boolean) : [];
         const fallbackMarkas = copy.marks ? copy.marks.split(',').map((x: string) => x.trim()).filter(Boolean) : [];
+        
+        const initCombs: any[] = [];
+        if (fallbackAgencies.length > 0 && fallbackMarkas.length > 0) {
+          fallbackAgencies.forEach(ag => {
+            fallbackMarkas.forEach(mk => {
+              initCombs.push({
+                agency: ag,
+                marka: mk,
+                quality: (copy as any).quality || (copy as any).grade || 'TD5',
+                rs: Number(copy.b_rate) || 0,
+                qty: Number(copy.total_unit) || 0,
+                enabled: true
+              });
+            });
+          });
+        }
+
         copy.quality_details = [{
           quality: (copy as any).quality || (copy as any).grade || 'TD5',
           qty: Number(copy.total_unit) || 0,
-          agency: copy.agency || '',
-          marka: copy.marks || '',
+          agency: fallbackAgencies[0] || copy.agency || '',
+          marka: fallbackMarkas[0] || copy.marks || '',
           rs: Number(copy.b_rate) || 0,
           agencies: fallbackAgencies,
           markas: fallbackMarkas,
-          applicableCombinations: (copy.agency && copy.marks) ? [{
-            agency: copy.agency,
-            marka: copy.marks,
-            quality: (copy as any).quality || (copy as any).grade || 'TD5',
-            rs: Number(copy.b_rate) || 0,
-            qty: Number(copy.total_unit) || 0,
-            enabled: true
-          }] : []
+          applicableCombinations: initCombs.length > 0 ? initCombs : undefined
         }];
       } else {
         // Normalize rows and group shared (quality, rs) rows for multi-select editing
@@ -188,6 +198,20 @@ export default function SaudaEntry({
           );
 
           if (!groupedMap.has(key)) {
+            const rowCombs: any[] = [];
+            ags.forEach(ag => {
+              mks.forEach(mk => {
+                rowCombs.push({
+                  agency: ag,
+                  marka: mk,
+                  quality: q,
+                  rs: r,
+                  qty: Number(row.qty) || 0,
+                  enabled: true
+                });
+              });
+            });
+
             groupedMap.set(key, {
               quality: q,
               rs: r,
@@ -196,14 +220,7 @@ export default function SaudaEntry({
               markas: [...mks],
               agency: ags[0] || '',
               marka: mks[0] || '',
-              applicableCombinations: (row.agency && row.marka) ? [{
-                agency: row.agency,
-                marka: row.marka,
-                quality: q,
-                rs: r,
-                qty: Number(row.qty) || 0,
-                enabled: true
-              }] : []
+              applicableCombinations: rowCombs.length > 0 ? rowCombs : undefined
             });
           } else {
             const existing = groupedMap.get(key);
@@ -213,20 +230,24 @@ export default function SaudaEntry({
             mks.forEach(mk => {
               if (mk && !existing.markas.includes(mk)) existing.markas.push(mk);
             });
-            if (row.agency && row.marka) {
-              const alreadyHas = existing.applicableCombinations.some(
-                (c: any) => c.agency.toUpperCase() === row.agency.toUpperCase() && c.marka.toUpperCase() === row.marka.toUpperCase()
-              );
-              if (!alreadyHas) {
-                existing.applicableCombinations.push({
-                  agency: row.agency,
-                  marka: row.marka,
-                  quality: q,
-                  rs: r,
-                  qty: Number(row.qty) || 0,
-                  enabled: true
+            if (Array.isArray(existing.applicableCombinations)) {
+              ags.forEach(ag => {
+                mks.forEach(mk => {
+                  const alreadyHas = existing.applicableCombinations.some(
+                    (c: any) => c.agency.toUpperCase() === ag.toUpperCase() && c.marka.toUpperCase() === mk.toUpperCase()
+                  );
+                  if (!alreadyHas) {
+                    existing.applicableCombinations.push({
+                      agency: ag,
+                      marka: mk,
+                      quality: q,
+                      rs: r,
+                      qty: Number(row.qty) || 0,
+                      enabled: true
+                    });
+                  }
                 });
-              }
+              });
             }
           }
         });
@@ -614,7 +635,23 @@ export default function SaudaEntry({
         }
       }
 
-      qd[index] = { ...qd[index], [field]: value };
+      if (field === 'agencies') {
+        qd[index] = {
+          ...qd[index],
+          agencies: Array.isArray(value) ? value : [value],
+          agency: Array.isArray(value) ? (value[0] || '') : (value || ''),
+          applicableCombinations: undefined
+        };
+      } else if (field === 'markas') {
+        qd[index] = {
+          ...qd[index],
+          markas: Array.isArray(value) ? value : [value],
+          marka: Array.isArray(value) ? (value[0] || '') : (value || ''),
+          applicableCombinations: undefined
+        };
+      } else {
+        qd[index] = { ...qd[index], [field]: value };
+      }
 
       // When modifying agencies or markas on the first row (index 0), automatically propagate to all subsequent spawned rows
       if (index === 0 && (field === 'agencies' || field === 'markas')) {
