@@ -44,7 +44,7 @@ import { dbModule, flushOfflineQueue } from '../services/dbModule';
 import { Sauda, SaudaQualityDetail } from '../types';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isUserId10, isUserId2, isUserAdmin, isL5OrAdmin, getCurrentUserContext } from '../lib/permissions';
-import { initUserMap, resolveDisplayName } from '../lib/userResolver';
+import { initUserMap, resolveDisplayName, getAuthenticatedUser } from '../lib/userResolver';
 import { logChange } from '../services/auditLogService';
 import { PaginationControls } from '../components/PaginationControls';
 import { generateSaudaPdfBase64 } from '../lib/saudaPdf';
@@ -320,7 +320,8 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
     const currentlyChecked = isCheckedSauda(entry);
     const nextApproved = !currentlyChecked;
-    const approverName = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Checker');
+    const { userId: authUserId, username: authUsername } = getAuthenticatedUser();
+    const approverName = authUsername || 'ADMIN';
 
     const targetId = entry.sauda_id || (entry as any).id;
     const saudaNo = entry.sauda_no;
@@ -330,12 +331,14 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       is_checked: nextApproved,
       checked_by: nextApproved ? approverName : null,
       approved_by: nextApproved ? approverName : null,
+      approved_user_id: nextApproved ? authUserId : null,
       checked_at: nextApproved ? new Date().toISOString() : null,
       approved_at: nextApproved ? new Date().toISOString() : null,
       status: nextApproved ? 'APPROVED' : 'PENDING',
       approval_status: nextApproved ? 'APPROVED' : 'PENDING',
       rejected_by: null,
-      rejected_at: null
+      rejected_at: null,
+      rejected_user_id: null
     };
 
     setSaudaList(prev => prev.map(s => {
@@ -354,6 +357,22 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', saudaNo).eq('financial_year', fYear).select();
           if (!error && data && data.length > 0) updateRes = data;
         }
+
+        // Permanently record this approval decision in dedicated sauda_approval_history
+        try {
+          await supabase.from('sauda_approval_history').insert({
+            id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            sauda_id: String(targetId || saudaNo),
+            sauda_no: String(saudaNo),
+            action_type: nextApproved ? 'APPROVED' : 'PENDING',
+            user_id: authUserId,
+            username: approverName,
+            remarks: nextApproved ? `Approved by ${approverName} (User ${authUserId})` : `Approval toggled back to Pending by ${approverName}`,
+            financial_year: fYear
+          });
+        } catch (e) {
+          console.warn("Failed to insert approval history:", e);
+        }
       }
       if (targetId) {
         await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload).catch(() => {});
@@ -369,7 +388,8 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         old_value: entry.status || 'PENDING',
         new_value: nextApproved ? 'APPROVED' : 'PENDING',
         user_name: approverName,
-        remarks: nextApproved ? `Approved by ${approverName}` : `Moved back to Pending by ${approverName}`
+        user_role: `User ${authUserId}`,
+        remarks: nextApproved ? `Approved by ${approverName} (User ${authUserId})` : `Moved back to Pending by ${approverName}`
       }).catch(() => {});
     } catch (err) {
       console.error("Error updating approval status in Supabase:", err);
@@ -508,13 +528,11 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       }
     }
 
-    const rejectorName = resolveDisplayName(
-      userCtx.userName || userCtx.username || userCtx.userId, 
-      isUserId10() ? 'Checker' : 'Admin'
-    );
+    const { userId: authUserId, username: authUsername } = getAuthenticatedUser();
+    const rejectorName = authUsername || 'SHYAMLAHOTI';
 
     const confirmReject = window.confirm(
-      `Are you sure you want to REJECT Sauda Order #${entry.sauda_no}?\n\nThis will mark it as Rejected in Supabase and send it to User 002 for review and correction.`
+      `Are you sure you want to REJECT Sauda Order #${entry.sauda_no}?\n\nThis will mark it as Rejected in Supabase by "${rejectorName}" and send it to User 002 for review and correction.`
     );
 
     if (!confirmReject) {
@@ -527,9 +545,11 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       checked_at: null,
       approved_by: null,
       approved_at: null,
+      approved_user_id: null,
       status: 'REJECTED',
       approval_status: 'REJECTED',
       rejected_by: rejectorName,
+      rejected_user_id: authUserId,
       rejected_at: new Date().toISOString()
     };
 
@@ -546,6 +566,22 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         if (cleanNo) {
           await supabase.from('sauda_master').update(updatePayload).or(`sauda_no.eq.${saudaNo},sauda_no.eq.${paddedNo},sauda_no.eq.${cleanNo}`);
         }
+
+        // Permanently record this rejection decision in dedicated sauda_approval_history
+        try {
+          await supabase.from('sauda_approval_history').insert({
+            id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            sauda_id: String(targetId || saudaNo),
+            sauda_no: String(saudaNo),
+            action_type: 'REJECTED',
+            user_id: authUserId,
+            username: rejectorName,
+            remarks: `Rejected by ${rejectorName} (User ${authUserId})`,
+            financial_year: fYear
+          });
+        } catch (e) {
+          console.warn("Failed to insert rejection history:", e);
+        }
       }
       if (targetId) {
         await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload).catch(() => {});
@@ -561,7 +597,8 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         old_value: entry.status || 'PENDING',
         new_value: 'REJECTED',
         user_name: rejectorName,
-        remarks: `Sauda #${saudaNo} rejected by ${rejectorName}`
+        user_role: `User ${authUserId}`,
+        remarks: `Sauda #${saudaNo} rejected by ${rejectorName} (User ${authUserId})`
       }).catch(() => {});
 
       window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sauda_master' } }));
@@ -1576,7 +1613,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                   {!isUser10 && <th className="px-3 py-2 text-center">Unit/Lorry</th>}
                   {!isUser10 && <th className="px-3 py-2 text-center bg-amber-50/70 text-amber-950 font-black">Unit</th>}
                   {!isUser10 && <th className="px-4 py-2 text-right bg-blue-50/60 text-blue-900">B. Rate</th>}
-                  <th className={cn("py-2 text-center whitespace-nowrap min-w-[130px]", isUser10 ? "px-2" : "px-3")}>Status</th>
+                  <th className={cn("py-2 text-center whitespace-nowrap min-w-[210px]", isUser10 ? "px-2" : "px-3")}>Status</th>
                   {(isAdminOrL4 || isUser10) && <th className={cn("py-2 text-center whitespace-nowrap min-w-[50px]", isUser10 ? "px-1" : "px-3")}>Actions</th>}
                 </tr>
               </thead>
@@ -1597,8 +1634,8 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                     Boolean(entry.rejected_by)
                   );
                   const userCtx = getCurrentUserContext();
-                  const checkerName = resolveDisplayName(entry.checked_by || entry.approved_by || (isChecked ? userCtx.userName : null), 'Checker');
-                  const rejectorName = resolveDisplayName(entry.rejected_by || (isRejected ? userCtx.userName : null), 'Unknown User');
+                  const checkerName = resolveDisplayName(entry.checked_by || entry.approved_by || (isChecked ? (userCtx.userName || userCtx.username) : null), 'ADMIN');
+                  const rejectorName = resolveDisplayName(entry.rejected_by || (isRejected ? (userCtx.userName || userCtx.username) : null), 'SHYAMLAHOTI');
 
                   return (
                     <tr 
@@ -1658,28 +1695,59 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                       <td className="px-3 text-center">
                         <div className="flex flex-col items-center justify-center gap-1 py-1">
                           {isChecked ? (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleMarkCheck(entry); }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs hover:bg-emerald-700 transition-all cursor-pointer"
-                              title="Approved (Click to toggle / un-approve)"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5 text-amber-300" />
-                              <span>Approved</span>
-                            </button>
+                            <div className="flex flex-col items-center justify-center gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleMarkCheck(entry); }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs hover:bg-emerald-700 transition-all cursor-pointer whitespace-nowrap"
+                                title={`APPROVED — Approved By: ${checkerName} (Click to toggle / un-approve)`}
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 text-amber-300" />
+                                <span>APPROVED &mdash; Approved By: <strong className="font-black text-amber-200">{checkerName}</strong></span>
+                              </button>
+                              <div
+                                className={cn(
+                                  "text-[9px] font-bold px-2 py-0.5 rounded-md tracking-tight text-center whitespace-nowrap shadow-2xs border",
+                                  isSelected 
+                                    ? "bg-emerald-950 text-amber-300 border-emerald-700" 
+                                    : "bg-emerald-50 text-emerald-900 border-emerald-300"
+                                )}
+                                title={`Approved By: ${checkerName}`}
+                              >
+                                Approved By: <span className="font-black uppercase">{checkerName}</span>
+                              </div>
+                            </div>
                           ) : isRejected ? (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleMarkReject(entry); }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-xs hover:bg-rose-700 transition-all cursor-pointer"
-                              title={isUser2 || !isUser10 ? "Rejected - Click to Edit and Resubmit" : "Rejected (Click to toggle / un-reject)"}
-                            >
-                              <X className="w-3.5 h-3.5 text-white" />
-                              <span>{isUser2 || !isUser10 ? "Edit & Resubmit" : "Rejected"}</span>
-                            </button>
+                            <div className="flex flex-col items-center justify-center gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleMarkReject(entry); }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-xs hover:bg-rose-700 transition-all cursor-pointer whitespace-nowrap"
+                                title={isUser2 || !isUser10 ? "Rejected - Click to Edit and Resubmit" : `REJECTED — Rejected By: ${rejectorName} (Click to toggle / un-reject)`}
+                              >
+                                <X className="w-3.5 h-3.5 text-white" />
+                                <span>REJECTED &mdash; Rejected By: <strong className="font-black text-rose-100">{rejectorName}</strong></span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditRejectorName(entry);
+                                }}
+                                className={cn(
+                                  "text-[9px] font-bold px-2 py-0.5 rounded-md tracking-tight text-center whitespace-nowrap cursor-pointer hover:scale-105 transition-all shadow-2xs border",
+                                  isSelected 
+                                    ? "bg-rose-950 text-rose-200 border-rose-700 hover:bg-rose-900" 
+                                    : "bg-rose-50 text-rose-900 border-rose-300 hover:bg-rose-100"
+                                )}
+                                title={`REJECTED — Rejected By: ${rejectorName} (Click to edit/update Rejector User Name)`}
+                              >
+                                Rejected By: <span className="font-black uppercase">{rejectorName}</span>
+                              </button>
+                            </div>
                           ) : (
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleMarkCheck(entry); }}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 hover:bg-emerald-600 hover:text-white border border-emerald-300 transition-all cursor-pointer shadow-2xs"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 hover:bg-emerald-600 hover:text-white border border-emerald-300 transition-all cursor-pointer shadow-2xs"
                                 title="Click to Approve (User ID 10 or Admin)"
                               >
                                 <CheckCircle2 className="w-3 h-3 text-emerald-600 hover:text-white" />
@@ -1688,40 +1756,13 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleMarkReject(entry); }}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 hover:bg-rose-600 hover:text-white border border-rose-300 transition-all cursor-pointer shadow-2xs"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 hover:bg-rose-600 hover:text-white border border-rose-300 transition-all cursor-pointer shadow-2xs"
                                 title="Click to Reject Sauda"
                               >
                                 <X className="w-3 h-3 text-rose-600 hover:text-white" />
                                 <span>Reject</span>
                               </button>
                             </div>
-                          )}
-
-                          {isChecked && checkerName && (
-                            <span className={cn(
-                              "text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight text-center truncate max-w-[120px]",
-                              isSelected ? "bg-emerald-900 text-amber-300" : "bg-emerald-100 text-emerald-900 border border-emerald-200"
-                            )}>
-                              ✓ {checkerName}
-                            </span>
-                          )}
-
-                          {isRejected && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditRejectorName(entry);
-                              }}
-                              className={cn(
-                                "text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight text-center truncate max-w-[120px] cursor-pointer hover:scale-105 transition-all flex items-center justify-center gap-0.5 shadow-2xs",
-                                isSelected ? "bg-rose-900 text-rose-200 hover:bg-rose-800" : "bg-rose-100 text-rose-900 border border-rose-200 hover:bg-rose-200"
-                              )}
-                              title="Click to edit/update Rejector User Name"
-                            >
-                              <span>✕</span>
-                              <span>{rejectorName || 'Unknown User'}</span>
-                            </button>
                           )}
                         </div>
                       </td>

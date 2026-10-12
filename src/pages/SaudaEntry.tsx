@@ -5,7 +5,7 @@ import { Sauda } from '../types';
 import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, getCurrentUserContext, isUserId10 } from '../lib/permissions';
-import { resolveDisplayName } from '../lib/userResolver';
+import { resolveDisplayName, getAuthenticatedUser } from '../lib/userResolver';
 import { logChange } from '../services/auditLogService';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { resolveSattaRate } from '../services/sattaRateService';
@@ -978,8 +978,9 @@ export default function SaudaEntry({
         saudaPayload.rejected_at = null;
       }
 
+      const { userId: authUserId, username: authUsername } = getAuthenticatedUser();
       if (!isEditMode && !saudaPayload.created_by) {
-        saudaPayload.created_by = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Rahul');
+        saudaPayload.created_by = authUsername;
       }
 
       if (saudaPayload.sauda_id) {
@@ -992,6 +993,23 @@ export default function SaudaEntry({
       }
 
       if (isWasRejected) {
+        if (supabase) {
+          try {
+            await supabase.from('sauda_approval_history').insert({
+              id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+              sauda_id: String(saudaPayload.sauda_id || saudaPayload.sauda_no),
+              sauda_no: String(saudaPayload.sauda_no),
+              action_type: 'RESUBMITTED',
+              user_id: authUserId,
+              username: authUsername,
+              remarks: `Edited and resubmitted by ${authUsername} (User ${authUserId}) to User 010`,
+              financial_year: saudaPayload.financial_year || '2026-2027'
+            });
+          } catch (e) {
+            console.warn("Failed to insert approval history:", e);
+          }
+        }
+
         logChange({
           module: 'Sauda Desk',
           entity_name: 'Sauda Contract Resubmission',
@@ -1001,8 +1019,9 @@ export default function SaudaEntry({
           field_label: 'Approval Status',
           old_value: 'REJECTED',
           new_value: 'PENDING',
-          user_name: resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'User 002'),
-          remarks: `Sauda #${saudaPayload.sauda_no} edited and resubmitted for verification by User 010`
+          user_name: authUsername,
+          user_role: `User ${authUserId}`,
+          remarks: `Sauda #${saudaPayload.sauda_no} edited and resubmitted for verification by User 010 by ${authUsername}`
         }).catch(() => {});
       }
 

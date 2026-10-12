@@ -36,7 +36,7 @@ import { MONTHS } from './types';
 import { isUserId10, getCurrentUserContext } from '../../lib/permissions';
 import { supabase } from '../../lib/supabase';
 import { dbModule } from '../../services/dbModule';
-import { initUserMap, resolveDisplayName } from '../../lib/userResolver';
+import { initUserMap, resolveDisplayName, getAuthenticatedUser } from '../../lib/userResolver';
 import { logChange } from '../../services/auditLogService';
 import SaudaPrintSlip from '../SaudaPrintSlip';
 
@@ -88,17 +88,22 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
     const fYear = sauda.financial_year || '2026-2027';
     if (!sId && !sNo) return;
 
+    const { userId: authUserId, username: authUsername } = getAuthenticatedUser();
+    const approverName = authUsername || 'ADMIN';
+
     setActionLoading(sId || sNo);
     const updatePayload = {
       status: 'APPROVED',
       approval_status: 'APPROVED',
       is_checked: true,
-      checked_by: currentUsername,
-      approved_by: currentUsername,
+      checked_by: approverName,
+      approved_by: approverName,
+      approved_user_id: authUserId,
       approved_at: new Date().toISOString(),
       checked_at: new Date().toISOString(),
       rejected_by: null,
-      rejected_at: null
+      rejected_at: null,
+      rejected_user_id: null
     };
 
     try {
@@ -111,6 +116,18 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
         if (!updateRes && sNo) {
           await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', sNo).eq('financial_year', fYear);
         }
+
+        // Permanently record approval in sauda_approval_history
+        await supabase.from('sauda_approval_history').insert({
+          id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          sauda_id: String(sId || sNo),
+          sauda_no: String(sNo),
+          action_type: 'APPROVED',
+          user_id: authUserId,
+          username: approverName,
+          remarks: `Approved by ${approverName} (User ${authUserId})`,
+          financial_year: fYear
+        });
       }
       if (sId) {
         await dbModule.update('sauda_master', 'sauda_id', sId, updatePayload).catch(() => {});
@@ -130,8 +147,9 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
         field_label: 'Approval Status',
         old_value: sauda.status || 'PENDING',
         new_value: 'APPROVED',
-        user_name: currentUsername,
-        remarks: `Sauda #${sNo} approved by ${currentUsername}`
+        user_name: approverName,
+        user_role: `User ${authUserId}`,
+        remarks: `Sauda #${sNo} approved by ${approverName} (User ${authUserId})`
       }).catch(() => {});
 
       window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sauda_master' } }));
@@ -150,6 +168,9 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
     const fYear = sauda.financial_year || '2026-2027';
     if (!sId && !sNo) return;
 
+    const { userId: authUserId, username: authUsername } = getAuthenticatedUser();
+    const rejectorName = authUsername || 'SHYAMLAHOTI';
+
     const confirmReject = window.confirm(`Are you sure you want to REJECT Sauda Order #${sauda.sauda_no}? It will NOT appear in Sauda Check Point.`);
     if (!confirmReject) return;
 
@@ -160,7 +181,9 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
       is_checked: false,
       checked_by: null,
       approved_by: null,
-      rejected_by: currentUsername,
+      approved_user_id: null,
+      rejected_by: rejectorName,
+      rejected_user_id: authUserId,
       rejected_at: new Date().toISOString()
     };
 
@@ -174,6 +197,18 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
           const paddedNo = cleanNo ? cleanNo.padStart(4, '0') : '';
           await supabase.from('sauda_master').update(updatePayload).or(`sauda_no.eq.${sNo},sauda_no.eq.${paddedNo},sauda_no.eq.${cleanNo}`);
         }
+
+        // Permanently record rejection in sauda_approval_history
+        await supabase.from('sauda_approval_history').insert({
+          id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          sauda_id: String(sId || sNo),
+          sauda_no: String(sNo),
+          action_type: 'REJECTED',
+          user_id: authUserId,
+          username: rejectorName,
+          remarks: `Rejected by ${rejectorName} (User ${authUserId})`,
+          financial_year: fYear
+        });
       }
       if (sId) {
         await dbModule.update('sauda_master', 'sauda_id', sId, updatePayload).catch(() => {});
@@ -193,8 +228,9 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
         field_label: 'Rejection Status',
         old_value: sauda.status || 'PENDING',
         new_value: 'REJECTED',
-        user_name: currentUsername,
-        remarks: `Sauda #${sNo} rejected by ${currentUsername}`
+        user_name: rejectorName,
+        user_role: `User ${authUserId}`,
+        remarks: `Sauda #${sNo} rejected by ${rejectorName} (User ${authUserId})`
       }).catch(() => {});
 
       window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sauda_master' } }));
@@ -741,10 +777,18 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
                       {/* 6. Approve */}
                       <td className="px-4 text-center">
                         {isApproved ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-[11px] font-black">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                            Approved
-                          </span>
+                          <div className="inline-flex flex-col items-center gap-1">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-[10.5px] font-black shadow-2xs whitespace-nowrap">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>APPROVED &mdash; Approved By: <strong className="font-black text-emerald-950 uppercase">{resolveDisplayName(entry.approved_by || entry.checked_by, 'ADMIN')}</strong></span>
+                            </span>
+                            <span 
+                              title={`Approved by ${resolveDisplayName(entry.approved_by || entry.checked_by, 'ADMIN')}`}
+                              className="text-[9.5px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md whitespace-nowrap"
+                            >
+                              Approved By: <strong className="font-black text-emerald-950 uppercase">{resolveDisplayName(entry.approved_by || entry.checked_by, 'ADMIN')}</strong>
+                            </span>
+                          </div>
                         ) : (
                           <button
                             type="button"
@@ -761,13 +805,21 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
                       {/* 7. Reject */}
                       <td className="px-4 text-center">
                         {isRejected ? (
-                          <span 
-                            title={`Rejected by ${resolveDisplayName(entry.rejected_by, 'Unknown User')}`}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-100 text-rose-800 border border-rose-300 rounded-xl text-[11px] font-black"
-                          >
-                            <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                            <span>✕ {resolveDisplayName(entry.rejected_by, 'Unknown User')}</span>
-                          </span>
+                          <div className="inline-flex flex-col items-center gap-1">
+                            <span 
+                              title={`REJECTED — Rejected By: ${resolveDisplayName(entry.rejected_by, 'SHYAMLAHOTI')}`}
+                              className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-100 text-rose-800 border border-rose-300 rounded-xl text-[10.5px] font-black shadow-2xs whitespace-nowrap"
+                            >
+                              <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                              <span>REJECTED &mdash; Rejected By: <strong className="font-black text-rose-950 uppercase">{resolveDisplayName(entry.rejected_by, 'SHYAMLAHOTI')}</strong></span>
+                            </span>
+                            <span 
+                              title={`Rejected by ${resolveDisplayName(entry.rejected_by, 'SHYAMLAHOTI')}`}
+                              className="text-[9.5px] font-bold text-rose-800 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md whitespace-nowrap"
+                            >
+                              Rejected By: <strong className="font-black text-rose-950 uppercase">{resolveDisplayName(entry.rejected_by, 'SHYAMLAHOTI')}</strong>
+                            </span>
+                          </div>
                         ) : (
                           <button
                             type="button"
