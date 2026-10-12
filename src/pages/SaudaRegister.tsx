@@ -300,15 +300,17 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     }
 
     const currentlyChecked = isCheckedSauda(entry);
-    const nextChecked = !currentlyChecked;
-    const checkerName = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Checker');
+    const nextApproved = !currentlyChecked;
+    const approverName = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Checker');
 
     const updatePayload = {
-      is_checked: nextChecked,
-      checked_by: nextChecked ? checkerName : null,
-      checked_at: nextChecked ? new Date().toISOString() : null,
-      status: nextChecked ? 'CHECKED' : 'PENDING',
-      approval_status: nextChecked ? 'CHECKED' : 'PENDING',
+      is_checked: nextApproved,
+      checked_by: nextApproved ? approverName : null,
+      approved_by: nextApproved ? approverName : null,
+      checked_at: nextApproved ? new Date().toISOString() : null,
+      approved_at: nextApproved ? new Date().toISOString() : null,
+      status: nextApproved ? 'APPROVED' : 'PENDING',
+      approval_status: nextApproved ? 'APPROVED' : 'PENDING',
       rejected_by: null,
       rejected_at: null
     };
@@ -319,7 +321,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       try {
         await dbModule.update('sauda_master', 'sauda_id', entry.sauda_id, updatePayload);
       } catch (err) {
-        console.error("Error updating check status in Supabase:", err);
+        console.error("Error updating approval status in Supabase:", err);
       }
     }
   };
@@ -372,6 +374,8 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           is_checked: false,
           checked_by: null,
           checked_at: null,
+          approved_by: null,
+          approved_at: null,
           status: 'PENDING',
           approval_status: 'PENDING',
           rejected_by: null,
@@ -411,6 +415,8 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       is_checked: false,
       checked_by: null,
       checked_at: null,
+      approved_by: null,
+      approved_at: null,
       status: 'REJECTED',
       approval_status: 'REJECTED',
       rejected_by: rejectorName,
@@ -1236,10 +1242,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                       ? "bg-emerald-800 text-white shadow-2xs"
                       : "text-emerald-800 hover:bg-emerald-100/60"
                   )}
-                  title="Checked"
+                  title="Approved"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Checked</span>
+                  <span>Approved</span>
                   <span className="text-[10px] font-mono opacity-80">({checkedSaudasCount})</span>
                 </button>
               )}
@@ -1364,10 +1370,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                             <button
                               onClick={(e) => { e.stopPropagation(); handleMarkCheck(entry); }}
                               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs hover:bg-emerald-700 transition-all cursor-pointer"
-                              title="Checked (Click to toggle / uncheck)"
+                              title="Approved (Click to toggle / un-approve)"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5 text-amber-300" />
-                              <span>Checked</span>
+                              <span>Approved</span>
                             </button>
                           ) : isRejected ? (
                             <button
@@ -1383,10 +1389,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleMarkCheck(entry); }}
                                 className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 hover:bg-emerald-600 hover:text-white border border-emerald-300 transition-all cursor-pointer shadow-2xs"
-                                title="Click to Check (User ID 10 or Admin)"
+                                title="Click to Approve (User ID 10 or Admin)"
                               >
                                 <CheckCircle2 className="w-3 h-3 text-emerald-600 hover:text-white" />
-                                <span>Check</span>
+                                <span>Approve</span>
                               </button>
 
                               <button

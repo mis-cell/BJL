@@ -1225,7 +1225,7 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     let moistClaimLots = 0;
     let qualClaimLots = 0;
 
-    const qualitySourceList = completedInspections;
+    const qualitySourceList = list.length > 0 ? list : completedInspections;
 
     // Direct aggregation of MRs with Premium from unified engine
     const monthPrem = filterAggregatedPremiums(unifiedPremiums, activeYear, mIdx);
