@@ -1076,6 +1076,10 @@ export function useInspectionLogic() {
         row.lorry_moisture_min = lorryMin;
         row.lorry_moisture_max = lorryMax;
         row.lorry_moisture_avg = row.lorry_read_avg;
+        setHeaderForm(prev => ({
+          ...prev,
+          actual_moisture: row.lorry_read_avg || 0
+        }));
       }
 
       // 2. Auto-calculate Inspection Read Avg if Min or Max present or modified
@@ -1125,11 +1129,17 @@ export function useInspectionLogic() {
         );
         row.moisture_claim = autoClaim;
         row.claim_moisture = autoClaim;
+        setHeaderForm(prev => ({
+          ...prev,
+          claim_moisture: autoClaim || 0
+        }));
       } else {
         const valNum = Number(value) || 0;
         row.moisture_claim = valNum;
         row.claim_moisture = valNum;
       }
+
+      
 
       // 5. Compute Reduced Weight & Final Receipt Weight (Claim)
       const computedWeights = computeDetailRowWeights(row);
