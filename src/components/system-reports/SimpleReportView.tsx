@@ -1015,9 +1015,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                 <Truck className="w-5 h-5 text-indigo-600" />
                 Procurement Checkpoints Pipeline & Stage Status
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              {/* <p className="text-xs text-slate-500 mt-0.5">
                 Sauda Check Point $\to$ Temporary Arrival $\to$ Final Arrival $\to$ Mill Inspection $\to$ Payment $\to$ Settlement
-              </p>
+              </p> */}
             </div>
           </div>
 
