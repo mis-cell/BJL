@@ -47,22 +47,22 @@ export const PREDEFINED_RANKS: Record<string, number> = {
 
 export const formatPoNumber = (sauda: any) => {
   if (!sauda) return '';
+  if (sauda.session && sauda.session.trim()) {
+    const s = sauda.session.trim();
+    if (s.includes('/') && s.toUpperCase().startsWith('BJCL')) {
+      return s;
+    }
+  }
   const rawNo = sauda.sauda_no || sauda.no || sauda.contract_no || '';
-  let str = String(rawNo).trim();
-  while (/^BJCL\/\d{4}-\d{4}\/BJCL\//i.test(str)) {
-    str = str.replace(/^BJCL\/\d{4}-\d{4}\//i, '');
-  }
-  if (str && str.toUpperCase().startsWith('BJCL/')) {
-    return str;
-  }
-  const cleanDigits = str.replace(/[^0-9]/g, '');
+  if (!rawNo) return sauda.session || '';
+
+  const cleanDigits = String(rawNo).replace(/[^0-9]/g, '');
   if (cleanDigits) {
     const padded = cleanDigits.padStart(4, '0');
-    const finMatch = sauda.session ? String(sauda.session).match(/\b\d{4}-\d{4}\b/) : null;
-    const finYear = sauda.financial_year || (finMatch ? finMatch[0] : '2026-2027');
+    const finYear = sauda.financial_year || '2026-2027';
     return `BJCL/${finYear}/${padded}`;
   }
-  return str || sauda.session || '';
+  return String(rawNo);
 };
 
 export const compareQualities = (aStr: string, bStr: string): number => {

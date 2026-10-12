@@ -5,7 +5,7 @@ import { Sauda } from '../types';
 import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, getCurrentUserContext, isUserId10 } from '../lib/permissions';
-import { resolveDisplayName, getAuthenticatedUser } from '../lib/userResolver';
+import { resolveDisplayName } from '../lib/userResolver';
 import { logChange } from '../services/auditLogService';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { resolveSattaRate } from '../services/sattaRateService';
@@ -128,55 +128,13 @@ export default function SaudaEntry({
       const realQD = (copy.quality_details || [])
         .filter((item: any) => item.quality || item.qty || item.agency || item.marka || item.rs);
 
-      // Normalize session to financial year string (e.g. "2026-2027")
-      const sessionStr = String(copy.session || '').trim();
-      const finMatch = sessionStr.match(/\b\d{4}-\d{4}\b/);
-      if (finMatch) {
-        copy.session = finMatch[0];
-        copy.financial_year = finMatch[0];
-      } else {
-        copy.session = copy.financial_year || '2026-2027';
-      }
-
-      if (copy.sauda_no) {
-        let cleanNo = String(copy.sauda_no).trim();
-        while (/^BJCL\/\d{4}-\d{4}\/BJCL\//i.test(cleanNo)) {
-          cleanNo = cleanNo.replace(/^BJCL\/\d{4}-\d{4}\//i, '');
-        }
-        copy.sauda_no = cleanNo;
+      if (copy.units_per_lorry === undefined && copy.units_per_lorry_type && !isNaN(Number(copy.units_per_lorry_type))) {
+        copy.units_per_lorry = Number(copy.units_per_lorry_type);
       }
 
       const existingCount = realQD.length;
       if (existingCount < 1) {
-        const fallbackAgencies = copy.agency ? copy.agency.split(',').map((x: string) => x.trim()).filter(Boolean) : [];
-        const fallbackMarkas = copy.marks ? copy.marks.split(',').map((x: string) => x.trim()).filter(Boolean) : [];
-        
-        const initCombs: any[] = [];
-        if (fallbackAgencies.length > 0 && fallbackMarkas.length > 0) {
-          fallbackAgencies.forEach(ag => {
-            fallbackMarkas.forEach(mk => {
-              initCombs.push({
-                agency: ag,
-                marka: mk,
-                quality: (copy as any).quality || (copy as any).grade || 'TD5',
-                rs: Number(copy.b_rate) || 0,
-                qty: Number(copy.total_unit) || 0,
-                enabled: true
-              });
-            });
-          });
-        }
-
-        copy.quality_details = [{
-          quality: (copy as any).quality || (copy as any).grade || 'TD5',
-          qty: Number(copy.total_unit) || 0,
-          agency: fallbackAgencies[0] || copy.agency || '',
-          marka: fallbackMarkas[0] || copy.marks || '',
-          rs: Number(copy.b_rate) || 0,
-          agencies: fallbackAgencies,
-          markas: fallbackMarkas,
-          applicableCombinations: initCombs.length > 0 ? initCombs : undefined
-        }];
+        copy.quality_details = [{ quality: '', qty: 0, agency: '', marka: '', rs: 0, agencies: [], markas: [], applicableCombinations: [] }];
       } else {
         // Normalize rows and group shared (quality, rs) rows for multi-select editing
         const groupedMap = new Map<string, any>();
@@ -198,20 +156,6 @@ export default function SaudaEntry({
           );
 
           if (!groupedMap.has(key)) {
-            const rowCombs: any[] = [];
-            ags.forEach(ag => {
-              mks.forEach(mk => {
-                rowCombs.push({
-                  agency: ag,
-                  marka: mk,
-                  quality: q,
-                  rs: r,
-                  qty: Number(row.qty) || 0,
-                  enabled: true
-                });
-              });
-            });
-
             groupedMap.set(key, {
               quality: q,
               rs: r,
@@ -220,7 +164,14 @@ export default function SaudaEntry({
               markas: [...mks],
               agency: ags[0] || '',
               marka: mks[0] || '',
-              applicableCombinations: rowCombs.length > 0 ? rowCombs : undefined
+              applicableCombinations: (row.agency && row.marka) ? [{
+                agency: row.agency,
+                marka: row.marka,
+                quality: q,
+                rs: r,
+                qty: Number(row.qty) || 0,
+                enabled: true
+              }] : []
             });
           } else {
             const existing = groupedMap.get(key);
@@ -230,24 +181,20 @@ export default function SaudaEntry({
             mks.forEach(mk => {
               if (mk && !existing.markas.includes(mk)) existing.markas.push(mk);
             });
-            if (Array.isArray(existing.applicableCombinations)) {
-              ags.forEach(ag => {
-                mks.forEach(mk => {
-                  const alreadyHas = existing.applicableCombinations.some(
-                    (c: any) => c.agency.toUpperCase() === ag.toUpperCase() && c.marka.toUpperCase() === mk.toUpperCase()
-                  );
-                  if (!alreadyHas) {
-                    existing.applicableCombinations.push({
-                      agency: ag,
-                      marka: mk,
-                      quality: q,
-                      rs: r,
-                      qty: Number(row.qty) || 0,
-                      enabled: true
-                    });
-                  }
+            if (row.agency && row.marka) {
+              const alreadyHas = existing.applicableCombinations.some(
+                (c: any) => c.agency.toUpperCase() === row.agency.toUpperCase() && c.marka.toUpperCase() === row.marka.toUpperCase()
+              );
+              if (!alreadyHas) {
+                existing.applicableCombinations.push({
+                  agency: row.agency,
+                  marka: row.marka,
+                  quality: q,
+                  rs: r,
+                  qty: Number(row.qty) || 0,
+                  enabled: true
                 });
-              });
+              }
             }
           }
         });
@@ -258,9 +205,9 @@ export default function SaudaEntry({
     }
 
     return {
-      sauda_no: 'BJCL/2026-2027/0153',
+      sauda_no: '0153',
       financial_year: '2026-2027',
-      session: '2026-2027',
+      session: 'BJCL/2026-2027/',
       po_type: 'Normal',
       date: today,
       broker: '',
@@ -338,18 +285,15 @@ export default function SaudaEntry({
         // Auto-generate next Order No. if creating new Sauda
         if (!initialData && allSaudas && allSaudas.length > 0) {
           const numbers = allSaudas.map((s: any) => {
-            const raw = String(s.sauda_no || '');
-            const cleanDigits = raw.replace(/^BJCL\/\d{4}-\d{4}\//i, '').replace(/[^0-9]/g, '');
-            const val = parseInt(cleanDigits, 10);
+            const val = parseInt(s.sauda_no || '0', 10);
             return isNaN(val) ? 0 : val;
           });
           const maxNo = Math.max(...numbers, 152);
           const nextNoStr = String(maxNo + 1).padStart(4, '0');
-          const fullSessionNo = `BJCL/2026-2027/${nextNoStr}`;
           setFormData(prev => ({
             ...prev,
-            sauda_no: fullSessionNo,
-            session: prev.session && !prev.session.startsWith('BJCL/') ? prev.session : (prev.financial_year || '2026-2027')
+            sauda_no: nextNoStr,
+            session: `BJCL/2026-2027/${nextNoStr}`
           }));
         }
       } catch (err) {
@@ -359,9 +303,6 @@ export default function SaudaEntry({
 
   useEffect(() => {
     loadMasterData();
-    if (initialData) {
-      setFormData(getInitialFormData());
-    }
   }, [initialData]);
 
   useLiveAutoRefresh(loadMasterData, [initialData], { tables: ['sauda_master', 'broker_master', 'supply_master', 'area_master', 'agency_master', 'grade_master', 'marka_master', 'satta_base_rates', 'satta_differentials'] });
@@ -397,14 +338,6 @@ export default function SaudaEntry({
 
     setFormData(prev => {
       const updated = { ...prev, [name]: finalValue };
-
-      // Handle sauda_no and session independently
-      if (name === 'sauda_no') {
-        const valStr = String(value || '').trim();
-        updated.sauda_no = valStr;
-      } else if (name === 'session') {
-        updated.session = String(value || '').trim();
-      }
 
       // Calculate Shipment Days automatically: Shipment Date - Contract Date
       if (name === 'shipment_date' || name === 'date') {
@@ -602,13 +535,11 @@ export default function SaudaEntry({
         }
       }
 
-      // Auto sync Order No. and Session to financial year
+      // Auto sync Order No. and Session
       if (name === 'sauda_no' && value) {
         const cleanVal = value.trim();
-        const finMatch = cleanVal.match(/\b\d{4}-\d{4}\b/);
-        const financialYear = finMatch ? finMatch[0] : (prev.financial_year || '2026-2027');
-        updated.session = financialYear;
-        updated.financial_year = financialYear;
+        const financialYear = prev.financial_year || '2026-2027';
+        updated.session = `BJCL/${financialYear}/${cleanVal}`;
       }
 
       return updated;
@@ -635,23 +566,7 @@ export default function SaudaEntry({
         }
       }
 
-      if (field === 'agencies') {
-        qd[index] = {
-          ...qd[index],
-          agencies: Array.isArray(value) ? value : [value],
-          agency: Array.isArray(value) ? (value[0] || '') : (value || ''),
-          applicableCombinations: undefined
-        };
-      } else if (field === 'markas') {
-        qd[index] = {
-          ...qd[index],
-          markas: Array.isArray(value) ? value : [value],
-          marka: Array.isArray(value) ? (value[0] || '') : (value || ''),
-          applicableCombinations: undefined
-        };
-      } else {
-        qd[index] = { ...qd[index], [field]: value };
-      }
+      qd[index] = { ...qd[index], [field]: value };
 
       // When modifying agencies or markas on the first row (index 0), automatically propagate to all subsequent spawned rows
       if (index === 0 && (field === 'agencies' || field === 'markas')) {
@@ -797,7 +712,7 @@ export default function SaudaEntry({
       // For User 010: apply safe fallbacks for hidden/non-mandatory fields
       if (isUser010) {
         if (!saudaData.sauda_no) {
-          saudaData.sauda_no = 'BJCL/2026-2027/0153';
+          saudaData.sauda_no = '0153';
         }
         if (!saudaData.date) {
           saudaData.date = today;
@@ -1031,41 +946,13 @@ export default function SaudaEntry({
       saudaPayload.shipment_date = toDateOrNull(saudaData.shipment_date);
       saudaPayload.b_date = toDateOrNull(saudaData.b_date) || saudaPayload.date;
 
-      const formattedSaudaNo = (() => {
-        let raw = String(saudaData.sauda_no || '').trim();
-        while (/^BJCL\/\d{4}-\d{4}\/BJCL\//i.test(raw)) {
-          raw = raw.replace(/^BJCL\/\d{4}-\d{4}\//i, '');
-        }
-        if (raw.startsWith('BJCL/')) return raw;
-        const cleanDigits = raw.replace(/[^0-9]/g, '');
-        const fYear = saudaData.financial_year || '2026-2027';
-        return cleanDigits ? `BJCL/${fYear}/${cleanDigits.padStart(4, '0')}` : raw;
-      })();
-
-      const cleanSession = (() => {
-        const s = String(saudaData.session || '').trim();
-        const finMatch = s.match(/\b\d{4}-\d{4}\b/);
-        if (finMatch) return finMatch[0];
-        return saudaData.financial_year || '2026-2027';
-      })();
-
-      saudaPayload.sauda_no = formattedSaudaNo;
-      saudaPayload.session = cleanSession;
-      saudaPayload.financial_year = cleanSession;
-
       let inserted;
       let isEditMode = !!saudaPayload.sauda_id;
 
       if (!saudaPayload.sauda_id && saudaPayload.sauda_no) {
         const targetFYear = saudaPayload.financial_year || '2026-2027';
         const allSaudas = await dbModule.fetchAll('sauda_master').catch(() => []);
-        const match = allSaudas.find((s: any) => {
-          if (s.financial_year !== targetFYear) return false;
-          if (s.sauda_no === saudaPayload.sauda_no) return true;
-          const sDigits = String(s.sauda_no || '').replace(/^BJCL\/\d{4}-\d{4}\//i, '').replace(/[^0-9]/g, '');
-          const pDigits = String(saudaPayload.sauda_no || '').replace(/^BJCL\/\d{4}-\d{4}\//i, '').replace(/[^0-9]/g, '');
-          return sDigits && pDigits && sDigits === pDigits;
-        });
+        const match = allSaudas.find((s: any) => s.sauda_no === saudaPayload.sauda_no && s.financial_year === targetFYear);
         if (match) {
           saudaPayload.sauda_id = match.sauda_id;
           isEditMode = true;
@@ -1089,21 +976,10 @@ export default function SaudaEntry({
         saudaPayload.checked_at = null;
         saudaPayload.rejected_by = null;
         saudaPayload.rejected_at = null;
-      } else if (initialData) {
-        // Explicitly retain approval status & verifier credentials if already approved
-        saudaPayload.status = initialData.status || saudaPayload.status || 'APPROVED';
-        saudaPayload.approval_status = initialData.approval_status || saudaPayload.approval_status || 'APPROVED';
-        saudaPayload.is_checked = initialData.is_checked !== undefined ? initialData.is_checked : true;
-        saudaPayload.checked_by = initialData.checked_by || saudaPayload.checked_by;
-        saudaPayload.checked_at = initialData.checked_at || saudaPayload.checked_at;
-        saudaPayload.approved_by = initialData.approved_by || saudaPayload.approved_by;
-        saudaPayload.approved_at = initialData.approved_at || saudaPayload.approved_at;
-        saudaPayload.approved_user_id = initialData.approved_user_id || saudaPayload.approved_user_id;
       }
 
-      const { userId: authUserId, username: authUsername } = getAuthenticatedUser();
       if (!isEditMode && !saudaPayload.created_by) {
-        saudaPayload.created_by = authUsername;
+        saudaPayload.created_by = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Rahul');
       }
 
       if (saudaPayload.sauda_id) {
@@ -1116,23 +992,6 @@ export default function SaudaEntry({
       }
 
       if (isWasRejected) {
-        if (supabase) {
-          try {
-            await supabase.from('sauda_approval_history').insert({
-              id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-              sauda_id: String(saudaPayload.sauda_id || saudaPayload.sauda_no),
-              sauda_no: String(saudaPayload.sauda_no),
-              action_type: 'RESUBMITTED',
-              user_id: authUserId,
-              username: authUsername,
-              remarks: `Edited and resubmitted by ${authUsername} (User ${authUserId}) to User 010`,
-              financial_year: saudaPayload.financial_year || '2026-2027'
-            });
-          } catch (e) {
-            console.warn("Failed to insert approval history:", e);
-          }
-        }
-
         logChange({
           module: 'Sauda Desk',
           entity_name: 'Sauda Contract Resubmission',
@@ -1142,9 +1001,8 @@ export default function SaudaEntry({
           field_label: 'Approval Status',
           old_value: 'REJECTED',
           new_value: 'PENDING',
-          user_name: authUsername,
-          user_role: `User ${authUserId}`,
-          remarks: `Sauda #${saudaPayload.sauda_no} edited and resubmitted for verification by User 010 by ${authUsername}`
+          user_name: resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'User 002'),
+          remarks: `Sauda #${saudaPayload.sauda_no} edited and resubmitted for verification by User 010`
         }).catch(() => {});
       }
 
@@ -1197,7 +1055,7 @@ export default function SaudaEntry({
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="bg-[#0b2415] text-amber-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded border border-emerald-700/60 tracking-wider w-fit">
-                  Session: {formData.session || '2026-2027'}
+                  {formData.session || 'BJCL 2026 - 2027'}
                 </span>
                 {initialData && (formData.created_by || initialData.created_by) && (
                   <span className="bg-emerald-950/80 text-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-700/50">
@@ -1249,6 +1107,23 @@ export default function SaudaEntry({
           </div>
         </div>
 
+        {/* Satta Chart Verification Badge */}
+        <div className="bg-emerald-50 border border-emerald-300 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
+            <span className="font-extrabold text-emerald-950 uppercase tracking-wide">
+              Step 1: Satta Chart Active (Source Rate: ₹{formData.b_rate ? Number(formData.b_rate).toLocaleString() : '17,500'})
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate ? onNavigate('satta_chart') : (window.location.hash = '#satta_chart')}
+            className="px-3 py-1 bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-lg text-[11px] font-bold transition-all cursor-pointer shadow-2xs"
+          >
+            Review / Update Satta Chart →
+          </button>
+        </div>
+
         {/* 2. Main Form Content */}
         <main ref={formContainerRef} className="flex-1 space-y-5 w-full min-w-0">
           {/* Section 1: Basic Details */}
@@ -1264,7 +1139,18 @@ export default function SaudaEntry({
             />
           </div>
 
-          {/* Section 2: Quality Details */}
+          {/* Section 2: Transportation Details */}
+          <div id="transportation-details" className="scroll-mt-14">
+            <TransportationCard
+              formData={formData}
+              onChange={handleChange}
+              onSelectChange={handleSelectChange}
+              unitOptions={UNIT_OPTIONS}
+              isUser010={isUser010}
+            />
+          </div>
+
+          {/* Section 3: Quality Details */}
           <div id="quality-details" className="scroll-mt-14">
             <QualityDetailsTable
               qualityDetails={formData.quality_details || []}
@@ -1275,17 +1161,6 @@ export default function SaudaEntry({
               grades={grades}
               agencies={agencies}
               markas={markas}
-              isUser010={isUser010}
-            />
-          </div>
-
-          {/* Section 3: Unit & Transportation Details */}
-          <div id="transportation-details" className="scroll-mt-14">
-            <TransportationCard
-              formData={formData}
-              onChange={handleChange}
-              onSelectChange={handleSelectChange}
-              unitOptions={UNIT_OPTIONS}
               isUser010={isUser010}
             />
           </div>
