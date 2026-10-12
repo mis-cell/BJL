@@ -785,18 +785,36 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     }
     let wtQtl = wtMt * 10;
 
-    // 1. Moisture % & Claim (read accurately from INSPECTION MODULE REGISTER)
+    // 1. Moisture % & Claim (read accurately from INSPECTION & ARRIVAL REGISTERS)
     let actualM = 0;
     if (raw.actual_moisture !== undefined && raw.actual_moisture !== null && raw.actual_moisture !== '') {
       actualM = Number(raw.actual_moisture);
+    } else if (raw.arrival_moisture !== undefined && raw.arrival_moisture !== null && raw.arrival_moisture !== '') {
+      actualM = Number(raw.arrival_moisture);
+    } else if (raw.moisture_pct !== undefined && raw.moisture_pct !== null && raw.moisture_pct !== '') {
+      actualM = Number(raw.moisture_pct);
     } else if (raw.moisture_act !== undefined && raw.moisture_act !== null && raw.moisture_act !== '') {
       actualM = Number(raw.moisture_act);
+    } else if (raw.inspection_moisture !== undefined && raw.inspection_moisture !== null && raw.inspection_moisture !== '') {
+      actualM = Number(raw.inspection_moisture);
     } else if (raw.moisture_percent !== undefined && raw.moisture_percent !== null) {
       actualM = Number(raw.moisture_percent);
     } else if (raw.moisture !== undefined && raw.moisture !== null) {
       actualM = Number(raw.moisture);
-    } else if (relatedDetails.length > 0 && relatedDetails[0].actual_moisture !== undefined) {
-      actualM = Number(relatedDetails[0].actual_moisture);
+    } else if (raw.moisture_content !== undefined && raw.moisture_content !== null) {
+      actualM = Number(raw.moisture_content);
+    } else if (raw.lab_moisture !== undefined && raw.lab_moisture !== null) {
+      actualM = Number(raw.lab_moisture);
+    }
+    
+    if (actualM === 0 && relatedDetails.length > 0) {
+      for (const d of relatedDetails) {
+        const val = Number(d.actual_moisture ?? d.arrival_moisture ?? d.moisture_pct ?? d.moisture_act ?? d.inspection_moisture ?? d.moisture ?? 0);
+        if (val > 0) {
+          actualM = val;
+          break;
+        }
+      }
     }
     if (isNaN(actualM)) actualM = 0;
 
@@ -853,6 +871,10 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       actualGradeDown = Number(raw.grade_down_act);
     } else if (raw.grade_down_percent !== undefined && raw.grade_down_percent !== null) {
       actualGradeDown = Number(raw.grade_down_percent);
+    } else if (raw.grade_down_pct !== undefined && raw.grade_down_pct !== null) {
+      actualGradeDown = Number(raw.grade_down_pct);
+    } else if (raw.arrival_grade_down !== undefined && raw.arrival_grade_down !== null) {
+      actualGradeDown = Number(raw.arrival_grade_down);
     } else if (raw.grade_down !== undefined && raw.grade_down !== null) {
       actualGradeDown = Number(raw.grade_down);
     }
@@ -870,7 +892,7 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
 
     if (actualGradeDown === 0 && relatedDetails.length > 0) {
       for (const d of relatedDetails) {
-        const val = Number(d.actual_grade_down ?? d.grade_down_act ?? d.grade_down ?? 0);
+        const val = Number(d.actual_grade_down ?? d.grade_down_act ?? d.grade_down_pct ?? d.arrival_grade_down ?? d.grade_down ?? 0);
         if (val > 0) {
           actualGradeDown = val;
           break;
