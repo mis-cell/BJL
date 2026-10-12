@@ -1108,7 +1108,7 @@ export default function SaudaEntry({
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="bg-[#0b2415] text-amber-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded border border-emerald-700/60 tracking-wider w-fit">
-                  {formData.session || 'BJCL 2026 - 2027'}
+                  Session: {formData.session || '2026-2027'}
                 </span>
                 {initialData && (formData.created_by || initialData.created_by) && (
                   <span className="bg-emerald-950/80 text-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-700/50">
