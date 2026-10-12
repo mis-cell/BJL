@@ -417,7 +417,8 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
           { id: 'SUPPLIER' as const, label: 'Supplier Wise', icon: Users, count: supplierData.length },
           { id: 'MONTH' as const, label: 'Month Wise', icon: Calendar, count: monthData.length },
           { id: 'DEDUCTION' as const, label: 'Deductions & Quality', icon: Scissors },
-          { id: 'CHECKPOINTS' as const, label: 'Checkpoints Pipeline', icon: Truck }
+          { id: 'CHECKPOINTS' as const, label: 'Checkpoints Pipeline', icon: Truck },
+          { id: 'ALLSAUDA' as const, label: 'All Sauda', icon: Building2 }
           
         ].map(tab => {
           const Icon = tab.icon;
@@ -447,7 +448,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       </div>
 
       {/* ================= TAB 1: DIMENSIONAL BREAKDOWN CONTENT ================= */}
-      {activeTab !== 'OVERVIEW' && activeTab !== 'DEDUCTION' && activeTab !== 'CHECKPOINTS' && activeTab !== 'ALL_DEALS' && (
+      {activeTab !== 'ALLSAUDA' && activeTab !== 'OVERVIEW' && activeTab !== 'DEDUCTION' && activeTab !== 'CHECKPOINTS' && activeTab !== 'ALL_DEALS' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-3 gap-3">
             <div>
@@ -1041,13 +1042,14 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       )}
 
       {/* ================= MAIN TRANSACTIONS LEDGER VIEW ================= */}
-      {/* <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+      {activeTab === 'ALLSAUDA' && (
+       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-3">
           <div>
             <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
               <FileText className="w-4 h-4 text-emerald-700" />
-              Complete Transaction Ledger ({filteredList.length} Records)
+              All Sauda ({filteredList.length})
             </h3>
           </div>
 
@@ -1297,7 +1299,8 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
           </table>
         </div>
       </div>
-      <SimpleDealSlipModal
+      )}
+      {/*<SimpleDealSlipModal
         transaction={selectedTxn}
         onClose={() => setSelectedTxn(null)}
       /> */}
