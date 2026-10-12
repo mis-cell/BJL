@@ -934,9 +934,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                 <Scissors className="w-5 h-5 text-rose-600" />
                 Deduction & Quality Inspection Analysis
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              {/* <p className="text-xs text-slate-500 mt-0.5">
                 Moisture claims, Grade Down demotions, quality penalties, and claim settlements across suppliers and brokers.
-              </p>
+              </p> */}
             </div>
           </div>
 
