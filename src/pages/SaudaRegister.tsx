@@ -29,12 +29,14 @@ import {
   ClipboardList,
   Scale,
   IndianRupee,
-  Eye
+  Eye,
+  History
 } from 'lucide-react';
 import { cn, sanitizeCsvData, getApiUrl } from '../lib/utils';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import SaudaEntry from './SaudaEntry';
 import SaudaPrintSlip from '../components/SaudaPrintSlip';
+import { UniversalAuditLogModal } from '../components/UniversalAuditLogModal';
 import { dbModule, flushOfflineQueue } from '../services/dbModule';
 import { Sauda, SaudaQualityDetail } from '../types';
 import { supabase } from '../lib/supabase';
@@ -251,6 +253,8 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const [isAccountsModalOpen, setIsAccountsModalOpen] = useState(false);
   const [emailSendingStatus, setEmailSendingStatus] = useState<Record<string, 'sending' | 'sent' | 'error' | 'success' | 'idle'>>({});
   const [openActionDropdownId, setOpenActionDropdownId] = useState<string | null>(null);
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [auditRecordId, setAuditRecordId] = useState<string | undefined>();
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -404,10 +408,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
   const handleMarkReject = async (entry: Sauda) => {
     const userCtx = getCurrentUserContext();
-    const canReject = isUserAdmin() || isL5OrAdmin() || isUserId2() || userCtx.userRole === 'ADMIN';
+    const canReject = isUserAdmin() || isUserId10() || isL5OrAdmin() || isUserId2() || userCtx.userRole === 'ADMIN';
 
     if (!canReject) {
-      alert("🔒 Permission Denied: Only System Admin, Level 4 User, or User ID 2 can Reject Sauda contracts.");
+      alert("🔒 Permission Denied: Only User ID 10 (Checker) or System Admin can reject Sauda contracts.");
       return;
     }
 
@@ -415,8 +419,21 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     const targetId = entry.sauda_id || (entry as any).id;
     const saudaNo = entry.sauda_no;
     const fYear = entry.financial_year || '2026-2027';
+    const cleanNo = String(saudaNo || '').replace(/^0+/, '');
+    const paddedNo = cleanNo ? cleanNo.padStart(4, '0') : '';
 
     if (currentlyRejected) {
+      if (isUser2 || !isUser10) {
+        // User 002 or maker: Click to review and edit/resubmit
+        const proceedEdit = window.confirm(
+          `Sauda #${entry.sauda_no} is currently REJECTED by "${resolveDisplayName(entry.rejected_by, 'Checker')}".\n\nClick "OK" to EDIT & RESUBMIT this Sauda contract now.\nClick "Cancel" to close.`
+        );
+        if (proceedEdit) {
+          handleEdit(entry);
+        }
+        return;
+      }
+
       const confirmUnreject = window.confirm(
         `Sauda #${entry.sauda_no} is currently REJECTED by "${resolveDisplayName(entry.rejected_by, 'Unknown User')}".\n\nClick "OK" to UN-REJECT this Sauda contract (move back to Pending).\nClick "Cancel" to edit the Rejector User Name instead.`
       );
@@ -435,27 +452,40 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         };
 
         setSaudaList(prev => prev.map(s => {
-          const match = (s.sauda_id && targetId && s.sauda_id === targetId) || (s.sauda_no === saudaNo && (s.financial_year || '2026-2027') === fYear);
+          const match = (s.sauda_id && targetId && s.sauda_id === targetId) || (s.sauda_no && saudaNo && String(s.sauda_no).replace(/^0+/, '') === cleanNo);
           return match ? { ...s, ...updatePayload } : s;
         }));
 
         try {
           if (supabase) {
-            let updateRes = null;
             if (targetId) {
-              const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', targetId).select();
-              if (!error && data && data.length > 0) updateRes = data;
+              await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', targetId);
             }
-            if (!updateRes && saudaNo) {
-              const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', saudaNo).eq('financial_year', fYear).select();
-              if (!error && data && data.length > 0) updateRes = data;
+            if (cleanNo) {
+              await supabase.from('sauda_master').update(updatePayload).or(`sauda_no.eq.${saudaNo},sauda_no.eq.${paddedNo},sauda_no.eq.${cleanNo}`);
             }
           }
           if (targetId) {
             await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload).catch(() => {});
           }
-        } catch (err) {
+
+          logChange({
+            module: 'Sauda Desk',
+            entity_name: 'Sauda Contract Un-reject',
+            record_id: String(targetId || saudaNo),
+            action: 'UPDATE',
+            field_name: 'status',
+            field_label: 'Approval Status',
+            old_value: 'REJECTED',
+            new_value: 'PENDING',
+            user_name: resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Admin'),
+            remarks: `Sauda #${saudaNo} moved back to Pending from Rejected`
+          }).catch(() => {});
+
+          window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sauda_master' } }));
+        } catch (err: any) {
           console.error("Error un-rejecting sauda in Supabase:", err);
+          alert("Failed to un-reject: " + (err.message || err));
         }
         return;
       } else {
@@ -464,18 +494,18 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       }
     }
 
-    const defaultName = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Unknown User');
-
-    const enteredName = window.prompt(
-      `Rejecting Sauda Contract #${entry.sauda_no}:\n\nPlease enter the User Name who is rejecting this contract:`,
-      defaultName
+    const rejectorName = resolveDisplayName(
+      userCtx.userName || userCtx.username || userCtx.userId, 
+      isUserId10() ? 'Checker' : 'Admin'
     );
 
-    if (enteredName === null) {
+    const confirmReject = window.confirm(
+      `Are you sure you want to REJECT Sauda Order #${entry.sauda_no}?\n\nThis will mark it as Rejected in Supabase and send it to User 002 for review and correction.`
+    );
+
+    if (!confirmReject) {
       return;
     }
-
-    const rejectorName = resolveDisplayName(enteredName.trim() || defaultName, 'Unknown User');
 
     const updatePayload = {
       is_checked: false,
@@ -490,20 +520,17 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     };
 
     setSaudaList(prev => prev.map(s => {
-      const match = (s.sauda_id && targetId && s.sauda_id === targetId) || (s.sauda_no === saudaNo && (s.financial_year || '2026-2027') === fYear);
+      const match = (s.sauda_id && targetId && s.sauda_id === targetId) || (s.sauda_no && saudaNo && String(s.sauda_no).replace(/^0+/, '') === cleanNo);
       return match ? { ...s, ...updatePayload } : s;
     }));
 
     try {
       if (supabase) {
-        let updateRes = null;
         if (targetId) {
-          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', targetId).select();
-          if (!error && data && data.length > 0) updateRes = data;
+          await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', targetId);
         }
-        if (!updateRes && saudaNo) {
-          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', saudaNo).eq('financial_year', fYear).select();
-          if (!error && data && data.length > 0) updateRes = data;
+        if (cleanNo) {
+          await supabase.from('sauda_master').update(updatePayload).or(`sauda_no.eq.${saudaNo},sauda_no.eq.${paddedNo},sauda_no.eq.${cleanNo}`);
         }
       }
       if (targetId) {
@@ -520,10 +547,14 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         old_value: entry.status || 'PENDING',
         new_value: 'REJECTED',
         user_name: rejectorName,
-        remarks: `Rejected by ${rejectorName}`
+        remarks: `Sauda #${saudaNo} rejected by ${rejectorName}`
       }).catch(() => {});
-    } catch (err) {
+
+      window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sauda_master' } }));
+      alert(`Order #${entry.sauda_no} has been REJECTED. It is permanently saved in Supabase and returned to User 002 for review.`);
+    } catch (err: any) {
       console.error("Error updating reject status in Supabase:", err);
+      alert("Failed to save rejection to database: " + (err.message || err));
     }
   };
 
@@ -1103,7 +1134,13 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const filteredSaudas = saudaList.filter(s => {
     // Filtering by Status Tab
     if (statusTab === 'pending') {
-      if (!isPendingUncheckedSauda(s)) return false;
+      if (isUser10) {
+        // User 010: Main Dashboard strictly shows records awaiting approval (rejected records do not appear as pending)
+        if (!isPendingUncheckedSauda(s)) return false;
+      } else {
+        // User 002 / Creator: Shows pending records AND rejected records requiring revision
+        if (isCheckedSauda(s)) return false;
+      }
     } else if (statusTab === 'checked') {
       if (!isCheckedSauda(s)) return false;
     } else if (statusTab === 'rejected') {
@@ -1137,7 +1174,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const rejectedSaudas = saudaList.filter(s => isRejectedSauda(s));
   const completedSaudas = saudaList.filter(s => isSaudaInCheckPointOrPo(s));
 
-  const pendingSaudasCount = pendingSaudas.length;
+  const pendingSaudasCount = isUser10
+    ? pendingSaudas.length
+    : saudaList.filter(s => !isCheckedSauda(s)).length;
   const checkedSaudasCount = checkedSaudas.length;
   const rejectedSaudasCount = rejectedSaudas.length;
   const totalSaudas = saudaList.length;
@@ -1308,6 +1347,18 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
               <span>Print Book</span>
             </button>
 
+            <button
+              onClick={() => {
+                setAuditRecordId(undefined);
+                setAuditModalOpen(true);
+              }}
+              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              title="View Universal Audit Trail for Sauda Contracts"
+            >
+              <History className="h-4 w-4 text-[#174C2C]" />
+              <span>Audit Trail</span>
+            </button>
+
             {/* Quick Section Switchers Beside Search */}
             <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 shrink-0 gap-1">
               <button
@@ -1363,6 +1414,33 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
             </div>
           </div>
         </div>
+
+        {/* Banner for Rejected Saudas awaiting Maker review */}
+        {!isUser10 && rejectedSaudasCount > 0 && statusTab !== 'rejected' && (
+          <div className="bg-rose-50 border-2 border-rose-300 rounded-[18px] p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xs animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-rose-600 text-white rounded-xl shadow-xs">
+                <X className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-rose-950 uppercase tracking-wider">
+                  {rejectedSaudasCount} Rejected Sauda Contract{rejectedSaudasCount > 1 ? 's' : ''} Awaiting Review & Resubmission
+                </h4>
+                <p className="text-[11px] text-rose-800 font-medium mt-0.5">
+                  User 010 (Checker) rejected these contract(s). Review the details, make corrections, and resubmit them for re-verification.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStatusTab('rejected')}
+              className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1.5"
+            >
+              <span>View Rejected ({rejectedSaudasCount})</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* 4. Data Table */}
         <div className="bg-white border border-slate-200 rounded-[18px] shadow-xs overflow-hidden">
@@ -1472,10 +1550,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                             <button
                               onClick={(e) => { e.stopPropagation(); handleMarkReject(entry); }}
                               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-xs hover:bg-rose-700 transition-all cursor-pointer"
-                              title="Rejected (Click to toggle / un-reject)"
+                              title={isUser2 || !isUser10 ? "Rejected - Click to Edit and Resubmit" : "Rejected (Click to toggle / un-reject)"}
                             >
                               <X className="w-3.5 h-3.5 text-white" />
-                              <span>Rejected</span>
+                              <span>{isUser2 || !isUser10 ? "Edit & Resubmit" : "Rejected"}</span>
                             </button>
                           ) : (
                             <div className="flex items-center gap-1">
@@ -1530,21 +1608,39 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                       {canSeeActions && (
                         <td className="px-3 text-center relative">
                           {isUser10 ? (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handlePrint(entry);
-                              }}
-                              className={cn(
-                                "p-1.5 rounded-lg transition-all cursor-pointer shadow-2xs inline-flex items-center justify-center",
-                                isSelected
-                                  ? "bg-white/20 text-amber-300 hover:bg-white/30"
-                                  : "bg-slate-100 text-slate-700 hover:bg-amber-100 hover:text-slate-900 border border-slate-300"
-                              )}
-                              title="Print Sauda Slip"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePrint(entry);
+                                }}
+                                className={cn(
+                                  "p-1.5 rounded-lg transition-all cursor-pointer shadow-2xs inline-flex items-center justify-center",
+                                  isSelected
+                                    ? "bg-white/20 text-amber-300 hover:bg-white/30"
+                                    : "bg-slate-100 text-slate-700 hover:bg-amber-100 hover:text-slate-900 border border-slate-300"
+                                )}
+                                title="Print Sauda Slip"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAuditRecordId(entry.sauda_id || entry.sauda_no);
+                                  setAuditModalOpen(true);
+                                }}
+                                className={cn(
+                                  "p-1.5 rounded-lg transition-all cursor-pointer shadow-2xs inline-flex items-center justify-center",
+                                  isSelected
+                                    ? "bg-white/20 text-white hover:bg-white/30"
+                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300"
+                                )}
+                                title="View Approval & Rejection Audit History"
+                              >
+                                <History className="w-4 h-4" />
+                              </button>
+                            </div>
                           ) : (
                             <div className="relative inline-block text-left">
                               <button
@@ -1569,7 +1665,36 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                                     className="fixed inset-0 z-20" 
                                     onClick={(e) => { e.stopPropagation(); setOpenActionDropdownId(null); }} 
                                   />
-                                  <div className="absolute right-0 mt-1 w-32 bg-white border border-slate-300 rounded-xl shadow-xl z-30 py-1 font-sans text-xs divide-y divide-slate-100 animate-in fade-in duration-100 text-left">
+                                  <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-300 rounded-xl shadow-xl z-30 py-1 font-sans text-xs divide-y divide-slate-100 animate-in fade-in duration-100 text-left">
+                                    {canEditOrDelete() && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenActionDropdownId(null);
+                                          handleEdit(entry);
+                                        }}
+                                        className="w-full px-3 py-1.5 text-left text-amber-800 hover:bg-amber-50 font-bold flex items-center gap-2 cursor-pointer"
+                                        title={isRejected ? "Review, Edit and Resubmit Sauda" : "Edit Sauda"}
+                                      >
+                                        <Edit className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                        <span>{isRejected ? "Edit & Resubmit" : "Edit"}</span>
+                                      </button>
+                                    )}
+
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenActionDropdownId(null);
+                                        setAuditRecordId(entry.sauda_id || entry.sauda_no);
+                                        setAuditModalOpen(true);
+                                      }}
+                                      className="w-full px-3 py-1.5 text-left text-slate-800 hover:bg-slate-100 font-bold flex items-center gap-2 cursor-pointer"
+                                      title="View Approval & Rejection Audit History"
+                                    >
+                                      <History className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                                      <span>Audit History</span>
+                                    </button>
+
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -1726,6 +1851,18 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           poList={poList}
           arrivalsList={arrivalsList}
           onClose={() => setIsAccountsModalOpen(false)}
+        />
+      )}
+
+      {auditModalOpen && (
+        <UniversalAuditLogModal
+          isOpen={auditModalOpen}
+          onClose={() => {
+            setAuditModalOpen(false);
+            setAuditRecordId(undefined);
+          }}
+          initialModule="Sauda Desk"
+          initialRecordId={auditRecordId}
         />
       )}
     </LegacyLayout>

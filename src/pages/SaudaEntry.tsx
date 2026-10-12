@@ -6,6 +6,7 @@ import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, getCurrentUserContext, isUserId10 } from '../lib/permissions';
 import { resolveDisplayName } from '../lib/userResolver';
+import { logChange } from '../services/auditLogService';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { resolveSattaRate } from '../services/sattaRateService';
 
@@ -982,9 +983,27 @@ export default function SaudaEntry({
       }
 
       if (saudaPayload.sauda_id) {
+        if (supabase) {
+          await supabase.from('sauda_master').update(saudaPayload).eq('sauda_id', saudaPayload.sauda_id);
+        }
         inserted = await dbModule.update('sauda_master', 'sauda_id', saudaPayload.sauda_id, saudaPayload);
       } else {
         inserted = await dbModule.insert('sauda_master', saudaPayload);
+      }
+
+      if (isWasRejected) {
+        logChange({
+          module: 'Sauda Desk',
+          entity_name: 'Sauda Contract Resubmission',
+          record_id: String(saudaPayload.sauda_id || saudaPayload.sauda_no),
+          action: 'UPDATE',
+          field_name: 'status',
+          field_label: 'Approval Status',
+          old_value: 'REJECTED',
+          new_value: 'PENDING',
+          user_name: resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'User 002'),
+          remarks: `Sauda #${saudaPayload.sauda_no} edited and resubmitted for verification by User 010`
+        }).catch(() => {});
       }
 
       if (inserted && flatCombinations.length > 0) {

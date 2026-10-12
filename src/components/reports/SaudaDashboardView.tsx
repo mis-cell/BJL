@@ -149,13 +149,13 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
 
     try {
       if (supabase) {
-        let updateRes = null;
         if (sId) {
-          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', sId).select();
-          if (!error && data && data.length > 0) updateRes = data;
+          await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', sId);
         }
-        if (!updateRes && sNo) {
-          await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', sNo).eq('financial_year', fYear);
+        if (sNo) {
+          const cleanNo = String(sNo).replace(/^0+/, '');
+          const paddedNo = cleanNo ? cleanNo.padStart(4, '0') : '';
+          await supabase.from('sauda_master').update(updatePayload).or(`sauda_no.eq.${sNo},sauda_no.eq.${paddedNo},sauda_no.eq.${cleanNo}`);
         }
       }
       if (sId) {
