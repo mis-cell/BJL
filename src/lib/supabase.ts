@@ -10,263 +10,39 @@ export const supabase = isConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
-// Programmatically align database and upgrade partitioned layouts to standard clean unified tables per user's directive.
+// Programmatically align database helper tables if missing
 if (supabase) {
   Promise.resolve().then(async () => {
     try {
       if (typeof window !== 'undefined') {
-        const isSynced = localStorage.getItem('bjl_schema_synced_v3') || sessionStorage.getItem('bjl_schema_synced_v3');
+        const isSynced = localStorage.getItem('bjl_schema_synced_v4') || sessionStorage.getItem('bjl_schema_synced_v4');
         if (isSynced) return;
-        localStorage.setItem('bjl_schema_synced_v3', '1');
-        sessionStorage.setItem('bjl_schema_synced_v3', '1');
+        localStorage.setItem('bjl_schema_synced_v4', '1');
+        sessionStorage.setItem('bjl_schema_synced_v4', '1');
       }
       await supabase.rpc('exec_sql', {
         query: `
           DO $$
           BEGIN
-            -- 1. Create temporary backups if parent tables / detail tables exist
-            IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'sauda_master') THEN
-              CREATE TABLE IF NOT EXISTS temp_sauda_backup AS SELECT * FROM sauda_master;
-            END IF;
+            -- Ensure supplementary helper columns exist non-destructively
+            ALTER TABLE IF EXISTS sauda_quality_details ADD COLUMN IF NOT EXISTS agency TEXT;
+            ALTER TABLE IF EXISTS sauda_quality_details ADD COLUMN IF NOT EXISTS marka TEXT;
+            ALTER TABLE IF EXISTS sauda_quality_details ADD COLUMN IF NOT EXISTS sauda_no TEXT;
+            ALTER TABLE IF EXISTS sauda_quality_details ADD COLUMN IF NOT EXISTS po_no TEXT;
 
-            IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'sauda_quality_details') THEN
-              CREATE TABLE IF NOT EXISTS temp_sauda_details_backup AS SELECT * FROM sauda_quality_details;
-            END IF;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS is_checked BOOLEAN DEFAULT FALSE;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS checked_by TEXT;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS checked_at TIMESTAMP WITH TIME ZONE;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approved_by TEXT;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approved_user_id TEXT;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS rejected_by TEXT;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMP WITH TIME ZONE;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS rejected_user_id TEXT;
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending';
+            ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approval_status TEXT DEFAULT 'pending';
 
-            IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'purchase_master') THEN
-              CREATE TABLE IF NOT EXISTS temp_purchase_backup AS SELECT * FROM purchase_master;
-            END IF;
-
-            IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'purchase_detail_master') THEN
-              CREATE TABLE IF NOT EXISTS temp_purchase_details_backup AS SELECT * FROM purchase_detail_master;
-            END IF;
-
-            IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'issue_master') THEN
-              CREATE TABLE IF NOT EXISTS temp_issue_backup AS SELECT * FROM issue_master;
-            END IF;
-
-            -- 2. Drop dependent constraints and tables CASCADE
-            DROP TABLE IF EXISTS sauda_quality_details CASCADE;
-            DROP TABLE IF EXISTS purchase_detail_master CASCADE;
-            DROP TABLE IF EXISTS sauda_master CASCADE;
-            DROP TABLE IF EXISTS purchase_master CASCADE;
-            DROP TABLE IF EXISTS issue_master CASCADE;
-
-            -- 3. Re-create the master tables as clean, regular non-partitioned tables
-            CREATE TABLE sauda_master (
-                sauda_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                financial_year TEXT NOT NULL,
-                sauda_no TEXT NOT NULL,
-                session TEXT, 
-                po_type TEXT,
-                date DATE NOT NULL,
-                broker TEXT,
-                supplier TEXT,
-                challan_supplier TEXT,
-                area TEXT,
-                agency TEXT,
-                marks TEXT,
-                no_of_lorries INTEGER,
-                units_per_lorry NUMERIC(15,2),
-                units_per_lorry_type TEXT,
-                total_unit INTEGER,
-                wt_per_lorry NUMERIC(15,3),
-                unit_type TEXT,
-                total_wt_in_ton NUMERIC(15,3),
-                shipment_date DATE,
-                shipment_days INTEGER,
-                shipment_penalty NUMERIC(15,2),
-                marks_claim NUMERIC(15,2),
-                quantity_claim NUMERIC(15,2),
-                remarks TEXT,
-                b_rate NUMERIC(15,2),
-                b_date DATE,
-                superior_normal_marks TEXT,
-                signature_url TEXT,
-                status TEXT DEFAULT 'pending',
-                approval_status TEXT DEFAULT 'pending',
-                is_checked BOOLEAN DEFAULT FALSE,
-                checked_by TEXT,
-                checked_at TIMESTAMP WITH TIME ZONE,
-                approved_by TEXT,
-                approved_at TIMESTAMP WITH TIME ZONE,
-                rejected_by TEXT,
-                rejected_at TIMESTAMP WITH TIME ZONE,
-                created_by TEXT,
-                open_remarks JSONB,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            );
-
-            CREATE TABLE purchase_master (
-                po_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                financial_year TEXT NOT NULL,
-                purchase_order TEXT,
-                po_type TEXT,
-                ptf_no TEXT,
-                pending BOOLEAN DEFAULT TRUE,
-                po_no TEXT NOT NULL UNIQUE,
-                po_date DATE NOT NULL,
-                broker TEXT,
-                supplier TEXT,
-                challan_supplier TEXT,
-                area TEXT,
-                trans_paid_by TEXT,
-                weight_unit_kgs NUMERIC(15,2),
-                against_cancellation TEXT,
-                purchase_unit_code TEXT,
-                purchase_unit_name TEXT,
-                total_lorries NUMERIC(15,2),
-                units_per_lorry NUMERIC(15,2),
-                total_units NUMERIC(15,2),
-                weight_per_lorry NUMERIC(15,3),
-                total_contract_mt NUMERIC(15,3),
-                marka_type TEXT,
-                marka_penalty NUMERIC(15,2),
-                qty_penalty NUMERIC(15,2),
-                delivery_from DATE,
-                delivery_to DATE,
-                grace_days INTEGER,
-                delivery_penalty NUMERIC(15,2),
-                contract_po_no TEXT,
-                contract_date DATE,
-                rate_detail TEXT,
-                delivery_schedule TEXT,
-                terms_condition TEXT,
-                remarks TEXT,
-                po_identification TEXT,
-                b_rate NUMERIC(15,2),
-                s_date DATE,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            );
-
-            CREATE TABLE issue_master (
-                amad_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                financial_year TEXT NOT NULL,
-                amad_no TEXT NOT NULL,
-                date DATE NOT NULL,
-                floor TEXT,
-                chamber TEXT,
-                farmer_name TEXT,
-                acc_no TEXT,
-                commodity TEXT,
-                variety TEXT,
-                grading TEXT,
-                marka TEXT,
-           driver_number TEXT,
-                bardana_type TEXT,
-                lorry_number TEXT,
-                total_packets INTEGER,
-                weight_qtl NUMERIC(15,2),
-                remarks TEXT,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            );
-
-            -- 4. Re-create the dependent details tables with simple relationships (referencing cleanly)
-            CREATE TABLE sauda_quality_details (
-                detail_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                sauda_id UUID REFERENCES sauda_master(sauda_id) ON DELETE CASCADE,
-                financial_year TEXT,
-                quality TEXT,
-                qty NUMERIC(15,3),
-                rs NUMERIC(15,2),
-                agency TEXT,
-                marka TEXT
-            );
-
-            CREATE TABLE purchase_detail_master (
-                item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                po_no TEXT REFERENCES purchase_master(po_no) ON DELETE CASCADE,
-                srl_no INTEGER,
-                crop_year TEXT,
-                grade_code TEXT,
-                agency_code TEXT,
-                marka_code TEXT,
-                quantity INTEGER,
-                weight_mt NUMERIC(15,3),
-                rate_qntl NUMERIC(15,2)
-            );
-
-            -- 5. Restore the data cleanly
-            IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'temp_sauda_backup') THEN
-              INSERT INTO sauda_master (
-                sauda_id, financial_year, sauda_no, session, po_type, date, broker, supplier, 
-                challan_supplier, area, agency, marks, no_of_lorries, units_per_lorry_type, 
-                total_unit, wt_per_lorry, unit_type, total_wt_in_ton, shipment_date, shipment_days, 
-                shipment_penalty, marks_claim, quantity_claim, remarks, b_rate, b_date, 
-                superior_normal_marks, signature_url, status, created_at
-              )
-              SELECT DISTINCT ON (sauda_id)
-                sauda_id, financial_year, sauda_no, session, po_type, date, broker, supplier, 
-                challan_supplier, area, agency, marks, no_of_lorries, units_per_lorry_type, 
-                total_unit, wt_per_lorry, unit_type, total_wt_in_ton, shipment_date, shipment_days, 
-                shipment_penalty, marks_claim, quantity_claim, remarks, b_rate, b_date, 
-                superior_normal_marks, signature_url, status, created_at
-              FROM temp_sauda_backup;
-              
-              DROP TABLE IF EXISTS temp_sauda_backup CASCADE;
-            END IF;
-
-            IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'temp_sauda_details_backup') THEN
-              INSERT INTO sauda_quality_details (
-                detail_id, sauda_id, financial_year, quality, qty, rs, agency, marka
-              )
-              SELECT 
-                detail_id, sauda_id, financial_year, quality, qty, rs, agency, marka
-              FROM temp_sauda_details_backup;
-              
-              DROP TABLE IF EXISTS temp_sauda_details_backup CASCADE;
-            END IF;
-
-            IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'temp_purchase_backup') THEN
-              INSERT INTO purchase_master (
-                po_id, financial_year, purchase_order, po_type, ptf_no, pending, po_no, po_date, 
-                broker, supplier, challan_supplier, area, trans_paid_by, weight_unit_kgs, 
-                against_cancellation, purchase_unit_code, purchase_unit_name, total_lorries, 
-                units_per_lorry, total_units, weight_per_lorry, total_contract_mt, marka_type, 
-                marka_penalty, qty_penalty, delivery_from, delivery_to, grace_days, 
-                delivery_penalty, contract_po_no, contract_date, rate_detail, delivery_schedule, 
-                terms_condition, remarks, po_identification, b_rate, s_date, created_at
-              )
-              SELECT DISTINCT ON (po_no)
-                po_id, financial_year, purchase_order, po_type, ptf_no, pending, po_no, po_date, 
-                broker, supplier, challan_supplier, area, trans_paid_by, weight_unit_kgs, 
-                against_cancellation, purchase_unit_code, purchase_unit_name, total_lorries, 
-                units_per_lorry, total_units, weight_per_lorry, total_contract_mt, marka_type, 
-                marka_penalty, qty_penalty, delivery_from, delivery_to, grace_days, 
-                delivery_penalty, contract_po_no, contract_date, rate_detail, delivery_schedule, 
-                terms_condition, remarks, po_identification, b_rate, s_date, created_at
-              FROM temp_purchase_backup;
-              
-              DROP TABLE IF EXISTS temp_purchase_backup CASCADE;
-            END IF;
-
-            IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'temp_purchase_details_backup') THEN
-              INSERT INTO purchase_detail_master (
-                item_id, po_no, srl_no, crop_year, grade_code, agency_code, marka_code, quantity, weight_mt, rate_qntl
-              )
-              SELECT 
-                item_id, po_no, srl_no, crop_year, grade_code, agency_code, marka_code, quantity, weight_mt, rate_qntl
-              FROM temp_purchase_details_backup;
-              
-              DROP TABLE IF EXISTS temp_purchase_details_backup CASCADE;
-            END IF;
-
-            IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'temp_issue_backup') THEN
-              INSERT INTO issue_master (
-                amad_id, financial_year, amad_no, date, floor, chamber, farmer_name, acc_no, 
-                commodity, variety, grading, marka, bardana_type, lorry_number, total_packets, 
-                weight_qtl, remarks, created_at
-              )
-              SELECT DISTINCT ON (amad_id)
-                amad_id, financial_year, amad_no, date, floor, chamber, farmer_name, acc_no, 
-                commodity, variety, grading, marka, bardana_type, lorry_number, total_packets, 
-                weight_qtl, remarks, created_at
-              FROM temp_issue_backup;
-              
-              DROP TABLE IF EXISTS temp_issue_backup CASCADE;
-            END IF;
-
-            -- 6. Disable RLS for standard accessible operations in applet
+            -- Disable RLS for standard accessible operations in applet
             ALTER TABLE IF EXISTS sauda_master DISABLE ROW LEVEL SECURITY;
             ALTER TABLE IF EXISTS sauda_quality_details DISABLE ROW LEVEL SECURITY;
             ALTER TABLE IF EXISTS purchase_master DISABLE ROW LEVEL SECURITY;

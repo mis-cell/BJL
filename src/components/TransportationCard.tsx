@@ -1,5 +1,5 @@
 import React from 'react';
-import { Truck, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Truck } from 'lucide-react';
 import SectionHeader from './SectionHeader';
 import SearchableSelect from './SearchableSelect';
 
@@ -18,51 +18,11 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
   unitOptions,
   isUser010 = false
 }) => {
-  const hasValidationIssues = (Number(formData.no_of_lorries) || 0) <= 0;
-
   return (
     <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#174C2C]/40 hover:shadow-lg transition-all">
       <SectionHeader icon={Truck} title="Unit & Transportation Details" />
 
-      {isUser010 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* No. of Lorries */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="no_of_lorries_010" className="text-xs font-semibold text-slate-700">
-              No. of Lorries
-            </label>
-            <input
-              id="no_of_lorries_010"
-              aria-label="No. of Lorries"
-              type="number"
-              min="1"
-              name="no_of_lorries"
-              value={formData.no_of_lorries ?? 1}
-              onChange={onChange}
-              className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs font-mono"
-            />
-          </div>
-
-          {/* Unit Type */}
-          <SearchableSelect
-            id="unit_type_010"
-            label="Unit Type"
-            value={formData.unit_type || 'BALES'}
-            onChange={(val) => {
-              if (onSelectChange) {
-                onSelectChange('unit_type', val);
-              } else {
-                onChange({ target: { name: 'unit_type', value: val } } as any);
-              }
-            }}
-            options={unitOptions}
-            placeholder="SELECT OR TYPE UNIT..."
-            isRequired={false}
-            isAutoPopulated={false}
-          />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* No. of Lorries */}
         <div className="flex flex-col gap-1.5">
           <label htmlFor="no_of_lorries_26" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
@@ -219,24 +179,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             className="bg-[#EAF4FF] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 text-right outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono"
           />
         </div>
-
-        {/* Issue Validation Panel */}
-        <div className="md:col-span-2 flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-700">Issue</label>
-          {hasValidationIssues ? (
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-2 text-xs font-semibold flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-              <span>Please specify a valid lorry count greater than 0</span>
-            </div>
-          ) : (
-            <div className="bg-[#F0FDF4] border border-[#DCFCE7] text-[#166534] rounded-xl px-4 py-2 text-xs font-semibold flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-[#16A34A] shrink-0" />
-              <span>No issues recorded</span>
-            </div>
-          )}
-        </div>
       </div>
-      )}
     </div>
   );
 };

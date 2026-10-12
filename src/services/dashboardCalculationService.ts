@@ -162,6 +162,23 @@ export interface InspectionRecord {
 }
 
 /**
+ * Extracts first positive (>0) numerical value across array of property keys
+ */
+export function extractPositiveVal(obj: any, keys: string[]): number {
+  if (!obj || typeof obj !== 'object') return 0;
+  for (const k of keys) {
+    const val = obj[k];
+    if (val !== undefined && val !== null && val !== '') {
+      const num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.]/g, ''));
+      if (!isNaN(num) && num > 0) {
+        return num;
+      }
+    }
+  }
+  return 0;
+}
+
+/**
  * Extracts Bales / Drum Quantity from Receipt details (grid_details) or fallback fields
  */
 export function getRecordBales(item: any): number {
@@ -785,30 +802,43 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     }
     let wtQtl = wtMt * 10;
 
-    // 1. Moisture % & Claim (read accurately from INSPECTION MODULE REGISTER)
-    let actualM = 0;
-    if (raw.actual_moisture !== undefined && raw.actual_moisture !== null && raw.actual_moisture !== '') {
-      actualM = Number(raw.actual_moisture);
-    } else if (raw.moisture_act !== undefined && raw.moisture_act !== null && raw.moisture_act !== '') {
-      actualM = Number(raw.moisture_act);
-    } else if (raw.moisture_percent !== undefined && raw.moisture_percent !== null) {
-      actualM = Number(raw.moisture_percent);
-    } else if (raw.moisture !== undefined && raw.moisture !== null) {
-      actualM = Number(raw.moisture);
-    } else if (relatedDetails.length > 0 && relatedDetails[0].actual_moisture !== undefined) {
-      actualM = Number(relatedDetails[0].actual_moisture);
+    // 1. Moisture % & Claim (read accurately from INSPECTION & ARRIVAL REGISTERS)
+    let actualM = extractPositiveVal(raw, [
+      'actual_moisture', 'actual_moist', 'act_moisture', 'act_moist',
+      'arrival_moisture', 'arr_moisture', 'arrival_moist', 'arr_moist',
+      'moisture_pct', 'moisture_percent', 'moisture_pct_act', 'moist_pct', 'moist_percent', 'm_pct', 'mst_pct',
+      'moisture_act', 'moist_act', 'moisture_actual', 'moist_actual',
+      'inspection_moisture', 'insp_moisture', 'inspection_moist',
+      'moisture', 'moist', 'mst', 'moisture_content', 'moisture_val', 'moisture_value',
+      'lab_moisture', 'lab_moist',
+      'gate_moisture', 'gate_moist', 'rec_moisture', 'received_moisture',
+      'avg_moisture', 'moisture_avg', 'avg_moist', 'moisture_percentage',
+      'moisture1', 'moisture2', 'moisture3'
+    ]);
+
+    if (actualM === 0 && raw.quality_matrix) {
+      actualM = extractPositiveVal(raw.quality_matrix, ['moisture', 'actual_moisture', 'arrival_moisture', 'moisture_pct']) ||
+                extractPositiveVal(raw.quality_matrix?.moisture, ['actual', 'dept', 'val', 'value', 'percent', 'pct']) ||
+                extractPositiveVal(raw.quality_matrix?.moisture_pct, ['actual', 'dept', 'val', 'value']);
+    }
+
+    if (actualM === 0 && relatedDetails.length > 0) {
+      for (const d of relatedDetails) {
+        const val = extractPositiveVal(d, [
+          'actual_moisture', 'arrival_moisture', 'moisture_pct', 'moisture_act',
+          'inspection_moisture', 'moisture', 'lab_moisture', 'moist_pct', 'mst_pct', 'actual_moist'
+        ]);
+        if (val > 0) {
+          actualM = val;
+          break;
+        }
+      }
     }
     if (isNaN(actualM)) actualM = 0;
 
-    let claimM = 0;
-    if (raw.claim_moisture !== undefined && raw.claim_moisture !== null && raw.claim_moisture !== '') {
-      claimM = Number(raw.claim_moisture);
-    } else if (raw.moisture_claim !== undefined && raw.moisture_claim !== null && raw.moisture_claim !== '') {
-      claimM = Number(raw.moisture_claim);
-    } else if (raw.claim_percent !== undefined && raw.claim_percent !== null) {
-      claimM = Number(raw.claim_percent);
-    } else if (relatedDetails.length > 0 && relatedDetails[0].claim_moisture !== undefined) {
-      claimM = Number(relatedDetails[0].claim_moisture);
+    let claimM = extractPositiveVal(raw, ['claim_moisture', 'moisture_claim', 'claim_percent']);
+    if (claimM === 0 && relatedDetails.length > 0) {
+      claimM = extractPositiveVal(relatedDetails[0], ['claim_moisture', 'moisture_claim', 'claim_percent']);
     }
     if (isNaN(claimM)) claimM = 0;
     if (claimM <= 0 && actualM > 15.0) {
@@ -817,27 +847,23 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     const moistDedAmt = Number(raw.moisture_claim_amt || raw.moisture_deduction_amount || (claimM > 0 ? (claimM * 50) : 0));
 
     // 2. Dust % & Claim (read accurately from INSPECTION MODULE REGISTER)
-    let actualDust = 0;
-    if (raw.actual_dust !== undefined && raw.actual_dust !== null && raw.actual_dust !== '') {
-      actualDust = Number(raw.actual_dust);
-    } else if (raw.dust_act !== undefined && raw.dust_act !== null && raw.dust_act !== '') {
-      actualDust = Number(raw.dust_act);
-    } else if (raw.dust_percent !== undefined && raw.dust_percent !== null) {
-      actualDust = Number(raw.dust_percent);
-    } else if (raw.dust !== undefined && raw.dust !== null) {
-      actualDust = Number(raw.dust);
-    } else if (relatedDetails.length > 0 && relatedDetails[0].actual_dust !== undefined) {
-      actualDust = Number(relatedDetails[0].actual_dust);
+    let actualDust = extractPositiveVal(raw, [
+      'actual_dust', 'dust_act', 'dust_percent', 'dust_pct', 'dust', 'arrival_dust', 'lab_dust'
+    ]);
+    if (actualDust === 0 && relatedDetails.length > 0) {
+      for (const d of relatedDetails) {
+        const val = extractPositiveVal(d, ['actual_dust', 'dust_act', 'dust_percent', 'dust']);
+        if (val > 0) {
+          actualDust = val;
+          break;
+        }
+      }
     }
     if (isNaN(actualDust)) actualDust = 0;
 
-    let claimDust = 0;
-    if (raw.claim_dust !== undefined && raw.claim_dust !== null && raw.claim_dust !== '') {
-      claimDust = Number(raw.claim_dust);
-    } else if (raw.dust_claim !== undefined && raw.dust_claim !== null && raw.dust_claim !== '') {
-      claimDust = Number(raw.dust_claim);
-    } else if (relatedDetails.length > 0 && relatedDetails[0].claim_dust !== undefined) {
-      claimDust = Number(relatedDetails[0].claim_dust);
+    let claimDust = extractPositiveVal(raw, ['claim_dust', 'dust_claim']);
+    if (claimDust === 0 && relatedDetails.length > 0) {
+      claimDust = extractPositiveVal(relatedDetails[0], ['claim_dust', 'dust_claim']);
     }
     if (isNaN(claimDust)) claimDust = 0;
     if (claimDust <= 0 && actualDust > 1.0) {
@@ -846,21 +872,20 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     const dustDedAmt = Number(raw.dust_claim_amt || raw.dust_deduction_amount || (claimDust > 0 ? (claimDust * 40) : 0));
 
     // 3. Grade Down % & Claim (read accurately from INSPECTION MODULE REGISTER)
-    let actualGradeDown = 0;
-    if (raw.actual_grade_down !== undefined && raw.actual_grade_down !== null && raw.actual_grade_down !== '') {
-      actualGradeDown = Number(raw.actual_grade_down);
-    } else if (raw.grade_down_act !== undefined && raw.grade_down_act !== null && raw.grade_down_act !== '') {
-      actualGradeDown = Number(raw.grade_down_act);
-    } else if (raw.grade_down_percent !== undefined && raw.grade_down_percent !== null) {
-      actualGradeDown = Number(raw.grade_down_percent);
-    } else if (raw.grade_down !== undefined && raw.grade_down !== null) {
-      actualGradeDown = Number(raw.grade_down);
-    }
+    let actualGradeDown = extractPositiveVal(raw, [
+      'actual_grade_down', 'actual_gradedown', 'act_grade_down', 'grade_down_actual',
+      'grade_down_act', 'grd_down_act',
+      'grade_down_percent', 'grade_down_pct', 'grd_down_pct', 'grd_pct',
+      'arrival_grade_down', 'arr_grade_down', 'arrival_gradedown',
+      'inspection_grade_down', 'insp_grade_down',
+      'grade_down', 'gradedown', 'grd_down', 'grade_down_val', 'grade_down_value',
+      'lab_grade_down', 'lab_gradedown'
+    ]);
 
     if (actualGradeDown === 0 && raw.quality_matrix?.grade_down) {
       const qm = raw.quality_matrix.grade_down;
       for (const k of ['1st', '2nd', '3rd', '4th', 'col1', 'col2', 'col3', 'col4']) {
-        const val = Number(qm[k]?.dept ?? qm[k]?.actual ?? 0);
+        const val = extractPositiveVal(qm[k], ['dept', 'actual', 'val', 'value', 'percent', 'pct']);
         if (val > 0) {
           actualGradeDown = val;
           break;
@@ -870,7 +895,9 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
 
     if (actualGradeDown === 0 && relatedDetails.length > 0) {
       for (const d of relatedDetails) {
-        const val = Number(d.actual_grade_down ?? d.grade_down_act ?? d.grade_down ?? 0);
+        const val = extractPositiveVal(d, [
+          'actual_grade_down', 'grade_down_act', 'grade_down_pct', 'arrival_grade_down', 'grade_down', 'grd_down'
+        ]);
         if (val > 0) {
           actualGradeDown = val;
           break;
@@ -879,17 +906,11 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
     }
     if (isNaN(actualGradeDown)) actualGradeDown = 0;
 
-    let claimGradeDown = 0;
-    if (raw.claim_grade_down !== undefined && raw.claim_grade_down !== null && raw.claim_grade_down !== '') {
-      claimGradeDown = Number(raw.claim_grade_down);
-    } else if (raw.grade_down_claim !== undefined && raw.grade_down_claim !== null && raw.grade_down_claim !== '') {
-      claimGradeDown = Number(raw.grade_down_claim);
-    }
-
+    let claimGradeDown = extractPositiveVal(raw, ['claim_grade_down', 'grade_down_claim']);
     if (claimGradeDown === 0 && raw.quality_matrix?.grade_down) {
       const qm = raw.quality_matrix.grade_down;
       for (const k of ['1st', '2nd', '3rd', '4th', 'col1', 'col2', 'col3', 'col4']) {
-        const val = Number(qm[k]?.claim ?? 0);
+        const val = extractPositiveVal(qm[k], ['claim', 'val', 'value']);
         if (val > 0) {
           claimGradeDown = val;
           break;
@@ -899,7 +920,7 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
 
     if (claimGradeDown === 0 && relatedDetails.length > 0) {
       for (const d of relatedDetails) {
-        const val = Number(d.claim_grade_down ?? d.grade_down_claim ?? 0);
+        const val = extractPositiveVal(d, ['claim_grade_down', 'grade_down_claim']);
         if (val > 0) {
           claimGradeDown = val;
           break;
@@ -1249,12 +1270,38 @@ export function computeInspectionMetrics(params: ComputeInspectionMetricsParams)
       if (r.qualityDeductionAmount > 0 || r.claimGradeDown > 0 || r.claimDust > 0) qualClaimLots++;
     });
 
-    const moistCount = qualitySourceList.filter(r => r.actualMoisture > 0).length;
-    const claimMoistCount = qualitySourceList.filter(r => r.claimMoisture > 0).length;
-    const dustCount = qualitySourceList.filter(r => r.actualDust > 0).length;
-    const claimDustCount = qualitySourceList.filter(r => r.claimDust > 0).length;
-    const gradeDownCount = qualitySourceList.filter(r => r.actualGradeDown > 0).length;
-    const claimGradeDownCount = qualitySourceList.filter(r => r.claimGradeDown > 0).length;
+    let moistCount = qualitySourceList.filter(r => r.actualMoisture > 0).length;
+    let claimMoistCount = qualitySourceList.filter(r => r.claimMoisture > 0).length;
+    let dustCount = qualitySourceList.filter(r => r.actualDust > 0).length;
+    let claimDustCount = qualitySourceList.filter(r => r.claimDust > 0).length;
+    let gradeDownCount = qualitySourceList.filter(r => r.actualGradeDown > 0).length;
+    let claimGradeDownCount = qualitySourceList.filter(r => r.claimGradeDown > 0).length;
+
+    // Supplementary scan over raw monthArrivals & monthFinalArrivals if qualitySourceList has 0 moisture/grade records
+    if (moistCount === 0 || gradeDownCount === 0) {
+      const rawArrivalPool = [...monthArrivals, ...monthFinalArrivals];
+      rawArrivalPool.forEach(arrRec => {
+        if (moistCount === 0) {
+          const arrM = extractPositiveVal(arrRec, [
+            'actual_moisture', 'arrival_moisture', 'moisture_pct', 'moisture_act', 'inspection_moisture',
+            'moisture', 'lab_moisture', 'moist_pct', 'mst_pct', 'actual_moist', 'gate_moisture'
+          ]);
+          if (arrM > 0) {
+            moistSum += arrM;
+            moistCount++;
+          }
+        }
+        if (gradeDownCount === 0) {
+          const arrG = extractPositiveVal(arrRec, [
+            'actual_grade_down', 'grade_down_act', 'grade_down_pct', 'arrival_grade_down', 'grade_down', 'grd_down'
+          ]);
+          if (arrG > 0) {
+            gradeDownSum += arrG;
+            gradeDownCount++;
+          }
+        }
+      });
+    }
 
     const avgMoisture = moistCount > 0 ? Number((moistSum / moistCount).toFixed(1)) : 0;
     const avgClaimMoisture = claimMoistCount > 0 ? Number((claimMoistSum / claimMoistCount).toFixed(1)) : 0;

@@ -6,6 +6,7 @@ import {
   Percent,
   Scissors,
   Truck,
+  Layers,
   Award,
   AlertTriangle,
   PieChart,
@@ -27,11 +28,11 @@ import { ReportFilterBar } from '../components/system-reports/ReportFilterBar';
 import { Priority1Dashboard } from '../components/system-reports/Priority1Dashboard';
 import { Priority2Analysis } from '../components/system-reports/Priority2Analysis';
 import { Priority3Operations } from '../components/system-reports/Priority3Operations';
-import { Priority4Detailed } from '../components/system-reports/Priority4Detailed';
 import { ExceptionAuditView } from '../components/system-reports/ExceptionAuditView';
 import { ContributionView } from '../components/system-reports/ContributionView';
 import { DrillDownModal, DrillDownViewMode } from '../components/system-reports/DrillDownModal';
 import { SimpleReportView } from '../components/system-reports/SimpleReportView';
+import { AllPoReportView } from '../components/system-reports/AllPoReportView';
 
 export type ReportNavSection = 
   | 'dashboard'
@@ -39,10 +40,10 @@ export type ReportNavSection =
   | 'premium_analysis'
   | 'deduction_claim'
   | 'sauda_checkpoints'
+  | 'all_po'
   | 'performance_ranking'
   | 'exception_abnormal'
-  | 'business_contribution'
-  | 'detailed_reports';
+  | 'business_contribution';
 
 interface ReportsProps {
   onClose?: () => void;
@@ -56,6 +57,18 @@ export default function Reports({ onClose }: ReportsProps) {
   
   // Master transactions and filters
   const [allTransactions, setAllTransactions] = useState<ReportTransactionLine[]>([]);
+  const [allPoSummary, setAllPoSummary] = useState<SystemReportDataset['allPoSummary']>({
+    records: [],
+    totalCount: 0,
+    totalQuantityMT: 0,
+    totalGrossValue: 0,
+    saudaDeskCount: 0,
+    saudaDeskMT: 0,
+    checkPointCount: 0,
+    checkPointMT: 0,
+    finalPoCount: 0,
+    finalPoMT: 0
+  });
   const [masterLists, setMasterLists] = useState<SystemReportDataset['masterLists']>({
     brokers: [],
     suppliers: [],
@@ -88,9 +101,10 @@ export default function Reports({ onClose }: ReportsProps) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const { allTransactions: txns, masterLists: lists } = await loadAndProcessSystemReportData();
+      const { allTransactions: txns, masterLists: lists, allPoSummary: poSum } = await loadAndProcessSystemReportData();
       setAllTransactions(txns);
       setMasterLists(lists);
+      if (poSum) setAllPoSummary(poSum);
     } catch (err) {
       console.error('Error loading system report dataset:', err);
     } finally {
@@ -145,6 +159,7 @@ export default function Reports({ onClose }: ReportsProps) {
   const dataset: SystemReportDataset = {
     transactions: allTransactions,
     filtered: filteredTransactions,
+    allPoSummary,
     masterLists,
     metrics
   };
@@ -284,10 +299,10 @@ export default function Reports({ onClose }: ReportsProps) {
                 { id: 'premium_analysis' as const, label: '3. Premium Analysis', icon: Percent, badge: 'P2' },
                 { id: 'deduction_claim' as const, label: '4. Deduction & Claim', icon: Scissors, badge: 'P3' },
                 { id: 'sauda_checkpoints' as const, label: '5. Checkpoints Pipeline', icon: Truck, badge: 'P3' },
-                { id: 'performance_ranking' as const, label: '6. Performance Ranking', icon: Award, badge: 'P2' },
-                { id: 'exception_abnormal' as const, label: '7. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
-                { id: 'business_contribution' as const, label: '8. Contribution & Pareto', icon: PieChart, badge: 'P9' },
-                { id: 'detailed_reports' as const, label: '9. Detailed Registers', icon: FileSpreadsheet, badge: 'Grain' },
+                { id: 'all_po' as const, label: '6. ALL PO', icon: Layers, badge: `${allPoSummary.totalCount || 0}` },
+                { id: 'performance_ranking' as const, label: '7. Performance Ranking', icon: Award, badge: 'P2' },
+                { id: 'exception_abnormal' as const, label: '8. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
+                { id: 'business_contribution' as const, label: '9. Contribution & Pareto', icon: PieChart, badge: 'P9' },
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeSection === tab.id;
@@ -348,6 +363,11 @@ export default function Reports({ onClose }: ReportsProps) {
               <Priority3Operations dataset={dataset} onDrillDown={handleOpenDrillDown} defaultSubTab="pipeline" />
             )}
 
+            {/* ALL PO Master Report (sauda_master, sauda_check_point, purchase_master) */}
+            {activeSection === 'all_po' && (
+              <AllPoReportView dataset={dataset} onDrillDown={handleOpenDrillDown} />
+            )}
+
             {/* 7. Performance Ranking (Priority 2) */}
             {activeSection === 'performance_ranking' && (
               <Priority2Analysis dataset={dataset} onDrillDown={handleOpenDrillDown} defaultSubTab="ranking" />
@@ -361,11 +381,6 @@ export default function Reports({ onClose }: ReportsProps) {
             {/* 9. Business Contribution (Priority 9) */}
             {activeSection === 'business_contribution' && (
               <ContributionView dataset={dataset} onDrillDown={handleOpenDrillDown} />
-            )}
-
-            {/* 10. Detailed Reports (Priority 4) */}
-            {activeSection === 'detailed_reports' && (
-              <Priority4Detailed dataset={dataset} onDrillDown={handleOpenDrillDown} />
             )}
 
           </div>

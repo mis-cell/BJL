@@ -7,13 +7,24 @@ const userDisplayMap: Record<string, string> = {
   '001': 'ADMIN',
   '1': 'ADMIN',
   'admin': 'ADMIN',
-  '002': 'Rahul',
-  '02': 'Rahul',
-  '2': 'Rahul',
-  'rahul': 'Rahul',
-  '010': 'Checker',
-  '10': 'Checker',
-  'checker': 'Checker',
+  '002': 'RAHUL',
+  '02': 'RAHUL',
+  '2': 'RAHUL',
+  'rahul': 'RAHUL',
+  '006': 'Ashish Kankaria',
+  '6': 'Ashish Kankaria',
+  '010': 'SHYAMLAHOTI',
+  '10': 'SHYAMLAHOTI',
+  'shyamlahoti': 'SHYAMLAHOTI',
+  'checker': 'SHYAMLAHOTI',
+  '011': 'ACCOUNT',
+  '11': 'ACCOUNT',
+  '012': 'MBAJAJ',
+  '12': 'MBAJAJ',
+  '013': 'SIMUL',
+  '13': 'SIMUL',
+  '014': 'ANKANA',
+  '14': 'ANKANA',
 };
 
 let isLoaded = false;
@@ -42,8 +53,17 @@ export async function initUserMap(): Promise<Record<string, string>> {
           userDisplayMap[uid] = uname;
           userDisplayMap[uid.toLowerCase()] = uname;
           userDisplayMap[uname.toLowerCase()] = uname;
+          const numOnly = uid.replace(/^0+/, '');
+          if (numOnly) userDisplayMap[numOnly] = uname;
+          const pad3 = uid.padStart(3, '0');
+          userDisplayMap[pad3] = uname;
         }
       });
+      if (userDisplayMap['010']) {
+        userDisplayMap['checker'] = userDisplayMap['010'];
+        userDisplayMap['user 10'] = userDisplayMap['010'];
+        userDisplayMap['user 010'] = userDisplayMap['010'];
+      }
     }
     isLoaded = true;
   } catch (err) {
@@ -61,7 +81,7 @@ export function resolveDisplayName(identifier?: string | null, fallback = 'Unkno
     const ctx = getCurrentUserContext();
     const active = ctx.userName || ctx.username || ctx.userId;
     if (active && active.toLowerCase() !== 'user 2' && active.toLowerCase() !== 'user') {
-      return active;
+      return resolveDisplayName(active, fallback);
     }
     return fallback;
   }
@@ -71,11 +91,11 @@ export function resolveDisplayName(identifier?: string | null, fallback = 'Unkno
 
   // Handle historic "User 2" or "User 002" references
   if (clean.toLowerCase() === 'user 2' || clean.toLowerCase() === 'user 002' || clean.toLowerCase() === 'user2') {
-    return userDisplayMap['002'] || 'Rahul';
+    return userDisplayMap['002'] || 'RAHUL';
   }
 
-  if (clean.toLowerCase() === 'user 10' || clean.toLowerCase() === 'user 010' || clean.toLowerCase() === 'user10') {
-    return userDisplayMap['010'] || 'Checker';
+  if (clean.toLowerCase() === 'user 10' || clean.toLowerCase() === 'user 010' || clean.toLowerCase() === 'user10' || clean.toLowerCase() === 'checker') {
+    return userDisplayMap['010'] || 'SHYAMLAHOTI';
   }
 
   // Check exact map match
@@ -98,8 +118,37 @@ export function resolveDisplayName(identifier?: string | null, fallback = 'Unkno
   const ctx = getCurrentUserContext();
   const active = ctx.userName || ctx.username || ctx.userId;
   if (active && active.toLowerCase() !== 'user 2' && active.toLowerCase() !== 'user') {
-    return active;
+    return resolveDisplayName(active, fallback);
   }
 
   return fallback;
+}
+
+/**
+ * Returns the authenticated user's ID and username with guaranteed resolution
+ */
+export function getAuthenticatedUser(): { userId: string; username: string } {
+  const userCtx = getCurrentUserContext();
+  const rawUserId = String(userCtx.userId || '').trim();
+  const rawUsername = String(userCtx.userName || userCtx.username || '').trim();
+
+  let resolvedUsername = '';
+  if (rawUsername && rawUsername.toLowerCase() !== 'user' && rawUsername.toLowerCase() !== 'user 2' && rawUsername.toLowerCase() !== 'user 10') {
+    resolvedUsername = resolveDisplayName(rawUsername);
+  } else if (rawUserId) {
+    resolvedUsername = resolveDisplayName(rawUserId);
+  }
+
+  if (!resolvedUsername || resolvedUsername === 'Unknown User') {
+    if (userCtx.userRole === 'ADMIN' || userCtx.userLevel === 'L5') {
+      resolvedUsername = 'ADMIN';
+    } else {
+      resolvedUsername = rawUsername || rawUserId || 'ADMIN';
+    }
+  }
+
+  return {
+    userId: rawUserId || (resolvedUsername === 'SHYAMLAHOTI' ? '010' : resolvedUsername === 'RAHUL' ? '002' : '001'),
+    username: resolvedUsername
+  };
 }

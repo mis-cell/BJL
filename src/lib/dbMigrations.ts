@@ -32,6 +32,23 @@ export async function runDatabaseMigrations() {
           );
           ALTER TABLE IF EXISTS app_audit_logs DISABLE ROW LEVEL SECURITY;
 
+          -- Sauda user tracking columns and history
+          ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS rejected_user_id TEXT;
+          ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approved_user_id TEXT;
+
+          CREATE TABLE IF NOT EXISTS sauda_approval_history (
+            id TEXT PRIMARY KEY,
+            sauda_id TEXT,
+            sauda_no TEXT NOT NULL,
+            action_type TEXT NOT NULL,
+            user_id TEXT,
+            username TEXT NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            remarks TEXT,
+            financial_year TEXT
+          );
+          ALTER TABLE IF EXISTS sauda_approval_history DISABLE ROW LEVEL SECURITY;
+
           -- Satta user tracking columns
           ALTER TABLE IF EXISTS satta_base_rates ADD COLUMN IF NOT EXISTS updated_by TEXT;
           ALTER TABLE IF EXISTS satta_differentials ADD COLUMN IF NOT EXISTS updated_by TEXT;
