@@ -30,7 +30,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
         <div className="space-y-3">
           {/* Subtle session reference for User 010 */}
           <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 border border-slate-200/80 rounded-xl px-4 py-2 font-mono">
-            <span className="font-semibold text-slate-600">Contract Session: <strong className="text-[#174C2C]">{formData.session || 'BJCL/2026-2027/'}</strong></span>
+            <span className="font-semibold text-slate-600">Contract Session: <strong className="text-[#174C2C]">{formData.session || '2026-2027'}</strong></span>
             <span>Order No: <strong className="text-slate-800 font-bold">{formData.sauda_no || 'Auto'}</strong></span>
           </div>
 

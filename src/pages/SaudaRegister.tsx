@@ -101,35 +101,20 @@ const compareQualities = (aStr: string, bStr: string): number => {
 
 const formatPoNumber = (sauda: any) => {
   if (!sauda) return '';
-  if (sauda.session && sauda.session.trim()) {
-    const s = sauda.session.trim();
-    const parts = s.split('/').filter(Boolean);
-    if (parts.length >= 3) {
-      return s;
-    }
-    const base = s.endsWith('/') ? s : s + '/';
-    return `${base}${sauda.sauda_no || ''}`;
+  const rawNo = String(sauda.sauda_no || sauda.no || sauda.contract_no || '').trim();
+  if (rawNo.toUpperCase().startsWith('BJCL/')) {
+    return rawNo;
   }
-  const numPart = parseInt(sauda.sauda_no, 10);
-  const val = isNaN(numPart) ? sauda.sauda_no : numPart;
-  
-  // Format the year suffix
-  let yearPart = '26'; // fallback
-  if (sauda.financial_year) {
-    const startYear = sauda.financial_year.split('-')[0].trim();
-    if (startYear.length >= 4) {
-      yearPart = startYear.slice(-2);
-    } else if (startYear.length === 2) {
-      yearPart = startYear;
-    }
-  } else if (sauda.session && sauda.session.includes('/')) {
-    const parts = sauda.session.split('/');
-    if (parts.length > 1) {
-      const yr = parts[1].split('-')[0].trim();
-      if (yr.length >= 4) yearPart = yr.slice(-2);
-    }
+  const cleanSession = String(sauda.session || sauda.financial_year || '2026-2027')
+    .replace(/^BJCL\//i, '')
+    .replace(/\/.*$/, '')
+    .trim() || '2026-2027';
+  if (rawNo) {
+    const digits = rawNo.replace(/[^0-9]/g, '');
+    const padded = digits ? digits.padStart(4, '0') : rawNo;
+    return `BJCL/${cleanSession}/${padded}`;
   }
-  return `BJCL${val}/${yearPart}`;
+  return `BJCL/${cleanSession}/Auto`;
 };
 
 // Helper to generate a high-fidelity retro HTML email representation of a Sauda Slip
@@ -1560,24 +1545,6 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 <span>New Sauda</span>
               </button>
             )}
-
-            <button
-              onClick={handleCsvDownload}
-              className="bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-              title="Export ALL Sauda Desk fields and data to CSV"
-            >
-              <Download className="h-4 w-4 text-emerald-200" />
-              <span>Export Data (CSV)</span>
-            </button>
-
-            <button
-              onClick={() => setIsImportModalOpen(true)}
-              className="bg-sky-700 hover:bg-sky-800 text-white px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-              title="Import & Upload bulk Sauda contracts to Supabase from CSV"
-            >
-              <Upload className="h-4 w-4 text-sky-200" />
-              <span>Import Data (CSV)</span>
-            </button>
 
             <button
               onClick={() => {

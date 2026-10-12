@@ -585,24 +585,20 @@ export type GradeItemSummary = CompiledReportData['gradeItemSummary'][number];
 // Helper functions strictly mirroring Sauda Desk (src/pages/SaudaRegister.tsx)
 export const formatPoNumber = (sauda: any): string => {
   if (!sauda) return '';
-  const rawNo = sauda.sauda_no || sauda.no || sauda.contract_no || '';
-  if (rawNo && String(rawNo).trim().toUpperCase().startsWith('BJCL/')) {
-    return String(rawNo).trim();
+  const rawNo = String(sauda.sauda_no || sauda.no || sauda.contract_no || '').trim();
+  if (rawNo.toUpperCase().startsWith('BJCL/')) {
+    return rawNo;
   }
-  if (sauda.session && sauda.session.trim()) {
-    const s = sauda.session.trim();
-    const parts = s.split('/').filter(Boolean);
-    if (parts.length >= 3) {
-      return s;
-    }
+  const cleanSession = String(sauda.session || sauda.financial_year || '2026-2027')
+    .replace(/^BJCL\//i, '')
+    .replace(/\/.*$/, '')
+    .trim() || '2026-2027';
+  if (rawNo) {
+    const digits = rawNo.replace(/[^0-9]/g, '');
+    const padded = digits ? digits.padStart(4, '0') : rawNo;
+    return `BJCL/${cleanSession}/${padded}`;
   }
-  const cleanDigits = String(rawNo).replace(/[^0-9]/g, '');
-  if (cleanDigits) {
-    const padded = cleanDigits.padStart(4, '0');
-    const finYear = sauda.financial_year || (sauda.session && !sauda.session.includes('/') ? sauda.session : '2026-2027');
-    return `BJCL/${finYear}/${padded}`;
-  }
-  return String(rawNo);
+  return `BJCL/${cleanSession}/Auto`;
 };
 
 export const getCleanDigits = (str: string): string => {

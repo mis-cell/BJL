@@ -125,10 +125,9 @@ export default function SaudaEntry({
       copy.challan_supplier = (copy.challan_supplier || '').toUpperCase();
       copy.area = (copy.area || '').toUpperCase();
 
-      if (copy.session && copy.session.includes('BJCL/')) {
-        copy.session = '2026-2027';
-      }
-      if (!copy.session) {
+      if (copy.session) {
+        copy.session = String(copy.session).replace(/^BJCL\//i, '').replace(/\/.*$/, '').trim() || '2026-2027';
+      } else {
         copy.session = '2026-2027';
       }
 
@@ -496,11 +495,11 @@ export default function SaudaEntry({
         }
       }
 
-      // Auto sync Order No. and Session
-      if (name === 'sauda_no' && value) {
-        const cleanVal = value.trim();
-        const financialYear = prev.financial_year || '2026-2027';
-        updated.session = `BJCL/${financialYear}/${cleanVal}`;
+      // Ensure session is kept as clean session string (e.g. 2026-2027)
+      if (name === 'session' && value) {
+        const cleanSession = value.replace(/^BJCL\//i, '').replace(/\/.*$/, '').trim();
+        updated.session = cleanSession || '2026-2027';
+        updated.financial_year = updated.session;
       }
 
       return updated;
