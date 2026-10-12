@@ -109,6 +109,7 @@ export default function SaudaEntry({
   } catch {}
 
   const detectedIs010 = isUserId10(userCtx);
+  const activeUsername = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Rahul');
 
   const [forceUser010, setForceUser010] = useState<boolean | null>(null);
   const isUser010 = forceUser010 !== null ? forceUser010 : detectedIs010;
@@ -1033,9 +1034,26 @@ export default function SaudaEntry({
               <FileText className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
-              <span className="bg-[#0b2415] text-amber-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded border border-emerald-700/60 tracking-wider w-fit">
-                {formData.session || 'BJCL 2026 - 2027'}
-              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="bg-[#0b2415] text-amber-300 text-[11px] font-extrabold px-2.5 py-0.5 rounded border border-emerald-700/60 tracking-wider w-fit">
+                  {formData.session || 'BJCL 2026 - 2027'}
+                </span>
+                {initialData && (formData.created_by || initialData.created_by) && (
+                  <span className="bg-emerald-950/80 text-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-700/50">
+                    Saved by: {resolveDisplayName(formData.created_by || initialData.created_by, activeUsername)}
+                  </span>
+                )}
+                {initialData && (initialData.approved_by || initialData.checked_by) && (
+                  <span className="bg-emerald-800 text-amber-300 text-[10px] font-extrabold px-2 py-0.5 rounded border border-amber-400/50">
+                    ✓ Approved by: {resolveDisplayName(initialData.approved_by || initialData.checked_by)}
+                  </span>
+                )}
+                {initialData && initialData.rejected_by && (
+                  <span className="bg-rose-900 text-rose-100 text-[10px] font-extrabold px-2 py-0.5 rounded border border-rose-500/50">
+                    ✕ Rejected by: {resolveDisplayName(initialData.rejected_by)}
+                  </span>
+                )}
+              </div>
               <h1 className="text-xl md:text-2xl font-black uppercase tracking-widest text-amber-300 drop-shadow mt-0.5">
                 {initialData ? `MODIFY SAUDA #${formData.sauda_no}` : "NEW SAUDA CONTRACT ENTRY"}
               </h1>
