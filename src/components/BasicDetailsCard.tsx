@@ -96,9 +96,10 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
               aria-label="Session"
               type="text"
               name="session"
-              value={formData.session || 'BJCL/2026-2027/'}
+              value={formData.session || '2026-2027'}
               onChange={onChange}
-              className="bg-[#EAF4FF] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs"
+              placeholder="e.g. 2026-2027"
+              className="bg-[#EAF4FF] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono"
             />
           </div>
 
@@ -120,7 +121,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
               name="sauda_no"
               value={formData.sauda_no || ''}
               onChange={onChange}
-              placeholder="e.g. 0153"
+              placeholder="e.g. BJCL/2026-2027/0153"
               required
               className="bg-[#FFECEC] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-black text-slate-900 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs font-mono"
             />

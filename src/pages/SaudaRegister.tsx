@@ -799,14 +799,16 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     if (!enforceEditOrDeletePermission("Edit")) {
       return;
     }
-    // Fetch quality details for this sauda
+    // Fetch quality details for this sauda if not already present
     try {
-      if (dbModule) {
+      if ((!sauda.quality_details || sauda.quality_details.length === 0) && sauda.sauda_id) {
         const { supabase } = await import('../lib/supabase.ts');
         if (supabase) {
            const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', sauda.sauda_id);
-           const sorted = (data || []).sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
-           sauda.quality_details = sorted;
+           if (data && data.length > 0) {
+             const sorted = (data || []).sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
+             sauda.quality_details = sorted;
+           }
         }
       }
     } catch(e) { console.error("Could not fetch qualities", e); }
@@ -817,12 +819,12 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const handlePrint = async (sauda: Sauda) => {
     let fullSauda = { ...sauda };
     try {
-      if (dbModule) {
+      if ((!fullSauda.quality_details || fullSauda.quality_details.length === 0) && sauda.sauda_id) {
         const { supabase } = await import('../lib/supabase.ts');
         if (supabase) {
            const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', sauda.sauda_id);
-           const sorted = (data || []).sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
-           if (sorted && sorted.length > 0) {
+           if (data && data.length > 0) {
+             const sorted = (data || []).sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
              const fallbackQ = (sorted.find((s: any) => s.quality)?.quality) || (sauda as any).quality || 'TD5';
              const fallbackR = Number(sauda.b_rate) || Number(sorted.find((s: any) => s.rs && Number(s.rs) > 0)?.rs) || 13500;
              fullSauda.quality_details = sorted.map((s: any) => ({

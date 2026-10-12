@@ -14,7 +14,11 @@ import {
   Filter,
   RefreshCw,
   ShieldCheck,
-  X
+  X,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Calendar
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -32,7 +36,7 @@ import { MONTHS } from './types';
 import { isUserId10, getCurrentUserContext } from '../../lib/permissions';
 import { supabase } from '../../lib/supabase';
 import { dbModule } from '../../services/dbModule';
-import { initUserMap, resolveDisplayName } from '../../lib/userResolver';
+import { initUserMap, resolveDisplayName, getAuthenticatedUser } from '../../lib/userResolver';
 import { logChange } from '../../services/auditLogService';
 import SaudaPrintSlip from '../SaudaPrintSlip';
 
@@ -46,6 +50,19 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<'date' | 'order_no'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+
+  const toggleSort = (field: 'date' | 'order_no') => {
+    if (sortField === field) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder('desc');
+    }
+  };
 
   const isUser10 = isUserId10();
   const userCtx = getCurrentUserContext();
@@ -71,17 +88,22 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
     const fYear = sauda.financial_year || '2026-2027';
     if (!sId && !sNo) return;
 
+    const { userId: authUserId, username: authUsername } = getAuthenticatedUser();
+    const approverName = authUsername || 'ADMIN';
+
     setActionLoading(sId || sNo);
     const updatePayload = {
       status: 'APPROVED',
       approval_status: 'APPROVED',
       is_checked: true,
-      checked_by: currentUsername,
-      approved_by: currentUsername,
+      checked_by: approverName,
+      approved_by: approverName,
+      approved_user_id: authUserId,
       approved_at: new Date().toISOString(),
       checked_at: new Date().toISOString(),
       rejected_by: null,
-      rejected_at: null
+      rejected_at: null,
+      rejected_user_id: null
     };
 
     try {
@@ -94,6 +116,18 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
         if (!updateRes && sNo) {
           await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', sNo).eq('financial_year', fYear);
         }
+
+        // Permanently record approval in sauda_approval_history
+        await supabase.from('sauda_approval_history').insert({
+          id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          sauda_id: String(sId || sNo),
+          sauda_no: String(sNo),
+          action_type: 'APPROVED',
+          user_id: authUserId,
+          username: approverName,
+          remarks: `Approved by ${approverName} (User ${authUserId})`,
+          financial_year: fYear
+        });
       }
       if (sId) {
         await dbModule.update('sauda_master', 'sauda_id', sId, updatePayload).catch(() => {});
@@ -113,8 +147,9 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
         field_label: 'Approval Status',
         old_value: sauda.status || 'PENDING',
         new_value: 'APPROVED',
-        user_name: currentUsername,
-        remarks: `Sauda #${sNo} approved by ${currentUsername}`
+        user_name: approverName,
+        user_role: `User ${authUserId}`,
+        remarks: `Sauda #${sNo} approved by ${approverName} (User ${authUserId})`
       }).catch(() => {});
 
       window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sauda_master' } }));
@@ -133,6 +168,9 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
     const fYear = sauda.financial_year || '2026-2027';
     if (!sId && !sNo) return;
 
+    const { userId: authUserId, username: authUsername } = getAuthenticatedUser();
+    const rejectorName = authUsername || 'SHYAMLAHOTI';
+
     const confirmReject = window.confirm(`Are you sure you want to REJECT Sauda Order #${sauda.sauda_no}? It will NOT appear in Sauda Check Point.`);
     if (!confirmReject) return;
 
@@ -143,7 +181,9 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
       is_checked: false,
       checked_by: null,
       approved_by: null,
-      rejected_by: currentUsername,
+      approved_user_id: null,
+      rejected_by: rejectorName,
+      rejected_user_id: authUserId,
       rejected_at: new Date().toISOString()
     };
 
@@ -157,6 +197,18 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
           const paddedNo = cleanNo ? cleanNo.padStart(4, '0') : '';
           await supabase.from('sauda_master').update(updatePayload).or(`sauda_no.eq.${sNo},sauda_no.eq.${paddedNo},sauda_no.eq.${cleanNo}`);
         }
+
+        // Permanently record rejection in sauda_approval_history
+        await supabase.from('sauda_approval_history').insert({
+          id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          sauda_id: String(sId || sNo),
+          sauda_no: String(sNo),
+          action_type: 'REJECTED',
+          user_id: authUserId,
+          username: rejectorName,
+          remarks: `Rejected by ${rejectorName} (User ${authUserId})`,
+          financial_year: fYear
+        });
       }
       if (sId) {
         await dbModule.update('sauda_master', 'sauda_id', sId, updatePayload).catch(() => {});
@@ -176,8 +228,9 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
         field_label: 'Rejection Status',
         old_value: sauda.status || 'PENDING',
         new_value: 'REJECTED',
-        user_name: currentUsername,
-        remarks: `Sauda #${sNo} rejected by ${currentUsername}`
+        user_name: rejectorName,
+        user_role: `User ${authUserId}`,
+        remarks: `Sauda #${sNo} rejected by ${rejectorName} (User ${authUserId})`
       }).catch(() => {});
 
       window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sauda_master' } }));
@@ -191,7 +244,7 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
   };
 
   const filteredUser10Saudas = useMemo(() => {
-    return saudaList.filter(s => {
+    const list = saudaList.filter(s => {
       const st = String(s.status || s.approval_status || 'pending').toLowerCase();
       const isAppr = st === 'approved' || Boolean(s.approved_by && st !== 'rejected');
       const isRej = st === 'rejected' || Boolean(s.rejected_by && st === 'rejected');
@@ -200,6 +253,14 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
       if (filterStatus === 'pending' && !isPend) return false;
       if (filterStatus === 'approved' && !isAppr) return false;
       if (filterStatus === 'rejected' && !isRej) return false;
+
+      // Date Range Filtering
+      if (startDate && s.date) {
+        if (new Date(s.date) < new Date(startDate)) return false;
+      }
+      if (endDate && s.date) {
+        if (new Date(s.date) > new Date(endDate + 'T23:59:59')) return false;
+      }
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -212,7 +273,24 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
 
       return true;
     });
-  }, [saudaList, filterStatus, searchQuery]);
+
+    return list.sort((a, b) => {
+      if (sortField === 'order_no') {
+        const numA = parseInt(String(a.sauda_no || '').replace(/\D/g, ''), 10) || 0;
+        const numB = parseInt(String(b.sauda_no || '').replace(/\D/g, ''), 10) || 0;
+        return sortOrder === 'asc' ? numA - numB : numB - numA;
+      } else {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        if (dateA === dateB) {
+          const numA = parseInt(String(a.sauda_no || '').replace(/\D/g, ''), 10) || 0;
+          const numB = parseInt(String(b.sauda_no || '').replace(/\D/g, ''), 10) || 0;
+          return sortOrder === 'asc' ? numA - numB : numB - numA;
+        }
+        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+      }
+    });
+  }, [saudaList, filterStatus, searchQuery, startDate, endDate, sortField, sortOrder]);
 
   const [reportMonth, setReportMonth] = useState<number>(new Date().getMonth() + 1);
   const [reportYear, setReportYear] = useState<number>(new Date().getFullYear());
@@ -450,7 +528,7 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
 
         {/* Action & Filter Toolbar */}
         <div className="bg-white border border-slate-200 p-3 rounded-2xl shadow-xs flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
             <div className="relative flex-1">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -460,6 +538,83 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
                 placeholder="Search by Order #, Broker, Supplier, Rate..."
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 font-medium outline-none focus:border-emerald-600 focus:bg-white transition-all"
               />
+            </div>
+          </div>
+
+          {/* Date Filter & Sort Controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1 text-xs">
+              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">From</span>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-transparent font-medium text-slate-700 outline-none text-xs"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1 text-xs">
+              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">To</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-transparent font-medium text-slate-700 outline-none text-xs"
+              />
+            </div>
+
+            {(startDate || endDate) && (
+              <button
+                type="button"
+                onClick={() => { setStartDate(''); setEndDate(''); }}
+                className="px-2 py-1 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl flex items-center gap-1 transition-all cursor-pointer"
+                title="Clear date filters"
+              >
+                <X className="w-3 h-3" />
+                <span>Clear</span>
+              </button>
+            )}
+
+            {/* Quick Sort Options Beside Date Filter */}
+            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1 text-xs">
+              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider pl-1.5 pr-0.5">
+                Sort:
+              </span>
+              <button
+                type="button"
+                onClick={() => toggleSort('date')}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95 ${
+                  sortField === 'date'
+                    ? 'bg-[#174C2C] text-white shadow-2xs'
+                    : 'text-slate-700 hover:bg-slate-200'
+                }`}
+                title={`Sort by Date (${sortField === 'date' && sortOrder === 'asc' ? 'Oldest first' : 'Newest first'})`}
+              >
+                <span>Date</span>
+                {sortField === 'date' ? (
+                  sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-amber-300" /> : <ArrowDown className="w-3 h-3 text-amber-300" />
+                ) : (
+                  <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => toggleSort('order_no')}
+                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95 ${
+                  sortField === 'order_no'
+                    ? 'bg-[#174C2C] text-white shadow-2xs'
+                    : 'text-slate-700 hover:bg-slate-200'
+                }`}
+                title={`Sort by Order No. (${sortField === 'order_no' && sortOrder === 'asc' ? 'Ascending #0001 → #9999' : 'Descending #9999 → #0001'})`}
+              >
+                <span>Order No.</span>
+                {sortField === 'order_no' ? (
+                  sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-amber-300" /> : <ArrowDown className="w-3 h-3 text-amber-300" />
+                ) : (
+                  <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                )}
+              </button>
             </div>
           </div>
 
@@ -522,8 +677,46 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
             <table className="w-full border-collapse text-xs min-w-[700px]">
               <thead className="bg-[#174C2C] text-white sticky top-0 z-10">
                 <tr className="h-10 text-[11px] font-black uppercase tracking-wider">
-                  <th className="px-4 py-2 text-center">Date</th>
-                  <th className="px-4 py-2 text-center">Order No.</th>
+                  <th
+                    onClick={() => toggleSort('date')}
+                    className={`px-4 py-2 text-center cursor-pointer transition-colors group select-none hover:bg-[#123b22] ${
+                      sortField === 'date' ? 'bg-[#123b22]' : ''
+                    }`}
+                    title={`Click to sort by Date (${sortField === 'date' ? (sortOrder === 'asc' ? 'Current: Oldest first' : 'Current: Newest first') : 'Click to sort'})`}
+                  >
+                    <div className="inline-flex items-center justify-center gap-1.5">
+                      <span>Date</span>
+                      {sortField === 'date' ? (
+                        sortOrder === 'asc' ? (
+                          <ArrowUp className="w-3.5 h-3.5 text-amber-300" />
+                        ) : (
+                          <ArrowDown className="w-3.5 h-3.5 text-amber-300" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 text-emerald-200/60 group-hover:text-white transition-colors" />
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => toggleSort('order_no')}
+                    className={`px-4 py-2 text-center cursor-pointer transition-colors group select-none hover:bg-[#123b22] ${
+                      sortField === 'order_no' ? 'bg-[#123b22]' : ''
+                    }`}
+                    title={`Click to sort by Order No. (${sortField === 'order_no' ? (sortOrder === 'asc' ? 'Current: Ascending #0001 → #9999' : 'Current: Descending #9999 → #0001') : 'Click to sort'})`}
+                  >
+                    <div className="inline-flex items-center justify-center gap-1.5">
+                      <span>Order No.</span>
+                      {sortField === 'order_no' ? (
+                        sortOrder === 'asc' ? (
+                          <ArrowUp className="w-3.5 h-3.5 text-amber-300" />
+                        ) : (
+                          <ArrowDown className="w-3.5 h-3.5 text-amber-300" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 text-emerald-200/60 group-hover:text-white transition-colors" />
+                      )}
+                    </div>
+                  </th>
                   <th className="px-5 py-2 text-left">Broker</th>
                   <th className="px-5 py-2 text-right">B. Rate</th>
                   <th className="px-4 py-2 text-center">Print Preview Only</th>
@@ -584,10 +777,18 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
                       {/* 6. Approve */}
                       <td className="px-4 text-center">
                         {isApproved ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-[11px] font-black">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                            Approved
-                          </span>
+                          <div className="inline-flex flex-col items-center gap-1">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-[10.5px] font-black shadow-2xs whitespace-nowrap">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>APPROVED &mdash; Approved By: <strong className="font-black text-emerald-950 uppercase">{resolveDisplayName(entry.approved_by || entry.checked_by, 'ADMIN')}</strong></span>
+                            </span>
+                            <span 
+                              title={`Approved by ${resolveDisplayName(entry.approved_by || entry.checked_by, 'ADMIN')}`}
+                              className="text-[9.5px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md whitespace-nowrap"
+                            >
+                              Approved By: <strong className="font-black text-emerald-950 uppercase">{resolveDisplayName(entry.approved_by || entry.checked_by, 'ADMIN')}</strong>
+                            </span>
+                          </div>
                         ) : (
                           <button
                             type="button"
@@ -604,13 +805,21 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
                       {/* 7. Reject */}
                       <td className="px-4 text-center">
                         {isRejected ? (
-                          <span 
-                            title={`Rejected by ${resolveDisplayName(entry.rejected_by, 'Unknown User')}`}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-100 text-rose-800 border border-rose-300 rounded-xl text-[11px] font-black"
-                          >
-                            <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                            <span>✕ {resolveDisplayName(entry.rejected_by, 'Unknown User')}</span>
-                          </span>
+                          <div className="inline-flex flex-col items-center gap-1">
+                            <span 
+                              title={`REJECTED — Rejected By: ${resolveDisplayName(entry.rejected_by, 'SHYAMLAHOTI')}`}
+                              className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-100 text-rose-800 border border-rose-300 rounded-xl text-[10.5px] font-black shadow-2xs whitespace-nowrap"
+                            >
+                              <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                              <span>REJECTED &mdash; Rejected By: <strong className="font-black text-rose-950 uppercase">{resolveDisplayName(entry.rejected_by, 'SHYAMLAHOTI')}</strong></span>
+                            </span>
+                            <span 
+                              title={`Rejected by ${resolveDisplayName(entry.rejected_by, 'SHYAMLAHOTI')}`}
+                              className="text-[9.5px] font-bold text-rose-800 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md whitespace-nowrap"
+                            >
+                              Rejected By: <strong className="font-black text-rose-950 uppercase">{resolveDisplayName(entry.rejected_by, 'SHYAMLAHOTI')}</strong>
+                            </span>
+                          </div>
                         ) : (
                           <button
                             type="button"

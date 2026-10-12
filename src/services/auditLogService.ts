@@ -294,7 +294,9 @@ export async function fetchAppAuditLogs(filters?: AuditLogFilters): Promise<AppA
         query = query.ilike('user_name', `%${filters.userName}%`);
       }
       if (filters?.recordId) {
-        query = query.ilike('record_id', `%${filters.recordId}%`);
+        const cleanRecId = String(filters.recordId).replace(/^0+/, '');
+        const padRecId = cleanRecId ? cleanRecId.padStart(4, '0') : '';
+        query = query.or(`record_id.ilike.%${filters.recordId}%,record_id.ilike.%${cleanRecId}%,record_id.ilike.%${padRecId}%`);
       }
       if (filters?.dateFrom) {
         query = query.gte('timestamp', `${filters.dateFrom}T00:00:00`);
@@ -306,6 +308,55 @@ export async function fetchAppAuditLogs(filters?: AuditLogFilters): Promise<AppA
       const { data, error } = await query;
       if (!error && data && Array.isArray(data)) {
         dbLogs = data;
+      }
+
+      // Query sauda_approval_history to include all dedicated approval, rejection, and resubmission events
+      try {
+        let histQuery = supabase
+          .from('sauda_approval_history')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(filters?.limit || 500);
+
+        if (filters?.recordId) {
+          const cleanRecId = String(filters.recordId).replace(/^0+/, '');
+          const padRecId = cleanRecId ? cleanRecId.padStart(4, '0') : '';
+          histQuery = histQuery.or(`sauda_no.ilike.%${filters.recordId}%,sauda_no.ilike.%${cleanRecId}%,sauda_no.ilike.%${padRecId}%,sauda_id.ilike.%${filters.recordId}%`);
+        }
+        if (filters?.userName && filters.userName !== 'ALL') {
+          histQuery = histQuery.ilike('username', `%${filters.userName}%`);
+        }
+        if (filters?.dateFrom) {
+          histQuery = histQuery.gte('created_at', `${filters.dateFrom}T00:00:00`);
+        }
+        if (filters?.dateTo) {
+          histQuery = histQuery.lte('created_at', `${filters.dateTo}T23:59:59`);
+        }
+
+        const { data: histData, error: histErr } = await histQuery;
+        if (!histErr && histData && Array.isArray(histData)) {
+          for (const row of histData) {
+            const rowId = `sah_${row.id || Math.random()}`;
+            dbLogs.push({
+              id: rowId,
+              timestamp: row.created_at || new Date().toISOString(),
+              created_at: row.created_at || new Date().toISOString(),
+              module: 'Sauda Desk',
+              entity_name: row.action_type === 'REJECTED' ? 'Sauda Contract Rejection' : (row.action_type === 'APPROVED' ? 'Sauda Contract Approval' : 'Sauda Contract Resubmission'),
+              record_id: `#${row.sauda_no || row.sauda_id}`,
+              action: 'UPDATE',
+              field_name: 'status',
+              field_label: 'Approval Status',
+              old_value: row.action_type === 'REJECTED' ? 'PENDING' : (row.action_type === 'RESUBMITTED' ? 'REJECTED' : 'PENDING'),
+              new_value: row.action_type,
+              user_name: row.username || 'System User',
+              user_role: row.user_id ? `User ${row.user_id}` : 'Approver',
+              remarks: row.remarks || `${row.action_type} by ${row.username}`
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('Could not query sauda_approval_history:', e);
       }
 
       // Also query user_activity_logs table to combine ALL activity logs

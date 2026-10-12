@@ -46,7 +46,6 @@ export default function SaudaPrintSlip({ sauda }: Props) {
 
       if (agList.length > 0 && mkList.length > 0) {
         if (agList.length === mkList.length && agList.length > 1) {
-          // 1-to-1 matching when matching counts provided (e.g. ACHINTALA with 39, ALAMPUR with ALAMPUR)
           agList.forEach((ag, idx) => {
             expandedList.push({
               agency: ag,
@@ -57,7 +56,6 @@ export default function SaudaPrintSlip({ sauda }: Props) {
             });
           });
         } else {
-          // Cross-product
           agList.forEach(ag => {
             mkList.forEach(mk => {
               expandedList.push({
@@ -115,21 +113,22 @@ export default function SaudaPrintSlip({ sauda }: Props) {
         : [{ agency: '', marka: '', quality: contractQuality, rs: contractRate, qty: 0 }]
       );
   
-  // Pad local qualities to at least 7 rows to match the physical slip format
+  // Pad local qualities to at least 7 rows to match physical slip layout
   const paddedQualities = [...qualityRows];
   while (paddedQualities.length < 7) {
     paddedQualities.push({ quality: '', percentage: 0, rate: 0, qty: 0, rs: 0, marka: '', agency: '' });
   }
 
-  const sessionParts = sauda.session ? sauda.session.split('/') : ['BJCL', '2026-2027', sauda.sauda_no];
-  const yearStr = sessionParts[1] || '2026-2027';
+  const sessionStr = sauda.session || '2026-2027';
+  const orderNoDisplay = sauda.sauda_no
+    ? (sauda.sauda_no.startsWith('BJCL') ? sauda.sauda_no : `BJCL / ${sessionStr}/${sauda.sauda_no}`)
+    : '';
 
   // Format any rate values nicely
   const getBrateString = () => {
     if (sauda.b_rate) {
       return `${Number(sauda.b_rate).toLocaleString('en-IN')}/-`;
     }
-    // Try to find the first quality rate as a backup
     const firstWithRate = qualityRows.find(q => q.rs && Number(q.rs) > 0);
     if (firstWithRate) {
       return `${Number(firstWithRate.rs).toLocaleString('en-IN')}/-`;
@@ -147,11 +146,11 @@ export default function SaudaPrintSlip({ sauda }: Props) {
              </div>
              <div className="flex flex-col">
                 <div className="font-extrabold text-[15px] text-black leading-tight tracking-tight">BALLY JUTE COMPANY LIMITED</div>
-                <div className="text-[10px] font-bold text-neutral-800 tracking-wider font-mono">SAUDA CONTRACT SLIP • {yearStr}</div>
+                <div className="text-[10px] font-bold text-neutral-800 tracking-wider font-mono">SAUDA CONTRACT SLIP • {sessionStr}</div>
              </div>
           </div>
           <div className="flex flex-col items-end text-right">
-             <div className="font-bold text-[16px] text-black">BJCL / {sauda.sauda_no}</div>
+             <div className="font-bold text-[15px] sm:text-[16px] text-black font-mono">{orderNoDisplay}</div>
              <div className="text-[11px] font-bold text-black">Date: {sauda.date ? new Date(sauda.date).toLocaleDateString('en-GB') : ''}</div>
              <div className="text-[10px] font-mono text-black">P.O. : {sauda.po_type || 'Normal/PTF'}</div>
           </div>

@@ -124,90 +124,48 @@ export default function SaudaEntry({
       copy.supplier = (copy.supplier || '').toUpperCase();
       copy.challan_supplier = (copy.challan_supplier || '').toUpperCase();
       copy.area = (copy.area || '').toUpperCase();
+
+      if (copy.session && copy.session.includes('BJCL/')) {
+        copy.session = '2026-2027';
+      }
+      if (!copy.session) {
+        copy.session = '2026-2027';
+      }
+
+      if (copy.sauda_no && !copy.sauda_no.startsWith('BJCL/')) {
+        const cleanNo = String(copy.sauda_no).replace(/^0+/, '');
+        const padded = cleanNo ? cleanNo.padStart(4, '0') : '0153';
+        copy.sauda_no = `BJCL/${copy.session}/${padded}`;
+      }
       
       const realQD = (copy.quality_details || [])
-        .filter((item: any) => item.quality || item.qty || item.agency || item.marka || item.rs);
+        .filter((item: any) => item.quality || item.qty || item.agency || item.marka || item.rs || (item.agencies && item.agencies.length > 0));
 
       if (copy.units_per_lorry === undefined && copy.units_per_lorry_type && !isNaN(Number(copy.units_per_lorry_type))) {
         copy.units_per_lorry = Number(copy.units_per_lorry_type);
       }
 
-      const existingCount = realQD.length;
-      if (existingCount < 1) {
+      if (realQD.length < 1) {
         copy.quality_details = [{ quality: '', qty: 0, agency: '', marka: '', rs: 0, agencies: [], markas: [], applicableCombinations: [] }];
       } else {
-        // Normalize rows and group shared (quality, rs) rows for multi-select editing
-        const groupedMap = new Map<string, any>();
-        realQD.forEach((row: any) => {
-          const q = String(row.quality || '').trim();
-          const r = Number(row.rs) || 0;
-          const key = `${q}_${r}`;
-
-          const ags: string[] = (
-            Array.isArray(row.agencies) && row.agencies.length > 0
-              ? row.agencies
-              : (row.agency ? String(row.agency).split(',').map((x: string) => x.trim()).filter(Boolean) : [])
-          );
-
-          const mks: string[] = (
-            Array.isArray(row.markas) && row.markas.length > 0
-              ? row.markas
-              : (row.marka ? String(row.marka).split(',').map((x: string) => x.trim()).filter(Boolean) : [])
-          );
-
-          if (!groupedMap.has(key)) {
-            groupedMap.set(key, {
-              quality: q,
-              rs: r,
-              qty: Number(row.qty) || 0,
-              agencies: [...ags],
-              markas: [...mks],
-              agency: ags[0] || '',
-              marka: mks[0] || '',
-              applicableCombinations: (row.agency && row.marka) ? [{
-                agency: row.agency,
-                marka: row.marka,
-                quality: q,
-                rs: r,
-                qty: Number(row.qty) || 0,
-                enabled: true
-              }] : []
-            });
-          } else {
-            const existing = groupedMap.get(key);
-            ags.forEach(ag => {
-              if (ag && !existing.agencies.includes(ag)) existing.agencies.push(ag);
-            });
-            mks.forEach(mk => {
-              if (mk && !existing.markas.includes(mk)) existing.markas.push(mk);
-            });
-            if (row.agency && row.marka) {
-              const alreadyHas = existing.applicableCombinations.some(
-                (c: any) => c.agency.toUpperCase() === row.agency.toUpperCase() && c.marka.toUpperCase() === row.marka.toUpperCase()
-              );
-              if (!alreadyHas) {
-                existing.applicableCombinations.push({
-                  agency: row.agency,
-                  marka: row.marka,
-                  quality: q,
-                  rs: r,
-                  qty: Number(row.qty) || 0,
-                  enabled: true
-                });
-              }
-            }
-          }
-        });
-
-        copy.quality_details = Array.from(groupedMap.values());
+        copy.quality_details = realQD.map((r: any) => ({
+          quality: r.quality || '',
+          rs: r.rs !== undefined ? Number(r.rs) : (r.rate || 0),
+          qty: Number(r.qty) || 0,
+          agency: r.agency || '',
+          marka: r.marka || '',
+          agencies: Array.isArray(r.agencies) && r.agencies.length > 0 ? r.agencies : (r.agency ? [r.agency] : []),
+          markas: Array.isArray(r.markas) && r.markas.length > 0 ? r.markas : (r.marka ? [r.marka] : []),
+          applicableCombinations: Array.isArray(r.applicableCombinations) ? r.applicableCombinations : []
+        }));
       }
       return copy;
     }
 
     return {
-      sauda_no: '0153',
+      sauda_no: 'BJCL/2026-2027/0153',
       financial_year: '2026-2027',
-      session: 'BJCL/2026-2027/',
+      session: '2026-2027',
       po_type: 'Normal',
       date: today,
       broker: '',
@@ -285,15 +243,18 @@ export default function SaudaEntry({
         // Auto-generate next Order No. if creating new Sauda
         if (!initialData && allSaudas && allSaudas.length > 0) {
           const numbers = allSaudas.map((s: any) => {
-            const val = parseInt(s.sauda_no || '0', 10);
+            const str = String(s.sauda_no || '');
+            const match = str.match(/\d+$/);
+            const val = match ? parseInt(match[0], 10) : parseInt(str, 10);
             return isNaN(val) ? 0 : val;
           });
           const maxNo = Math.max(...numbers, 152);
           const nextNoStr = String(maxNo + 1).padStart(4, '0');
+          const currentSession = formData.session || '2026-2027';
           setFormData(prev => ({
             ...prev,
-            sauda_no: nextNoStr,
-            session: `BJCL/2026-2027/${nextNoStr}`
+            sauda_no: `BJCL/${currentSession}/${nextNoStr}`,
+            session: currentSession
           }));
         }
       } catch (err) {
@@ -901,7 +862,8 @@ export default function SaudaEntry({
         'approved_at',
         'rejected_by',
         'rejected_at',
-        'created_at'
+        'created_at',
+        'quality_details'
       ];
 
       const toIntegerOrNull = (v: any) => {
@@ -925,6 +887,30 @@ export default function SaudaEntry({
           saudaPayload[field] = (saudaData as any)[field];
         }
       });
+
+      // Save complete raw quality details array (preserving multi-select agencies, markas, applicableCombinations)
+      saudaPayload.quality_details = (formData.quality_details || []).map((q: any) => ({
+        quality: String(q.quality || '').trim(),
+        rs: toNumericOrNull(q.rs) ?? 0,
+        qty: toNumericOrNull(q.qty) ?? 0,
+        agency: String(q.agency || '').trim(),
+        marka: String(q.marka || '').trim(),
+        agencies: Array.isArray(q.agencies) && q.agencies.length > 0 ? q.agencies : (q.agency ? [q.agency] : []),
+        markas: Array.isArray(q.markas) && q.markas.length > 0 ? q.markas : (q.marka ? [q.marka] : []),
+        applicableCombinations: Array.isArray(q.applicableCombinations) ? q.applicableCombinations : []
+      }));
+
+      // Map session and sauda_no cleanly
+      const cleanSession = saudaData.session ? String(saudaData.session).replace(/^BJCL\//, '').replace(/\/$/, '').trim() : '2026-2027';
+      saudaPayload.session = cleanSession || '2026-2027';
+
+      let rawSaudaNo = saudaData.sauda_no ? String(saudaData.sauda_no).trim() : '0153';
+      if (!rawSaudaNo.startsWith('BJCL/')) {
+        const digits = rawSaudaNo.replace(/^0+/, '');
+        const padded = digits ? digits.padStart(4, '0') : '0153';
+        rawSaudaNo = `BJCL/${saudaPayload.session}/${padded}`;
+      }
+      saudaPayload.sauda_no = rawSaudaNo;
 
       // Strongly sanitize types so Postgres never receives "" for integer, numeric, or date fields
       saudaPayload.no_of_lorries = toIntegerOrNull(saudaData.no_of_lorries) ?? 1;
