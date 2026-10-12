@@ -13,13 +13,14 @@ export default function SaudaPrintSlip({ sauda }: Props) {
   const contractQuality = (sauda as any).quality || '';
   const contractRate = Number(sauda.b_rate) || 0;
 
-  // Expand all active rows so Agency, Marka, Quality, Rs are rendered cleanly
+  // Process rows cleanly without unnecessary cross-product duplication
   const expandedList: any[] = [];
   rawQualityRows.forEach(row => {
-    // 1. If row already has explicit applicableCombinations array
+    // 1. If row has explicit applicableCombinations array with items
     if (Array.isArray(row.applicableCombinations) && row.applicableCombinations.length > 0) {
-      row.applicableCombinations.forEach((comb: any) => {
-        if (comb.enabled !== false && (comb.agency || comb.marka || comb.quality || comb.rs)) {
+      const enabledCombs = row.applicableCombinations.filter((comb: any) => comb.enabled !== false && (comb.agency || comb.marka || comb.quality || comb.rs));
+      if (enabledCombs.length > 0) {
+        enabledCombs.forEach((comb: any) => {
           expandedList.push({
             agency: String(comb.agency || row.agency || '').trim(),
             marka: String(comb.marka || row.marka || '').trim(),
@@ -27,76 +28,25 @@ export default function SaudaPrintSlip({ sauda }: Props) {
             rs: comb.rs ? Number(comb.rs) : (row.rs ? Number(row.rs) : 0),
             qty: Number(comb.qty) || Number(row.qty) || 0
           });
-        }
-      });
-    } else {
-      const agList: string[] = (
-        Array.isArray(row.agencies) && row.agencies.length > 0
-          ? row.agencies
-          : (row.agency ? String(row.agency).split(',').map((x: string) => x.trim()).filter(Boolean) : [])
-      );
-      const mkList: string[] = (
-        Array.isArray(row.markas) && row.markas.length > 0
-          ? row.markas
-          : (row.marka ? String(row.marka).split(',').map((x: string) => x.trim()).filter(Boolean) : [])
-      );
-
-      const rowQ = String(row.quality || '').trim();
-      const rowR = row.rs !== undefined && row.rs !== null && String(row.rs).trim() !== '' ? Number(row.rs) : 0;
-
-      if (agList.length > 0 && mkList.length > 0) {
-        if (agList.length === mkList.length && agList.length > 1) {
-          agList.forEach((ag, idx) => {
-            expandedList.push({
-              agency: ag,
-              marka: mkList[idx] || mkList[0] || '',
-              quality: rowQ,
-              rs: rowR,
-              qty: Number(row.qty) || 0
-            });
-          });
-        } else {
-          agList.forEach(ag => {
-            mkList.forEach(mk => {
-              expandedList.push({
-                agency: ag,
-                marka: mk,
-                quality: rowQ,
-                rs: rowR,
-                qty: Number(row.qty) || 0
-              });
-            });
-          });
-        }
-      } else if (agList.length > 0) {
-        agList.forEach(ag => {
-          expandedList.push({
-            agency: ag,
-            marka: String(row.marka || '').trim(),
-            quality: rowQ,
-            rs: rowR,
-            qty: Number(row.qty) || 0
-          });
         });
-      } else if (mkList.length > 0) {
-        mkList.forEach(mk => {
-          expandedList.push({
-            agency: String(row.agency || '').trim(),
-            marka: mk,
-            quality: rowQ,
-            rs: rowR,
-            qty: Number(row.qty) || 0
-          });
-        });
-      } else if (row.quality || row.agency || row.marka || Number(row.rs) > 0) {
-        expandedList.push({
-          agency: String(row.agency || '').trim(),
-          marka: String(row.marka || '').trim(),
-          quality: rowQ,
-          rs: rowR,
-          qty: Number(row.qty) || 0
-        });
+        return;
       }
+    }
+
+    // 2. Otherwise render the row directly as specified in the form
+    const rowAgency = String(row.agency || (Array.isArray(row.agencies) ? row.agencies.join(', ') : '')).trim();
+    const rowMarka = String(row.marka || (Array.isArray(row.markas) ? row.markas.join(', ') : '')).trim();
+    const rowQuality = String(row.quality || '').trim();
+    const rowRs = row.rs !== undefined && row.rs !== null && String(row.rs).trim() !== '' ? Number(row.rs) : 0;
+
+    if (rowQuality || rowRs > 0 || rowAgency || rowMarka) {
+      expandedList.push({
+        agency: rowAgency,
+        marka: rowMarka,
+        quality: rowQuality,
+        rs: rowRs,
+        qty: Number(row.qty) || 0
+      });
     }
   });
 
@@ -119,10 +69,22 @@ export default function SaudaPrintSlip({ sauda }: Props) {
     paddedQualities.push({ quality: '', percentage: 0, rate: 0, qty: 0, rs: 0, marka: '', agency: '' });
   }
 
-  const sessionStr = sauda.session || '2026-2027';
-  const orderNoDisplay = sauda.sauda_no
-    ? (sauda.sauda_no.startsWith('BJCL') ? sauda.sauda_no : `BJCL / ${sessionStr}/${sauda.sauda_no}`)
-    : '';
+  // Clean session string (e.g. 2026-2027)
+  const rawSession = String(sauda.session || '2026-2027').trim();
+  const sessionStr = rawSession.replace(/^BJCL\//i, '').replace(/\/.*$/, '').trim() || '2026-2027';
+
+  // Format order number cleanly (e.g. BJCL/2026-2027/585)
+  let orderNoDisplay = '';
+  if (sauda.sauda_no) {
+    const rawNo = String(sauda.sauda_no).trim();
+    if (rawNo.startsWith('BJCL/')) {
+      orderNoDisplay = rawNo;
+    } else {
+      const cleanDigits = rawNo.replace(/^0+/, '');
+      const padded = cleanDigits ? cleanDigits : '0153';
+      orderNoDisplay = `BJCL/${sessionStr}/${padded}`;
+    }
+  }
 
   // Format any rate values nicely
   const getBrateString = () => {
