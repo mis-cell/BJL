@@ -320,7 +320,8 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
           readOnly={false}
           tabIndex={-1}
           title="Auto-calculated average (Locked)"
-          value={row.lorry_read_avg !== undefined && row.lorry_read_avg !== null && String(row.lorry_read_avg) !== "" && Number(row.lorry_read_avg) > 0 ? row.lorry_read_avg : (row.lorry_moisture_avg !== undefined && row.lorry_moisture_avg !== null && Number(row.lorry_moisture_avg) > 0 ? row.lorry_moisture_avg : ((Number(row.lorry_read_min) > 0 && Number(row.lorry_read_max) > 0) ? Number(((Number(row.lorry_read_min) + Number(row.lorry_read_max)) / 2).toFixed(2)) : (row.lorry_read_min || row.lorry_read_max || 0)))}
+          value={row.lorry_read_avg ?? 0}
+          //value={row.lorry_read_avg !== undefined && row.lorry_read_avg !== null && String(row.lorry_read_avg) !== "" && Number(row.lorry_read_avg) > 0 ? row.lorry_read_avg : (row.lorry_moisture_avg !== undefined && row.lorry_moisture_avg !== null && Number(row.lorry_moisture_avg) > 0 ? row.lorry_moisture_avg : ((Number(row.lorry_read_min) > 0 && Number(row.lorry_read_max) > 0) ? Number(((Number(row.lorry_read_min) + Number(row.lorry_read_max)) / 2).toFixed(2)) : (row.lorry_read_min || row.lorry_read_max || 0)))}
           onChange={(e) => onDetailChange(index, "lorry_read_avg", Number(e.target.value))}
           className={getFieldInputStyle(false, "text-blue-900 font-black")}
         />
@@ -358,7 +359,8 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
           readOnly={false}
           tabIndex={-1}
           title="Auto-calculated average (Locked)"
-          value={row.insp_read_avg !== undefined && row.insp_read_avg !== null && String(row.insp_read_avg) !== "" && Number(row.insp_read_avg) > 0 ? row.insp_read_avg : (row.insp_moisture_avg !== undefined && row.insp_moisture_avg !== null && Number(row.insp_moisture_avg) > 0 ? row.insp_moisture_avg : ((Number(row.insp_read_min) > 0 && Number(row.insp_read_max) > 0) ? Number(((Number(row.insp_read_min) + Number(row.insp_read_max)) / 2).toFixed(2)) : (row.insp_read_min || row.insp_read_max || row.moisture_act || row.actual_moisture || (headerForm as any)?.actual_moisture || 0)))}
+          value={row.insp_read_avg ?? 0}
+          //value={row.insp_read_avg !== undefined && row.insp_read_avg !== null && String(row.insp_read_avg) !== "" && Number(row.insp_read_avg) > 0 ? row.insp_read_avg : (row.insp_moisture_avg !== undefined && row.insp_moisture_avg !== null && Number(row.insp_moisture_avg) > 0 ? row.insp_moisture_avg : ((Number(row.insp_read_min) > 0 && Number(row.insp_read_max) > 0) ? Number(((Number(row.insp_read_min) + Number(row.insp_read_max)) / 2).toFixed(2)) : (row.insp_read_min || row.insp_read_max || row.moisture_act || row.actual_moisture || (headerForm as any)?.actual_moisture || 0)))}
           onChange={(e) => onDetailChange(index, "insp_read_avg", Number(e.target.value))}
           className={getFieldInputStyle(false, "text-blue-900 font-black")}
         />

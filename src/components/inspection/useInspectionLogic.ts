@@ -1067,23 +1067,20 @@ export function useInspectionLogic() {
       const lorryMax = Number(row.lorry_read_max) || 0;
       if (['lorry_read_min', 'lorry_read_max'].includes(field as string)) {
         if (lorryMin > 0 && lorryMax > 0) {
-          row.lorry_read_avg = Number(((lorryMin + lorryMax) / 2).toFixed(2));
+          //row.lorry_read_avg = Number(((lorryMin + lorryMax) / 2).toFixed(2));
         } else if (lorryMin > 0 || lorryMax > 0) {
-          row.lorry_read_avg = lorryMin || lorryMax;
+          //row.lorry_read_avg = lorryMin || lorryMax;
         } else {
           row.lorry_read_avg = 0;
         }
         row.lorry_moisture_min = lorryMin;
         row.lorry_moisture_max = lorryMax;
         row.lorry_moisture_avg = row.lorry_read_avg;
-        setHeaderForm(prev => ({
-          ...prev,
-          actual_moisture: row.lorry_read_avg || 0
-        }));
+        
       }
 
       // 2. Auto-calculate Inspection Read Avg if Min or Max present or modified
-      const inspMin = Number(row.insp_read_min) || 0;
+      /* const inspMin = Number(row.insp_read_min) || 0;
       const inspMax = Number(row.insp_read_max) || 0;
       if (['insp_read_min', 'insp_read_max'].includes(field as string)) {
         if (inspMin > 0 && inspMax > 0) {
@@ -1096,21 +1093,26 @@ export function useInspectionLogic() {
         row.insp_moisture_min = inspMin;
         row.insp_moisture_max = inspMax;
         row.insp_moisture_avg = row.insp_read_avg;
-      }
+      } */
 
       // 3. Auto-calculate Moisture Actual % from Lorry and Inspection Readings
       const lAvg = Number(row.lorry_read_avg) || 0;
       const iAvg = Number(row.insp_read_avg) || 0;
-      if (['lorry_read_min', 'lorry_read_max', 'lorry_read_avg', 'insp_read_min', 'insp_read_max', 'insp_read_avg'].includes(field as string)) {
+      if (['lorry_read_min', 'lorry_read_max', 'lorry_read_avg' ].includes(field as string)) {
         if (lAvg > 0 && iAvg > 0) {
-          row.moisture_act = Number(((lAvg + iAvg) / 2).toFixed(2));
+          //row.moisture_act = Number(((lAvg + iAvg) / 2).toFixed(2));
         } else if (lAvg > 0 || iAvg > 0) {
-          row.moisture_act = lAvg || iAvg;
+          //row.moisture_act = lAvg || iAvg;
         } else if (Number(headerForm.actual_moisture) > 0) {
-          row.moisture_act = Number(headerForm.actual_moisture);
+          //row.moisture_act = Number(headerForm.actual_moisture);
         }
-        row.actual_moisture = row.moisture_act;
-        row.settlement_moisture = row.moisture_act;
+        row.moisture_act = row.lorry_read_avg;
+        row.actual_moisture = row.lorry_read_avg;
+        row.settlement_moisture = row.lorry_read_avg;
+        setHeaderForm(prev => ({
+          ...prev,
+          actual_moisture: row.lorry_read_avg || 0
+        }));
       } else if (field === 'moisture_act' || field === 'actual_moisture') {
         const valNum = Number(value) || 0;
         row.moisture_act = valNum;
