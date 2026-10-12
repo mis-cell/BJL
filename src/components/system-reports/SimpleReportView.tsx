@@ -62,9 +62,23 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   // Selected Slip Modal
   const [selectedTxn, setSelectedTxn] = useState<ReportTransactionLine | null>(null);
 
-  // Sorting
-  const [sortField, setSortField] = useState<'date' | 'quantityMT' | 'grossPurchaseValue'>('date');
-  const [sortAsc, setSortAsc] = useState<boolean>(false);
+  // Sorting for All Sauda Table
+  const [sortField, setSortField] = useState<'date' | 'saudaNo' | 'supplier' | 'broker' | 'quantityMT'>('date');
+  const [sortAsc, setSortAsc] = useState<boolean>(false); // Default false = Latest Date First
+
+  // Pagination for All Sauda Table
+  const [allSaudaPage, setAllSaudaPage] = useState<number>(1);
+  const [allSaudaPageSize, setAllSaudaPageSize] = useState<number>(50);
+
+  const handleSort = (field: 'date' | 'saudaNo' | 'supplier' | 'broker' | 'quantityMT') => {
+    if (sortField === field) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortField(field);
+      setSortAsc(field === 'date' ? false : true);
+    }
+    setAllSaudaPage(1);
+  };
 
   // Filtered & Sorted Transactions
   const filteredList = useMemo(() => {
@@ -94,24 +108,66 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter(t =>
-        t.saudaNo.toLowerCase().includes(q) ||
-        t.poNo.toLowerCase().includes(q) ||
-        t.supplier.toLowerCase().includes(q) ||
-        t.broker.toLowerCase().includes(q) ||
-        t.area.toLowerCase().includes(q) ||
-        t.grade.toLowerCase().includes(q)
+        (t.saudaNo || '').toLowerCase().includes(q) ||
+        (t.poNo || '').toLowerCase().includes(q) ||
+        (t.supplier || '').toLowerCase().includes(q) ||
+        (t.broker || '').toLowerCase().includes(q) ||
+        (t.area || '').toLowerCase().includes(q) ||
+        (t.grade || '').toLowerCase().includes(q)
       );
     }
 
-    // Sort
+    // Sort with Date as default (latest first) and Sauda / PO No. as secondary sort
     list.sort((a, b) => {
-      let valA: any = a[sortField];
-      let valB: any = b[sortField];
       if (sortField === 'date') {
-        valA = new Date(valA || '1970-01-01').getTime();
-        valB = new Date(valB || '1970-01-01').getTime();
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        const diff = sortAsc ? dateA - dateB : dateB - dateA;
+        if (diff !== 0) return diff;
+
+        // Secondary sort: Sauda / PO No. (natural numeric sort)
+        const strA = a.saudaNo || a.poNo || '';
+        const strB = b.saudaNo || b.poNo || '';
+        return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
       }
-      return sortAsc ? valA - valB : valB - valA;
+
+      if (sortField === 'saudaNo') {
+        const strA = a.saudaNo || a.poNo || '';
+        const strB = b.saudaNo || b.poNo || '';
+        const comp = strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
+        if (comp !== 0) return sortAsc ? comp : -comp;
+
+        // Secondary sort: Date (latest date first)
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
+      }
+
+      if (sortField === 'supplier') {
+        const supA = a.supplier || '';
+        const supB = b.supplier || '';
+        const comp = supA.localeCompare(supB, undefined, { sensitivity: 'base' });
+        if (comp !== 0) return sortAsc ? comp : -comp;
+        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
+      }
+
+      if (sortField === 'broker') {
+        const brkA = a.broker || '';
+        const brkB = b.broker || '';
+        const comp = brkA.localeCompare(brkB, undefined, { sensitivity: 'base' });
+        if (comp !== 0) return sortAsc ? comp : -comp;
+        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
+      }
+
+      if (sortField === 'quantityMT') {
+        const wtA = Number(a.quantityMT || 0);
+        const wtB = Number(b.quantityMT || 0);
+        const diff = sortAsc ? wtA - wtB : wtB - wtA;
+        if (diff !== 0) return diff;
+        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
+      }
+
+      return 0;
     });
 
     return list;
@@ -1158,136 +1214,78 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
         <div className="overflow-x-auto border border-slate-200 rounded-2xl">
           <table className="w-full text-xs text-left border-collapse">
             <thead>
-              <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b">
-                <th className="p-3">
-                  <button 
-                    onClick={() => { setSortField('date'); setSortAsc(!sortAsc); }}
-                    className="flex items-center gap-1 hover:text-slate-950 font-bold uppercase cursor-pointer"
-                  >
-                    Date
+              <tr className="bg-slate-900 text-white font-black uppercase text-[10px] tracking-wider border-b border-slate-800 select-none">
+                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('date')}>
+                  <div className="flex items-center gap-1.5">
+                    <span>Date</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                  </button>
+                  </div>
                 </th>
-                <th className="p-3">Sauda / PO No.</th>
-                <th className="p-3">Party / Supplier</th>
-                <th className="p-3">Broker</th>
-                <th className="p-3">Grade & Area</th>
-                <th className="p-3 text-right">
-                  <button 
-                    onClick={() => { setSortField('quantityMT'); setSortAsc(!sortAsc); }}
-                    className="flex items-center gap-1 hover:text-slate-950 font-bold uppercase ml-auto cursor-pointer"
-                  >
-                    Weight (MT)
+                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('saudaNo')}>
+                  <div className="flex items-center gap-1.5">
+                    <span>Sauda / PO No.</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                  </button>
+                  </div>
                 </th>
-                <th className="p-3 text-right">Rate (₹/Qtl)</th>
-                <th className="p-3 text-right">
-                  <button 
-                    onClick={() => { setSortField('grossPurchaseValue'); setSortAsc(!sortAsc); }}
-                    className="flex items-center gap-1 hover:text-slate-950 font-bold uppercase ml-auto cursor-pointer"
-                  >
-                    Total Value
+                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('supplier')}>
+                  <div className="flex items-center gap-1.5">
+                    <span>Party / Supplier</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                  </button>
+                  </div>
                 </th>
-                <th className="p-3 text-center">Arrival</th>
-                <th className="p-3 text-center">Payment</th>
-                <th className="p-3 text-center">Action</th>
+                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('broker')}>
+                  <div className="flex items-center gap-1.5">
+                    <span>Broker</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </div>
+                </th>
+                <th className="p-3 text-right cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('quantityMT')}>
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span>Weight (MT)</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
               {filteredList.length > 0 ? (
-                filteredList.map((t, idx) => {
-                  const isAllArrived = t.pendingWeightMT <= 0.01;
-                  const isPaid = t.paymentStatus === 'PAID';
+                filteredList
+                  .slice((allSaudaPage - 1) * allSaudaPageSize, allSaudaPage * allSaudaPageSize)
+                  .map((t, idx) => {
+                    const saudaPoDisplay = t.saudaNo && t.poNo && t.saudaNo !== t.poNo
+                      ? `${t.saudaNo} / ${t.poNo}`
+                      : (t.saudaNo || t.poNo || '-');
 
-                  return (
-                    <tr
-                      key={t.txnId || idx}
-                      onClick={() => setSelectedTxn(t)}
-                      className="hover:bg-emerald-50/60 transition cursor-pointer group"
-                    >
-                      <td className="p-3 text-slate-600 font-mono text-[11px] whitespace-nowrap">
-                        {t.date || '-'}
-                      </td>
+                    return (
+                      <tr
+                        key={t.txnId || idx}
+                        className="hover:bg-emerald-50/60 transition cursor-pointer"
+                      >
+                        <td className="p-3 text-slate-700 font-mono text-[11px] whitespace-nowrap">
+                          {t.date || '-'}
+                        </td>
 
-                      <td className="p-3 font-mono font-bold text-slate-900 whitespace-nowrap">
-                        <div>{t.saudaNo}</div>
-                        {t.poNo && t.poNo !== t.saudaNo && (
-                          <span className="text-[10px] text-slate-400 font-normal block">
-                            PO: {t.poNo}
-                          </span>
-                        )}
-                      </td>
+                        <td className="p-3 font-mono font-bold text-slate-900 whitespace-nowrap">
+                          {saudaPoDisplay}
+                        </td>
 
-                      <td className="p-3 font-bold text-slate-900 max-w-[180px] truncate" title={t.supplier}>
-                        {t.supplier || 'Unassigned'}
-                      </td>
+                        <td className="p-3 font-bold text-slate-900 max-w-[220px] truncate" title={t.supplier || 'Unassigned'}>
+                          {t.supplier || 'Unassigned'}
+                        </td>
 
-                      <td className="p-3 text-slate-700 font-semibold max-w-[120px] truncate" title={t.broker}>
-                        {t.broker || '-'}
-                      </td>
+                        <td className="p-3 text-slate-700 font-semibold max-w-[180px] truncate" title={t.broker || 'Direct'}>
+                          {t.broker || 'Direct'}
+                        </td>
 
-                      <td className="p-3 text-slate-800">
-                        <div className="font-bold text-emerald-950">{t.grade || '-'}</div>
-                        <span className="text-[10px] text-slate-500 block">{t.area || '-'}</span>
-                      </td>
-
-                      <td className="p-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
-                        {t.quantityMT.toFixed(2)} MT
-                      </td>
-
-                      <td className="p-3 text-right font-mono font-bold text-slate-800 whitespace-nowrap">
-                        ₹{t.purchaseRate.toLocaleString()}
-                      </td>
-
-                      <td className="p-3 text-right font-mono font-black text-slate-950 whitespace-nowrap">
-                        ₹{Math.round(t.grossPurchaseValue).toLocaleString()}
-                      </td>
-
-                      <td className="p-3 text-center whitespace-nowrap">
-                        {isAllArrived ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                            🟢 Arrived
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800" title={`${t.pendingWeightMT.toFixed(1)} MT Pending`}>
-                            🟡 {t.arrivedWeightMT > 0 ? `${t.arrivedWeightMT.toFixed(1)} MT` : 'Pending'}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="p-3 text-center whitespace-nowrap">
-                        {isPaid ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                            🟢 Paid
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800" title={`Due: ₹${Math.round(t.pendingPayable).toLocaleString()}`}>
-                            🔴 Due
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="p-3 text-center">
-                        <button
-                          onClick={e => {
-                            e.stopPropagation();
-                            setSelectedTxn(t);
-                          }}
-                          className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold text-[11px] rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1 mx-auto"
-                        >
-                          <FileText className="w-3 h-3 text-emerald-700" />
-                          <span>Slip</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
+                        <td className="p-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                          {Number(t.quantityMT || 0).toFixed(2)} MT
+                        </td>
+                      </tr>
+                    );
+                  })
               ) : (
                 <tr>
-                  <td colSpan={11} className="p-12 text-center text-slate-400 space-y-2">
+                  <td colSpan={5} className="p-12 text-center text-slate-400 space-y-2">
                     <XCircle className="w-8 h-8 text-slate-300 mx-auto" />
                     <div className="font-bold text-slate-700 text-sm">No Transaction Records Found</div>
                     <p className="text-xs text-slate-500">
@@ -1299,6 +1297,46 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             </tbody>
           </table>
         </div>
+
+        {/* PAGINATION FOOTER */}
+        {filteredList.length > 0 && (
+          <div className="p-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs font-sans rounded-b-2xl">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500 font-medium">Rows per page:</span>
+              <select
+                value={allSaudaPageSize}
+                onChange={e => { setAllSaudaPageSize(Number(e.target.value)); setAllSaudaPage(1); }}
+                className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={250}>250</option>
+              </select>
+              <span className="text-slate-500 ml-2 font-medium">
+                Showing {(allSaudaPage - 1) * allSaudaPageSize + 1} to {Math.min(allSaudaPage * allSaudaPageSize, filteredList.length)} of {filteredList.length} records
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1 font-bold">
+              <button
+                disabled={allSaudaPage === 1}
+                onClick={() => setAllSaudaPage(prev => Math.max(1, prev - 1))}
+                className="px-3 py-1 bg-white border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100 transition cursor-pointer"
+              >
+                Prev
+              </button>
+              <span className="px-2 font-mono">Page {allSaudaPage} of {Math.ceil(filteredList.length / allSaudaPageSize) || 1}</span>
+              <button
+                disabled={allSaudaPage >= Math.ceil(filteredList.length / allSaudaPageSize)}
+                onClick={() => setAllSaudaPage(prev => Math.min(Math.ceil(filteredList.length / allSaudaPageSize), prev + 1))}
+                className="px-3 py-1 bg-white border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100 transition cursor-pointer"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       )}
       {/*<SimpleDealSlipModal

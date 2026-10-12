@@ -712,42 +712,74 @@ export async function loadAndProcessSystemReportData(): Promise<{
       return Array.from(new Set(keys));
     };
 
-    const addPoToMap = (p: any) => {
-      const itemKeys = getAllRecordKeys(p);
-      if (itemKeys.length > 0 && itemKeys.some(k => seenCanonKeys.has(k))) {
-        return;
+    const uniquePosList: any[] = [];
+    const seenPosKeys = new Set<string>();
+
+    const pushUniquePo = (item: any, prefix: string) => {
+      if (!item) return;
+      const idVal = item.sauda_id || item.po_id || item.id;
+      const rawNo = item.po_no || item.sauda_no || item.contract_po_no || item.session;
+      const key = `${prefix}_${idVal || rawNo || Math.random()}`;
+      if (!seenPosKeys.has(key)) {
+        seenPosKeys.add(key);
+        uniquePosList.push(item);
       }
-
-      const rawPNo = String(p.po_no || p.contract_po_no || p.ptf_no || p.sauda_no || p.session || (p.id ? `PO-${p.id}` : '')).trim().toUpperCase();
-      const cleanNo = rawPNo ? rawPNo.replace(/^p\.?o\.?\s*[:\-]?\s*/i, '').trim() : (itemKeys[0] || '');
-      if (!cleanNo) return;
-
-      allPosMap.set(cleanNo, p);
-      itemKeys.forEach(k => seenCanonKeys.add(k));
-      seenCanonKeys.add(cleanNo);
     };
 
     (saudas || []).forEach((s: any) => {
-      addPoToMap({
+      pushUniquePo({
         ...s,
         po_no: s.po_no || s.sauda_no,
-        sauda_no: s.sauda_no,
-        contract_date: s.date || s.b_date || s.created_at,
-        supplier: s.supplier || s.challan_supplier,
+        sauda_no: s.sauda_no || s.po_no,
+        contract_date: normalizeToISODate(s.date || s.b_date || s.created_at),
+        supplier: s.supplier || s.challan_supplier || s.party_name,
         broker: s.broker,
         agency: s.agency,
         area: s.area,
         grade: s.quality || s.grade,
-        total_contract_mt: Number(s.total_wt_in_ton) || 0,
+        total_contract_mt: Number(s.total_wt_in_ton || s.wt_per_lorry || 0),
         b_rate: Number(s.b_rate) || 0,
         status: s.approval_status || s.status || 'Active',
         id: s.sauda_id || s.id
-      });
+      }, 'SAUDA_DESK');
     });
-    (scps || []).forEach(addPoToMap);
-    (pos || []).forEach(addPoToMap);
 
-    const uniquePosList = Array.from(allPosMap.values());
+    (scps || []).forEach((sc: any) => {
+      pushUniquePo({
+        ...sc,
+        po_no: sc.po_no || sc.contract_po_no || sc.sauda_no,
+        sauda_no: sc.sauda_no || sc.po_no || sc.contract_po_no,
+        contract_date: normalizeToISODate(sc.po_date || sc.contract_date || sc.created_at),
+        supplier: sc.supplier || sc.challan_supplier || sc.party_name,
+        broker: sc.broker,
+        agency: sc.agency,
+        area: sc.area,
+        grade: sc.grade || sc.quality,
+        total_contract_mt: Number(sc.total_contract_mt || sc.quantity || 0),
+        b_rate: Number(sc.b_rate) || 0,
+        status: sc.status || 'Active',
+        id: sc.po_id || sc.id
+      }, 'SCP');
+    });
+
+    (pos || []).forEach((p: any) => {
+      pushUniquePo({
+        ...p,
+        po_no: p.po_no || p.contract_po_no || p.sauda_no,
+        sauda_no: p.sauda_no || p.po_no || p.contract_po_no,
+        contract_date: normalizeToISODate(p.po_date || p.contract_date || p.created_at),
+        supplier: p.supplier || p.challan_supplier || p.party_name,
+        broker: p.broker,
+        agency: p.agency,
+        area: p.area,
+        grade: p.grade || p.quality,
+        total_contract_mt: Number(p.total_contract_mt || p.quantity || 0),
+        b_rate: Number(p.b_rate) || 0,
+        status: p.status || 'Active',
+        id: p.po_id || p.id
+      }, 'FINAL_PO');
+    });
+
     const transactionLines: ReportTransactionLine[] = [];
     let txnCounter = 1;
 

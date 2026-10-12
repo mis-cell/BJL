@@ -28,7 +28,6 @@ import { ReportFilterBar } from '../components/system-reports/ReportFilterBar';
 import { Priority1Dashboard } from '../components/system-reports/Priority1Dashboard';
 import { Priority2Analysis } from '../components/system-reports/Priority2Analysis';
 import { Priority3Operations } from '../components/system-reports/Priority3Operations';
-import { Priority4Detailed } from '../components/system-reports/Priority4Detailed';
 import { ExceptionAuditView } from '../components/system-reports/ExceptionAuditView';
 import { ContributionView } from '../components/system-reports/ContributionView';
 import { DrillDownModal, DrillDownViewMode } from '../components/system-reports/DrillDownModal';
@@ -44,8 +43,7 @@ export type ReportNavSection =
   | 'all_po'
   | 'performance_ranking'
   | 'exception_abnormal'
-  | 'business_contribution'
-  | 'detailed_reports';
+  | 'business_contribution';
 
 interface ReportsProps {
   onClose?: () => void;
@@ -305,7 +303,6 @@ export default function Reports({ onClose }: ReportsProps) {
                 { id: 'performance_ranking' as const, label: '7. Performance Ranking', icon: Award, badge: 'P2' },
                 { id: 'exception_abnormal' as const, label: '8. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
                 { id: 'business_contribution' as const, label: '9. Contribution & Pareto', icon: PieChart, badge: 'P9' },
-                { id: 'detailed_reports' as const, label: '10. Detailed Registers', icon: FileSpreadsheet, badge: 'Grain' },
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeSection === tab.id;
@@ -384,11 +381,6 @@ export default function Reports({ onClose }: ReportsProps) {
             {/* 9. Business Contribution (Priority 9) */}
             {activeSection === 'business_contribution' && (
               <ContributionView dataset={dataset} onDrillDown={handleOpenDrillDown} />
-            )}
-
-            {/* 10. Detailed Reports (Priority 4) */}
-            {activeSection === 'detailed_reports' && (
-              <Priority4Detailed dataset={dataset} onDrillDown={handleOpenDrillDown} />
             )}
 
           </div>

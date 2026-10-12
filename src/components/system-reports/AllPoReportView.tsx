@@ -42,17 +42,55 @@ export const AllPoReportView: React.FC<AllPoReportViewProps> = ({
   // Sort records
   const sortedRecords = useMemo(() => {
     return [...filteredRecords].sort((a, b) => {
-      let aVal = a[sortField];
-      let bVal = b[sortField];
+      if (sortField === 'date') {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        const diff = sortAsc ? dateA - dateB : dateB - dateA;
+        if (diff !== 0) return diff;
 
-      if (typeof aVal === 'string') {
-        return sortAsc
-          ? String(aVal).localeCompare(String(bVal))
-          : String(bVal).localeCompare(String(aVal));
+        // Secondary sort: Sauda / PO No.
+        const strA = a.saudaNo || a.poNo || '';
+        const strB = b.saudaNo || b.poNo || '';
+        return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
       }
-      return sortAsc
-        ? Number(aVal || 0) - Number(bVal || 0)
-        : Number(bVal || 0) - Number(aVal || 0);
+
+      if (sortField === 'poNo' || sortField === 'saudaNo') {
+        const strA = a.saudaNo || a.poNo || '';
+        const strB = b.saudaNo || b.poNo || '';
+        const comp = strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
+        if (comp !== 0) return sortAsc ? comp : -comp;
+
+        // Secondary sort: Date
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
+      }
+
+      if (sortField === 'supplier') {
+        const supA = a.supplier || '';
+        const supB = b.supplier || '';
+        const comp = supA.localeCompare(supB, undefined, { sensitivity: 'base' });
+        if (comp !== 0) return sortAsc ? comp : -comp;
+        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
+      }
+
+      if (sortField === 'broker') {
+        const brkA = a.broker || '';
+        const brkB = b.broker || '';
+        const comp = brkA.localeCompare(brkB, undefined, { sensitivity: 'base' });
+        if (comp !== 0) return sortAsc ? comp : -comp;
+        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
+      }
+
+      if (sortField === 'quantityMT') {
+        const wtA = Number(a.quantityMT || 0);
+        const wtB = Number(b.quantityMT || 0);
+        const diff = sortAsc ? wtA - wtB : wtB - wtA;
+        if (diff !== 0) return diff;
+        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
+      }
+
+      return 0;
     });
   }, [filteredRecords, sortField, sortAsc]);
 
@@ -74,25 +112,21 @@ export const AllPoReportView: React.FC<AllPoReportViewProps> = ({
 
   const exportAllCSV = () => {
     if (!filteredRecords.length) return;
-    const headers = ['#', 'Date', 'Sauda/PO', 'Broker', 'QTY (MT)', 'BASE RATE (₹/Qtl)', 'Source Section', 'Supplier', 'Status'];
+    const headers = ['Date', 'Sauda / PO No.', 'Party / Supplier', 'Broker', 'Weight (MT)'];
 
-    const rows = filteredRecords.map((r, idx) => [
-      idx + 1,
+    const rows = filteredRecords.map((r) => [
       r.date || '-',
-      `"${r.poNo || r.saudaNo || '-'}"`,
-      `"${r.broker || '-'}"`,
-      (r.quantityMT || 0).toFixed(3),
-      (r.rate || 0).toFixed(2),
-      `"${r.sourceSection}"`,
-      `"${r.supplier || '-'}"`,
-      `"${r.status || '-'}"`
+      `"${r.saudaNo || r.poNo || '-'}"`,
+      `"${r.supplier || 'Unassigned'}"`,
+      `"${r.broker || 'Direct'}"`,
+      (r.quantityMT || 0).toFixed(2)
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const encoded = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encoded);
-    link.setAttribute('download', `ALL_PO_Master_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `ALL_Sauda_Export_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -260,34 +294,33 @@ export const AllPoReportView: React.FC<AllPoReportViewProps> = ({
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-900 text-white font-black uppercase text-[10px] tracking-wider border-b border-slate-800 select-none">
-                <th className="p-3 text-center w-10">#</th>
-                <th className="p-3 cursor-pointer hover:bg-slate-800" onClick={() => handleSort('date')}>
-                  <div className="flex items-center gap-1">
+                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('date')}>
+                  <div className="flex items-center gap-1.5">
                     <span>Date</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </div>
                 </th>
-                <th className="p-3 cursor-pointer hover:bg-slate-800" onClick={() => handleSort('poNo')}>
-                  <div className="flex items-center gap-1">
-                    <span>Sauda/PO</span>
+                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('saudaNo')}>
+                  <div className="flex items-center gap-1.5">
+                    <span>Sauda / PO No.</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </div>
                 </th>
-                <th className="p-3 cursor-pointer hover:bg-slate-800" onClick={() => handleSort('broker')}>
-                  <div className="flex items-center gap-1">
+                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('supplier')}>
+                  <div className="flex items-center gap-1.5">
+                    <span>Party / Supplier</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                  </div>
+                </th>
+                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('broker')}>
+                  <div className="flex items-center gap-1.5">
                     <span>Broker</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </div>
                 </th>
-                <th className="p-3 text-right cursor-pointer hover:bg-slate-800" onClick={() => handleSort('quantityMT')}>
-                  <div className="flex items-center justify-end gap-1">
-                    <span>QTY</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                  </div>
-                </th>
-                <th className="p-3 text-right cursor-pointer hover:bg-slate-800" onClick={() => handleSort('rate')}>
-                  <div className="flex items-center justify-end gap-1">
-                    <span>BASE RATE</span>
+                <th className="p-3 text-right cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('quantityMT')}>
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span>Weight (MT)</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </div>
                 </th>
@@ -296,8 +329,8 @@ export const AllPoReportView: React.FC<AllPoReportViewProps> = ({
             <tbody className="divide-y divide-slate-100 font-mono text-[11px] text-slate-800 font-medium">
               {pagedRecords.length > 0 ? (
                 pagedRecords.map((r, idx) => {
-                  const displayPoSauda = r.poNo && r.poNo !== r.saudaNo && r.poNo !== 'DESK' && r.poNo !== 'CHECKPOINT' && r.poNo !== 'FINAL_PO'
-                    ? `${r.poNo} (${r.saudaNo})`
+                  const displayPoSauda = r.poNo && r.saudaNo && r.poNo !== r.saudaNo && r.poNo !== 'DESK' && r.poNo !== 'CHECKPOINT' && r.poNo !== 'FINAL_PO'
+                    ? `${r.saudaNo} / ${r.poNo}`
                     : (r.saudaNo || r.poNo || '-');
 
                   return (
@@ -305,33 +338,27 @@ export const AllPoReportView: React.FC<AllPoReportViewProps> = ({
                       key={r.id || idx}
                       className="hover:bg-slate-50/80 transition"
                     >
-                      <td className="p-3 text-center text-slate-400 font-sans">
-                        {(currentPage - 1) * pageSize + idx + 1}
-                      </td>
                       <td className="p-3 text-slate-600 whitespace-nowrap">
                         {r.date || '-'}
                       </td>
                       <td className="p-3 font-bold text-slate-900 whitespace-nowrap">
-                        <div>{displayPoSauda}</div>
-                        <span className="text-[9px] font-sans font-semibold text-slate-400 block mt-0.5">
-                          {r.sourceSection}
-                        </span>
+                        {displayPoSauda}
                       </td>
-                      <td className="p-3 font-sans text-slate-700 max-w-[160px] truncate" title={r.broker}>
+                      <td className="p-3 font-sans font-bold text-slate-900 max-w-[220px] truncate" title={r.supplier || 'Unassigned'}>
+                        {r.supplier || 'Unassigned'}
+                      </td>
+                      <td className="p-3 font-sans text-slate-700 max-w-[180px] truncate" title={r.broker || 'Direct'}>
                         {r.broker || 'Direct'}
                       </td>
                       <td className="p-3 text-right font-bold text-slate-900 whitespace-nowrap">
-                        {(r.quantityMT || 0).toFixed(3)} MT
-                      </td>
-                      <td className="p-3 text-right font-bold text-emerald-900 whitespace-nowrap">
-                        ₹{(r.rate || 0).toLocaleString('en-IN')}
+                        {(r.quantityMT || 0).toFixed(2)} MT
                       </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-slate-400 font-sans">
+                  <td colSpan={5} className="p-12 text-center text-slate-400 font-sans">
                     No records found for the selected filter or search query.
                   </td>
                 </tr>
