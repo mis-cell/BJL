@@ -390,10 +390,10 @@ export default function LegacyLayout({
       icon: BarChart3,
       subItems: [
         { id: 'reports', label: 'Report', icon: BarChart3, pageId: 'reports' },
-        { id: 'treds', label: 'Trade', icon: Wallet, pageId: 'treds' },
         { id: 'system_change_logs', label: 'System Change Log', icon: History, pageId: 'system_change_logs' },
-        /* { id: 'admindesk', label: 'Admin Desk', icon: Lock, pageId: 'admindesk' }, */
-        /* { id: 'ai_assistant', label: 'Jarves AI 2.0', icon: Sparkles, pageId: 'ai_assistant' }, */
+        { id: 'treds', label: 'Trade', icon: Wallet, pageId: 'treds' },
+        { id: 'admindesk', label: 'Admin Desk', icon: Lock, pageId: 'admindesk' },
+        { id: 'ai_assistant', label: 'Jarves AI 2.0', icon: Sparkles, pageId: 'ai_assistant' },
       ]
     }
   ];
@@ -592,7 +592,7 @@ export default function LegacyLayout({
             {/* Notification Tray for New Material Mismatch or Satta Dispute Cases */}
             {(disputeSummary.materialMismatchCount > 0 || disputeSummary.sattaDisputeCount > 0) && (
               <div className="relative">
-                {/* <button
+                <button
                   onClick={() => setIsDisputeTrayOpen(!isDisputeTrayOpen)}
                   className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400 hover:bg-amber-300 border border-amber-300 text-[#103A20] text-[11px] font-black shadow-md transition-all cursor-pointer animate-pulse"
                   title="New Material Mismatch or Satta Dispute Cases Opened"
@@ -602,7 +602,7 @@ export default function LegacyLayout({
                   <span className="bg-[#103A20] text-amber-300 font-black px-1.5 py-0.2 rounded-full text-[10px]">
                     {disputeSummary.materialMismatchCount + disputeSummary.sattaDisputeCount}
                   </span>
-                </button> */}
+                </button>
 
                 {isDisputeTrayOpen && (
                   <div className="absolute right-0 mt-2 w-80 bg-slate-900 border border-amber-500/40 rounded-xl shadow-2xl py-3 z-[9999] text-xs text-white">

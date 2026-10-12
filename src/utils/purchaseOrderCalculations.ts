@@ -47,16 +47,13 @@ export const PREDEFINED_RANKS: Record<string, number> = {
 
 export const formatPoNumber = (sauda: any) => {
   if (!sauda) return '';
-  const rawNo = sauda.sauda_no || sauda.no || sauda.contract_no || '';
-  if (rawNo && String(rawNo).trim().toUpperCase().startsWith('BJCL/')) {
-    return String(rawNo).trim();
-  }
   if (sauda.session && sauda.session.trim()) {
     const s = sauda.session.trim();
     if (s.includes('/') && s.toUpperCase().startsWith('BJCL')) {
       return s;
     }
   }
+  const rawNo = sauda.sauda_no || sauda.no || sauda.contract_no || '';
   if (!rawNo) return sauda.session || '';
 
   const cleanDigits = String(rawNo).replace(/[^0-9]/g, '');

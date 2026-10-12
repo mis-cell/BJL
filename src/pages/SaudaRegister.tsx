@@ -30,10 +30,7 @@ import {
   Scale,
   IndianRupee,
   Eye,
-  History,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown
+  History
 } from 'lucide-react';
 import { cn, sanitizeCsvData, getApiUrl } from '../lib/utils';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
@@ -44,7 +41,7 @@ import { dbModule, flushOfflineQueue } from '../services/dbModule';
 import { Sauda, SaudaQualityDetail } from '../types';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isUserId10, isUserId2, isUserAdmin, isL5OrAdmin, getCurrentUserContext } from '../lib/permissions';
-import { initUserMap, resolveDisplayName, getAuthenticatedUser } from '../lib/userResolver';
+import { initUserMap, resolveDisplayName } from '../lib/userResolver';
 import { logChange } from '../services/auditLogService';
 import { PaginationControls } from '../components/PaginationControls';
 import { generateSaudaPdfBase64 } from '../lib/saudaPdf';
@@ -103,24 +100,35 @@ const compareQualities = (aStr: string, bStr: string): number => {
 
 const formatPoNumber = (sauda: any) => {
   if (!sauda) return '';
-  const rawNo = sauda.sauda_no || sauda.no || sauda.contract_no || '';
-  if (rawNo && String(rawNo).trim().toUpperCase().startsWith('BJCL/')) {
-    return String(rawNo).trim();
-  }
   if (sauda.session && sauda.session.trim()) {
     const s = sauda.session.trim();
     const parts = s.split('/').filter(Boolean);
     if (parts.length >= 3) {
       return s;
     }
+    const base = s.endsWith('/') ? s : s + '/';
+    return `${base}${sauda.sauda_no || ''}`;
   }
-  const cleanDigits = String(rawNo).replace(/[^0-9]/g, '');
-  if (cleanDigits) {
-    const padded = cleanDigits.padStart(4, '0');
-    const finYear = sauda.financial_year || (sauda.session && !sauda.session.includes('/') ? sauda.session : '2026-2027');
-    return `BJCL/${finYear}/${padded}`;
+  const numPart = parseInt(sauda.sauda_no, 10);
+  const val = isNaN(numPart) ? sauda.sauda_no : numPart;
+  
+  // Format the year suffix
+  let yearPart = '26'; // fallback
+  if (sauda.financial_year) {
+    const startYear = sauda.financial_year.split('-')[0].trim();
+    if (startYear.length >= 4) {
+      yearPart = startYear.slice(-2);
+    } else if (startYear.length === 2) {
+      yearPart = startYear;
+    }
+  } else if (sauda.session && sauda.session.includes('/')) {
+    const parts = sauda.session.split('/');
+    if (parts.length > 1) {
+      const yr = parts[1].split('-')[0].trim();
+      if (yr.length >= 4) yearPart = yr.slice(-2);
+    }
   }
-  return String(rawNo);
+  return `BJCL${val}/${yearPart}`;
 };
 
 // Helper to generate a high-fidelity retro HTML email representation of a Sauda Slip
@@ -256,17 +264,6 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [statusTab, setStatusTab] = useState<'pending' | 'checked' | 'rejected' | 'all'>('pending');
-  const [sortField, setSortField] = useState<'date' | 'order_no'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  const toggleSort = (field: 'date' | 'order_no') => {
-    if (sortField === field) {
-      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder(field === 'date' ? 'desc' : 'asc');
-    }
-  };
 
   const isUser10 = isUserId10();
   const isUser2 = isUserId2();
@@ -309,8 +306,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
     const currentlyChecked = isCheckedSauda(entry);
     const nextApproved = !currentlyChecked;
-    const { userId: authUserId, username: authUsername } = getAuthenticatedUser();
-    const approverName = authUsername || 'ADMIN';
+    const approverName = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Checker');
 
     const targetId = entry.sauda_id || (entry as any).id;
     const saudaNo = entry.sauda_no;
@@ -320,14 +316,12 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       is_checked: nextApproved,
       checked_by: nextApproved ? approverName : null,
       approved_by: nextApproved ? approverName : null,
-      approved_user_id: nextApproved ? authUserId : null,
       checked_at: nextApproved ? new Date().toISOString() : null,
       approved_at: nextApproved ? new Date().toISOString() : null,
       status: nextApproved ? 'APPROVED' : 'PENDING',
       approval_status: nextApproved ? 'APPROVED' : 'PENDING',
       rejected_by: null,
-      rejected_at: null,
-      rejected_user_id: null
+      rejected_at: null
     };
 
     setSaudaList(prev => prev.map(s => {
@@ -346,22 +340,6 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', saudaNo).eq('financial_year', fYear).select();
           if (!error && data && data.length > 0) updateRes = data;
         }
-
-        // Permanently record this approval decision in dedicated sauda_approval_history
-        try {
-          await supabase.from('sauda_approval_history').insert({
-            id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-            sauda_id: String(targetId || saudaNo),
-            sauda_no: String(saudaNo),
-            action_type: nextApproved ? 'APPROVED' : 'PENDING',
-            user_id: authUserId,
-            username: approverName,
-            remarks: nextApproved ? `Approved by ${approverName} (User ${authUserId})` : `Approval toggled back to Pending by ${approverName}`,
-            financial_year: fYear
-          });
-        } catch (e) {
-          console.warn("Failed to insert approval history:", e);
-        }
       }
       if (targetId) {
         await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload).catch(() => {});
@@ -377,8 +355,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         old_value: entry.status || 'PENDING',
         new_value: nextApproved ? 'APPROVED' : 'PENDING',
         user_name: approverName,
-        user_role: `User ${authUserId}`,
-        remarks: nextApproved ? `Approved by ${approverName} (User ${authUserId})` : `Moved back to Pending by ${approverName}`
+        remarks: nextApproved ? `Approved by ${approverName}` : `Moved back to Pending by ${approverName}`
       }).catch(() => {});
     } catch (err) {
       console.error("Error updating approval status in Supabase:", err);
@@ -517,11 +494,13 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       }
     }
 
-    const { userId: authUserId, username: authUsername } = getAuthenticatedUser();
-    const rejectorName = authUsername || 'SHYAMLAHOTI';
+    const rejectorName = resolveDisplayName(
+      userCtx.userName || userCtx.username || userCtx.userId, 
+      isUserId10() ? 'Checker' : 'Admin'
+    );
 
     const confirmReject = window.confirm(
-      `Are you sure you want to REJECT Sauda Order #${entry.sauda_no}?\n\nThis will mark it as Rejected in Supabase by "${rejectorName}" and send it to User 002 for review and correction.`
+      `Are you sure you want to REJECT Sauda Order #${entry.sauda_no}?\n\nThis will mark it as Rejected in Supabase and send it to User 002 for review and correction.`
     );
 
     if (!confirmReject) {
@@ -534,11 +513,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       checked_at: null,
       approved_by: null,
       approved_at: null,
-      approved_user_id: null,
       status: 'REJECTED',
       approval_status: 'REJECTED',
       rejected_by: rejectorName,
-      rejected_user_id: authUserId,
       rejected_at: new Date().toISOString()
     };
 
@@ -555,22 +532,6 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         if (cleanNo) {
           await supabase.from('sauda_master').update(updatePayload).or(`sauda_no.eq.${saudaNo},sauda_no.eq.${paddedNo},sauda_no.eq.${cleanNo}`);
         }
-
-        // Permanently record this rejection decision in dedicated sauda_approval_history
-        try {
-          await supabase.from('sauda_approval_history').insert({
-            id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-            sauda_id: String(targetId || saudaNo),
-            sauda_no: String(saudaNo),
-            action_type: 'REJECTED',
-            user_id: authUserId,
-            username: rejectorName,
-            remarks: `Rejected by ${rejectorName} (User ${authUserId})`,
-            financial_year: fYear
-          });
-        } catch (e) {
-          console.warn("Failed to insert rejection history:", e);
-        }
       }
       if (targetId) {
         await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload).catch(() => {});
@@ -586,8 +547,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         old_value: entry.status || 'PENDING',
         new_value: 'REJECTED',
         user_name: rejectorName,
-        user_role: `User ${authUserId}`,
-        remarks: `Sauda #${saudaNo} rejected by ${rejectorName} (User ${authUserId})`
+        remarks: `Sauda #${saudaNo} rejected by ${rejectorName}`
       }).catch(() => {});
 
       window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sauda_master' } }));
@@ -835,72 +795,46 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     }
   };
 
-  const fetchQualityDetailsForSauda = async (sauda: Sauda): Promise<any[]> => {
-    try {
-      const { supabase } = await import('../lib/supabase.ts');
-      if (!supabase) return sauda.quality_details || [];
-
-      let details: any[] = [];
-      
-      // 1. Try querying by sauda_id (UUID or stored string)
-      if (sauda.sauda_id) {
-        const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', sauda.sauda_id);
-        if (data && data.length > 0) details = data;
-      }
-
-      // 2. Try querying by full sauda_no (e.g. BJCL/2026-2027/0875)
-      if (details.length === 0 && sauda.sauda_no) {
-        const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', sauda.sauda_no);
-        if (data && data.length > 0) details = data;
-      }
-
-      // 3. Try querying by sauda_no column in sauda_quality_details if present
-      if (details.length === 0 && sauda.sauda_no) {
-        const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_no', sauda.sauda_no);
-        if (data && data.length > 0) details = data;
-      }
-
-      // 4. Try clean digits sequence
-      if (details.length === 0 && sauda.sauda_no) {
-        const cleanSeq = sauda.sauda_no.replace(/^BJCL\/\d{4}-\d{4}\//i, '').replace(/[^0-9]/g, '');
-        if (cleanSeq) {
-          const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', cleanSeq);
-          if (data && data.length > 0) details = data;
-        }
-      }
-
-      if (details.length > 0) {
-        return details.sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
-      }
-    } catch (e) {
-      console.error("Could not fetch qualities:", e);
-    }
-    return sauda.quality_details || [];
-  };
-
   const handleEdit = async (sauda: Sauda) => {
     if (!enforceEditOrDeletePermission("Edit")) {
       return;
     }
-    const qualities = await fetchQualityDetailsForSauda(sauda);
-    const fullEditRecord = { ...sauda, quality_details: qualities };
-    setEditingSauda(fullEditRecord);
+    // Fetch quality details for this sauda
+    try {
+      if (dbModule) {
+        const { supabase } = await import('../lib/supabase.ts');
+        if (supabase) {
+           const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', sauda.sauda_id);
+           const sorted = (data || []).sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
+           sauda.quality_details = sorted;
+        }
+      }
+    } catch(e) { console.error("Could not fetch qualities", e); }
+    
+    setEditingSauda(sauda);
   };
 
   const handlePrint = async (sauda: Sauda) => {
-    const qualities = await fetchQualityDetailsForSauda(sauda);
     let fullSauda = { ...sauda };
-    if (qualities && qualities.length > 0) {
-      const fallbackQ = (qualities.find((s: any) => s.quality)?.quality) || (sauda as any).quality || 'TD5';
-      const fallbackR = Number(sauda.b_rate) || Number(qualities.find((s: any) => s.rs && Number(s.rs) > 0)?.rs) || 13500;
-      fullSauda.quality_details = qualities.map((s: any) => ({
-        ...s,
-        quality: s.quality || fallbackQ,
-        rs: Number(s.rs) > 0 ? Number(s.rs) : fallbackR
-      }));
-    } else {
-      fullSauda.quality_details = qualities;
-    }
+    try {
+      if (dbModule) {
+        const { supabase } = await import('../lib/supabase.ts');
+        if (supabase) {
+           const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', sauda.sauda_id);
+           const sorted = (data || []).sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
+           if (sorted && sorted.length > 0) {
+             const fallbackQ = (sorted.find((s: any) => s.quality)?.quality) || (sauda as any).quality || 'TD5';
+             const fallbackR = Number(sauda.b_rate) || Number(sorted.find((s: any) => s.rs && Number(s.rs) > 0)?.rs) || 13500;
+             fullSauda.quality_details = sorted.map((s: any) => ({
+               ...s,
+               quality: s.quality || fallbackQ,
+               rs: Number(s.rs) > 0 ? Number(s.rs) : fallbackR
+             }));
+           }
+        }
+      }
+    } catch(e) { console.error("Could not fetch qualities", e); }
+    
     setPrintingSauda(fullSauda);
   };
 
@@ -1233,32 +1167,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     if (endDate && (!s.date || new Date(s.date) > new Date(endDate))) return false;
 
     return true;
-  }).sort((a, b) => {
-    if (sortField === 'order_no') {
-      const getSeq = (val: string) => {
-        const raw = String(val || '').replace(/^BJCL\/\d{4}-\d{4}\//i, '');
-        return parseInt(raw.replace(/\D/g, '') || '0', 10);
-      };
-      const numA = getSeq(a.sauda_no);
-      const numB = getSeq(b.sauda_no);
-      if (numA !== numB) {
-        return sortOrder === 'asc' ? numA - numB : numB - numA;
-      }
-      return sortOrder === 'asc' 
-        ? String(a.sauda_no || '').localeCompare(String(b.sauda_no || ''))
-        : String(b.sauda_no || '').localeCompare(String(a.sauda_no || ''));
-    }
-
-    // Default: Sort by Date
-    const timeA = new Date(a.date || (a as any).b_date || (a as any).created_at || 0).getTime();
-    const timeB = new Date(b.date || (b as any).b_date || (b as any).created_at || 0).getTime();
-    if (timeA !== timeB) {
-      return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
-    }
-    const numA = parseInt(String(a.sauda_no || '').replace(/\D/g, '') || '0', 10);
-    const numB = parseInt(String(b.sauda_no || '').replace(/\D/g, '') || '0', 10);
-    return numB - numA;
-  });
+  }).sort((a, b) => new Date(b.date || (b as any).b_date || (b as any).created_at || 0).getTime() - new Date(a.date || (a as any).b_date || (a as any).created_at || 0).getTime());
 
   const pendingSaudas = saudaList.filter(s => isPendingUncheckedSauda(s));
   const checkedSaudas = saudaList.filter(s => isCheckedSauda(s));
@@ -1392,55 +1301,13 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
             </div>
 
             <button 
-              onClick={() => { setSearchTerm(''); setStartDate(''); setEndDate(''); setSortField('date'); setSortOrder('desc'); }}
+              onClick={() => { setSearchTerm(''); setStartDate(''); setEndDate(''); }}
               className="px-2.5 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl flex items-center gap-1 transition-all cursor-pointer active:scale-95" 
               title="Clear search and filter"
             >
               <X className="h-3.5 w-3.5" />
               <span>Clear</span>
             </button>
-
-            {/* Quick Sort Options Beside Date Filter */}
-            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1 text-xs">
-              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider pl-1.5 pr-0.5">Sort:</span>
-              <button
-                type="button"
-                onClick={() => toggleSort('date')}
-                className={cn(
-                  "px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95",
-                  sortField === 'date'
-                    ? "bg-[#174C2C] text-white shadow-2xs"
-                    : "text-slate-700 hover:bg-slate-200"
-                )}
-                title={`Sort by Date (${sortField === 'date' && sortOrder === 'asc' ? 'Oldest first' : 'Newest first'})`}
-              >
-                <span>Date</span>
-                {sortField === 'date' ? (
-                  sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-amber-300" /> : <ArrowDown className="w-3 h-3 text-amber-300" />
-                ) : (
-                  <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => toggleSort('order_no')}
-                className={cn(
-                  "px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95",
-                  sortField === 'order_no'
-                    ? "bg-[#174C2C] text-white shadow-2xs"
-                    : "text-slate-700 hover:bg-slate-200"
-                )}
-                title={`Sort by Order No. (${sortField === 'order_no' && sortOrder === 'asc' ? 'Ascending #0001 → #9999' : 'Descending #9999 → #0001'})`}
-              >
-                <span>Order No.</span>
-                {sortField === 'order_no' ? (
-                  sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-amber-300" /> : <ArrowDown className="w-3 h-3 text-amber-300" />
-                ) : (
-                  <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
-                )}
-              </button>
-            </div>
 
             <button 
               onClick={fetchSaudas}
@@ -1548,7 +1415,32 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           </div>
         </div>
 
-
+        {/* Banner for Rejected Saudas awaiting Maker review */}
+        {!isUser10 && rejectedSaudasCount > 0 && statusTab !== 'rejected' && (
+          <div className="bg-rose-50 border-2 border-rose-300 rounded-[18px] p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xs animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-rose-600 text-white rounded-xl shadow-xs">
+                <X className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-rose-950 uppercase tracking-wider">
+                  {rejectedSaudasCount} Rejected Sauda Contract{rejectedSaudasCount > 1 ? 's' : ''} Awaiting Review & Resubmission
+                </h4>
+                <p className="text-[11px] text-rose-800 font-medium mt-0.5">
+                  User 010 (Checker) rejected these contract(s). Review the details, make corrections, and resubmit them for re-verification.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStatusTab('rejected')}
+              className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1.5"
+            >
+              <span>View Rejected ({rejectedSaudasCount})</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* 4. Data Table */}
         <div className="bg-white border border-slate-200 rounded-[18px] shadow-xs overflow-hidden">
@@ -1556,58 +1448,15 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
             <table className={cn("w-full border-collapse text-xs", isUser10 ? "min-w-[480px]" : "min-w-[1050px]")}>
               <thead className="bg-slate-100/90 border-b border-slate-200 sticky top-0 z-10">
                 <tr className="h-10 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
-                  <th 
-                    onClick={() => toggleSort('date')}
-                    className={cn(
-                      "py-2 text-center whitespace-nowrap cursor-pointer transition-colors group select-none hover:bg-slate-200/80", 
-                      isUser10 ? "px-2 w-[85px]" : "px-3 w-[100px]",
-                      sortField === 'date' && "bg-slate-200/60 text-slate-950 font-black"
-                    )}
-                    title={`Click to sort by Date (${sortField === 'date' ? (sortOrder === 'asc' ? 'Current: Oldest first' : 'Current: Newest first') : 'Click to sort'})`}
-                  >
-                    <div className="inline-flex items-center justify-center gap-1">
-                      <span>Date</span>
-                      {sortField === 'date' ? (
-                        sortOrder === 'asc' ? (
-                          <ArrowUp className="w-3.5 h-3.5 text-[#174C2C]" />
-                        ) : (
-                          <ArrowDown className="w-3.5 h-3.5 text-[#174C2C]" />
-                        )
-                      ) : (
-                        <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60 group-hover:opacity-100 transition-opacity" />
-                      )}
-                    </div>
-                  </th>
-
-                  <th 
-                    onClick={() => toggleSort('order_no')}
-                    className={cn(
-                      "py-2 text-center whitespace-nowrap cursor-pointer transition-colors group select-none hover:bg-slate-200/80", 
-                      isUser10 ? "px-2 w-[95px]" : "px-3 w-[110px]",
-                      sortField === 'order_no' && "bg-slate-200/60 text-slate-950 font-black"
-                    )}
-                    title={`Click to sort by Order No. (${sortField === 'order_no' ? (sortOrder === 'asc' ? 'Current: Ascending #0001 → #9999' : 'Current: Descending #9999 → #0001') : 'Click to sort'})`}
-                  >
-                    <div className="inline-flex items-center justify-center gap-1">
-                      <span>Order No.</span>
-                      {sortField === 'order_no' ? (
-                        sortOrder === 'asc' ? (
-                          <ArrowUp className="w-3.5 h-3.5 text-[#174C2C]" />
-                        ) : (
-                          <ArrowDown className="w-3.5 h-3.5 text-[#174C2C]" />
-                        )
-                      ) : (
-                        <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60 group-hover:opacity-100 transition-opacity" />
-                      )}
-                    </div>
-                  </th>
+                  <th className={cn("py-2 text-center whitespace-nowrap", isUser10 ? "px-2 w-[80px]" : "px-3")}>Date</th>
+                  <th className={cn("py-2 text-center whitespace-nowrap", isUser10 ? "px-2 w-[75px]" : "px-3")}>Order No.</th>
                   {!isUser10 && <th className="px-3 py-2 text-center">Session</th>}
                   <th className={cn("py-2 text-left whitespace-nowrap min-w-[130px]", isUser10 ? "px-2" : "px-4")}>Broker</th>
                   {!isUser10 && <th className="px-4 py-2 text-left">Supplier</th>}
                   {!isUser10 && <th className="px-3 py-2 text-center">Unit/Lorry</th>}
                   {!isUser10 && <th className="px-3 py-2 text-center bg-amber-50/70 text-amber-950 font-black">Unit</th>}
                   {!isUser10 && <th className="px-4 py-2 text-right bg-blue-50/60 text-blue-900">B. Rate</th>}
-                  <th className={cn("py-2 text-center whitespace-nowrap min-w-[210px]", isUser10 ? "px-2" : "px-3")}>Status</th>
+                  <th className={cn("py-2 text-center whitespace-nowrap min-w-[130px]", isUser10 ? "px-2" : "px-3")}>Status</th>
                   {(isAdminOrL4 || isUser10) && <th className={cn("py-2 text-center whitespace-nowrap min-w-[50px]", isUser10 ? "px-1" : "px-3")}>Actions</th>}
                 </tr>
               </thead>
@@ -1628,8 +1477,8 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                     Boolean(entry.rejected_by)
                   );
                   const userCtx = getCurrentUserContext();
-                  const checkerName = resolveDisplayName(entry.checked_by || entry.approved_by || (isChecked ? (userCtx.userName || userCtx.username) : null), 'ADMIN');
-                  const rejectorName = resolveDisplayName(entry.rejected_by || (isRejected ? (userCtx.userName || userCtx.username) : null), 'SHYAMLAHOTI');
+                  const checkerName = resolveDisplayName(entry.checked_by || entry.approved_by || (isChecked ? userCtx.userName : null), 'Checker');
+                  const rejectorName = resolveDisplayName(entry.rejected_by || (isRejected ? userCtx.userName : null), 'Unknown User');
 
                   return (
                     <tr 
@@ -1647,7 +1496,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                         {new Date(entry.date).toLocaleDateString('en-GB')}
                       </td>
                       <td className={cn("text-center font-bold whitespace-nowrap", isUser10 ? "px-2" : "px-3", isSelected ? "text-amber-300" : "text-slate-900")}>
-                        {String(entry.sauda_no || '').startsWith('BJCL/') ? entry.sauda_no : `#${entry.sauda_no}`}
+                        #{entry.sauda_no}
                       </td>
                       {!isUser10 && (
                         <td className={cn("px-3 text-center text-[10px] font-mono", isSelected ? "text-emerald-100" : "text-slate-500")}>
@@ -1689,59 +1538,28 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                       <td className="px-3 text-center">
                         <div className="flex flex-col items-center justify-center gap-1 py-1">
                           {isChecked ? (
-                            <div className="flex flex-col items-center justify-center gap-1">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleMarkCheck(entry); }}
-                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs hover:bg-emerald-700 transition-all cursor-pointer whitespace-nowrap"
-                                title={`APPROVED — Approved By: ${checkerName} (Click to toggle / un-approve)`}
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5 text-amber-300" />
-                                <span>APPROVED &mdash; Approved By: <strong className="font-black text-amber-200">{checkerName}</strong></span>
-                              </button>
-                              <div
-                                className={cn(
-                                  "text-[9px] font-bold px-2 py-0.5 rounded-md tracking-tight text-center whitespace-nowrap shadow-2xs border",
-                                  isSelected 
-                                    ? "bg-emerald-950 text-amber-300 border-emerald-700" 
-                                    : "bg-emerald-50 text-emerald-900 border-emerald-300"
-                                )}
-                                title={`Approved By: ${checkerName}`}
-                              >
-                                Approved By: <span className="font-black uppercase">{checkerName}</span>
-                              </div>
-                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleMarkCheck(entry); }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs hover:bg-emerald-700 transition-all cursor-pointer"
+                              title="Approved (Click to toggle / un-approve)"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 text-amber-300" />
+                              <span>Approved</span>
+                            </button>
                           ) : isRejected ? (
-                            <div className="flex flex-col items-center justify-center gap-1">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleMarkReject(entry); }}
-                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-xs hover:bg-rose-700 transition-all cursor-pointer whitespace-nowrap"
-                                title={isUser2 || !isUser10 ? "Rejected - Click to Edit and Resubmit" : `REJECTED — Rejected By: ${rejectorName} (Click to toggle / un-reject)`}
-                              >
-                                <X className="w-3.5 h-3.5 text-white" />
-                                <span>REJECTED &mdash; Rejected By: <strong className="font-black text-rose-100">{rejectorName}</strong></span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditRejectorName(entry);
-                                }}
-                                className={cn(
-                                  "text-[9px] font-bold px-2 py-0.5 rounded-md tracking-tight text-center whitespace-nowrap cursor-pointer hover:scale-105 transition-all shadow-2xs border",
-                                  isSelected 
-                                    ? "bg-rose-950 text-rose-200 border-rose-700 hover:bg-rose-900" 
-                                    : "bg-rose-50 text-rose-900 border-rose-300 hover:bg-rose-100"
-                                )}
-                                title={`REJECTED — Rejected By: ${rejectorName} (Click to edit/update Rejector User Name)`}
-                              >
-                                Rejected By: <span className="font-black uppercase">{rejectorName}</span>
-                              </button>
-                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleMarkReject(entry); }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-xs hover:bg-rose-700 transition-all cursor-pointer"
+                              title={isUser2 || !isUser10 ? "Rejected - Click to Edit and Resubmit" : "Rejected (Click to toggle / un-reject)"}
+                            >
+                              <X className="w-3.5 h-3.5 text-white" />
+                              <span>{isUser2 || !isUser10 ? "Edit & Resubmit" : "Rejected"}</span>
+                            </button>
                           ) : (
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleMarkCheck(entry); }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 hover:bg-emerald-600 hover:text-white border border-emerald-300 transition-all cursor-pointer shadow-2xs"
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 hover:bg-emerald-600 hover:text-white border border-emerald-300 transition-all cursor-pointer shadow-2xs"
                                 title="Click to Approve (User ID 10 or Admin)"
                               >
                                 <CheckCircle2 className="w-3 h-3 text-emerald-600 hover:text-white" />
@@ -1750,13 +1568,40 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleMarkReject(entry); }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 hover:bg-rose-600 hover:text-white border border-rose-300 transition-all cursor-pointer shadow-2xs"
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 hover:bg-rose-600 hover:text-white border border-rose-300 transition-all cursor-pointer shadow-2xs"
                                 title="Click to Reject Sauda"
                               >
                                 <X className="w-3 h-3 text-rose-600 hover:text-white" />
                                 <span>Reject</span>
                               </button>
                             </div>
+                          )}
+
+                          {isChecked && checkerName && (
+                            <span className={cn(
+                              "text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight text-center truncate max-w-[120px]",
+                              isSelected ? "bg-emerald-900 text-amber-300" : "bg-emerald-100 text-emerald-900 border border-emerald-200"
+                            )}>
+                              ✓ {checkerName}
+                            </span>
+                          )}
+
+                          {isRejected && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditRejectorName(entry);
+                              }}
+                              className={cn(
+                                "text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight text-center truncate max-w-[120px] cursor-pointer hover:scale-105 transition-all flex items-center justify-center gap-0.5 shadow-2xs",
+                                isSelected ? "bg-rose-900 text-rose-200 hover:bg-rose-800" : "bg-rose-100 text-rose-900 border border-rose-200 hover:bg-rose-200"
+                              )}
+                              title="Click to edit/update Rejector User Name"
+                            >
+                              <span>✕</span>
+                              <span>{rejectorName || 'Unknown User'}</span>
+                            </button>
                           )}
                         </div>
                       </td>

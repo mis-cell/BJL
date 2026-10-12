@@ -42,237 +42,79 @@ type TabDimension =
   | 'MONTH'
   | 'DEDUCTION'
   | 'CHECKPOINTS'
-  | 'ALLSAUDA'
   | 'ALL_DEALS';
 
 export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   dataset,
   onOpenManagementView
 }) => {
-  const { transactions, metrics, allPoSummary } = dataset;
+  const { transactions, metrics } = dataset;
 
   // Active Tab Dimension
-  const [activeTab, setActiveTab] = useState<TabDimension>('ALLSAUDA');
+  const [activeTab, setActiveTab] = useState<TabDimension>('OVERVIEW');
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
+  const [quickFilter, setQuickFilter] = useState<'ALL' | 'PENDING_DELIVERY' | 'PAYMENT_DUE' | 'COMPLETED' | 'ALERTS'>('ALL');
+  const [dateFilter, setDateFilter] = useState<'ALL' | 'THIS_MONTH' | 'TODAY'>('ALL');
   
   // Selected Slip Modal
   const [selectedTxn, setSelectedTxn] = useState<ReportTransactionLine | null>(null);
 
-  // Sauda records from sauda_master, sauda_check_point, purchase_master (Sauda / PO level, exactly 1 row per Sauda, NOT split by grade)
-  const allSaudaRecords = useMemo(() => {
-    return allPoSummary?.records || [];
-  }, [allPoSummary]);
+  // Sorting
+  const [sortField, setSortField] = useState<'date' | 'quantityMT' | 'grossPurchaseValue'>('date');
+  const [sortAsc, setSortAsc] = useState<boolean>(false);
 
-  // Available Months for Month Wise Filter
-  const availableMonths = useMemo(() => {
-    const set = new Set<string>();
-    allSaudaRecords.forEach(r => {
-      if (r.month) set.add(r.month);
-      else if (r.date && r.date.length >= 7) set.add(r.date.substring(0, 7));
-    });
-    transactions.forEach(t => {
-      if (t.month) set.add(t.month);
-      else if (t.date && t.date.length >= 7) set.add(t.date.substring(0, 7));
-    });
-    return Array.from(set).sort().reverse();
-  }, [allSaudaRecords, transactions]);
-
-  const formatMonthLabel = (m: string) => {
-    if (!m) return '';
-    try {
-      const [year, month] = m.split('-');
-      if (year && month) {
-        const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, 1);
-        return date.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
-      }
-    } catch {
-      // fallback
-    }
-    return m;
-  };
-
-  // Sorting for All Sauda Table
-  const [sortField, setSortField] = useState<'date' | 'saudaNo' | 'supplier' | 'broker' | 'quantityMT'>('date');
-  const [sortAsc, setSortAsc] = useState<boolean>(false); // Default false = Latest Date First
-
-  // Pagination for All Sauda Table
-  const [allSaudaPage, setAllSaudaPage] = useState<number>(1);
-  const [allSaudaPageSize, setAllSaudaPageSize] = useState<number>(50);
-
-  const handleSort = (field: 'date' | 'saudaNo' | 'supplier' | 'broker' | 'quantityMT') => {
-    if (sortField === field) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortField(field);
-      setSortAsc(field === 'date' ? false : true);
-    }
-    setAllSaudaPage(1);
-  };
-
-  // Filtered & Sorted All Sauda List (Each Sauda / PO is 1 row, full total weight, from sauda_master, scp, pm)
-  const filteredSaudaList = useMemo(() => {
-    let list = [...allSaudaRecords];
-
-    // Month Wise Filter
-    if (selectedMonth && selectedMonth !== 'ALL') {
-      list = list.filter(r =>
-        r.month === selectedMonth ||
-        (r.date && (r.date === selectedMonth || r.date.startsWith(selectedMonth) || normalizeToISODate(r.date).startsWith(selectedMonth)))
-      );
-    }
-
-    // Search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      list = list.filter(r =>
-        (r.saudaNo || '').toLowerCase().includes(q) ||
-        (r.poNo || '').toLowerCase().includes(q) ||
-        (r.supplier || '').toLowerCase().includes(q) ||
-        (r.broker || '').toLowerCase().includes(q) ||
-        (r.area || '').toLowerCase().includes(q) ||
-        (r.date || '').toLowerCase().includes(q)
-      );
-    }
-
-    // Sort with Date as default (latest first) and Sauda / PO No. as secondary sort
-    list.sort((a, b) => {
-      if (sortField === 'date') {
-        const dateA = a.date ? new Date(a.date).getTime() : 0;
-        const dateB = b.date ? new Date(b.date).getTime() : 0;
-        const diff = sortAsc ? dateA - dateB : dateB - dateA;
-        if (diff !== 0) return diff;
-
-        // Secondary sort: Sauda / PO No. (natural numeric sort)
-        const strA = a.saudaNo || a.poNo || '';
-        const strB = b.saudaNo || b.poNo || '';
-        return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
-      }
-
-      if (sortField === 'saudaNo') {
-        const strA = a.saudaNo || a.poNo || '';
-        const strB = b.saudaNo || b.poNo || '';
-        const comp = strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
-        if (comp !== 0) return sortAsc ? comp : -comp;
-
-        // Secondary sort: Date (latest date first)
-        const dateA = a.date ? new Date(a.date).getTime() : 0;
-        const dateB = b.date ? new Date(b.date).getTime() : 0;
-        return dateB - dateA;
-      }
-
-      if (sortField === 'supplier') {
-        const supA = a.supplier || '';
-        const supB = b.supplier || '';
-        const comp = supA.localeCompare(supB, undefined, { sensitivity: 'base' });
-        if (comp !== 0) return sortAsc ? comp : -comp;
-        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
-      }
-
-      if (sortField === 'broker') {
-        const brkA = a.broker || '';
-        const brkB = b.broker || '';
-        const comp = brkA.localeCompare(brkB, undefined, { sensitivity: 'base' });
-        if (comp !== 0) return sortAsc ? comp : -comp;
-        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
-      }
-
-      if (sortField === 'quantityMT') {
-        const wtA = Number(a.quantityMT || 0);
-        const wtB = Number(b.quantityMT || 0);
-        const diff = sortAsc ? wtA - wtB : wtB - wtA;
-        if (diff !== 0) return diff;
-        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
-      }
-
-      return 0;
-    });
-
-    return list;
-  }, [allSaudaRecords, selectedMonth, searchQuery, sortField, sortAsc]);
-
-  // Filtered & Sorted Transactions (Used for Dimensional Breakdown Tabs like Broker, Agency, Grade, etc.)
+  // Filtered & Sorted Transactions
   const filteredList = useMemo(() => {
     let list = [...transactions];
 
-    // Month Wise Filter
-    if (selectedMonth && selectedMonth !== 'ALL') {
-      list = list.filter(t =>
-        t.month === selectedMonth ||
-        (t.date && (t.date === selectedMonth || t.date.startsWith(selectedMonth) || normalizeToISODate(t.date).startsWith(selectedMonth)))
-      );
+    // Quick tab filters
+    if (quickFilter === 'PENDING_DELIVERY') {
+      list = list.filter(t => t.pendingWeightMT > 0.01);
+    } else if (quickFilter === 'PAYMENT_DUE') {
+      list = list.filter(t => t.pendingPayable > 100);
+    } else if (quickFilter === 'COMPLETED') {
+      list = list.filter(t => t.pendingWeightMT <= 0.01 && t.paymentStatus === 'PAID');
+    } else if (quickFilter === 'ALERTS') {
+      list = list.filter(t => t.isAbnormal || t.deductionAmount > 0);
+    }
+
+    // Date filter
+    const todayStr = getTodayISODate();
+    const curYearMonth = todayStr.substring(0, 7);
+    if (dateFilter === 'TODAY') {
+      list = list.filter(t => t.date && (t.date === todayStr || normalizeToISODate(t.date) === todayStr));
+    } else if (dateFilter === 'THIS_MONTH') {
+      list = list.filter(t => t.date && (t.date.startsWith(curYearMonth) || normalizeToISODate(t.date).startsWith(curYearMonth)));
     }
 
     // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter(t =>
-        (t.saudaNo || '').toLowerCase().includes(q) ||
-        (t.poNo || '').toLowerCase().includes(q) ||
-        (t.supplier || '').toLowerCase().includes(q) ||
-        (t.broker || '').toLowerCase().includes(q) ||
-        (t.area || '').toLowerCase().includes(q) ||
-        (t.grade || '').toLowerCase().includes(q)
+        t.saudaNo.toLowerCase().includes(q) ||
+        t.poNo.toLowerCase().includes(q) ||
+        t.supplier.toLowerCase().includes(q) ||
+        t.broker.toLowerCase().includes(q) ||
+        t.area.toLowerCase().includes(q) ||
+        t.grade.toLowerCase().includes(q)
       );
     }
 
-    // Sort with Date as default (latest first) and Sauda / PO No. as secondary sort
+    // Sort
     list.sort((a, b) => {
+      let valA: any = a[sortField];
+      let valB: any = b[sortField];
       if (sortField === 'date') {
-        const dateA = a.date ? new Date(a.date).getTime() : 0;
-        const dateB = b.date ? new Date(b.date).getTime() : 0;
-        const diff = sortAsc ? dateA - dateB : dateB - dateA;
-        if (diff !== 0) return diff;
-
-        // Secondary sort: Sauda / PO No. (natural numeric sort)
-        const strA = a.saudaNo || a.poNo || '';
-        const strB = b.saudaNo || b.poNo || '';
-        return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
+        valA = new Date(valA || '1970-01-01').getTime();
+        valB = new Date(valB || '1970-01-01').getTime();
       }
-
-      if (sortField === 'saudaNo') {
-        const strA = a.saudaNo || a.poNo || '';
-        const strB = b.saudaNo || b.poNo || '';
-        const comp = strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
-        if (comp !== 0) return sortAsc ? comp : -comp;
-
-        // Secondary sort: Date (latest date first)
-        const dateA = a.date ? new Date(a.date).getTime() : 0;
-        const dateB = b.date ? new Date(b.date).getTime() : 0;
-        return dateB - dateA;
-      }
-
-      if (sortField === 'supplier') {
-        const supA = a.supplier || '';
-        const supB = b.supplier || '';
-        const comp = supA.localeCompare(supB, undefined, { sensitivity: 'base' });
-        if (comp !== 0) return sortAsc ? comp : -comp;
-        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
-      }
-
-      if (sortField === 'broker') {
-        const brkA = a.broker || '';
-        const brkB = b.broker || '';
-        const comp = brkA.localeCompare(brkB, undefined, { sensitivity: 'base' });
-        if (comp !== 0) return sortAsc ? comp : -comp;
-        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
-      }
-
-      if (sortField === 'quantityMT') {
-        const wtA = Number(a.quantityMT || 0);
-        const wtB = Number(b.quantityMT || 0);
-        const diff = sortAsc ? wtA - wtB : wtB - wtA;
-        if (diff !== 0) return diff;
-        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
-      }
-
-      return 0;
+      return sortAsc ? valA - valB : valB - valA;
     });
 
     return list;
-  }, [transactions, selectedMonth, searchQuery, sortField, sortAsc]);
+  }, [transactions, quickFilter, dateFilter, searchQuery, sortField, sortAsc]);
 
   // Active Sub-Analysis View for Dimensional Tabs
   const [subAnalysisMode, setSubAnalysisMode] = useState<'VOLUME' | 'DEDUCTION' | 'CHECKPOINTS' | 'PREMIUM' | 'RANKING' | 'ABNORMAL'>('VOLUME');
@@ -399,37 +241,169 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   const supplierData = useMemo(() => aggregateByDimension(t => t.supplier), [filteredList]);
   const monthData = useMemo(() => aggregateByDimension(t => t.month || (t.date ? t.date.substring(0, 7) : 'Unknown')), [filteredList]);
 
+  // Counts for quick tabs
+  const tabCounts = useMemo(() => {
+    return {
+      all: transactions.length,
+      pendingDelivery: transactions.filter(t => t.pendingWeightMT > 0.01).length,
+      paymentDue: transactions.filter(t => t.pendingPayable > 100).length,
+      completed: transactions.filter(t => t.pendingWeightMT <= 0.01 && t.paymentStatus === 'PAID').length,
+      alerts: transactions.filter(t => t.isAbnormal || t.deductionAmount > 0).length
+    };
+  }, [transactions]);
+
   // CSV Export
   const handleExportCSV = () => {
-    const exportList = activeTab === 'ALLSAUDA' ? filteredSaudaList : filteredList;
-    if (!exportList.length) return;
+    if (!filteredList.length) return;
     const headers = [
-      'Date', 'Sauda / PO No', 'Party / Supplier', 'Broker', 'Weight (MT)'
+      'Date', 'Sauda No', 'PO No', 'Supplier/Party', 'Broker',
+      'Area', 'Grade', 'Weight MT', 'Rate Rs/Qtl', 'Total Rs',
+      'Arrived MT', 'Pending MT', 'Paid Rs', 'Balance Rs', 'Status'
     ];
-    const rows = exportList.map(t => {
-      const saudaPo = t.saudaNo && t.poNo && t.saudaNo !== t.poNo
-        ? `${t.saudaNo} / ${t.poNo}`
-        : (t.saudaNo || t.poNo || '-');
-      return [
-        t.date || '-',
-        `"${saudaPo}"`,
-        `"${t.supplier || 'Unassigned'}"`,
-        `"${t.broker || 'Direct'}"`,
-        (t.quantityMT || 0).toFixed(2)
-      ];
-    });
+    const rows = filteredList.map(t => [
+      t.date, t.saudaNo, t.poNo, `"${t.supplier}"`, `"${t.broker}"`,
+      `"${t.area}"`, t.grade, t.quantityMT, t.purchaseRate, t.grossPurchaseValue,
+      t.arrivedWeightMT, t.pendingWeightMT, t.paidAmount, t.pendingPayable, t.saudaStatus
+    ]);
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const encoded = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encoded);
-    link.setAttribute('download', `all_sauda_report_${selectedMonth !== 'ALL' ? selectedMonth : 'all'}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `sauda_procurement_report_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  const deliveryProgress = metrics.totalQuantityMT > 0
+    ? Math.min(100, (metrics.arrivedMT / metrics.totalQuantityMT) * 100)
+    : 0;
+
   return (
-    <div className="space-y-4 font-sans text-slate-800">
+    <div className="space-y-5 font-sans text-slate-800">
+
+      {/* ================= 4 BIG SIMPLE METRIC CARDS ================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        
+        {/* Card 1: Total Saudas */}
+        <div 
+          onClick={() => { setActiveTab('OVERVIEW'); setQuickFilter('ALL'); }}
+          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-sm hover:shadow ${
+            activeTab === 'OVERVIEW' && quickFilter === 'ALL'
+              ? 'bg-gradient-to-br from-emerald-50 to-green-100 border-emerald-500 ring-2 ring-emerald-500/20'
+              : 'bg-white border-slate-200 hover:border-emerald-300'
+          }`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-black uppercase text-slate-500 tracking-wider">
+              Total Deals
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+              📦
+            </div>
+          </div>
+          <div className="text-2xl font-black text-emerald-950 font-mono">
+            {metrics.totalSaudaCount || metrics.totalPOCount || transactions.length}
+            <span className="text-xs font-bold text-slate-500 ml-1.5 font-sans">Deals</span>
+          </div>
+          <div className="mt-2 pt-2 border-t border-slate-100 text-xs text-slate-600 flex items-center justify-between">
+            <span>Total Weight:</span>
+            <strong className="font-mono text-emerald-900 font-bold">
+              {metrics.totalQuantityMT.toFixed(2)} MT
+            </strong>
+          </div>
+        </div>
+
+        {/* Card 2: Total Purchase Value */}
+        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-black uppercase text-slate-500 tracking-wider">
+              Total Purchase Value
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-yellow-100 text-yellow-800 flex items-center justify-center font-bold">
+              💰
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 font-mono truncate">
+            ₹{metrics.totalPurchaseValue >= 10000000 
+              ? `${(metrics.totalPurchaseValue / 10000000).toFixed(2)} Cr` 
+              : `${(metrics.totalPurchaseValue / 100000).toFixed(2)} Lakh`}
+          </div>
+          <div className="mt-2 pt-2 border-t border-slate-100 text-xs text-slate-600 flex items-center justify-between">
+            <span>Average Rate:</span>
+            <strong className="font-mono text-slate-900 font-bold">
+              ₹{Math.round(metrics.weightedPurchaseRate).toLocaleString()} /Qtl
+            </strong>
+          </div>
+        </div>
+
+        {/* Card 3: Arrival Status */}
+        <div 
+          onClick={() => { setActiveTab('OVERVIEW'); setQuickFilter('PENDING_DELIVERY'); }}
+          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-sm hover:shadow ${
+            activeTab === 'OVERVIEW' && quickFilter === 'PENDING_DELIVERY'
+              ? 'bg-gradient-to-br from-amber-50 to-orange-100 border-amber-500 ring-2 ring-amber-500/20'
+              : 'bg-white border-slate-200 hover:border-amber-300'
+          }`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-black uppercase text-slate-500 tracking-wider">
+              Material Arrival
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+              🚛
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-black text-emerald-700 font-mono">
+              {metrics.arrivedMT.toFixed(1)}
+            </span>
+            <span className="text-xs font-bold text-slate-400">/ {metrics.totalQuantityMT.toFixed(1)} MT</span>
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-2">
+            <div 
+              className="bg-emerald-600 h-full rounded-full transition-all duration-300"
+              style={{ width: `${deliveryProgress}%` }}
+            />
+          </div>
+
+          <div className="mt-2 text-xs flex items-center justify-between">
+            <span className="text-emerald-700 font-bold">{deliveryProgress.toFixed(0)}% Delivered</span>
+            <span className="text-amber-700 font-bold">{metrics.pendingDeliveryMT.toFixed(1)} MT Pending</span>
+          </div>
+        </div>
+
+        {/* Card 4: Payment Status */}
+        <div 
+          onClick={() => { setActiveTab('OVERVIEW'); setQuickFilter('PAYMENT_DUE'); }}
+          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-sm hover:shadow ${
+            activeTab === 'OVERVIEW' && quickFilter === 'PAYMENT_DUE'
+              ? 'bg-gradient-to-br from-rose-50 to-red-100 border-rose-500 ring-2 ring-rose-500/20'
+              : 'bg-white border-slate-200 hover:border-rose-300'
+          }`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-black uppercase text-slate-500 tracking-wider">
+              Payment & Balance
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold">
+              💳
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 font-mono truncate">
+            ₹{(metrics.totalPayment / 100000).toFixed(2)} Lakh
+          </div>
+          <div className="mt-2 pt-2 border-t border-slate-100 text-xs flex items-center justify-between">
+            <span className="text-slate-500">Pending Balance:</span>
+            <strong className="font-mono text-rose-600 font-bold">
+              ₹{((metrics.totalPurchaseValue - metrics.totalPayment) / 100000).toFixed(2)} Lakh
+            </strong>
+          </div>
+        </div>
+
+      </div>
 
       {/* ================= MULTI-DIMENSIONAL ANALYSIS NAVIGATION TABS ================= */}
       <div className="bg-slate-900 p-2 rounded-2xl border border-slate-800 flex items-center gap-1.5 flex-wrap text-xs shadow-inner">
@@ -443,8 +417,8 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
           { id: 'SUPPLIER' as const, label: 'Supplier Wise', icon: Users, count: supplierData.length },
           { id: 'MONTH' as const, label: 'Month Wise', icon: Calendar, count: monthData.length },
           { id: 'DEDUCTION' as const, label: 'Deductions & Quality', icon: Scissors },
-          { id: 'CHECKPOINTS' as const, label: 'Checkpoints Pipeline', icon: Truck },
-          { id: 'ALLSAUDA' as const, label: 'All Sauda', icon: Building2, count: filteredSaudaList.length }
+          { id: 'CHECKPOINTS' as const, label: 'Checkpoints Pipeline', icon: Truck }
+          
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -473,7 +447,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       </div>
 
       {/* ================= TAB 1: DIMENSIONAL BREAKDOWN CONTENT ================= */}
-      {activeTab !== 'ALLSAUDA' && activeTab !== 'OVERVIEW' && activeTab !== 'DEDUCTION' && activeTab !== 'CHECKPOINTS' && activeTab !== 'ALL_DEALS' && (
+      {activeTab !== 'OVERVIEW' && activeTab !== 'DEDUCTION' && activeTab !== 'CHECKPOINTS' && activeTab !== 'ALL_DEALS' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-3 gap-3">
             <div>
@@ -1067,14 +1041,13 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       )}
 
       {/* ================= MAIN TRANSACTIONS LEDGER VIEW ================= */}
-      {activeTab === 'ALLSAUDA' && (
-       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+      {/* <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b pb-3">
           <div>
             <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
               <FileText className="w-4 h-4 text-emerald-700" />
-              All Sauda ({filteredSaudaList.length})
+              Complete Transaction Ledger ({filteredList.length} Records)
             </h3>
           </div>
 
@@ -1089,35 +1062,26 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                 className="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded-xl w-60 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
             </div>
-            {/* Month Wise Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold">
-              <Calendar className="w-3.5 h-3.5 text-slate-600" />
-              <span className="text-slate-600 text-[11px] whitespace-nowrap">Month:</span>
-              <select
-                value={selectedMonth}
-                onChange={e => { setSelectedMonth(e.target.value); setAllSaudaPage(1); }}
-                className="bg-transparent font-bold text-slate-900 text-xs focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Months</option>
-                {availableMonths.map(m => (
-                  <option key={m} value={m}>
-                    {formatMonthLabel(m)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {(searchQuery || selectedMonth !== 'ALL') && (
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
               <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedMonth('ALL');
-                }}
-                className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                onClick={() => setDateFilter('ALL')}
+                className={`px-2.5 py-1 rounded-lg transition ${dateFilter === 'ALL' ? 'bg-white shadow text-slate-900' : 'text-slate-600'}`}
               >
-                Clear Filters
+                All
               </button>
-            )}
+              <button
+                onClick={() => setDateFilter('THIS_MONTH')}
+                className={`px-2.5 py-1 rounded-lg transition ${dateFilter === 'THIS_MONTH' ? 'bg-white shadow text-slate-900' : 'text-slate-600'}`}
+              >
+                This Month
+              </button>
+              <button
+                onClick={() => setDateFilter('TODAY')}
+                className={`px-2.5 py-1 rounded-lg transition ${dateFilter === 'TODAY' ? 'bg-white shadow text-slate-900' : 'text-slate-600'}`}
+              >
+                Today
+              </button>
+            </div>
 
             <button
               onClick={handleExportCSV}
@@ -1128,85 +1092,203 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             </button>
           </div>
         </div>
+        <div className="flex items-center gap-2 flex-wrap text-xs">
+          <span className="font-bold text-slate-500 text-[11px] uppercase tracking-wider">Filter:</span>
+          
+          <button
+            onClick={() => setQuickFilter('ALL')}
+            className={`px-3 py-1 rounded-xl font-bold transition flex items-center gap-1 cursor-pointer ${
+              quickFilter === 'ALL'
+                ? 'bg-slate-900 text-white'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            All Deals ({tabCounts.all})
+          </button>
+
+          <button
+            onClick={() => setQuickFilter('PENDING_DELIVERY')}
+            className={`px-3 py-1 rounded-xl font-bold transition flex items-center gap-1 cursor-pointer ${
+              quickFilter === 'PENDING_DELIVERY'
+                ? 'bg-amber-600 text-white'
+                : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
+            }`}
+          >
+            <span>🚚 Delivery Pending ({tabCounts.pendingDelivery})</span>
+          </button>
+
+          <button
+            onClick={() => setQuickFilter('PAYMENT_DUE')}
+            className={`px-3 py-1 rounded-xl font-bold transition flex items-center gap-1 cursor-pointer ${
+              quickFilter === 'PAYMENT_DUE'
+                ? 'bg-rose-600 text-white'
+                : 'bg-rose-50 text-rose-900 border border-rose-200 hover:bg-rose-100'
+            }`}
+          >
+            <span>💳 Payment Due ({tabCounts.paymentDue})</span>
+          </button>
+
+          <button
+            onClick={() => setQuickFilter('COMPLETED')}
+            className={`px-3 py-1 rounded-xl font-bold transition flex items-center gap-1 cursor-pointer ${
+              quickFilter === 'COMPLETED'
+                ? 'bg-emerald-700 text-white'
+                : 'bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100'
+            }`}
+          >
+            <span>✓ Completed ({tabCounts.completed})</span>
+          </button>
+
+          {(searchQuery || quickFilter !== 'ALL' || dateFilter !== 'ALL') && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setQuickFilter('ALL');
+                setDateFilter('ALL');
+              }}
+              className="text-xs font-bold text-rose-600 hover:underline ml-auto cursor-pointer"
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
         <div className="overflow-x-auto border border-slate-200 rounded-2xl">
           <table className="w-full text-xs text-left border-collapse">
             <thead>
-              <tr className="bg-slate-900 text-white font-black uppercase text-[10px] tracking-wider border-b border-slate-800 select-none">
-                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('date')}>
-                  <div className="flex items-center gap-1.5">
-                    <span>Date</span>
+              <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b">
+                <th className="p-3">
+                  <button 
+                    onClick={() => { setSortField('date'); setSortAsc(!sortAsc); }}
+                    className="flex items-center gap-1 hover:text-slate-950 font-bold uppercase cursor-pointer"
+                  >
+                    Date
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                  </div>
+                  </button>
                 </th>
-                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('saudaNo')}>
-                  <div className="flex items-center gap-1.5">
-                    <span>Sauda / PO No.</span>
+                <th className="p-3">Sauda / PO No.</th>
+                <th className="p-3">Party / Supplier</th>
+                <th className="p-3">Broker</th>
+                <th className="p-3">Grade & Area</th>
+                <th className="p-3 text-right">
+                  <button 
+                    onClick={() => { setSortField('quantityMT'); setSortAsc(!sortAsc); }}
+                    className="flex items-center gap-1 hover:text-slate-950 font-bold uppercase ml-auto cursor-pointer"
+                  >
+                    Weight (MT)
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                  </div>
+                  </button>
                 </th>
-                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('supplier')}>
-                  <div className="flex items-center gap-1.5">
-                    <span>Party / Supplier</span>
+                <th className="p-3 text-right">Rate (₹/Qtl)</th>
+                <th className="p-3 text-right">
+                  <button 
+                    onClick={() => { setSortField('grossPurchaseValue'); setSortAsc(!sortAsc); }}
+                    className="flex items-center gap-1 hover:text-slate-950 font-bold uppercase ml-auto cursor-pointer"
+                  >
+                    Total Value
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                  </div>
+                  </button>
                 </th>
-                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('broker')}>
-                  <div className="flex items-center gap-1.5">
-                    <span>Broker</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                  </div>
-                </th>
-                <th className="p-3 text-right cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('quantityMT')}>
-                  <div className="flex items-center justify-end gap-1.5">
-                    <span>Weight (MT)</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                  </div>
-                </th>
+                <th className="p-3 text-center">Arrival</th>
+                <th className="p-3 text-center">Payment</th>
+                <th className="p-3 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
-              {filteredSaudaList.length > 0 ? (
-                filteredSaudaList
-                  .slice((allSaudaPage - 1) * allSaudaPageSize, allSaudaPage * allSaudaPageSize)
-                  .map((t, idx) => {
-                    const saudaPoDisplay = t.saudaNo && t.poNo && t.saudaNo !== t.poNo
-                      ? `${t.saudaNo} / ${t.poNo}`
-                      : (t.saudaNo || t.poNo || '-');
+              {filteredList.length > 0 ? (
+                filteredList.map((t, idx) => {
+                  const isAllArrived = t.pendingWeightMT <= 0.01;
+                  const isPaid = t.paymentStatus === 'PAID';
 
-                    return (
-                      <tr
-                        key={t.id || t.poNo || t.saudaNo || idx}
-                        className="hover:bg-emerald-50/60 transition cursor-pointer"
-                      >
-                        <td className="p-3 text-slate-700 font-mono text-[11px] whitespace-nowrap">
-                          {t.date || '-'}
-                        </td>
+                  return (
+                    <tr
+                      key={t.txnId || idx}
+                      onClick={() => setSelectedTxn(t)}
+                      className="hover:bg-emerald-50/60 transition cursor-pointer group"
+                    >
+                      <td className="p-3 text-slate-600 font-mono text-[11px] whitespace-nowrap">
+                        {t.date || '-'}
+                      </td>
 
-                        <td className="p-3 font-mono font-bold text-slate-900 whitespace-nowrap">
-                          {saudaPoDisplay}
-                        </td>
+                      <td className="p-3 font-mono font-bold text-slate-900 whitespace-nowrap">
+                        <div>{t.saudaNo}</div>
+                        {t.poNo && t.poNo !== t.saudaNo && (
+                          <span className="text-[10px] text-slate-400 font-normal block">
+                            PO: {t.poNo}
+                          </span>
+                        )}
+                      </td>
 
-                        <td className="p-3 font-bold text-slate-900 max-w-[220px] truncate" title={t.supplier || 'Unassigned'}>
-                          {t.supplier || 'Unassigned'}
-                        </td>
+                      <td className="p-3 font-bold text-slate-900 max-w-[180px] truncate" title={t.supplier}>
+                        {t.supplier || 'Unassigned'}
+                      </td>
 
-                        <td className="p-3 text-slate-700 font-semibold max-w-[180px] truncate" title={t.broker || 'Direct'}>
-                          {t.broker || 'Direct'}
-                        </td>
+                      <td className="p-3 text-slate-700 font-semibold max-w-[120px] truncate" title={t.broker}>
+                        {t.broker || '-'}
+                      </td>
 
-                        <td className="p-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
-                          {Number(t.quantityMT || 0).toFixed(2)} MT
-                        </td>
-                      </tr>
-                    );
-                  })
+                      <td className="p-3 text-slate-800">
+                        <div className="font-bold text-emerald-950">{t.grade || '-'}</div>
+                        <span className="text-[10px] text-slate-500 block">{t.area || '-'}</span>
+                      </td>
+
+                      <td className="p-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                        {t.quantityMT.toFixed(2)} MT
+                      </td>
+
+                      <td className="p-3 text-right font-mono font-bold text-slate-800 whitespace-nowrap">
+                        ₹{t.purchaseRate.toLocaleString()}
+                      </td>
+
+                      <td className="p-3 text-right font-mono font-black text-slate-950 whitespace-nowrap">
+                        ₹{Math.round(t.grossPurchaseValue).toLocaleString()}
+                      </td>
+
+                      <td className="p-3 text-center whitespace-nowrap">
+                        {isAllArrived ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            🟢 Arrived
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800" title={`${t.pendingWeightMT.toFixed(1)} MT Pending`}>
+                            🟡 {t.arrivedWeightMT > 0 ? `${t.arrivedWeightMT.toFixed(1)} MT` : 'Pending'}
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="p-3 text-center whitespace-nowrap">
+                        {isPaid ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            🟢 Paid
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800" title={`Due: ₹${Math.round(t.pendingPayable).toLocaleString()}`}>
+                            🔴 Due
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            setSelectedTxn(t);
+                          }}
+                          className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold text-[11px] rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1 mx-auto"
+                        >
+                          <FileText className="w-3 h-3 text-emerald-700" />
+                          <span>Slip</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={5} className="p-12 text-center text-slate-400 space-y-2">
+                  <td colSpan={11} className="p-12 text-center text-slate-400 space-y-2">
                     <XCircle className="w-8 h-8 text-slate-300 mx-auto" />
-                    <div className="font-bold text-slate-700 text-sm">No Sauda Records Found</div>
+                    <div className="font-bold text-slate-700 text-sm">No Transaction Records Found</div>
                     <p className="text-xs text-slate-500">
-                      Try clearing search filters or selecting a different month.
+                      Try clearing search filters or selecting a different date range.
                     </p>
                   </td>
                 </tr>
@@ -1214,49 +1296,8 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             </tbody>
           </table>
         </div>
-
-        {/* PAGINATION FOOTER */}
-        {filteredSaudaList.length > 0 && (
-          <div className="p-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs font-sans rounded-b-2xl">
-            <div className="flex items-center gap-2">
-              <span className="text-slate-500 font-medium">Rows per page:</span>
-              <select
-                value={allSaudaPageSize}
-                onChange={e => { setAllSaudaPageSize(Number(e.target.value)); setAllSaudaPage(1); }}
-                className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold"
-              >
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-                <option value={250}>250</option>
-              </select>
-              <span className="text-slate-500 ml-2 font-medium">
-                Showing {(allSaudaPage - 1) * allSaudaPageSize + 1} to {Math.min(allSaudaPage * allSaudaPageSize, filteredSaudaList.length)} of {filteredSaudaList.length} records
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1 font-bold">
-              <button
-                disabled={allSaudaPage === 1}
-                onClick={() => setAllSaudaPage(prev => Math.max(1, prev - 1))}
-                className="px-3 py-1 bg-white border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100 transition cursor-pointer"
-              >
-                Prev
-              </button>
-              <span className="px-2 font-mono">Page {allSaudaPage} of {Math.ceil(filteredSaudaList.length / allSaudaPageSize) || 1}</span>
-              <button
-                disabled={allSaudaPage >= Math.ceil(filteredSaudaList.length / allSaudaPageSize)}
-                onClick={() => setAllSaudaPage(prev => Math.min(Math.ceil(filteredSaudaList.length / allSaudaPageSize), prev + 1))}
-                className="px-3 py-1 bg-white border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100 transition cursor-pointer"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
       </div>
-      )}
-      {/*<SimpleDealSlipModal
+      <SimpleDealSlipModal
         transaction={selectedTxn}
         onClose={() => setSelectedTxn(null)}
       /> */}

@@ -692,57 +692,47 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider sticky top-0 border-b border-slate-200">
-                  <th className="p-2.5">Date</th>
-                  <th className="p-2.5">Sauda / PO No.</th>
-                  <th className="p-2.5">Party / Supplier</th>
+                  <th className="p-2.5 text-center">#</th>
+                  <th className="p-2.5">Sauda Number</th>
+                  <th className="p-2.5">Sauda Date</th>
+                  <th className="p-2.5">PO Number</th>
+                  <th className="p-2.5">Supplier</th>
                   <th className="p-2.5">Broker</th>
-                  <th className="p-2.5 text-right font-black text-emerald-900">Weight (MT)</th>
+                  <th className="p-2.5">Agency</th>
+                  <th className="p-2.5">Area</th>
+                  <th className="p-2.5">Grade</th>
+                  <th className="p-2.5 text-right font-black text-emerald-900">Sauda Qty (MT)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                {(() => {
-                  const map = new Map<string, any>();
-                  filteredTransactions.forEach((t, i) => {
-                    const key = (t.saudaNo || t.poNo || t.txnId || `sauda-${i}`).trim();
-                    if (map.has(key)) {
-                      const existing = map.get(key);
-                      existing.quantityMT = (Number(existing.quantityMT) || 0) + (Number(t.quantityMT) || 0);
-                    } else {
-                      map.set(key, { ...t, quantityMT: Number(t.quantityMT) || 0 });
-                    }
-                  });
-                  const list = Array.from(map.values());
-
-                  return list.map((t, idx) => {
-                    const saudaPoDisplay = t.saudaNo && t.poNo && t.saudaNo !== t.poNo
-                      ? `${t.saudaNo} / ${t.poNo}`
-                      : (t.saudaNo || t.poNo || '-');
-
-                    return (
-                      <tr key={t.txnId || t.id || idx} className="hover:bg-emerald-50/40 transition font-mono text-[11px]">
-                        <td className="p-2.5 text-slate-600 whitespace-nowrap">{t.date || '-'}</td>
-                        <td className="p-2.5 font-bold text-emerald-950 whitespace-nowrap">{saudaPoDisplay}</td>
-                        <td className="p-2.5 font-sans font-semibold text-slate-900 truncate max-w-[220px]" title={t.supplier || 'Unassigned'}>
-                          {t.supplier || 'Unassigned'}
-                        </td>
-                        <td className="p-2.5 font-sans text-slate-700 truncate max-w-[180px]" title={t.broker || 'Direct'}>
-                          {t.broker || 'Direct'}
-                        </td>
-                        <td className="p-2.5 text-right font-black text-emerald-900 text-xs whitespace-nowrap">
-                          {Number(t.quantityMT || 0).toFixed(2)} MT
-                        </td>
-                      </tr>
-                    );
-                  });
-                })()}
+                {filteredTransactions.map((t, idx) => (
+                  <tr key={t.txnId || idx} className="hover:bg-emerald-50/40 transition font-mono text-[11px]">
+                    <td className="p-2 text-center text-slate-400">{idx + 1}</td>
+                    <td className="p-2 font-bold text-emerald-950">{t.saudaNo}</td>
+                    <td className="p-2 text-slate-600 whitespace-nowrap">{t.date}</td>
+                    <td className="p-2 text-slate-800 font-bold">{t.poNo || 'Pending'}</td>
+                    <td className="p-2 font-sans font-semibold text-slate-900" title={t.supplier}>{t.supplier}</td>
+                    <td className="p-2 font-sans text-slate-700" title={t.broker}>{t.broker}</td>
+                    <td className="p-2 font-sans text-slate-600">{t.agency}</td>
+                    <td className="p-2 font-sans text-slate-600">{t.area}</td>
+                    <td className="p-2">
+                      <span className="px-2 py-0.5 rounded bg-slate-100 font-bold text-slate-800 text-[10px]">
+                        {t.grade}
+                      </span>
+                    </td>
+                    <td className="p-2 text-right font-black text-emerald-900 text-xs">
+                      {t.quantityMT.toFixed(2)} MT
+                    </td>
+                  </tr>
+                ))}
               </tbody>
               <tfoot>
                 <tr className="bg-emerald-50 text-emerald-950 font-black text-xs border-t-2 border-emerald-300 font-mono">
-                  <td colSpan={4} className="p-3 text-right uppercase tracking-wider font-bold">
-                    Total Weight:
+                  <td colSpan={9} className="p-3 text-right uppercase tracking-wider">
+                    Total Sauda Contract Quantity:
                   </td>
-                  <td className="p-3 text-right font-black text-emerald-950 text-sm whitespace-nowrap">
-                    {filteredTransactions.reduce((acc, t) => acc + (Number(t.quantityMT) || 0), 0).toFixed(2)} MT
+                  <td className="p-3 text-right font-black text-emerald-950 text-sm">
+                    {filteredTransactions.reduce((acc, t) => acc + t.quantityMT, 0).toFixed(2)} MT
                   </td>
                 </tr>
               </tfoot>

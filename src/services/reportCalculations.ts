@@ -585,24 +585,33 @@ export type GradeItemSummary = CompiledReportData['gradeItemSummary'][number];
 // Helper functions strictly mirroring Sauda Desk (src/pages/SaudaRegister.tsx)
 export const formatPoNumber = (sauda: any): string => {
   if (!sauda) return '';
-  const rawNo = sauda.sauda_no || sauda.no || sauda.contract_no || '';
-  if (rawNo && String(rawNo).trim().toUpperCase().startsWith('BJCL/')) {
-    return String(rawNo).trim();
-  }
   if (sauda.session && sauda.session.trim()) {
     const s = sauda.session.trim();
     const parts = s.split('/').filter(Boolean);
     if (parts.length >= 3) {
       return s;
     }
+    const base = s.endsWith('/') ? s : s + '/';
+    return `${base}${sauda.sauda_no || ''}`;
   }
-  const cleanDigits = String(rawNo).replace(/[^0-9]/g, '');
-  if (cleanDigits) {
-    const padded = cleanDigits.padStart(4, '0');
-    const finYear = sauda.financial_year || (sauda.session && !sauda.session.includes('/') ? sauda.session : '2026-2027');
-    return `BJCL/${finYear}/${padded}`;
+  const numPart = parseInt(sauda.sauda_no, 10);
+  const val = isNaN(numPart) ? sauda.sauda_no : numPart;
+  
+  let yearPart = '26';
+  if (sauda.financial_year) {
+    const startYear = sauda.financial_year.split('-')[0].trim();
+    if (startYear.length >= 4) {
+      yearPart = startYear.slice(-2);
+    } else if (startYear.length === 2) {
+      yearPart = startYear;
+    }
+  } else if (sauda.session && sauda.session.includes('/')) {
+    const parts = sauda.session.split('/');
+    if (parts.length > 1) {
+      yearPart = parts[parts.length - 1].slice(-2);
+    }
   }
-  return String(rawNo);
+  return `BJCL/${val}/${yearPart}`;
 };
 
 export const getCleanDigits = (str: string): string => {
