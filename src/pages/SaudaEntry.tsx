@@ -647,11 +647,45 @@ export default function SaudaEntry({
         return;
       }
 
+      if (!formData.challan_supplier) {
+        alert("Please fill in or select an supplier.");
+        return;
+      }
+
       if (!formData.area) {
         alert("Please fill in or select an Area.");
         return;
       }
 
+      if (!formData.no_of_lorries) {
+        alert("Please fill no of lorries.");
+        return;
+      }
+
+      if (!formData.unit_type) {
+        alert("Please fill in or select an type.");
+        return;
+      }
+
+      if (formData.unit_type === 'BALES'|| formData.unit_type === 'DRUMS') {
+        if(!formData.units_per_lorry){
+          alert("Please fill in or unit per lorry.");
+          return;
+        }
+      }
+
+      if (formData.unit_type === 'LOOSE') {
+        if(!formData.wt_per_lorry){
+          alert("Please fill in or WT per lorry.");
+          return;
+        }
+      }
+
+      if (!formData.shipment_date) {
+        alert("Please fill in or shipment date.");
+        return;
+      }
+      
       // Validate Quality Details rows
       const qdRows = formData.quality_details || [];
       for (let i = 0; i < qdRows.length; i++) {

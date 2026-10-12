@@ -26,7 +26,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
         {/* No. of Lorries */}
         <div className="flex flex-col gap-1.5">
           <label htmlFor="no_of_lorries_26" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-            <span>No. of Lorries</span>
+            <span>No. of Lorries </span>
             <span className="text-rose-600 font-black text-sm">*</span>
           </label>
           <input
@@ -37,9 +37,26 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             name="no_of_lorries"
             value={formData.no_of_lorries ?? 1}
             onChange={onChange}
+            required
             className="bg-[#FFECEC] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs font-mono"
           />
         </div>
+        {/* Unit Type - SEARCHABLE DROPDOWN */}
+        <SearchableSelect
+          label="Unit Type"
+          value={formData.unit_type || 'BALES'}
+          onChange={(val) => {
+            if (onSelectChange) {
+              onSelectChange('unit_type', val);
+            } else {
+              onChange({ target: { name: 'unit_type', value: val } } as any);
+            }
+          }}
+          options={unitOptions}
+          placeholder="SELECT OR TYPE UNIT..."
+          isAutoPopulated={Boolean(formData.unit_type)}
+          requiredisRequired={true}
+        />
 
         {/* Units/Lorry - NUMERIC INPUT */}
         <div className="flex flex-col gap-1.5">
@@ -101,6 +118,9 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             placeholder={String(formData.unit_type || '').toUpperCase().includes('LOOSE') ? 'Manual count' : 'e.g. 80'}
             value={formData.units_per_lorry !== undefined && formData.units_per_lorry !== null ? formData.units_per_lorry : ''}
             onChange={onChange}
+            required={['BALES', 'BALE', 'DRUM', 'DRUMS'].includes(
+              String(formData.unit_type || '').toUpperCase().trim()
+            )}
             className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs font-mono"
           />
         </div>
@@ -141,25 +161,12 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             name="wt_per_lorry"
             value={formData.wt_per_lorry ?? 0}
             onChange={onChange}
+            required={['LOOSE', 'LOOSES'].includes(
+              String(formData.unit_type || '').toUpperCase().trim()
+            )}
             className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs font-mono"
           />
         </div>
-
-        {/* Unit Type - SEARCHABLE DROPDOWN */}
-        <SearchableSelect
-          label="Unit Type"
-          value={formData.unit_type || 'BALES'}
-          onChange={(val) => {
-            if (onSelectChange) {
-              onSelectChange('unit_type', val);
-            } else {
-              onChange({ target: { name: 'unit_type', value: val } } as any);
-            }
-          }}
-          options={unitOptions}
-          placeholder="SELECT OR TYPE UNIT..."
-          isAutoPopulated={Boolean(formData.unit_type)}
-        />
 
         {/* Total Weight in Ton */}
         <div className="flex flex-col gap-1.5">

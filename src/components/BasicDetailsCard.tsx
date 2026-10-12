@@ -200,6 +200,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
             onChange={(val) => onSelectChange('challan_supplier', val)}
             options={suppliers}
             placeholder="SELECT OR TYPE CHALLAN SUPPLIER..."
+            isRequired={true}
             isAutoPopulated={Boolean(formData.challan_supplier && (formData.challan_supplier === formData.supplier || formData.is_auto_filled))}
           />
 

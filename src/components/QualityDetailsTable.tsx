@@ -313,7 +313,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
               title="Add another Quality configuration row"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>Spawn Row</span>
+              <span>Add Row</span>
             </button>
             <button
               type="button"
@@ -460,7 +460,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
 
       {/* Generated Combinations Breakdown Matrix */}
       {allCombinations.length > 0 && (
-        <div className="bg-[#F8FAF8] rounded-xl border border-[#D5E5D9] p-3.5 sm:p-4 shadow-2xs">
+        <div className=" hidden bg-[#F8FAF8] rounded-xl border border-[#D5E5D9] p-3.5 sm:p-4 shadow-2xs">
           <div className="flex items-center justify-between gap-2 mb-2.5 pb-2 border-b border-[#E1EFE4]">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-md bg-[#174C2C] text-amber-300 flex items-center justify-center font-bold text-xs shadow-2xs">
