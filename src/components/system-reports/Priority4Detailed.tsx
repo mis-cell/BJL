@@ -96,9 +96,6 @@ export const Priority4Detailed: React.FC<Priority4DetailedProps> = ({
           <h3 className="text-xs font-black uppercase text-emerald-950 tracking-wider">
             10. Complete System Transaction Register (Master Grain: G0)
           </h3>
-          <span className="text-[10px] text-slate-500 font-mono">
-            Every row represents an individual Transaction Line (Supplier + Sauda + PO + Grade + Rate + Qty)
-          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -121,17 +118,9 @@ export const Priority4Detailed: React.FC<Priority4DetailedProps> = ({
                 <th className="p-2.5 text-center w-8">#</th>
                 <th className="p-2.5 cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('date')}>Date</th>
                 <th className="p-2.5 cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('saudaNo')}>Sauda / PO</th>
-                <th className="p-2.5 cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('supplier')}>Supplier</th>
                 <th className="p-2.5 cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('broker')}>Broker</th>
-                <th className="p-2.5">Area & Grade</th>
-                <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('quantityMT')}>Qty (MT)</th>
-                <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('purchaseRate')}>Purchase Rate</th>
-                <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('baseRate')}>Base Rate</th>
-                <th className="p-2.5 text-right">Variance</th>
-                <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('grossPurchaseValue')}>Purchase Val</th>
-                <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('premiumAmount')}>Premium</th>
-                <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('deductionAmount')}>Deductions</th>
-                <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('effectiveCost')}>Eff. Cost</th>
+                <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('quantityMT')}>QTY</th>
+                <th className="p-2.5 text-right cursor-pointer hover:bg-emerald-900" onClick={() => handleSort('baseRate')}>BASE RATE</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-mono text-[11px] text-slate-700 font-medium">
@@ -141,30 +130,17 @@ export const Priority4Detailed: React.FC<Priority4DetailedProps> = ({
                   onClick={() => onDrillDown(`Transaction: ${t.txnId} (${t.poNo})`, [t])}
                   className="hover:bg-emerald-50/50 transition cursor-pointer"
                 >
-                  <td className="p-2 text-center text-slate-400">{(currentPage - 1) * pageSize + idx + 1}</td>
-                  <td className="p-2 text-slate-600 whitespace-nowrap">{t.date}</td>
-                  <td className="p-2 font-bold text-emerald-950">
+                  <td className="p-2.5 text-center text-slate-400">{(currentPage - 1) * pageSize + idx + 1}</td>
+                  <td className="p-2.5 text-slate-600 whitespace-nowrap">{t.date}</td>
+                  <td className="p-2.5 font-bold text-emerald-950">
                     <div>{t.poNo}</div>
-                    <div className="text-[10px] text-slate-400 font-normal">{t.saudaNo}</div>
+                    {t.saudaNo && t.saudaNo !== t.poNo && (
+                      <div className="text-[10px] text-slate-400 font-normal">{t.saudaNo}</div>
+                    )}
                   </td>
-                  <td className="p-2 max-w-[140px] truncate" title={t.supplier}>{t.supplier}</td>
-                  <td className="p-2 max-w-[120px] truncate" title={t.broker}>{t.broker}</td>
-                  <td className="p-2">
-                    <span className="font-bold text-slate-800">{t.grade}</span>
-                    <span className="text-[10px] text-slate-500 block">{t.area}</span>
-                  </td>
-                  <td className="p-2 text-right font-bold">{t.quantityMT.toFixed(3)}</td>
-                  <td className="p-2 text-right">₹{t.purchaseRate.toLocaleString()}</td>
-                  <td className="p-2 text-right text-slate-500">₹{t.baseRate.toLocaleString()}</td>
-                  <td className="p-2 text-right">
-                    <span className={t.rateVariance > 0 ? 'text-amber-700 font-bold' : (t.rateVariance < 0 ? 'text-emerald-700 font-bold' : 'text-slate-400')}>
-                      {t.rateVariance > 0 ? `+₹${t.rateVariance.toFixed(0)}` : (t.rateVariance < 0 ? `-₹${Math.abs(t.rateVariance).toFixed(0)}` : '₹0')}
-                    </span>
-                  </td>
-                  <td className="p-2 text-right">₹{t.grossPurchaseValue.toLocaleString()}</td>
-                  <td className="p-2 text-right text-amber-700 font-bold">{t.premiumAmount > 0 ? `₹${t.premiumAmount.toLocaleString()}` : '—'}</td>
-                  <td className="p-2 text-right text-rose-700 font-bold">{t.deductionAmount > 0 ? `₹${t.deductionAmount.toLocaleString()}` : '—'}</td>
-                  <td className="p-2 text-right text-slate-900 font-bold">₹{t.effectiveCost.toLocaleString()}</td>
+                  <td className="p-2.5 max-w-[140px] truncate" title={t.broker}>{t.broker}</td>
+                  <td className="p-2.5 text-right font-bold text-slate-900">{t.quantityMT.toFixed(3)} MT</td>
+                  <td className="p-2.5 text-right font-bold text-emerald-900">₹{(t.baseRate || t.purchaseRate).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>

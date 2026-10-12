@@ -42,6 +42,7 @@ type TabDimension =
   | 'MONTH'
   | 'DEDUCTION'
   | 'CHECKPOINTS'
+  | 'ALLSAUDA'
   | 'ALL_DEALS';
 
 export const SimpleReportView: React.FC<SimpleReportViewProps> = ({

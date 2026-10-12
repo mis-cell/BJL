@@ -727,6 +727,23 @@ export async function loadAndProcessSystemReportData(): Promise<{
       seenCanonKeys.add(cleanNo);
     };
 
+    (saudas || []).forEach((s: any) => {
+      addPoToMap({
+        ...s,
+        po_no: s.po_no || s.sauda_no,
+        sauda_no: s.sauda_no,
+        contract_date: s.date || s.b_date || s.created_at,
+        supplier: s.supplier || s.challan_supplier,
+        broker: s.broker,
+        agency: s.agency,
+        area: s.area,
+        grade: s.quality || s.grade,
+        total_contract_mt: Number(s.total_wt_in_ton) || 0,
+        b_rate: Number(s.b_rate) || 0,
+        status: s.approval_status || s.status || 'Active',
+        id: s.sauda_id || s.id
+      });
+    });
     (scps || []).forEach(addPoToMap);
     (pos || []).forEach(addPoToMap);
 
