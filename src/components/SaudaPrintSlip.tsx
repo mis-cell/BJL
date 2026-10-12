@@ -107,12 +107,18 @@ export default function SaudaPrintSlip({ sauda }: Props) {
     : (rawQualityRows.length > 0
         ? rawQualityRows.map(r => ({
             ...r,
-            agency: r.agency || '',
-            marka: r.marka || '',
-            quality: r.quality || '',
-            rs: Number(r.rs) || 0
+            agency: r.agency || sauda.agency || '',
+            marka: r.marka || sauda.marks || '',
+            quality: r.quality || contractQuality || 'TD5',
+            rs: Number(r.rs) > 0 ? Number(r.rs) : contractRate
           }))
-        : [{ agency: '', marka: '', quality: contractQuality, rs: contractRate, qty: 0 }]
+        : [{
+            agency: sauda.agency || '',
+            marka: sauda.marks || '',
+            quality: contractQuality || 'TD5',
+            rs: contractRate,
+            qty: Number(sauda.total_unit) || 0
+          }]
       );
   
   // Pad local qualities to at least 7 rows to match the physical slip format
@@ -121,8 +127,7 @@ export default function SaudaPrintSlip({ sauda }: Props) {
     paddedQualities.push({ quality: '', percentage: 0, rate: 0, qty: 0, rs: 0, marka: '', agency: '' });
   }
 
-  const sessionParts = sauda.session ? sauda.session.split('/') : ['BJCL', '2026-2027', sauda.sauda_no];
-  const yearStr = sessionParts[1] || '2026-2027';
+  const yearStr = (sauda.session && !sauda.session.startsWith('BJCL/')) ? sauda.session : (sauda.financial_year || '2026-2027');
 
   // Format any rate values nicely
   const getBrateString = () => {
@@ -151,7 +156,9 @@ export default function SaudaPrintSlip({ sauda }: Props) {
              </div>
           </div>
           <div className="flex flex-col items-end text-right">
-             <div className="font-bold text-[16px] text-black">BJCL / {sauda.sauda_no}</div>
+             <div className="font-bold text-[16px] text-black">
+               {String(sauda.sauda_no || '').startsWith('BJCL') ? sauda.sauda_no : `BJCL / ${sauda.sauda_no}`}
+             </div>
              <div className="text-[11px] font-bold text-black">Date: {sauda.date ? new Date(sauda.date).toLocaleDateString('en-GB') : ''}</div>
              <div className="text-[10px] font-mono text-black">P.O. : {sauda.po_type || 'Normal/PTF'}</div>
           </div>

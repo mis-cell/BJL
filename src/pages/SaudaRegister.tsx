@@ -835,46 +835,72 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     }
   };
 
+  const fetchQualityDetailsForSauda = async (sauda: Sauda): Promise<any[]> => {
+    try {
+      const { supabase } = await import('../lib/supabase.ts');
+      if (!supabase) return sauda.quality_details || [];
+
+      let details: any[] = [];
+      
+      // 1. Try querying by sauda_id (UUID or stored string)
+      if (sauda.sauda_id) {
+        const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', sauda.sauda_id);
+        if (data && data.length > 0) details = data;
+      }
+
+      // 2. Try querying by full sauda_no (e.g. BJCL/2026-2027/0875)
+      if (details.length === 0 && sauda.sauda_no) {
+        const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', sauda.sauda_no);
+        if (data && data.length > 0) details = data;
+      }
+
+      // 3. Try querying by sauda_no column in sauda_quality_details if present
+      if (details.length === 0 && sauda.sauda_no) {
+        const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_no', sauda.sauda_no);
+        if (data && data.length > 0) details = data;
+      }
+
+      // 4. Try clean digits sequence
+      if (details.length === 0 && sauda.sauda_no) {
+        const cleanSeq = sauda.sauda_no.replace(/^BJCL\/\d{4}-\d{4}\//i, '').replace(/[^0-9]/g, '');
+        if (cleanSeq) {
+          const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', cleanSeq);
+          if (data && data.length > 0) details = data;
+        }
+      }
+
+      if (details.length > 0) {
+        return details.sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
+      }
+    } catch (e) {
+      console.error("Could not fetch qualities:", e);
+    }
+    return sauda.quality_details || [];
+  };
+
   const handleEdit = async (sauda: Sauda) => {
     if (!enforceEditOrDeletePermission("Edit")) {
       return;
     }
-    // Fetch quality details for this sauda
-    try {
-      if (dbModule) {
-        const { supabase } = await import('../lib/supabase.ts');
-        if (supabase) {
-           const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', sauda.sauda_id);
-           const sorted = (data || []).sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
-           sauda.quality_details = sorted;
-        }
-      }
-    } catch(e) { console.error("Could not fetch qualities", e); }
-    
-    setEditingSauda(sauda);
+    const qualities = await fetchQualityDetailsForSauda(sauda);
+    const fullEditRecord = { ...sauda, quality_details: qualities };
+    setEditingSauda(fullEditRecord);
   };
 
   const handlePrint = async (sauda: Sauda) => {
+    const qualities = await fetchQualityDetailsForSauda(sauda);
     let fullSauda = { ...sauda };
-    try {
-      if (dbModule) {
-        const { supabase } = await import('../lib/supabase.ts');
-        if (supabase) {
-           const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', sauda.sauda_id);
-           const sorted = (data || []).sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
-           if (sorted && sorted.length > 0) {
-             const fallbackQ = (sorted.find((s: any) => s.quality)?.quality) || (sauda as any).quality || 'TD5';
-             const fallbackR = Number(sauda.b_rate) || Number(sorted.find((s: any) => s.rs && Number(s.rs) > 0)?.rs) || 13500;
-             fullSauda.quality_details = sorted.map((s: any) => ({
-               ...s,
-               quality: s.quality || fallbackQ,
-               rs: Number(s.rs) > 0 ? Number(s.rs) : fallbackR
-             }));
-           }
-        }
-      }
-    } catch(e) { console.error("Could not fetch qualities", e); }
-    
+    if (qualities && qualities.length > 0) {
+      const fallbackQ = (qualities.find((s: any) => s.quality)?.quality) || (sauda as any).quality || 'TD5';
+      const fallbackR = Number(sauda.b_rate) || Number(qualities.find((s: any) => s.rs && Number(s.rs) > 0)?.rs) || 13500;
+      fullSauda.quality_details = qualities.map((s: any) => ({
+        ...s,
+        quality: s.quality || fallbackQ,
+        rs: Number(s.rs) > 0 ? Number(s.rs) : fallbackR
+      }));
+    } else {
+      fullSauda.quality_details = qualities;
+    }
     setPrintingSauda(fullSauda);
   };
 

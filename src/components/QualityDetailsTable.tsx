@@ -333,33 +333,19 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
         <table className="w-full text-left border-collapse table-fixed">
           <thead className="sticky top-0 z-20 shadow-2xs">
             <tr className="bg-[#EDF4EF] text-[#174C2C] font-bold text-xs uppercase border-b border-[#D8E4DC]">
-              {isUser010 ? (
-                <>
-                  <th className="px-3.5 py-2.5 w-3/5 bg-[#EDF4EF] rounded-tl-xl">
-                    Quality
-                  </th>
-                  <th className="px-3.5 py-2.5 w-2/5 text-right bg-[#EDF4EF]">
-                    Rs.
-                  </th>
-                  <th className="px-2 py-2.5 w-12 text-center bg-[#EDF4EF] rounded-tr-xl"></th>
-                </>
-              ) : (
-                <>
-                  <th className="px-3 py-2.5 w-[31%] bg-[#EDF4EF] rounded-tl-xl">
-                    Agency <span className="text-[10px] text-emerald-700 font-semibold normal-case">(Multiple Select)</span>
-                  </th>
-                  <th className="px-3 py-2.5 w-[31%] bg-[#EDF4EF]">
-                    Marka <span className="text-[10px] text-emerald-700 font-semibold normal-case">(Multiple Select)</span>
-                  </th>
-                  <th className="px-3 py-2.5 w-[21%] bg-[#EDF4EF]">
-                    Quality <span className="text-rose-600 font-black">*</span>
-                  </th>
-                  <th className="px-3 py-2.5 w-[13%] text-right bg-[#EDF4EF]">
-                    Rs. <span className="text-rose-600 font-black">*</span>
-                  </th>
-                  <th className="px-1 py-2.5 w-[4%] text-center bg-[#EDF4EF] rounded-tr-xl"></th>
-                </>
-              )}
+              <th className="px-3 py-2.5 w-[31%] bg-[#EDF4EF] rounded-tl-xl">
+                Agency <span className="text-[10px] text-emerald-700 font-semibold normal-case">(Multiple Select)</span>
+              </th>
+              <th className="px-3 py-2.5 w-[31%] bg-[#EDF4EF]">
+                Marka <span className="text-[10px] text-emerald-700 font-semibold normal-case">(Multiple Select)</span>
+              </th>
+              <th className="px-3 py-2.5 w-[21%] bg-[#EDF4EF]">
+                Quality <span className="text-rose-600 font-black">*</span>
+              </th>
+              <th className="px-3 py-2.5 w-[13%] text-right bg-[#EDF4EF]">
+                Rs. <span className="text-rose-600 font-black">*</span>
+              </th>
+              <th className="px-1 py-2.5 w-[4%] text-center bg-[#EDF4EF] rounded-tr-xl"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EAE6DD] text-xs">
@@ -393,75 +379,55 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                     style={{ zIndex: Math.max(10, 80 - i * 5) }}
                     className="hover:bg-[#F9F8F5] transition-colors relative focus-within:z-[90]"
                   >
-                      {isUser010 ? (
-                        <>
-                          {/* Quality - SEARCHABLE SELECT */}
-                          <td className="p-2.5 align-top">
-                            <SearchableSelect
-                              id={`qd_quality_${i}`}
-                              name="qd_quality"
-                              value={qd.quality || ''}
-                              onChange={(val) => onQualityChange(i, 'quality', val)}
-                              options={availableGradeOptions}
-                              placeholder="Select Quality..."
-                              isRequired={false}
-                              compact={true}
-                            />
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          {/* Agency - SEARCHABLE MULTI-SELECT */}
-                          <td className="p-2.5 align-top">
-                            <SearchableMultiSelect
-                              id={`agency_${i}`}
-                              name="agency"
-                              selectedValues={currentAgencies}
-                              onChange={(vals) => {
-                                onQualityChange(i, 'agencies', vals);
-                                onQualityChange(i, 'agency', vals[0] || '');
-                                // Reset custom combinations so they regenerate for the new agency selection
-                                onQualityChange(i, 'applicableCombinations', undefined);
-                              }}
-                              options={agencyOptions}
-                              placeholder="Select / search Agencies..."
-                              badgeTheme="emerald"
-                            />
-                          </td>
+                        {/* Agency - SEARCHABLE MULTI-SELECT */}
+                        <td className="p-2.5 align-top">
+                          <SearchableMultiSelect
+                            id={`agency_${i}`}
+                            name="agency"
+                            selectedValues={currentAgencies}
+                            onChange={(vals) => {
+                              onQualityChange(i, 'agencies', vals);
+                              onQualityChange(i, 'agency', vals[0] || '');
+                              // Reset custom combinations so they regenerate for the new agency selection
+                              onQualityChange(i, 'applicableCombinations', undefined);
+                            }}
+                            options={agencyOptions}
+                            placeholder="Select / search Agencies..."
+                            badgeTheme="emerald"
+                          />
+                        </td>
 
-                          {/* Marka - SEARCHABLE MULTI-SELECT */}
-                          <td className="p-2.5 align-top">
-                            <SearchableMultiSelect
-                              id={`marka_${i}`}
-                              name="marka"
-                              selectedValues={currentMarkas}
-                              onChange={(vals) => {
-                                onQualityChange(i, 'markas', vals);
-                                onQualityChange(i, 'marka', vals[0] || '');
-                                // Reset custom combinations so they regenerate for the new marka selection
-                                onQualityChange(i, 'applicableCombinations', undefined);
-                              }}
-                              options={markaOptions}
-                              placeholder="Select / search Markas..."
-                              badgeTheme="amber"
-                            />
-                          </td>
+                        {/* Marka - SEARCHABLE MULTI-SELECT */}
+                        <td className="p-2.5 align-top">
+                          <SearchableMultiSelect
+                            id={`marka_${i}`}
+                            name="marka"
+                            selectedValues={currentMarkas}
+                            onChange={(vals) => {
+                              onQualityChange(i, 'markas', vals);
+                              onQualityChange(i, 'marka', vals[0] || '');
+                              // Reset custom combinations so they regenerate for the new marka selection
+                              onQualityChange(i, 'applicableCombinations', undefined);
+                            }}
+                            options={markaOptions}
+                            placeholder="Select / search Markas..."
+                            badgeTheme="amber"
+                          />
+                        </td>
 
-                          {/* Quality - SEARCHABLE SELECT */}
-                          <td className="p-2.5 align-top">
-                            <SearchableSelect
-                              id={`qd_quality_${i}`}
-                              name="qd_quality"
-                              value={qd.quality || ''}
-                              onChange={(val) => onQualityChange(i, 'quality', val)}
-                              options={availableGradeOptions}
-                              placeholder="--Select Quality *--"
-                              isRequired={true}
-                              compact={true}
-                            />
-                          </td>
-                        </>
-                      )}
+                        {/* Quality - SEARCHABLE SELECT */}
+                        <td className="p-2.5 align-top">
+                          <SearchableSelect
+                            id={`qd_quality_${i}`}
+                            name="qd_quality"
+                            value={qd.quality || ''}
+                            onChange={(val) => onQualityChange(i, 'quality', val)}
+                            options={availableGradeOptions}
+                            placeholder="--Select Quality *--"
+                            isRequired={true}
+                            compact={true}
+                          />
+                        </td>
 
                       {/* Rs. / Rate */}
                       <td className="p-2.5 align-top">

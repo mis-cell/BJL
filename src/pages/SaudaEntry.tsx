@@ -134,7 +134,25 @@ export default function SaudaEntry({
 
       const existingCount = realQD.length;
       if (existingCount < 1) {
-        copy.quality_details = [{ quality: '', qty: 0, agency: '', marka: '', rs: 0, agencies: [], markas: [], applicableCombinations: [] }];
+        const fallbackAgencies = copy.agency ? copy.agency.split(',').map((x: string) => x.trim()).filter(Boolean) : [];
+        const fallbackMarkas = copy.marks ? copy.marks.split(',').map((x: string) => x.trim()).filter(Boolean) : [];
+        copy.quality_details = [{
+          quality: (copy as any).quality || (copy as any).grade || 'TD5',
+          qty: Number(copy.total_unit) || 0,
+          agency: copy.agency || '',
+          marka: copy.marks || '',
+          rs: Number(copy.b_rate) || 0,
+          agencies: fallbackAgencies,
+          markas: fallbackMarkas,
+          applicableCombinations: (copy.agency && copy.marks) ? [{
+            agency: copy.agency,
+            marka: copy.marks,
+            quality: (copy as any).quality || (copy as any).grade || 'TD5',
+            rs: Number(copy.b_rate) || 0,
+            qty: Number(copy.total_unit) || 0,
+            enabled: true
+          }] : []
+        }];
       } else {
         // Normalize rows and group shared (quality, rs) rows for multi-select editing
         const groupedMap = new Map<string, any>();
@@ -306,6 +324,9 @@ export default function SaudaEntry({
 
   useEffect(() => {
     loadMasterData();
+    if (initialData) {
+      setFormData(getInitialFormData());
+    }
   }, [initialData]);
 
   useLiveAutoRefresh(loadMasterData, [initialData], { tables: ['sauda_master', 'broker_master', 'supply_master', 'area_master', 'agency_master', 'grade_master', 'marka_master', 'satta_base_rates', 'satta_differentials'] });
@@ -1010,6 +1031,16 @@ export default function SaudaEntry({
         saudaPayload.checked_at = null;
         saudaPayload.rejected_by = null;
         saudaPayload.rejected_at = null;
+      } else if (initialData) {
+        // Explicitly retain approval status & verifier credentials if already approved
+        saudaPayload.status = initialData.status || saudaPayload.status || 'APPROVED';
+        saudaPayload.approval_status = initialData.approval_status || saudaPayload.approval_status || 'APPROVED';
+        saudaPayload.is_checked = initialData.is_checked !== undefined ? initialData.is_checked : true;
+        saudaPayload.checked_by = initialData.checked_by || saudaPayload.checked_by;
+        saudaPayload.checked_at = initialData.checked_at || saudaPayload.checked_at;
+        saudaPayload.approved_by = initialData.approved_by || saudaPayload.approved_by;
+        saudaPayload.approved_at = initialData.approved_at || saudaPayload.approved_at;
+        saudaPayload.approved_user_id = initialData.approved_user_id || saudaPayload.approved_user_id;
       }
 
       const { userId: authUserId, username: authUsername } = getAuthenticatedUser();
