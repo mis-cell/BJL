@@ -1533,32 +1533,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           </div>
         </div>
 
-        {/* Banner for Rejected Saudas awaiting Maker review */}
-        {!isUser10 && rejectedSaudasCount > 0 && statusTab !== 'rejected' && (
-          <div className="bg-rose-50 border-2 border-rose-300 rounded-[18px] p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xs animate-in fade-in">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-rose-600 text-white rounded-xl shadow-xs">
-                <X className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-rose-950 uppercase tracking-wider">
-                  {rejectedSaudasCount} Rejected Sauda Contract{rejectedSaudasCount > 1 ? 's' : ''} Awaiting Review & Resubmission
-                </h4>
-                <p className="text-[11px] text-rose-800 font-medium mt-0.5">
-                  User 010 (Checker) rejected these contract(s). Review the details, make corrections, and resubmit them for re-verification.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setStatusTab('rejected')}
-              className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1.5"
-            >
-              <span>View Rejected ({rejectedSaudasCount})</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
+
 
         {/* 4. Data Table */}
         <div className="bg-white border border-slate-200 rounded-[18px] shadow-xs overflow-hidden">
