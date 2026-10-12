@@ -946,7 +946,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               <strong className="text-2xl font-black text-rose-950 font-mono block mt-1">
                 {formatIndianCurrency(metrics.totalDeduction)}
               </strong>
-              <span className="text-[10px] text-rose-700 mt-1 block">Moisture + Grade Down + Short Weight</span>
+              {/* <span className="text-[10px] text-rose-700 mt-1 block">Moisture + Grade Down + Short Weight</span> */}
             </div>
 
             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
@@ -954,7 +954,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               <strong className="text-2xl font-black text-emerald-950 font-mono block mt-1">
                 {formatIndianCurrency(metrics.totalPremium)}
               </strong>
-              <span className="text-[10px] text-emerald-700 mt-1 block">Premium allowed for superior quality / agency</span>
+              {/* <span className="text-[10px] text-emerald-700 mt-1 block">Premium allowed for superior quality / agency</span> */}
             </div>
 
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl">
@@ -962,7 +962,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               <strong className="text-2xl font-black text-amber-950 font-mono block mt-1">
                 {metrics.abnormalCount} Deals
               </strong>
-              <span className="text-[10px] text-amber-700 mt-1 block">High Moisture, High Deduction, or Quality Exception</span>
+              {/* <span className="text-[10px] text-amber-700 mt-1 block">High Moisture, High Deduction, or Quality Exception</span> */}
             </div>
           </div>
 
