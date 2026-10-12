@@ -1,4 +1,5 @@
 import { dbModule } from './dbModule';
+import { cleanSaudaNo } from '../lib/utils';
 
 export interface SaudaRecord {
   sauda_id?: string;
@@ -586,19 +587,9 @@ export type GradeItemSummary = CompiledReportData['gradeItemSummary'][number];
 export const formatPoNumber = (sauda: any): string => {
   if (!sauda) return '';
   const rawNo = String(sauda.sauda_no || sauda.no || sauda.contract_no || '').trim();
-  if (rawNo.toUpperCase().startsWith('BJCL/')) {
-    return rawNo;
-  }
-  const cleanSession = String(sauda.session || sauda.financial_year || '2026-2027')
-    .replace(/^BJCL\//i, '')
-    .replace(/\/.*$/, '')
-    .trim() || '2026-2027';
-  if (rawNo) {
-    const digits = rawNo.replace(/[^0-9]/g, '');
-    const padded = digits ? digits.padStart(4, '0') : rawNo;
-    return `BJCL/${cleanSession}/${padded}`;
-  }
-  return `BJCL/${cleanSession}/Auto`;
+  const sessionVal = String(sauda.session || sauda.financial_year || '2026-2027');
+  if (!rawNo) return `BJCL/${sessionVal}/Auto`;
+  return cleanSaudaNo(rawNo, sessionVal);
 };
 
 export const getCleanDigits = (str: string): string => {

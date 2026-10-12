@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sauda } from '../types';
+import { cleanSaudaNo } from '../lib/utils';
 
 interface Props {
   sauda: Sauda;
@@ -73,18 +74,8 @@ export default function SaudaPrintSlip({ sauda }: Props) {
   const rawSession = String(sauda.session || '2026-2027').trim();
   const sessionStr = rawSession.replace(/^BJCL\//i, '').replace(/\/.*$/, '').trim() || '2026-2027';
 
-  // Format order number cleanly (e.g. BJCL/2026-2027/585)
-  let orderNoDisplay = '';
-  if (sauda.sauda_no) {
-    const rawNo = String(sauda.sauda_no).trim();
-    if (rawNo.startsWith('BJCL/')) {
-      orderNoDisplay = rawNo;
-    } else {
-      const cleanDigits = rawNo.replace(/^0+/, '');
-      const padded = cleanDigits ? cleanDigits : '0153';
-      orderNoDisplay = `BJCL/${sessionStr}/${padded}`;
-    }
-  }
+  // Format order number cleanly (e.g. BJCL/2026-2027/0585)
+  const orderNoDisplay = cleanSaudaNo(sauda.sauda_no, sessionStr);
 
   // Format any rate values nicely
   const getBrateString = () => {

@@ -5,6 +5,33 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function cleanSaudaNo(rawSaudaNo: any, session?: any): string {
+  if (!rawSaudaNo) return '';
+  const cleanSession = String(session || '2026-2027')
+    .replace(/^BJCL\//i, '')
+    .replace(/\/.*$/, '')
+    .trim() || '2026-2027';
+
+  let str = String(rawSaudaNo).trim();
+  
+  // Recursively remove any duplicate 'BJCL/' or 'BJCL/YYYY-YYYY/' prefix
+  while (/^BJCL\/(20\d{2}-20\d{2}\/)?/i.test(str) || /^BJCL\//i.test(str)) {
+    str = str.replace(/^BJCL\/(20\d{2}-20\d{2}\/)?/i, '').replace(/^BJCL\//i, '');
+  }
+
+  // Also remove trailing or leading slashes from number part
+  str = str.replace(/^\/+|\/+$/g, '').trim();
+
+  if (!str) return `BJCL/${cleanSession}/Auto`;
+
+  // Pad numbers if only digits (e.g. 656 -> 0656)
+  if (/^\d+$/.test(str)) {
+    str = str.padStart(4, '0');
+  }
+
+  return `BJCL/${cleanSession}/${str}`;
+}
+
 export function getApiUrl(apiPath: string): string {
   const cleanPath = apiPath.startsWith('/') ? apiPath.substring(1) : apiPath;
   

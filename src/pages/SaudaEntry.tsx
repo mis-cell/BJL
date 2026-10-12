@@ -9,6 +9,7 @@ import { resolveDisplayName } from '../lib/userResolver';
 import { logChange } from '../services/auditLogService';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { resolveSattaRate } from '../services/sattaRateService';
+import { cleanSaudaNo } from '../lib/utils';
 
 import LegacyLayout from '../components/LegacyLayout';
 import BasicDetailsCard from '../components/BasicDetailsCard';
@@ -131,10 +132,8 @@ export default function SaudaEntry({
         copy.session = '2026-2027';
       }
 
-      if (copy.sauda_no && !copy.sauda_no.startsWith('BJCL/')) {
-        const cleanNo = String(copy.sauda_no).replace(/^0+/, '');
-        const padded = cleanNo ? cleanNo.padStart(4, '0') : '0153';
-        copy.sauda_no = `BJCL/${copy.session}/${padded}`;
+      if (copy.sauda_no) {
+        copy.sauda_no = cleanSaudaNo(copy.sauda_no, copy.session);
       }
       
       const realQD = (copy.quality_details || [])
@@ -495,11 +494,22 @@ export default function SaudaEntry({
         }
       }
 
-      // Ensure session is kept as clean session string (e.g. 2026-2027)
-      if (name === 'session' && value) {
-        const cleanSession = value.replace(/^BJCL\//i, '').replace(/\/.*$/, '').trim();
-        updated.session = cleanSession || '2026-2027';
-        updated.financial_year = updated.session;
+      // Ensure session and order_no stay in sync and clean without duplicate prefixes
+      if (name === 'session') {
+        const cleanSession = String(value || '').replace(/^BJCL\//i, '').replace(/\/.*$/, '').trim() || '2026-2027';
+        updated.session = cleanSession;
+        updated.financial_year = cleanSession;
+        if (updated.sauda_no) {
+          updated.sauda_no = cleanSaudaNo(updated.sauda_no, cleanSession);
+        }
+      }
+
+      if (name === 'sauda_no') {
+        let val = String(value || '').trim();
+        if (/BJCL.*BJCL/i.test(val)) {
+          val = cleanSaudaNo(val, updated.session || '2026-2027');
+        }
+        updated.sauda_no = val;
       }
 
       return updated;
@@ -900,16 +910,9 @@ export default function SaudaEntry({
       }));
 
       // Map session and sauda_no cleanly
-      const cleanSession = saudaData.session ? String(saudaData.session).replace(/^BJCL\//, '').replace(/\/$/, '').trim() : '2026-2027';
+      const cleanSession = saudaData.session ? String(saudaData.session).replace(/^BJCL\//i, '').replace(/\/.*$/, '').trim() : '2026-2027';
       saudaPayload.session = cleanSession || '2026-2027';
-
-      let rawSaudaNo = saudaData.sauda_no ? String(saudaData.sauda_no).trim() : '0153';
-      if (!rawSaudaNo.startsWith('BJCL/')) {
-        const digits = rawSaudaNo.replace(/^0+/, '');
-        const padded = digits ? digits.padStart(4, '0') : '0153';
-        rawSaudaNo = `BJCL/${saudaPayload.session}/${padded}`;
-      }
-      saudaPayload.sauda_no = rawSaudaNo;
+      saudaPayload.sauda_no = cleanSaudaNo(saudaData.sauda_no, saudaPayload.session);
 
       // Strongly sanitize types so Postgres never receives "" for integer, numeric, or date fields
       saudaPayload.no_of_lorries = toIntegerOrNull(saudaData.no_of_lorries) ?? 1;

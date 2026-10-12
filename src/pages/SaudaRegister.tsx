@@ -33,7 +33,7 @@ import {
   Eye,
   History
 } from 'lucide-react';
-import { cn, sanitizeCsvData, getApiUrl } from '../lib/utils';
+import { cn, sanitizeCsvData, getApiUrl, cleanSaudaNo } from '../lib/utils';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 import SaudaEntry from './SaudaEntry';
 import SaudaPrintSlip from '../components/SaudaPrintSlip';
@@ -102,19 +102,9 @@ const compareQualities = (aStr: string, bStr: string): number => {
 const formatPoNumber = (sauda: any) => {
   if (!sauda) return '';
   const rawNo = String(sauda.sauda_no || sauda.no || sauda.contract_no || '').trim();
-  if (rawNo.toUpperCase().startsWith('BJCL/')) {
-    return rawNo;
-  }
-  const cleanSession = String(sauda.session || sauda.financial_year || '2026-2027')
-    .replace(/^BJCL\//i, '')
-    .replace(/\/.*$/, '')
-    .trim() || '2026-2027';
-  if (rawNo) {
-    const digits = rawNo.replace(/[^0-9]/g, '');
-    const padded = digits ? digits.padStart(4, '0') : rawNo;
-    return `BJCL/${cleanSession}/${padded}`;
-  }
-  return `BJCL/${cleanSession}/Auto`;
+  const sessionVal = String(sauda.session || sauda.financial_year || '2026-2027');
+  if (!rawNo) return `BJCL/${sessionVal}/Auto`;
+  return cleanSaudaNo(rawNo, sessionVal);
 };
 
 // Helper to generate a high-fidelity retro HTML email representation of a Sauda Slip
