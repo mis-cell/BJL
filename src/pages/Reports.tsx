@@ -33,6 +33,7 @@ import { ExceptionAuditView } from '../components/system-reports/ExceptionAuditV
 import { ContributionView } from '../components/system-reports/ContributionView';
 import { DrillDownModal, DrillDownViewMode } from '../components/system-reports/DrillDownModal';
 import { SimpleReportView } from '../components/system-reports/SimpleReportView';
+import { AllPoReportView } from '../components/system-reports/AllPoReportView';
 
 export type ReportNavSection = 
   | 'dashboard'
@@ -363,6 +364,11 @@ export default function Reports({ onClose }: ReportsProps) {
             {/* 6. Sauda / PO Checkpoints (Priority 3) */}
             {activeSection === 'sauda_checkpoints' && (
               <Priority3Operations dataset={dataset} onDrillDown={handleOpenDrillDown} defaultSubTab="pipeline" />
+            )}
+
+            {/* ALL PO Master Report (sauda_master, sauda_check_point, purchase_master) */}
+            {activeSection === 'all_po' && (
+              <AllPoReportView dataset={dataset} onDrillDown={handleOpenDrillDown} />
             )}
 
             {/* 7. Performance Ranking (Priority 2) */}
