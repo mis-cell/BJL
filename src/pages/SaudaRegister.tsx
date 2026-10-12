@@ -104,23 +104,21 @@ const compareQualities = (aStr: string, bStr: string): number => {
 const formatPoNumber = (sauda: any) => {
   if (!sauda) return '';
   const rawNo = sauda.sauda_no || sauda.no || sauda.contract_no || '';
-  if (rawNo && String(rawNo).trim().toUpperCase().startsWith('BJCL/')) {
-    return String(rawNo).trim();
+  let str = String(rawNo).trim();
+  while (/^BJCL\/\d{4}-\d{4}\/BJCL\//i.test(str)) {
+    str = str.replace(/^BJCL\/\d{4}-\d{4}\//i, '');
   }
-  if (sauda.session && sauda.session.trim()) {
-    const s = sauda.session.trim();
-    const parts = s.split('/').filter(Boolean);
-    if (parts.length >= 3) {
-      return s;
-    }
+  if (str && str.toUpperCase().startsWith('BJCL/')) {
+    return str;
   }
-  const cleanDigits = String(rawNo).replace(/[^0-9]/g, '');
+  const cleanDigits = str.replace(/[^0-9]/g, '');
   if (cleanDigits) {
     const padded = cleanDigits.padStart(4, '0');
-    const finYear = sauda.financial_year || (sauda.session && !sauda.session.includes('/') ? sauda.session : '2026-2027');
+    const finMatch = sauda.session ? String(sauda.session).match(/\b\d{4}-\d{4}\b/) : null;
+    const finYear = sauda.financial_year || (finMatch ? finMatch[0] : '2026-2027');
     return `BJCL/${finYear}/${padded}`;
   }
-  return String(rawNo);
+  return str || sauda.session || '';
 };
 
 // Helper to generate a high-fidelity retro HTML email representation of a Sauda Slip

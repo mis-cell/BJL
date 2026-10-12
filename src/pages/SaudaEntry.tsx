@@ -128,8 +128,22 @@ export default function SaudaEntry({
       const realQD = (copy.quality_details || [])
         .filter((item: any) => item.quality || item.qty || item.agency || item.marka || item.rs);
 
-      if (copy.units_per_lorry === undefined && copy.units_per_lorry_type && !isNaN(Number(copy.units_per_lorry_type))) {
-        copy.units_per_lorry = Number(copy.units_per_lorry_type);
+      // Normalize session to financial year string (e.g. "2026-2027")
+      const sessionStr = String(copy.session || '').trim();
+      const finMatch = sessionStr.match(/\b\d{4}-\d{4}\b/);
+      if (finMatch) {
+        copy.session = finMatch[0];
+        copy.financial_year = finMatch[0];
+      } else {
+        copy.session = copy.financial_year || '2026-2027';
+      }
+
+      if (copy.sauda_no) {
+        let cleanNo = String(copy.sauda_no).trim();
+        while (/^BJCL\/\d{4}-\d{4}\/BJCL\//i.test(cleanNo)) {
+          cleanNo = cleanNo.replace(/^BJCL\/\d{4}-\d{4}\//i, '');
+        }
+        copy.sauda_no = cleanNo;
       }
 
       const existingCount = realQD.length;
@@ -567,11 +581,13 @@ export default function SaudaEntry({
         }
       }
 
-      // Auto sync Order No. and Session
+      // Auto sync Order No. and Session to financial year
       if (name === 'sauda_no' && value) {
         const cleanVal = value.trim();
-        const financialYear = prev.financial_year || '2026-2027';
-        updated.session = `BJCL/${financialYear}/${cleanVal}`;
+        const finMatch = cleanVal.match(/\b\d{4}-\d{4}\b/);
+        const financialYear = finMatch ? finMatch[0] : (prev.financial_year || '2026-2027');
+        updated.session = financialYear;
+        updated.financial_year = financialYear;
       }
 
       return updated;
@@ -979,7 +995,10 @@ export default function SaudaEntry({
       saudaPayload.b_date = toDateOrNull(saudaData.b_date) || saudaPayload.date;
 
       const formattedSaudaNo = (() => {
-        const raw = String(saudaData.sauda_no || '').trim();
+        let raw = String(saudaData.sauda_no || '').trim();
+        while (/^BJCL\/\d{4}-\d{4}\/BJCL\//i.test(raw)) {
+          raw = raw.replace(/^BJCL\/\d{4}-\d{4}\//i, '');
+        }
         if (raw.startsWith('BJCL/')) return raw;
         const cleanDigits = raw.replace(/[^0-9]/g, '');
         const fYear = saudaData.financial_year || '2026-2027';
@@ -988,12 +1007,14 @@ export default function SaudaEntry({
 
       const cleanSession = (() => {
         const s = String(saudaData.session || '').trim();
-        if (s && !s.startsWith('BJCL/')) return s;
+        const finMatch = s.match(/\b\d{4}-\d{4}\b/);
+        if (finMatch) return finMatch[0];
         return saudaData.financial_year || '2026-2027';
       })();
 
       saudaPayload.sauda_no = formattedSaudaNo;
       saudaPayload.session = cleanSession;
+      saudaPayload.financial_year = cleanSession;
 
       let inserted;
       let isEditMode = !!saudaPayload.sauda_id;
