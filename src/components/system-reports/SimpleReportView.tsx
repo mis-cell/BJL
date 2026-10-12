@@ -49,7 +49,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   dataset,
   onOpenManagementView
 }) => {
-  const { transactions, metrics } = dataset;
+  const { transactions, metrics, allPoSummary } = dataset;
 
   // Active Tab Dimension
   const [activeTab, setActiveTab] = useState<TabDimension>('ALLSAUDA');
@@ -61,15 +61,24 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   // Selected Slip Modal
   const [selectedTxn, setSelectedTxn] = useState<ReportTransactionLine | null>(null);
 
+  // Sauda records from sauda_master, sauda_check_point, purchase_master (Sauda / PO level, exactly 1 row per Sauda, NOT split by grade)
+  const allSaudaRecords = useMemo(() => {
+    return allPoSummary?.records || [];
+  }, [allPoSummary]);
+
   // Available Months for Month Wise Filter
   const availableMonths = useMemo(() => {
     const set = new Set<string>();
+    allSaudaRecords.forEach(r => {
+      if (r.month) set.add(r.month);
+      else if (r.date && r.date.length >= 7) set.add(r.date.substring(0, 7));
+    });
     transactions.forEach(t => {
       if (t.month) set.add(t.month);
       else if (t.date && t.date.length >= 7) set.add(t.date.substring(0, 7));
     });
     return Array.from(set).sort().reverse();
-  }, [transactions]);
+  }, [allSaudaRecords, transactions]);
 
   const formatMonthLabel = (m: string) => {
     if (!m) return '';
@@ -103,7 +112,88 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     setAllSaudaPage(1);
   };
 
-  // Filtered & Sorted Transactions
+  // Filtered & Sorted All Sauda List (Each Sauda / PO is 1 row, full total weight, from sauda_master, scp, pm)
+  const filteredSaudaList = useMemo(() => {
+    let list = [...allSaudaRecords];
+
+    // Month Wise Filter
+    if (selectedMonth && selectedMonth !== 'ALL') {
+      list = list.filter(r =>
+        r.month === selectedMonth ||
+        (r.date && (r.date === selectedMonth || r.date.startsWith(selectedMonth) || normalizeToISODate(r.date).startsWith(selectedMonth)))
+      );
+    }
+
+    // Search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(r =>
+        (r.saudaNo || '').toLowerCase().includes(q) ||
+        (r.poNo || '').toLowerCase().includes(q) ||
+        (r.supplier || '').toLowerCase().includes(q) ||
+        (r.broker || '').toLowerCase().includes(q) ||
+        (r.area || '').toLowerCase().includes(q) ||
+        (r.date || '').toLowerCase().includes(q)
+      );
+    }
+
+    // Sort with Date as default (latest first) and Sauda / PO No. as secondary sort
+    list.sort((a, b) => {
+      if (sortField === 'date') {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        const diff = sortAsc ? dateA - dateB : dateB - dateA;
+        if (diff !== 0) return diff;
+
+        // Secondary sort: Sauda / PO No. (natural numeric sort)
+        const strA = a.saudaNo || a.poNo || '';
+        const strB = b.saudaNo || b.poNo || '';
+        return strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
+      }
+
+      if (sortField === 'saudaNo') {
+        const strA = a.saudaNo || a.poNo || '';
+        const strB = b.saudaNo || b.poNo || '';
+        const comp = strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
+        if (comp !== 0) return sortAsc ? comp : -comp;
+
+        // Secondary sort: Date (latest date first)
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
+      }
+
+      if (sortField === 'supplier') {
+        const supA = a.supplier || '';
+        const supB = b.supplier || '';
+        const comp = supA.localeCompare(supB, undefined, { sensitivity: 'base' });
+        if (comp !== 0) return sortAsc ? comp : -comp;
+        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
+      }
+
+      if (sortField === 'broker') {
+        const brkA = a.broker || '';
+        const brkB = b.broker || '';
+        const comp = brkA.localeCompare(brkB, undefined, { sensitivity: 'base' });
+        if (comp !== 0) return sortAsc ? comp : -comp;
+        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
+      }
+
+      if (sortField === 'quantityMT') {
+        const wtA = Number(a.quantityMT || 0);
+        const wtB = Number(b.quantityMT || 0);
+        const diff = sortAsc ? wtA - wtB : wtB - wtA;
+        if (diff !== 0) return diff;
+        return (b.date ? new Date(b.date).getTime() : 0) - (a.date ? new Date(a.date).getTime() : 0);
+      }
+
+      return 0;
+    });
+
+    return list;
+  }, [allSaudaRecords, selectedMonth, searchQuery, sortField, sortAsc]);
+
+  // Filtered & Sorted Transactions (Used for Dimensional Breakdown Tabs like Broker, Agency, Grade, etc.)
   const filteredList = useMemo(() => {
     let list = [...transactions];
 
@@ -311,11 +401,12 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
   // CSV Export
   const handleExportCSV = () => {
-    if (!filteredList.length) return;
+    const exportList = activeTab === 'ALLSAUDA' ? filteredSaudaList : filteredList;
+    if (!exportList.length) return;
     const headers = [
       'Date', 'Sauda / PO No', 'Party / Supplier', 'Broker', 'Weight (MT)'
     ];
-    const rows = filteredList.map(t => {
+    const rows = exportList.map(t => {
       const saudaPo = t.saudaNo && t.poNo && t.saudaNo !== t.poNo
         ? `${t.saudaNo} / ${t.poNo}`
         : (t.saudaNo || t.poNo || '-');
@@ -353,7 +444,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
           { id: 'MONTH' as const, label: 'Month Wise', icon: Calendar, count: monthData.length },
           { id: 'DEDUCTION' as const, label: 'Deductions & Quality', icon: Scissors },
           { id: 'CHECKPOINTS' as const, label: 'Checkpoints Pipeline', icon: Truck },
-          { id: 'ALLSAUDA' as const, label: 'All Sauda', icon: Building2, count: filteredList.length }
+          { id: 'ALLSAUDA' as const, label: 'All Sauda', icon: Building2, count: filteredSaudaList.length }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -983,7 +1074,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
           <div>
             <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 flex items-center gap-2">
               <FileText className="w-4 h-4 text-emerald-700" />
-              All Sauda ({filteredList.length})
+              All Sauda ({filteredSaudaList.length})
             </h3>
           </div>
 
@@ -1074,8 +1165,8 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
-              {filteredList.length > 0 ? (
-                filteredList
+              {filteredSaudaList.length > 0 ? (
+                filteredSaudaList
                   .slice((allSaudaPage - 1) * allSaudaPageSize, allSaudaPage * allSaudaPageSize)
                   .map((t, idx) => {
                     const saudaPoDisplay = t.saudaNo && t.poNo && t.saudaNo !== t.poNo
@@ -1084,7 +1175,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
                     return (
                       <tr
-                        key={t.txnId || idx}
+                        key={t.id || t.poNo || t.saudaNo || idx}
                         className="hover:bg-emerald-50/60 transition cursor-pointer"
                       >
                         <td className="p-3 text-slate-700 font-mono text-[11px] whitespace-nowrap">
@@ -1113,9 +1204,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                 <tr>
                   <td colSpan={5} className="p-12 text-center text-slate-400 space-y-2">
                     <XCircle className="w-8 h-8 text-slate-300 mx-auto" />
-                    <div className="font-bold text-slate-700 text-sm">No Transaction Records Found</div>
+                    <div className="font-bold text-slate-700 text-sm">No Sauda Records Found</div>
                     <p className="text-xs text-slate-500">
-                      Try clearing search filters or selecting a different date range.
+                      Try clearing search filters or selecting a different month.
                     </p>
                   </td>
                 </tr>
@@ -1125,7 +1216,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
         </div>
 
         {/* PAGINATION FOOTER */}
-        {filteredList.length > 0 && (
+        {filteredSaudaList.length > 0 && (
           <div className="p-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs font-sans rounded-b-2xl">
             <div className="flex items-center gap-2">
               <span className="text-slate-500 font-medium">Rows per page:</span>
@@ -1140,7 +1231,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                 <option value={250}>250</option>
               </select>
               <span className="text-slate-500 ml-2 font-medium">
-                Showing {(allSaudaPage - 1) * allSaudaPageSize + 1} to {Math.min(allSaudaPage * allSaudaPageSize, filteredList.length)} of {filteredList.length} records
+                Showing {(allSaudaPage - 1) * allSaudaPageSize + 1} to {Math.min(allSaudaPage * allSaudaPageSize, filteredSaudaList.length)} of {filteredSaudaList.length} records
               </span>
             </div>
 
@@ -1152,10 +1243,10 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               >
                 Prev
               </button>
-              <span className="px-2 font-mono">Page {allSaudaPage} of {Math.ceil(filteredList.length / allSaudaPageSize) || 1}</span>
+              <span className="px-2 font-mono">Page {allSaudaPage} of {Math.ceil(filteredSaudaList.length / allSaudaPageSize) || 1}</span>
               <button
-                disabled={allSaudaPage >= Math.ceil(filteredList.length / allSaudaPageSize)}
-                onClick={() => setAllSaudaPage(prev => Math.min(Math.ceil(filteredList.length / allSaudaPageSize), prev + 1))}
+                disabled={allSaudaPage >= Math.ceil(filteredSaudaList.length / allSaudaPageSize)}
+                onClick={() => setAllSaudaPage(prev => Math.min(Math.ceil(filteredSaudaList.length / allSaudaPageSize), prev + 1))}
                 className="px-3 py-1 bg-white border border-slate-200 rounded-lg disabled:opacity-40 hover:bg-slate-100 transition cursor-pointer"
               >
                 Next

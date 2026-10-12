@@ -700,27 +700,41 @@ export const DrillDownModal: React.FC<DrillDownModalProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                {filteredTransactions.map((t, idx) => {
-                  const saudaPoDisplay = t.saudaNo && t.poNo && t.saudaNo !== t.poNo
-                    ? `${t.saudaNo} / ${t.poNo}`
-                    : (t.saudaNo || t.poNo || '-');
+                {(() => {
+                  const map = new Map<string, any>();
+                  filteredTransactions.forEach((t, i) => {
+                    const key = (t.saudaNo || t.poNo || t.txnId || `sauda-${i}`).trim();
+                    if (map.has(key)) {
+                      const existing = map.get(key);
+                      existing.quantityMT = (Number(existing.quantityMT) || 0) + (Number(t.quantityMT) || 0);
+                    } else {
+                      map.set(key, { ...t, quantityMT: Number(t.quantityMT) || 0 });
+                    }
+                  });
+                  const list = Array.from(map.values());
 
-                  return (
-                    <tr key={t.txnId || idx} className="hover:bg-emerald-50/40 transition font-mono text-[11px]">
-                      <td className="p-2.5 text-slate-600 whitespace-nowrap">{t.date || '-'}</td>
-                      <td className="p-2.5 font-bold text-emerald-950 whitespace-nowrap">{saudaPoDisplay}</td>
-                      <td className="p-2.5 font-sans font-semibold text-slate-900 truncate max-w-[220px]" title={t.supplier || 'Unassigned'}>
-                        {t.supplier || 'Unassigned'}
-                      </td>
-                      <td className="p-2.5 font-sans text-slate-700 truncate max-w-[180px]" title={t.broker || 'Direct'}>
-                        {t.broker || 'Direct'}
-                      </td>
-                      <td className="p-2.5 text-right font-black text-emerald-900 text-xs whitespace-nowrap">
-                        {Number(t.quantityMT || 0).toFixed(2)} MT
-                      </td>
-                    </tr>
-                  );
-                })}
+                  return list.map((t, idx) => {
+                    const saudaPoDisplay = t.saudaNo && t.poNo && t.saudaNo !== t.poNo
+                      ? `${t.saudaNo} / ${t.poNo}`
+                      : (t.saudaNo || t.poNo || '-');
+
+                    return (
+                      <tr key={t.txnId || t.id || idx} className="hover:bg-emerald-50/40 transition font-mono text-[11px]">
+                        <td className="p-2.5 text-slate-600 whitespace-nowrap">{t.date || '-'}</td>
+                        <td className="p-2.5 font-bold text-emerald-950 whitespace-nowrap">{saudaPoDisplay}</td>
+                        <td className="p-2.5 font-sans font-semibold text-slate-900 truncate max-w-[220px]" title={t.supplier || 'Unassigned'}>
+                          {t.supplier || 'Unassigned'}
+                        </td>
+                        <td className="p-2.5 font-sans text-slate-700 truncate max-w-[180px]" title={t.broker || 'Direct'}>
+                          {t.broker || 'Direct'}
+                        </td>
+                        <td className="p-2.5 text-right font-black text-emerald-900 text-xs whitespace-nowrap">
+                          {Number(t.quantityMT || 0).toFixed(2)} MT
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
               </tbody>
               <tfoot>
                 <tr className="bg-emerald-50 text-emerald-950 font-black text-xs border-t-2 border-emerald-300 font-mono">
