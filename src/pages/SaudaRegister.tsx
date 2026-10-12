@@ -1338,13 +1338,8 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const filteredSaudas = saudaList.filter(s => {
     // Filtering by Status Tab
     if (statusTab === 'pending') {
-      if (isUser10) {
-        // User 010: Main Dashboard strictly shows records awaiting approval (rejected records do not appear as pending)
-        if (!isPendingUncheckedSauda(s)) return false;
-      } else {
-        // User 002 / Creator: Shows pending records AND rejected records requiring revision
-        if (isCheckedSauda(s)) return false;
-      }
+      // Main Dashboard strictly shows records awaiting approval (pending, not checked and not rejected)
+      if (!isPendingUncheckedSauda(s)) return false;
     } else if (statusTab === 'checked') {
       if (!isCheckedSauda(s)) return false;
     } else if (statusTab === 'rejected') {
@@ -1378,9 +1373,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const rejectedSaudas = saudaList.filter(s => isRejectedSauda(s));
   const completedSaudas = saudaList.filter(s => isSaudaInCheckPointOrPo(s));
 
-  const pendingSaudasCount = isUser10
-    ? pendingSaudas.length
-    : saudaList.filter(s => !isCheckedSauda(s)).length;
+  const pendingSaudasCount = pendingSaudas.length;
   const checkedSaudasCount = checkedSaudas.length;
   const rejectedSaudasCount = rejectedSaudas.length;
   const totalSaudas = saudaList.length;
