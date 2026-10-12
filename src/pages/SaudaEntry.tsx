@@ -1279,6 +1279,17 @@ export default function SaudaEntry({
             />
           </div>
 
+          {/* Section 3: Unit & Transportation Details */}
+          <div id="transportation-details" className="scroll-mt-14">
+            <TransportationCard
+              formData={formData}
+              onChange={handleChange}
+              onSelectChange={handleSelectChange}
+              unitOptions={UNIT_OPTIONS}
+              isUser010={isUser010}
+            />
+          </div>
+
           {/* Section 4: Shipment & Claims */}
           <div id="claims-details" className="scroll-mt-14">
             <ShipmentClaimsCard
