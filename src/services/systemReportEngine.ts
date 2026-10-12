@@ -350,9 +350,11 @@ export async function loadAndProcessSystemReportData(): Promise<{
       }
     });
 
-    const resolveGradeName = (rawName: string, rawCode: string, saudaNo: string, poNo: string): string => {
-      const cleanName = (rawName || '').trim();
-      const cleanCode = (rawCode || '').trim();
+    const resolveGradeName = (rawName?: string, rawCode?: string, saudaNo?: string, poNo?: string): string => {
+      const cleanName = String(rawName || '').trim();
+      const cleanCode = String(rawCode || '').trim();
+      const sNoClean = String(saudaNo || '').trim().toUpperCase();
+      const pNoClean = String(poNo || '').trim().toUpperCase();
 
       // Check grade_master match by name or code
       if (cleanName && gradeMap.has(cleanName.toUpperCase())) {
@@ -370,7 +372,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       }
 
       // Check sauda quality details (quality/grade)
-      const qList = saudaQualityMap.get(saudaNo.toUpperCase()) || saudaQualityMap.get(poNo.toUpperCase());
+      const qList = (sNoClean ? saudaQualityMap.get(sNoClean) : undefined) || (pNoClean ? saudaQualityMap.get(pNoClean) : undefined);
       if (qList && qList.length > 0) {
         for (const q of qList) {
           const qVal = String(q.quality || q.grade_name || q.grade_code || q.grade || '').trim();
@@ -384,7 +386,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       }
 
       // Check sauda master quality
-      const saudaRow = saudaMasterMap.get(saudaNo.toUpperCase()) || saudaMasterMap.get(poNo.toUpperCase());
+      const saudaRow = (sNoClean ? saudaMasterMap.get(sNoClean) : undefined) || (pNoClean ? saudaMasterMap.get(pNoClean) : undefined);
       if (saudaRow) {
         const sVal = String(saudaRow.quality || saudaRow.grade || '').trim();
         if (sVal && gradeMap.has(sVal.toUpperCase())) {

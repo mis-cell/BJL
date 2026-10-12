@@ -52,15 +52,38 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   const { transactions, metrics } = dataset;
 
   // Active Tab Dimension
-  const [activeTab, setActiveTab] = useState<TabDimension>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<TabDimension>('ALLSAUDA');
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [quickFilter, setQuickFilter] = useState<'ALL' | 'PENDING_DELIVERY' | 'PAYMENT_DUE' | 'COMPLETED' | 'ALERTS'>('ALL');
-  const [dateFilter, setDateFilter] = useState<'ALL' | 'THIS_MONTH' | 'TODAY'>('ALL');
+  const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
   
   // Selected Slip Modal
   const [selectedTxn, setSelectedTxn] = useState<ReportTransactionLine | null>(null);
+
+  // Available Months for Month Wise Filter
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>();
+    transactions.forEach(t => {
+      if (t.month) set.add(t.month);
+      else if (t.date && t.date.length >= 7) set.add(t.date.substring(0, 7));
+    });
+    return Array.from(set).sort().reverse();
+  }, [transactions]);
+
+  const formatMonthLabel = (m: string) => {
+    if (!m) return '';
+    try {
+      const [year, month] = m.split('-');
+      if (year && month) {
+        const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, 1);
+        return date.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+      }
+    } catch {
+      // fallback
+    }
+    return m;
+  };
 
   // Sorting for All Sauda Table
   const [sortField, setSortField] = useState<'date' | 'saudaNo' | 'supplier' | 'broker' | 'quantityMT'>('date');
@@ -84,24 +107,12 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   const filteredList = useMemo(() => {
     let list = [...transactions];
 
-    // Quick tab filters
-    if (quickFilter === 'PENDING_DELIVERY') {
-      list = list.filter(t => t.pendingWeightMT > 0.01);
-    } else if (quickFilter === 'PAYMENT_DUE') {
-      list = list.filter(t => t.pendingPayable > 100);
-    } else if (quickFilter === 'COMPLETED') {
-      list = list.filter(t => t.pendingWeightMT <= 0.01 && t.paymentStatus === 'PAID');
-    } else if (quickFilter === 'ALERTS') {
-      list = list.filter(t => t.isAbnormal || t.deductionAmount > 0);
-    }
-
-    // Date filter
-    const todayStr = getTodayISODate();
-    const curYearMonth = todayStr.substring(0, 7);
-    if (dateFilter === 'TODAY') {
-      list = list.filter(t => t.date && (t.date === todayStr || normalizeToISODate(t.date) === todayStr));
-    } else if (dateFilter === 'THIS_MONTH') {
-      list = list.filter(t => t.date && (t.date.startsWith(curYearMonth) || normalizeToISODate(t.date).startsWith(curYearMonth)));
+    // Month Wise Filter
+    if (selectedMonth && selectedMonth !== 'ALL') {
+      list = list.filter(t =>
+        t.month === selectedMonth ||
+        (t.date && (t.date === selectedMonth || t.date.startsWith(selectedMonth) || normalizeToISODate(t.date).startsWith(selectedMonth)))
+      );
     }
 
     // Search query
@@ -171,7 +182,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     });
 
     return list;
-  }, [transactions, quickFilter, dateFilter, searchQuery, sortField, sortAsc]);
+  }, [transactions, selectedMonth, searchQuery, sortField, sortAsc]);
 
   // Active Sub-Analysis View for Dimensional Tabs
   const [subAnalysisMode, setSubAnalysisMode] = useState<'VOLUME' | 'DEDUCTION' | 'CHECKPOINTS' | 'PREMIUM' | 'RANKING' | 'ABNORMAL'>('VOLUME');
@@ -298,169 +309,36 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   const supplierData = useMemo(() => aggregateByDimension(t => t.supplier), [filteredList]);
   const monthData = useMemo(() => aggregateByDimension(t => t.month || (t.date ? t.date.substring(0, 7) : 'Unknown')), [filteredList]);
 
-  // Counts for quick tabs
-  const tabCounts = useMemo(() => {
-    return {
-      all: transactions.length,
-      pendingDelivery: transactions.filter(t => t.pendingWeightMT > 0.01).length,
-      paymentDue: transactions.filter(t => t.pendingPayable > 100).length,
-      completed: transactions.filter(t => t.pendingWeightMT <= 0.01 && t.paymentStatus === 'PAID').length,
-      alerts: transactions.filter(t => t.isAbnormal || t.deductionAmount > 0).length
-    };
-  }, [transactions]);
-
   // CSV Export
   const handleExportCSV = () => {
     if (!filteredList.length) return;
     const headers = [
-      'Date', 'Sauda No', 'PO No', 'Supplier/Party', 'Broker',
-      'Area', 'Grade', 'Weight MT', 'Rate Rs/Qtl', 'Total Rs',
-      'Arrived MT', 'Pending MT', 'Paid Rs', 'Balance Rs', 'Status'
+      'Date', 'Sauda / PO No', 'Party / Supplier', 'Broker', 'Weight (MT)'
     ];
-    const rows = filteredList.map(t => [
-      t.date, t.saudaNo, t.poNo, `"${t.supplier}"`, `"${t.broker}"`,
-      `"${t.area}"`, t.grade, t.quantityMT, t.purchaseRate, t.grossPurchaseValue,
-      t.arrivedWeightMT, t.pendingWeightMT, t.paidAmount, t.pendingPayable, t.saudaStatus
-    ]);
+    const rows = filteredList.map(t => {
+      const saudaPo = t.saudaNo && t.poNo && t.saudaNo !== t.poNo
+        ? `${t.saudaNo} / ${t.poNo}`
+        : (t.saudaNo || t.poNo || '-');
+      return [
+        t.date || '-',
+        `"${saudaPo}"`,
+        `"${t.supplier || 'Unassigned'}"`,
+        `"${t.broker || 'Direct'}"`,
+        (t.quantityMT || 0).toFixed(2)
+      ];
+    });
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const encoded = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encoded);
-    link.setAttribute('download', `sauda_procurement_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `all_sauda_report_${selectedMonth !== 'ALL' ? selectedMonth : 'all'}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const deliveryProgress = metrics.totalQuantityMT > 0
-    ? Math.min(100, (metrics.arrivedMT / metrics.totalQuantityMT) * 100)
-    : 0;
-
   return (
-    <div className="space-y-5 font-sans text-slate-800">
-
-      {/* ================= 4 BIG SIMPLE METRIC CARDS ================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        
-        {/* Card 1: Total Saudas */}
-        <div 
-          onClick={() => { setActiveTab('OVERVIEW'); setQuickFilter('ALL'); }}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-sm hover:shadow ${
-            activeTab === 'OVERVIEW' && quickFilter === 'ALL'
-              ? 'bg-gradient-to-br from-emerald-50 to-green-100 border-emerald-500 ring-2 ring-emerald-500/20'
-              : 'bg-white border-slate-200 hover:border-emerald-300'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-black uppercase text-slate-500 tracking-wider">
-              Total Deals
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-              📦
-            </div>
-          </div>
-          <div className="text-2xl font-black text-emerald-950 font-mono">
-            {metrics.totalSaudaCount || metrics.totalPOCount || transactions.length}
-            <span className="text-xs font-bold text-slate-500 ml-1.5 font-sans">Deals</span>
-          </div>
-          <div className="mt-2 pt-2 border-t border-slate-100 text-xs text-slate-600 flex items-center justify-between">
-            <span>Total Weight:</span>
-            <strong className="font-mono text-emerald-900 font-bold">
-              {metrics.totalQuantityMT.toFixed(2)} MT
-            </strong>
-          </div>
-        </div>
-
-        {/* Card 2: Total Purchase Value */}
-        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-black uppercase text-slate-500 tracking-wider">
-              Total Purchase Value
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-yellow-100 text-yellow-800 flex items-center justify-center font-bold">
-              💰
-            </div>
-          </div>
-          <div className="text-2xl font-black text-slate-900 font-mono truncate">
-            ₹{metrics.totalPurchaseValue >= 10000000 
-              ? `${(metrics.totalPurchaseValue / 10000000).toFixed(2)} Cr` 
-              : `${(metrics.totalPurchaseValue / 100000).toFixed(2)} Lakh`}
-          </div>
-          <div className="mt-2 pt-2 border-t border-slate-100 text-xs text-slate-600 flex items-center justify-between">
-            <span>Average Rate:</span>
-            <strong className="font-mono text-slate-900 font-bold">
-              ₹{Math.round(metrics.weightedPurchaseRate).toLocaleString()} /Qtl
-            </strong>
-          </div>
-        </div>
-
-        {/* Card 3: Arrival Status */}
-        <div 
-          onClick={() => { setActiveTab('OVERVIEW'); setQuickFilter('PENDING_DELIVERY'); }}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-sm hover:shadow ${
-            activeTab === 'OVERVIEW' && quickFilter === 'PENDING_DELIVERY'
-              ? 'bg-gradient-to-br from-amber-50 to-orange-100 border-amber-500 ring-2 ring-amber-500/20'
-              : 'bg-white border-slate-200 hover:border-amber-300'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-black uppercase text-slate-500 tracking-wider">
-              Material Arrival
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
-              🚛
-            </div>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-emerald-700 font-mono">
-              {metrics.arrivedMT.toFixed(1)}
-            </span>
-            <span className="text-xs font-bold text-slate-400">/ {metrics.totalQuantityMT.toFixed(1)} MT</span>
-          </div>
-
-          {/* Progress bar */}
-          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-2">
-            <div 
-              className="bg-emerald-600 h-full rounded-full transition-all duration-300"
-              style={{ width: `${deliveryProgress}%` }}
-            />
-          </div>
-
-          <div className="mt-2 text-xs flex items-center justify-between">
-            <span className="text-emerald-700 font-bold">{deliveryProgress.toFixed(0)}% Delivered</span>
-            <span className="text-amber-700 font-bold">{metrics.pendingDeliveryMT.toFixed(1)} MT Pending</span>
-          </div>
-        </div>
-
-        {/* Card 4: Payment Status */}
-        <div 
-          onClick={() => { setActiveTab('OVERVIEW'); setQuickFilter('PAYMENT_DUE'); }}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-sm hover:shadow ${
-            activeTab === 'OVERVIEW' && quickFilter === 'PAYMENT_DUE'
-              ? 'bg-gradient-to-br from-rose-50 to-red-100 border-rose-500 ring-2 ring-rose-500/20'
-              : 'bg-white border-slate-200 hover:border-rose-300'
-          }`}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-black uppercase text-slate-500 tracking-wider">
-              Payment & Balance
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold">
-              💳
-            </div>
-          </div>
-          <div className="text-2xl font-black text-slate-900 font-mono truncate">
-            ₹{(metrics.totalPayment / 100000).toFixed(2)} Lakh
-          </div>
-          <div className="mt-2 pt-2 border-t border-slate-100 text-xs flex items-center justify-between">
-            <span className="text-slate-500">Pending Balance:</span>
-            <strong className="font-mono text-rose-600 font-bold">
-              ₹{((metrics.totalPurchaseValue - metrics.totalPayment) / 100000).toFixed(2)} Lakh
-            </strong>
-          </div>
-        </div>
-
-      </div>
+    <div className="space-y-4 font-sans text-slate-800">
 
       {/* ================= MULTI-DIMENSIONAL ANALYSIS NAVIGATION TABS ================= */}
       <div className="bg-slate-900 p-2 rounded-2xl border border-slate-800 flex items-center gap-1.5 flex-wrap text-xs shadow-inner">
@@ -475,8 +353,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
           { id: 'MONTH' as const, label: 'Month Wise', icon: Calendar, count: monthData.length },
           { id: 'DEDUCTION' as const, label: 'Deductions & Quality', icon: Scissors },
           { id: 'CHECKPOINTS' as const, label: 'Checkpoints Pipeline', icon: Truck },
-          { id: 'ALLSAUDA' as const, label: 'All Sauda', icon: Building2 }
-          
+          { id: 'ALLSAUDA' as const, label: 'All Sauda', icon: Building2, count: filteredList.length }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -1121,26 +998,35 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                 className="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded-xl w-60 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
             </div>
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
-              <button
-                onClick={() => setDateFilter('ALL')}
-                className={`px-2.5 py-1 rounded-lg transition ${dateFilter === 'ALL' ? 'bg-white shadow text-slate-900' : 'text-slate-600'}`}
+            {/* Month Wise Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold">
+              <Calendar className="w-3.5 h-3.5 text-slate-600" />
+              <span className="text-slate-600 text-[11px] whitespace-nowrap">Month:</span>
+              <select
+                value={selectedMonth}
+                onChange={e => { setSelectedMonth(e.target.value); setAllSaudaPage(1); }}
+                className="bg-transparent font-bold text-slate-900 text-xs focus:outline-none cursor-pointer"
               >
-                All
-              </button>
-              <button
-                onClick={() => setDateFilter('THIS_MONTH')}
-                className={`px-2.5 py-1 rounded-lg transition ${dateFilter === 'THIS_MONTH' ? 'bg-white shadow text-slate-900' : 'text-slate-600'}`}
-              >
-                This Month
-              </button>
-              <button
-                onClick={() => setDateFilter('TODAY')}
-                className={`px-2.5 py-1 rounded-lg transition ${dateFilter === 'TODAY' ? 'bg-white shadow text-slate-900' : 'text-slate-600'}`}
-              >
-                Today
-              </button>
+                <option value="ALL">All Months</option>
+                {availableMonths.map(m => (
+                  <option key={m} value={m}>
+                    {formatMonthLabel(m)}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {(searchQuery || selectedMonth !== 'ALL') && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedMonth('ALL');
+                }}
+                className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+              >
+                Clear Filters
+              </button>
+            )}
 
             <button
               onClick={handleExportCSV}
@@ -1150,66 +1036,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               <span>Export CSV</span>
             </button>
           </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap text-xs">
-          <span className="font-bold text-slate-500 text-[11px] uppercase tracking-wider">Filter:</span>
-          
-          <button
-            onClick={() => setQuickFilter('ALL')}
-            className={`px-3 py-1 rounded-xl font-bold transition flex items-center gap-1 cursor-pointer ${
-              quickFilter === 'ALL'
-                ? 'bg-slate-900 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            All Deals ({tabCounts.all})
-          </button>
-
-          <button
-            onClick={() => setQuickFilter('PENDING_DELIVERY')}
-            className={`px-3 py-1 rounded-xl font-bold transition flex items-center gap-1 cursor-pointer ${
-              quickFilter === 'PENDING_DELIVERY'
-                ? 'bg-amber-600 text-white'
-                : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
-            }`}
-          >
-            <span>🚚 Delivery Pending ({tabCounts.pendingDelivery})</span>
-          </button>
-
-          <button
-            onClick={() => setQuickFilter('PAYMENT_DUE')}
-            className={`px-3 py-1 rounded-xl font-bold transition flex items-center gap-1 cursor-pointer ${
-              quickFilter === 'PAYMENT_DUE'
-                ? 'bg-rose-600 text-white'
-                : 'bg-rose-50 text-rose-900 border border-rose-200 hover:bg-rose-100'
-            }`}
-          >
-            <span>💳 Payment Due ({tabCounts.paymentDue})</span>
-          </button>
-
-          <button
-            onClick={() => setQuickFilter('COMPLETED')}
-            className={`px-3 py-1 rounded-xl font-bold transition flex items-center gap-1 cursor-pointer ${
-              quickFilter === 'COMPLETED'
-                ? 'bg-emerald-700 text-white'
-                : 'bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100'
-            }`}
-          >
-            <span>✓ Completed ({tabCounts.completed})</span>
-          </button>
-
-          {(searchQuery || quickFilter !== 'ALL' || dateFilter !== 'ALL') && (
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setQuickFilter('ALL');
-                setDateFilter('ALL');
-              }}
-              className="text-xs font-bold text-rose-600 hover:underline ml-auto cursor-pointer"
-            >
-              Clear Filters
-            </button>
-          )}
         </div>
         <div className="overflow-x-auto border border-slate-200 rounded-2xl">
           <table className="w-full text-xs text-left border-collapse">
