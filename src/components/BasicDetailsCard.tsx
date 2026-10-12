@@ -30,7 +30,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
         <div className="space-y-3">
           {/* Subtle session reference for User 010 */}
           <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 border border-slate-200/80 rounded-xl px-4 py-2 font-mono">
-            <span className="font-semibold text-slate-600">Contract Session: <strong className="text-[#174C2C]">{formData.session || 'BJCL/2026-2027/'}</strong></span>
+            <span className="font-semibold text-slate-600">Contract Session: <strong className="text-[#174C2C]">{formData.session || formData.financial_year || '2026-2027'}</strong></span>
             <span>Order No: <strong className="text-slate-800 font-bold">{formData.sauda_no || 'Auto'}</strong></span>
           </div>
 
@@ -96,16 +96,16 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
               aria-label="Session"
               type="text"
               name="session"
-              value={formData.session || 'BJCL/2026-2027/'}
+              value={formData.session || formData.financial_year || '2026-2027'}
               onChange={onChange}
-              className="bg-[#EAF4FF] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs"
+              className="bg-[#EAF4FF] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono"
             />
           </div>
 
           {/* Order No. */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="sauda_no_43" className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-              <span>Order No.</span>
+              <span>Order No. (Sauda No.)</span>
               <span className="text-rose-600 font-black text-sm">*</span>
               {formData.sauda_no && (
                 <span className="ml-auto text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded border border-sky-300 font-bold uppercase">
@@ -120,7 +120,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
               name="sauda_no"
               value={formData.sauda_no || ''}
               onChange={onChange}
-              placeholder="e.g. 0153"
+              placeholder="e.g. BJCL/2026-2027/0875"
               required
               className="bg-[#FFECEC] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-black text-slate-900 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs font-mono"
             />

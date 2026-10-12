@@ -1220,8 +1220,12 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     return true;
   }).sort((a, b) => {
     if (sortField === 'order_no') {
-      const numA = parseInt(String(a.sauda_no || '').replace(/\D/g, '') || '0', 10);
-      const numB = parseInt(String(b.sauda_no || '').replace(/\D/g, '') || '0', 10);
+      const getSeq = (val: string) => {
+        const raw = String(val || '').replace(/^BJCL\/\d{4}-\d{4}\//i, '');
+        return parseInt(raw.replace(/\D/g, '') || '0', 10);
+      };
+      const numA = getSeq(a.sauda_no);
+      const numB = getSeq(b.sauda_no);
       if (numA !== numB) {
         return sortOrder === 'asc' ? numA - numB : numB - numA;
       }
@@ -1653,7 +1657,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                         {new Date(entry.date).toLocaleDateString('en-GB')}
                       </td>
                       <td className={cn("text-center font-bold whitespace-nowrap", isUser10 ? "px-2" : "px-3", isSelected ? "text-amber-300" : "text-slate-900")}>
-                        #{entry.sauda_no}
+                        {String(entry.sauda_no || '').startsWith('BJCL/') ? entry.sauda_no : `#${entry.sauda_no}`}
                       </td>
                       {!isUser10 && (
                         <td className={cn("px-3 text-center text-[10px] font-mono", isSelected ? "text-emerald-100" : "text-slate-500")}>
