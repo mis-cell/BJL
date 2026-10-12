@@ -6,6 +6,7 @@ import {
   HandCoins, 
   Search, 
   Download, 
+  Upload,
   Printer, 
   ArrowRight,
   ArrowLeft,
@@ -255,6 +256,12 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const [openActionDropdownId, setOpenActionDropdownId] = useState<string | null>(null);
   const [auditModalOpen, setAuditModalOpen] = useState(false);
   const [auditRecordId, setAuditRecordId] = useState<string | undefined>();
+
+  // Import Modal State
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importCsvText, setImportCsvText] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importStatusMessage, setImportStatusMessage] = useState('');
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -680,22 +687,47 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         return;
       }
 
-      // Map raw columns to descriptive headers
-      const dataToExport = fullData.map((row: any) => ({
-        "Sauda ID": row.sauda_id,
-        "Sauda Contract No": row.sauda_no,
-        "Date": row.date ? new Date(row.date).toLocaleDateString('en-GB') : '',
-        "Broker": row.broker || '',
-        "Supplier / Merchant": row.supplier || '',
-        "Marka / Marks": row.marks || '',
-        "Units per Lorry Type": row.units_per_lorry_type || '',
-        "Total Unit": row.total_unit || 0,
-        "B. Rate (Rs)": row.b_rate || 0,
-        "Total Wt In Ton": row.total_wt_in_ton || 0,
-        "Status": (row.status || '').toUpperCase(),
-        "Financial Year": row.financial_year || '',
-        "Created At": row.created_at || ''
-      }));
+      // Map raw columns to descriptive headers covering ALL fields
+      const dataToExport = fullData.map((row: any) => {
+        let qDetailsStr = '';
+        if (Array.isArray(row.quality_details)) {
+          qDetailsStr = JSON.stringify(row.quality_details);
+        } else if (typeof row.quality_details === 'string') {
+          qDetailsStr = row.quality_details;
+        }
+
+        return {
+          "Order No": row.sauda_no || '',
+          "Session": row.session || '2026-2027',
+          "PO Type": row.po_type || 'Normal',
+          "Date": row.date ? new Date(row.date).toISOString().split('T')[0] : '',
+          "Broker": row.broker || '',
+          "Supplier": row.supplier || '',
+          "Challan Supplier": row.challan_supplier || '',
+          "Area": row.area || '',
+          "Agency": row.agency || '',
+          "Marks": row.marks || '',
+          "No of Lorries": row.no_of_lorries || 1,
+          "Units Per Lorry": row.units_per_lorry || row.units_per_lorry_type || 80,
+          "Unit Type": row.unit_type || 'BALES',
+          "Total Unit": row.total_unit || 0,
+          "Wt Per Lorry": row.wt_per_lorry || 0,
+          "Total Wt Ton": row.total_wt_in_ton || 0,
+          "Shipment Date": row.shipment_date ? new Date(row.shipment_date).toISOString().split('T')[0] : '',
+          "Shipment Days": row.shipment_days || 0,
+          "Shipment Penalty": row.shipment_penalty || 0,
+          "Marks Claim": row.marks_claim || 0,
+          "Quantity Claim": row.quantity_claim || 0,
+          "Book Rate": row.b_rate || 0,
+          "Book Date": row.b_date ? new Date(row.b_date).toISOString().split('T')[0] : '',
+          "Superior Normal Marks": row.superior_normal_marks || 'New (F2)',
+          "Remarks": row.remarks || '',
+          "Status": (row.status || 'PENDING').toUpperCase(),
+          "Quality Details JSON": qDetailsStr,
+          "Sauda ID": row.sauda_id || '',
+          "Created At": row.created_at || ''
+        };
+      });
 
       const sanitizedData = sanitizeCsvData(dataToExport);
       const csv = Papa.unparse(sanitizedData);
@@ -704,13 +736,208 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Sauda_Register_Full_Export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `Sauda_Desk_Full_Export_${new Date().toISOString().split('T')[0]}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (err: any) {
       console.error("CSV Export failed:", err);
       alert("Failed to export: " + err.message);
+    }
+  };
+
+  const handleCsvImport = async (csvDataString: string) => {
+    if (!csvDataString || !csvDataString.trim()) {
+      alert("Please select a CSV file or paste CSV text first.");
+      return;
+    }
+
+    setIsImporting(true);
+    setImportStatusMessage("Parsing CSV data...");
+
+    try {
+      const parsed = Papa.parse(csvDataString, {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: false
+      });
+
+      const rows: any[] = parsed.data || [];
+      if (rows.length === 0) {
+        alert("No valid data rows found in the provided CSV.");
+        setIsImporting(false);
+        return;
+      }
+
+      setImportStatusMessage(`Grouping and processing ${rows.length} rows...`);
+
+      const cleanVal = (v: any) => (v !== undefined && v !== null ? String(v).trim() : '');
+
+      const groupMap = new Map<string, { header: any; qualities: any[] }>();
+
+      rows.forEach((r, idx) => {
+        const orderNoRaw = cleanVal(r["Order No"] || r["order_no"] || r["sauda_no"] || r["Order Number"] || r["Contract No"] || r["SLIP NO"]);
+        if (!orderNoRaw) return;
+
+        let sessionVal = cleanVal(r["Session"] || r["session"] || '2026-2027');
+        sessionVal = sessionVal.replace(/^BJCL\//i, '').replace(/\/.*$/, '').trim() || '2026-2027';
+
+        let saudaNo = orderNoRaw;
+        if (!saudaNo.startsWith('BJCL/')) {
+          const digits = saudaNo.replace(/^0+/, '');
+          const padded = digits ? digits : String(idx + 153).padStart(4, '0');
+          saudaNo = `BJCL/${sessionVal}/${padded}`;
+        }
+
+        const parseDateString = (dtStr: string) => {
+          if (!dtStr) return new Date().toISOString().split('T')[0];
+          const s = dtStr.trim();
+          if (s.length >= 10 && s[4] === '-' && s[7] === '-') return s.slice(0, 10);
+          if (s.includes('-')) {
+            const parts = s.split('-');
+            if (parts.length === 3) {
+              if (parts[0].length === 2 && parts[2].length === 4) {
+                return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+              }
+            }
+          }
+          const d = new Date(s);
+          return !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        };
+
+        const dateVal = parseDateString(cleanVal(r["Date"] || r["date"] || r["DATE"]));
+        const shipmentDateVal = parseDateString(cleanVal(r["Shipment Date"] || r["shipment_date"] || r["SHIPMENT BY"] || dateVal));
+        const bDateVal = parseDateString(cleanVal(r["Book Date"] || r["b_date"] || r["S. DATE"] || dateVal));
+
+        const qualityVal = cleanVal(r["Quality"] || r["quality"] || r["QUALITY / GRADE"] || r["Grade"] || 'TD6').toUpperCase();
+        const rsVal = parseFloat(cleanVal(r["Rs"] || r["rs"] || r["B. RATE"] || r["Rate"] || r["book_rate"] || '0')) || 0;
+        const agencyVal = cleanVal(r["Agency"] || r["agency"] || r["AGENCY"] || r["Area"] || '').toUpperCase();
+        const markaVal = cleanVal(r["Marka"] || r["marka"] || r["MARKA"] || r["Marks"] || '').toUpperCase();
+        const qtyVal = parseFloat(cleanVal(r["Qty"] || r["qty"] || r["Quantity"] || '0')) || 0;
+
+        if (!groupMap.has(saudaNo)) {
+          let qJson = [];
+          const rawQJson = cleanVal(r["Quality Details JSON"] || r["quality_details"]);
+          if (rawQJson) {
+            try {
+              qJson = JSON.parse(rawQJson);
+            } catch (e) {}
+          }
+
+          groupMap.set(saudaNo, {
+            header: {
+              financial_year: sessionVal,
+              session: sessionVal,
+              sauda_no: saudaNo,
+              po_type: cleanVal(r["PO Type"] || r["po_type"] || r["P.O. TYPE"] || 'Normal'),
+              date: dateVal,
+              broker: cleanVal(r["Broker"] || r["broker"] || r["BROKER"]).toUpperCase(),
+              supplier: cleanVal(r["Supplier"] || r["supplier"] || r["SUPPLIER"]).toUpperCase(),
+              challan_supplier: cleanVal(r["Challan Supplier"] || r["challan_supplier"] || r["Supplier"] || r["supplier"]).toUpperCase(),
+              area: cleanVal(r["Area"] || r["area"] || r["AREA / CENTER"]).toUpperCase(),
+              agency: agencyVal,
+              marks: markaVal,
+              no_of_lorries: parseInt(cleanVal(r["No of Lorries"] || r["no_of_lorries"] || '1'), 10) || 1,
+              units_per_lorry: parseFloat(cleanVal(r["Units Per Lorry"] || r["units_per_lorry"] || '80')) || 80,
+              units_per_lorry_type: cleanVal(r["Units Per Lorry"] || r["units_per_lorry"] || '80'),
+              total_unit: parseInt(cleanVal(r["Total Unit"] || r["total_unit"] || '160'), 10) || 160,
+              wt_per_lorry: parseFloat(cleanVal(r["Wt Per Lorry"] || r["wt_per_lorry"] || '11.8')) || 11.8,
+              unit_type: cleanVal(r["Unit Type"] || r["unit_type"] || 'BALES').toUpperCase() || 'BALES',
+              total_wt_in_ton: parseFloat(cleanVal(r["Total Wt Ton"] || r["total_wt_in_ton"] || '23.6')) || 23.6,
+              shipment_date: shipmentDateVal,
+              shipment_days: parseInt(cleanVal(r["Shipment Days"] || r["shipment_days"] || '15'), 10) || 15,
+              shipment_penalty: parseFloat(cleanVal(r["Shipment Penalty"] || r["shipment_penalty"] || '50')) || 50,
+              marks_claim: parseFloat(cleanVal(r["Marks Claim"] || r["marks_claim"] || '0')) || 0,
+              quantity_claim: parseFloat(cleanVal(r["Quantity Claim"] || r["quantity_claim"] || '0')) || 0,
+              b_rate: parseFloat(cleanVal(r["Book Rate"] || r["b_rate"] || rsVal || '12500')) || 12500,
+              b_date: bDateVal,
+              superior_normal_marks: cleanVal(r["Superior Normal Marks"] || r["superior_normal_marks"] || 'New (F2)'),
+              remarks: cleanVal(r["Remarks"] || r["remarks"] || 'Area, Agency Grade, Grade differential can change as per market.'),
+              status: cleanVal(r["Status"] || r["status"] || 'PENDING').toUpperCase() || 'PENDING',
+              approval_status: cleanVal(r["Status"] || r["status"] || 'PENDING').toUpperCase() || 'PENDING',
+              quality_details_json: qJson
+            },
+            qualities: []
+          });
+        }
+
+        const currentGroup = groupMap.get(saudaNo)!;
+        if (qualityVal) {
+          currentGroup.qualities.push({
+            quality: qualityVal,
+            rs: rsVal,
+            agency: agencyVal || currentGroup.header.agency,
+            marka: markaVal || currentGroup.header.marks,
+            qty: qtyVal,
+            agencies: agencyVal ? [agencyVal] : [],
+            markas: markaVal ? [markaVal] : []
+          });
+        }
+      });
+
+      const totalGroups = groupMap.size;
+      if (totalGroups === 0) {
+        alert("No valid Sauda records could be parsed. Check column header names.");
+        setIsImporting(false);
+        return;
+      }
+
+      setImportStatusMessage(`Importing ${totalGroups} Sauda contracts into Supabase...`);
+
+      let importedCount = 0;
+      for (const [sNo, item] of groupMap.entries()) {
+        const header = item.header;
+        let finalQD = item.qualities;
+
+        if (header.quality_details_json && header.quality_details_json.length > 0) {
+          finalQD = header.quality_details_json;
+        }
+
+        header.quality_details = finalQD;
+        delete header.quality_details_json;
+
+        if (supabase) {
+          const { data: existing } = await supabase.from('sauda_master').select('sauda_id').eq('sauda_no', sNo).maybeSingle();
+          if (existing?.sauda_id) {
+            header.sauda_id = existing.sauda_id;
+            await supabase.from('sauda_master').update(header).eq('sauda_id', existing.sauda_id);
+            await supabase.from('sauda_quality_details').delete().eq('sauda_id', existing.sauda_id);
+          } else {
+            const { data: inserted } = await supabase.from('sauda_master').insert(header).select();
+            if (inserted && inserted[0]) {
+              header.sauda_id = inserted[0].sauda_id;
+            }
+          }
+
+          if (header.sauda_id && finalQD.length > 0) {
+            for (const q of finalQD) {
+              await supabase.from('sauda_quality_details').insert({
+                sauda_id: header.sauda_id,
+                sauda_no: sNo,
+                financial_year: header.financial_year || '2026-2027',
+                quality: q.quality || 'TD6',
+                qty: q.qty || 0,
+                agency: q.agency || header.agency || '',
+                marka: q.marka || header.marks || '',
+                rs: q.rs || header.b_rate || 0
+              });
+            }
+          }
+        }
+        importedCount++;
+      }
+
+      alert(`✅ Success! Successfully imported ${importedCount} Sauda contracts (${rows.length} total detail rows) into Supabase!`);
+      setIsImportModalOpen(false);
+      setImportCsvText('');
+      window.dispatchEvent(new CustomEvent('app-data-updated'));
+      fetchSaudas();
+    } catch (err: any) {
+      console.error("Import error:", err);
+      alert(`Import failed: ${err.message || String(err)}`);
+    } finally {
+      setIsImporting(false);
+      setImportStatusMessage('');
     }
   };
 
@@ -1322,7 +1549,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
             </button>
           </div>
 
-          {/* Buttons Moved Beside Search Section: New Sauda, Print Book, Main Dashboard, Checked, Reject */}
+          {/* Buttons Moved Beside Search Section: New Sauda, Print Book, Export, Import, Audit Trail */}
           <div className="flex items-center gap-2 flex-wrap shrink-0">
             {!isUser10 && (
               <button
@@ -1333,6 +1560,24 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 <span>New Sauda</span>
               </button>
             )}
+
+            <button
+              onClick={handleCsvDownload}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              title="Export ALL Sauda Desk fields and data to CSV"
+            >
+              <Download className="h-4 w-4 text-emerald-200" />
+              <span>Export Data (CSV)</span>
+            </button>
+
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="bg-sky-700 hover:bg-sky-800 text-white px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              title="Import & Upload bulk Sauda contracts to Supabase from CSV"
+            >
+              <Upload className="h-4 w-4 text-sky-200" />
+              <span>Import Data (CSV)</span>
+            </button>
 
             <button
               onClick={() => {
@@ -1866,6 +2111,101 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           initialModule="Sauda Desk"
           initialRecordId={auditRecordId}
         />
+      )}
+
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-sky-100 rounded-xl text-sky-800 font-bold">
+                  <Upload className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Bulk Import Sauda Contracts from CSV</h3>
+                  <p className="text-xs text-slate-500 font-medium">Upload a CSV file or paste raw CSV text to inject contracts directly into Supabase</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* File upload picker */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-extrabold text-slate-700">1. Upload CSV File</label>
+              <input
+                type="file"
+                accept=".csv,.txt"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                      const content = evt.target?.result as string;
+                      if (content) setImportCsvText(content);
+                    };
+                    reader.readAsText(file);
+                  }
+                }}
+                className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 cursor-pointer border border-slate-200 rounded-xl p-1 bg-slate-50"
+              />
+            </div>
+
+            {/* CSV Textarea */}
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-extrabold text-slate-700">2. Or Paste CSV Raw Text</label>
+                <a
+                  href="/sample_sauda_import.csv"
+                  download="sample_sauda_import.csv"
+                  className="text-[11px] font-bold text-sky-700 hover:underline flex items-center gap-1"
+                >
+                  <Download className="h-3 w-3" />
+                  <span>Download Sample CSV Template</span>
+                </a>
+              </div>
+              <textarea
+                rows={8}
+                value={importCsvText}
+                onChange={(e) => setImportCsvText(e.target.value)}
+                placeholder={`"Order No","Session","PO Type","Date","Broker","Supplier","Area","Agency","Marka","Quality","Rs"\n"BJCL/2026-2027/0586","2026-2027","Normal","14-09-2026","SHREE BRIJDHAM TRADERS","SHREE BRIJDHAM TRADERS","LOWER ASSAM","BILASHIPARA","YUNUS","TD6",13400`}
+                className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-mono text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200 transition-all"
+              />
+            </div>
+
+            {importStatusMessage && (
+              <p className="text-xs font-bold text-sky-800 bg-sky-50 p-2.5 rounded-xl border border-sky-200 flex items-center gap-2">
+                <RefreshCcw className="h-3.5 w-3.5 animate-spin text-sky-600" />
+                <span>{importStatusMessage}</span>
+              </p>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(false)}
+                disabled={isImporting}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCsvImport(importCsvText)}
+                disabled={isImporting || !importCsvText.trim()}
+                className="px-5 py-2 bg-sky-700 hover:bg-sky-800 text-white font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Upload className="h-4 w-4" />
+                <span>{isImporting ? "Importing Data..." : "Upload & Inject to Supabase"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </LegacyLayout>
   );
