@@ -74,9 +74,43 @@ export interface ReportFilterCriteria {
   searchQuery?: string;
 }
 
+export interface AllPoRecord {
+  id: string;
+  sourceSection: 'Sauda Desk' | 'Sauda Check Point' | 'Final PO';
+  poNo: string;
+  saudaNo: string;
+  date: string;
+  month: string;
+  financialYear: string;
+  supplier: string;
+  broker: string;
+  agency?: string;
+  area?: string;
+  grade?: string;
+  quantityMT: number;
+  rate: number;
+  grossValue: number;
+  status: string;
+  raw?: any;
+}
+
+export interface AllPoSummary {
+  records: AllPoRecord[];
+  totalCount: number;
+  totalQuantityMT: number;
+  totalGrossValue: number;
+  saudaDeskCount: number;
+  saudaDeskMT: number;
+  checkPointCount: number;
+  checkPointMT: number;
+  finalPoCount: number;
+  finalPoMT: number;
+}
+
 export interface SystemReportDataset {
   transactions: ReportTransactionLine[];
   filtered: ReportTransactionLine[];
+  allPoSummary: AllPoSummary;
   masterLists: {
     brokers: string[];
     suppliers: string[];
@@ -224,6 +258,7 @@ function getYearMonth(dateStr: string): string {
 
 export async function loadAndProcessSystemReportData(): Promise<{
   allTransactions: ReportTransactionLine[];
+  allPoSummary: AllPoSummary;
   masterLists: SystemReportDataset['masterLists'];
 }> {
   try {
@@ -1013,8 +1048,161 @@ export async function loadAndProcessSystemReportData(): Promise<{
       if (t.poNo && t.poNo !== 'Pending P.O.') poSet.add(t.poNo);
     });
 
+    // Build Consolidated ALL PO Summary across Sauda Desk, Sauda Check Point, and Final PO
+    const resolveSupplierName = (raw?: string) => {
+      const c = String(raw || '').trim();
+      if (!c) return 'Unassigned Supplier';
+      return supplyMap.get(c.toUpperCase()) || c;
+    };
+    const resolveBrokerName = (raw?: string) => {
+      const c = String(raw || '').trim();
+      if (!c) return 'Direct';
+      return brokerMap.get(c.toUpperCase()) || c;
+    };
+    const resolveAgencyName = (raw?: string) => {
+      const c = String(raw || '').trim();
+      if (!c) return '-';
+      return agencyMap.get(c.toUpperCase()) || c;
+    };
+    const resolveAreaName = (raw?: string) => {
+      const c = String(raw || '').trim();
+      if (!c) return '-';
+      return areaMap.get(c.toUpperCase()) || c;
+    };
+
+    const allPoRecords: AllPoRecord[] = [];
+    const seenAllPoKeys = new Set<string>();
+
+    let saudaDeskCount = 0;
+    let saudaDeskMT = 0;
+    let checkPointCount = 0;
+    let checkPointMT = 0;
+    let finalPoCount = 0;
+    let finalPoMT = 0;
+
+    // 1. Sauda Desk (saudas)
+    (saudas || []).forEach((s: any) => {
+      const sNo = String(s.sauda_no || '').trim();
+      const idKey = `SAUDA_DESK_${s.sauda_id || s.id || sNo}`;
+      const dedupeKey = sNo ? `SAUDA_${sNo.toUpperCase()}` : idKey;
+      const mt = Number(s.total_wt_in_ton) || 0;
+      const rate = Number(s.b_rate) || 0;
+
+      saudaDeskCount++;
+      saudaDeskMT += mt;
+
+      if (!seenAllPoKeys.has(dedupeKey)) {
+        seenAllPoKeys.add(dedupeKey);
+        allPoRecords.push({
+          id: idKey,
+          sourceSection: 'Sauda Desk',
+          poNo: s.po_no || sNo || 'DESK',
+          saudaNo: sNo || 'DESK',
+          date: normalizeToISODate(s.date || s.b_date || s.created_at),
+          month: getYearMonth(s.date || s.b_date || s.created_at),
+          financialYear: getFinancialYear(s.date || s.b_date || s.created_at),
+          supplier: resolveSupplierName(s.supplier || s.challan_supplier),
+          broker: resolveBrokerName(s.broker),
+          agency: resolveAgencyName(s.agency),
+          area: resolveAreaName(s.area),
+          grade: resolveGradeName(s.quality || s.grade, '', sNo, s.po_no),
+          quantityMT: mt,
+          rate: rate,
+          grossValue: (mt * 10) * rate,
+          status: s.approval_status || s.status || 'Active',
+          raw: s
+        });
+      }
+    });
+
+    // 2. Sauda Check Point (scps)
+    (scps || []).forEach((scp: any) => {
+      const pNo = String(scp.po_no || scp.contract_po_no || '').trim();
+      const sNo = String(scp.sauda_no || '').trim();
+      const idKey = `CHECKPOINT_${scp.po_id || scp.id || pNo || sNo}`;
+      const dedupeKey = pNo ? `PO_${pNo.toUpperCase()}` : (sNo ? `SAUDA_${sNo.toUpperCase()}` : idKey);
+      const mt = Number(scp.total_contract_mt) || 0;
+      const rate = Number(scp.b_rate) || 0;
+
+      checkPointCount++;
+      checkPointMT += mt;
+
+      if (!seenAllPoKeys.has(dedupeKey)) {
+        seenAllPoKeys.add(dedupeKey);
+        allPoRecords.push({
+          id: idKey,
+          sourceSection: 'Sauda Check Point',
+          poNo: pNo || sNo || 'CHECKPOINT',
+          saudaNo: sNo || pNo || 'CHECKPOINT',
+          date: normalizeToISODate(scp.po_date || scp.contract_date || scp.created_at),
+          month: getYearMonth(scp.po_date || scp.contract_date || scp.created_at),
+          financialYear: getFinancialYear(scp.po_date || scp.contract_date || scp.created_at),
+          supplier: resolveSupplierName(scp.supplier || scp.challan_supplier),
+          broker: resolveBrokerName(scp.broker),
+          agency: resolveAgencyName(scp.agency),
+          area: resolveAreaName(scp.area),
+          grade: resolveGradeName(scp.grade, '', sNo, pNo),
+          quantityMT: mt,
+          rate: rate,
+          grossValue: (mt * 10) * rate,
+          status: scp.status || 'Active',
+          raw: scp
+        });
+      }
+    });
+
+    // 3. Final PO (pos)
+    (pos || []).forEach((p: any) => {
+      const pNo = String(p.po_no || p.contract_po_no || '').trim();
+      const sNo = String(p.sauda_no || '').trim();
+      const idKey = `FINAL_PO_${p.po_id || p.id || pNo}`;
+      const dedupeKey = pNo ? `PO_${pNo.toUpperCase()}` : (sNo ? `SAUDA_${sNo.toUpperCase()}` : idKey);
+      const mt = Number(p.total_contract_mt) || 0;
+      const rate = Number(p.b_rate) || 0;
+
+      finalPoCount++;
+      finalPoMT += mt;
+
+      if (!seenAllPoKeys.has(dedupeKey)) {
+        seenAllPoKeys.add(dedupeKey);
+        allPoRecords.push({
+          id: idKey,
+          sourceSection: 'Final PO',
+          poNo: pNo || sNo || 'FINAL_PO',
+          saudaNo: sNo || pNo || 'FINAL_PO',
+          date: normalizeToISODate(p.po_date || p.contract_date || p.created_at),
+          month: getYearMonth(p.po_date || p.contract_date || p.created_at),
+          financialYear: getFinancialYear(p.po_date || p.contract_date || p.created_at),
+          supplier: resolveSupplierName(p.supplier || p.challan_supplier),
+          broker: resolveBrokerName(p.broker),
+          agency: resolveAgencyName(p.agency),
+          area: resolveAreaName(p.area),
+          grade: resolveGradeName(p.grade, '', sNo, pNo),
+          quantityMT: mt,
+          rate: rate,
+          grossValue: (mt * 10) * rate,
+          status: p.status || 'Active',
+          raw: p
+        });
+      }
+    });
+
+    const allPoSummary: AllPoSummary = {
+      records: allPoRecords,
+      totalCount: allPoRecords.length,
+      totalQuantityMT: allPoRecords.reduce((sum, r) => sum + r.quantityMT, 0),
+      totalGrossValue: allPoRecords.reduce((sum, r) => sum + r.grossValue, 0),
+      saudaDeskCount,
+      saudaDeskMT,
+      checkPointCount,
+      checkPointMT,
+      finalPoCount,
+      finalPoMT
+    };
+
     return {
       allTransactions: transactionLines,
+      allPoSummary,
       masterLists: {
         brokers: Array.from(brokerSet).sort(),
         suppliers: Array.from(supplierSet).sort(),
@@ -1031,6 +1219,18 @@ export async function loadAndProcessSystemReportData(): Promise<{
     console.error('Failed to load system report data:', error);
     return {
       allTransactions: [],
+      allPoSummary: {
+        records: [],
+        totalCount: 0,
+        totalQuantityMT: 0,
+        totalGrossValue: 0,
+        saudaDeskCount: 0,
+        saudaDeskMT: 0,
+        checkPointCount: 0,
+        checkPointMT: 0,
+        finalPoCount: 0,
+        finalPoMT: 0
+      },
       masterLists: {
         brokers: [],
         suppliers: [],

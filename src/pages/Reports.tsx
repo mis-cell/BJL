@@ -6,6 +6,7 @@ import {
   Percent,
   Scissors,
   Truck,
+  Layers,
   Award,
   AlertTriangle,
   PieChart,
@@ -39,6 +40,7 @@ export type ReportNavSection =
   | 'premium_analysis'
   | 'deduction_claim'
   | 'sauda_checkpoints'
+  | 'all_po'
   | 'performance_ranking'
   | 'exception_abnormal'
   | 'business_contribution'
@@ -56,6 +58,18 @@ export default function Reports({ onClose }: ReportsProps) {
   
   // Master transactions and filters
   const [allTransactions, setAllTransactions] = useState<ReportTransactionLine[]>([]);
+  const [allPoSummary, setAllPoSummary] = useState<SystemReportDataset['allPoSummary']>({
+    records: [],
+    totalCount: 0,
+    totalQuantityMT: 0,
+    totalGrossValue: 0,
+    saudaDeskCount: 0,
+    saudaDeskMT: 0,
+    checkPointCount: 0,
+    checkPointMT: 0,
+    finalPoCount: 0,
+    finalPoMT: 0
+  });
   const [masterLists, setMasterLists] = useState<SystemReportDataset['masterLists']>({
     brokers: [],
     suppliers: [],
@@ -88,9 +102,10 @@ export default function Reports({ onClose }: ReportsProps) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const { allTransactions: txns, masterLists: lists } = await loadAndProcessSystemReportData();
+      const { allTransactions: txns, masterLists: lists, allPoSummary: poSum } = await loadAndProcessSystemReportData();
       setAllTransactions(txns);
       setMasterLists(lists);
+      if (poSum) setAllPoSummary(poSum);
     } catch (err) {
       console.error('Error loading system report dataset:', err);
     } finally {
@@ -145,6 +160,7 @@ export default function Reports({ onClose }: ReportsProps) {
   const dataset: SystemReportDataset = {
     transactions: allTransactions,
     filtered: filteredTransactions,
+    allPoSummary,
     masterLists,
     metrics
   };
@@ -284,10 +300,11 @@ export default function Reports({ onClose }: ReportsProps) {
                 { id: 'premium_analysis' as const, label: '3. Premium Analysis', icon: Percent, badge: 'P2' },
                 { id: 'deduction_claim' as const, label: '4. Deduction & Claim', icon: Scissors, badge: 'P3' },
                 { id: 'sauda_checkpoints' as const, label: '5. Checkpoints Pipeline', icon: Truck, badge: 'P3' },
-                { id: 'performance_ranking' as const, label: '6. Performance Ranking', icon: Award, badge: 'P2' },
-                { id: 'exception_abnormal' as const, label: '7. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
-                { id: 'business_contribution' as const, label: '8. Contribution & Pareto', icon: PieChart, badge: 'P9' },
-                { id: 'detailed_reports' as const, label: '9. Detailed Registers', icon: FileSpreadsheet, badge: 'Grain' },
+                { id: 'all_po' as const, label: '6. ALL PO', icon: Layers, badge: `${allPoSummary.totalCount || 0}` },
+                { id: 'performance_ranking' as const, label: '7. Performance Ranking', icon: Award, badge: 'P2' },
+                { id: 'exception_abnormal' as const, label: '8. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
+                { id: 'business_contribution' as const, label: '9. Contribution & Pareto', icon: PieChart, badge: 'P9' },
+                { id: 'detailed_reports' as const, label: '10. Detailed Registers', icon: FileSpreadsheet, badge: 'Grain' },
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeSection === tab.id;
