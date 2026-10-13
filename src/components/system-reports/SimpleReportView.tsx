@@ -456,11 +456,86 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     return list.sort((a, b) => b.grossValue - a.grossValue);
   };
 
-  const brokerData = useMemo(() => aggregateByDimension(t => t.broker), [allDimensionRecords]);
+  const brokerData = useMemo(() => {
+    const list = aggregateByDimension(t => t.broker);
+    const existingKeys = new Set(list.map(item => item.key.toLowerCase()));
+    (dataset.masterLists.brokers || []).forEach(b => {
+      const bName = String(b).trim();
+      if (bName && !existingKeys.has(bName.toLowerCase())) {
+        list.push({
+          key: bName,
+          dealCount: 0,
+          quantityMT: 0,
+          arrivedMT: 0,
+          pendingMT: 0,
+          grossValue: 0,
+          deductionAmount: 0,
+          premiumAmount: 0,
+          paidAmount: 0,
+          pendingPayable: 0,
+          avgRate: 0,
+          abnormalDeals: 0,
+          moistureSum: 0,
+          moistureCount: 0,
+          saudaCheckpointCount: 0,
+          tempArrivalCount: 0,
+          finalArrivalCount: 0,
+          millInspectionCount: 0,
+          paymentOperationCount: 0,
+          settlementCount: 0,
+          poCount: 0,
+          poQuantityMT: 0,
+          poGrossValue: 0,
+          avgMoisture: 0,
+          tier: 'MEDIUM'
+        });
+      }
+    });
+    return list.sort((a, b) => b.grossValue - a.grossValue);
+  }, [allDimensionRecords, dataset.masterLists.brokers]);
+
   const agencyData = useMemo(() => aggregateByDimension(t => t.agency), [allDimensionRecords]);
   const areaData = useMemo(() => aggregateByDimension(t => t.area), [allDimensionRecords]);
   const gradeData = useMemo(() => aggregateByDimension(t => t.grade), [allDimensionRecords]);
-  const supplierData = useMemo(() => aggregateByDimension(t => t.supplier), [allDimensionRecords]);
+
+  const supplierData = useMemo(() => {
+    const list = aggregateByDimension(t => t.supplier);
+    const existingKeys = new Set(list.map(item => item.key.toLowerCase()));
+    (dataset.masterLists.suppliers || []).forEach(s => {
+      const sName = String(s).trim();
+      if (sName && !existingKeys.has(sName.toLowerCase())) {
+        list.push({
+          key: sName,
+          dealCount: 0,
+          quantityMT: 0,
+          arrivedMT: 0,
+          pendingMT: 0,
+          grossValue: 0,
+          deductionAmount: 0,
+          premiumAmount: 0,
+          paidAmount: 0,
+          pendingPayable: 0,
+          avgRate: 0,
+          abnormalDeals: 0,
+          moistureSum: 0,
+          moistureCount: 0,
+          saudaCheckpointCount: 0,
+          tempArrivalCount: 0,
+          finalArrivalCount: 0,
+          millInspectionCount: 0,
+          paymentOperationCount: 0,
+          settlementCount: 0,
+          poCount: 0,
+          poQuantityMT: 0,
+          poGrossValue: 0,
+          avgMoisture: 0,
+          tier: 'MEDIUM'
+        });
+      }
+    });
+    return list.sort((a, b) => b.grossValue - a.grossValue);
+  }, [allDimensionRecords, dataset.masterLists.suppliers]);
+
   const monthData = useMemo(() => aggregateByDimension(t => t.month || (t.date ? t.date.substring(0, 7) : 'Unknown')), [allDimensionRecords]);
 
   // CSV Export

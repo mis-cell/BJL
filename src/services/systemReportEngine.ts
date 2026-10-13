@@ -953,7 +953,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       });
     });
 
-    // Populate master lists for dropdowns
+    // Populate master lists for dropdowns and totals
     const brokerSet = new Set<string>();
     const supplierSet = new Set<string>();
     const agencySet = new Set<string>();
@@ -963,6 +963,27 @@ export async function loadAndProcessSystemReportData(): Promise<{
     const fySet = new Set<string>();
     const saudaSet = new Set<string>();
     const poSet = new Set<string>();
+
+    (brokers || []).forEach((b: any) => {
+      const name = String(b.broker_name || b.name || '').trim();
+      if (name && name.toUpperCase() !== 'DIRECT' && name !== '-') brokerSet.add(name);
+    });
+    (suppliers || []).forEach((s: any) => {
+      const name = String(s.supply_name || s.supplier_name || s.name || '').trim();
+      if (name && name !== '-') supplierSet.add(name);
+    });
+    (agencies || []).forEach((a: any) => {
+      const name = String(a.agency_name || a.name || '').trim();
+      if (name && name !== '-') agencySet.add(name);
+    });
+    (areas || []).forEach((ar: any) => {
+      const name = String(ar.area_name || ar.name || '').trim();
+      if (name && name !== '-') areaSet.add(name);
+    });
+    (grades || []).forEach((g: any) => {
+      const name = String(g.grade_name || g.name || '').trim();
+      if (name && name !== '-') gradeSet.add(name);
+    });
 
     transactionLines.forEach(t => {
       if (t.broker && t.broker !== 'Direct') brokerSet.add(t.broker);
