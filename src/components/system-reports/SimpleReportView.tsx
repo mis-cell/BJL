@@ -682,7 +682,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                            activeTab === 'GRADE' ? 'Grade Name' : 
                            'Broker Name'}
                         </th>
-                        <th className="p-3 text-center">Contract Sauda</th>
+                        <th className="p-3 text-center">Sauda Count</th>
                         <th className="p-3 text-right">Contract Weight (MT)</th>
                         <th className="p-3 text-right">Arrived Weight (MT)</th>
                         <th className="p-3 text-right">Avg Rate (₹/Qtl)</th>
