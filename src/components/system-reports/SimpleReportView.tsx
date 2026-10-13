@@ -276,7 +276,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   }, [transactions, selectedMonth, searchQuery, sortField, sortAsc]);
 
   // Active Sub-Analysis View for Dimensional Tabs
-  const [subAnalysisMode, setSubAnalysisMode] = useState<'VOLUME' | 'DEDUCTION' | 'CHECKPOINTS' | 'PREMIUM' | 'RANKING' | 'ABNORMAL'>('VOLUME');
+  const [subAnalysisMode, setSubAnalysisMode] = useState<'VOLUME' | 'DEDUCTION' | 'CHECKPOINTS' | 'PREMIUM' | 'RANKING'>('VOLUME');
 
   // Aggregation Helper Function for multi-dimensional analysis
   const aggregateByDimension = (keyGetter: (t: ReportTransactionLine) => string) => {
@@ -510,7 +510,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     { id: 'CHECKPOINTS' as const, label: 'Checkpoints Pipeline', sub: 'Sauda to Settlement', icon: '🚚' },
     { id: 'PREMIUM' as const, label: 'Premium Given', sub: 'Premium Analysis', icon: '💰' },
     { id: 'RANKING' as const, label: 'Ranking Cards', sub: 'Best, Medium, Lower', icon: '🏆' },
-    { id: 'ABNORMAL' as const, label: 'Abnormal Data', sub: 'Vs Top Performers', icon: '⚠️' },
   ].map((item) => {
     const isActive = subAnalysisMode === item.id;
 
@@ -923,48 +922,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               );
             }
 
-            if (subAnalysisMode === 'ABNORMAL') {
-              return (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b">
-                        <th className="p-3">Entity Name</th>
-                        <th className="p-3 text-center">Deals</th>
-                        <th className="p-3 text-center text-amber-800">Abnormal / Flagged Deals</th>
-                        <th className="p-3 text-right text-rose-700">Quality Deductions (₹)</th>
-                        {/* <th className="p-3 text-center">Performance Rating</th> */}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium">
-                      {currentData.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 transition">
-                          <td className="p-3 font-bold text-slate-900">{row.key}</td>
-                          <td className="p-3 text-center font-mono">{row.dealCount}</td>
-                          <td className="p-3 text-center font-mono font-bold text-amber-900">
-                            {row.abnormalDeals > 0 ? `⚠️ ${row.abnormalDeals} Deals` : 'None'}
-                          </td>
-                          <td className="p-3 text-right font-mono font-bold text-rose-700">
-                            {row.deductionAmount > 0 ? `-₹${Math.round(row.deductionAmount).toLocaleString()}` : '₹0'}
-                          </td>
-                          {/* <td className="p-3 text-center">
-                            {row.abnormalDeals === 0 ? (
-                              <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                🌟 Very Good Performer
-                              </span>
-                            ) : (
-                              <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                ⚠️ Quality Claims Flagged
-                              </span>
-                            )}
-                          </td> */}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            }
+
 
             return null;
           })()}

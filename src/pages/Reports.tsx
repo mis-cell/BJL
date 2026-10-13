@@ -48,11 +48,16 @@ export type ReportNavSection =
 interface ReportsProps {
   onClose?: () => void;
   initialReportType?: string;
+  initialBroker?: string;
 }
 
-export default function Reports({ onClose }: ReportsProps) {
-  const [viewMode, setViewMode] = useState<'simple' | 'management'>('simple');
-  const [activeSection, setActiveSection] = useState<ReportNavSection>('dashboard');
+export default function Reports({ onClose, initialReportType, initialBroker }: ReportsProps) {
+  const [viewMode, setViewMode] = useState<'simple' | 'management'>(
+    initialReportType === 'exception_abnormal' || initialReportType === 'abnormal' ? 'management' : 'simple'
+  );
+  const [activeSection, setActiveSection] = useState<ReportNavSection>(
+    initialReportType === 'exception_abnormal' || initialReportType === 'abnormal' ? 'exception_abnormal' : 'dashboard'
+  );
   const [loading, setLoading] = useState<boolean>(true);
   
   // Master transactions and filters
@@ -301,7 +306,7 @@ export default function Reports({ onClose }: ReportsProps) {
                 { id: 'sauda_checkpoints' as const, label: '5. Checkpoints Pipeline', icon: Truck, badge: 'P3' },
                 { id: 'all_po' as const, label: '6. ALL PO', icon: Layers, badge: `${allPoSummary.totalCount || 0}` },
                 { id: 'performance_ranking' as const, label: '7. Performance Ranking', icon: Award, badge: 'P2' },
-                { id: 'exception_abnormal' as const, label: '8. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
+                { id: 'exception_abnormal' as const, label: '8. Abnormal Data Analysis', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
                 { id: 'business_contribution' as const, label: '9. Contribution & Pareto', icon: PieChart, badge: 'P9' },
               ].map(tab => {
                 const Icon = tab.icon;
@@ -373,9 +378,9 @@ export default function Reports({ onClose }: ReportsProps) {
               <Priority2Analysis dataset={dataset} onDrillDown={handleOpenDrillDown} defaultSubTab="ranking" />
             )}
 
-            {/* 8. Exception / Abnormal (Priority 1-D / 8) */}
+            {/* 8. Abnormal Data Analysis (Priority 1-D / 8) */}
             {activeSection === 'exception_abnormal' && (
-              <ExceptionAuditView dataset={dataset} onDrillDown={handleOpenDrillDown} />
+              <ExceptionAuditView dataset={dataset} onDrillDown={handleOpenDrillDown} initialBroker={initialBroker} />
             )}
 
             {/* 9. Business Contribution (Priority 9) */}

@@ -55,7 +55,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
           options={unitOptions}
           placeholder="SELECT OR TYPE UNIT..."
           isAutoPopulated={Boolean(formData.unit_type)}
-          requiredisRequired={true}
+          isRequired={true}
         />
 
         {/* Units/Lorry - NUMERIC INPUT */}

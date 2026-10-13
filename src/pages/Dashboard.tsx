@@ -33,6 +33,7 @@ export default function Dashboard({
   isActive = true
 }: DashboardProps) {
   const [localCurrentTab, setLocalCurrentTab] = useState<'menu' | 'mismatch' | 'reports'>('menu');
+  const [reportInitialSection, setReportInitialSection] = useState<string | undefined>(undefined);
   const currentTab = propCurrentTab !== undefined ? propCurrentTab : localCurrentTab;
   const setCurrentTab = propSetCurrentTab !== undefined ? propSetCurrentTab : setLocalCurrentTab;
 
@@ -266,7 +267,14 @@ export default function Dashboard({
             loading={loading}
             onRefresh={loadStats}
             onNavigate={onNavigate}
-            setcurrentTab={setCurrentTab}
+            setcurrentTab={(tab) => {
+              if (tab === 'reports:abnormal') {
+                setReportInitialSection('exception_abnormal');
+                setCurrentTab('reports');
+              } else {
+                setCurrentTab(tab as any);
+              }
+            }}
             currentTab={currentTab}
             allowedModules={allowedModules}
             isAdmin={isAdmin}
@@ -283,7 +291,11 @@ export default function Dashboard({
         {/* Tab 3: Detailed Reports View */}
         {currentTab === 'reports' && (
           <Reports 
-            onClose={() => setCurrentTab('menu')}
+            onClose={() => {
+              setReportInitialSection(undefined);
+              setCurrentTab('menu');
+            }}
+            initialReportType={reportInitialSection}
           />
         )}
 

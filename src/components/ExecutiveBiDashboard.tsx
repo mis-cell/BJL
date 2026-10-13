@@ -72,6 +72,8 @@ import {
 } from '../services/dashboardCalculationService';
 import DashboardDrilldownModal from './DashboardDrilldownModal';
 import InspectionDrilldownModal, { DrilldownTabType } from './InspectionDrilldownModal';
+import SuspicionDetectedSection from './dashboard/SuspicionDetectedSection';
+import { analyzeBrokerSuspiciousData } from '../services/brokerSuspicionService';
 
 function safeStr(val: any, fallback = 'N/A'): string {
   if (val === null || val === undefined || val === '') return fallback;
@@ -231,6 +233,21 @@ export default function ExecutiveBiDashboard({
       selectedYear: activeYear
     });
   }, [inspections, inspectionDetails, materialInspections, millInspections, arrivals, finalArrivals, saudaCheckPoints, saudaCheckPointDetails, paymentRecords, paymentDetails, pos, settlements, activeYear]);
+
+  // 3. Broker-Wise Suspicion Detected Analysis
+  const brokerSuspiciousSummaries = useMemo(() => {
+    return analyzeBrokerSuspiciousData({
+      saudas,
+      pos,
+      arrivals,
+      finalArrivals,
+      paymentRecords,
+      saudaCheckPoints,
+      inspections,
+      materialInspections,
+      settlements
+    });
+  }, [saudas, pos, arrivals, finalArrivals, paymentRecords, saudaCheckPoints, inspections, materialInspections, settlements]);
 
   // Handler to open drilldown modal with specific records
   const handleOpenDrilldown = (params: {
@@ -724,6 +741,19 @@ export default function ExecutiveBiDashboard({
         )}
 
       </div>
+
+      {/* SUSPICION DETECTED SECTION */}
+      <SuspicionDetectedSection 
+        summaries={brokerSuspiciousSummaries} 
+        onRefresh={onRefresh}
+        onNavigateToAbnormalReport={() => {
+          if (setcurrentTab) {
+            setcurrentTab('reports:abnormal');
+          } else if (onNavigate) {
+            onNavigate('reports');
+          }
+        }}
+      />
 
       {/* 3. MONTH-WISE CONTRACT AND PAYMENT SUMMARY SECTION */}
       <div className="bg-[#FAF7F0] border-2 border-[#D6CAA8] rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
