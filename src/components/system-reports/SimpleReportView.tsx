@@ -670,7 +670,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               }
 
               return (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-xs">
                   <table className="w-full text-xs text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b">
@@ -686,10 +686,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                         <th className="p-3 text-right">Contract Weight (MT)</th>
                         <th className="p-3 text-right">Arrived Weight (MT)</th>
                         <th className="p-3 text-right">Avg Rate (₹/Qtl)</th>
-                        <th className="p-3 text-right">Total Value</th>
-                        <th className="p-3 text-right text-emerald-800">Paid Amount (₹)</th>
-                        <th className="p-3 text-right text-rose-800">Pending Balance</th>
-                        {/* <th className="p-3 text-center">Volume Tag</th> */}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
@@ -715,12 +711,20 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             <td className="p-3 text-right font-mono font-bold text-emerald-950">{row.quantityMT.toFixed(2)} MT</td>
                             <td className="p-3 text-right font-mono text-slate-700">{row.arrivedMT.toFixed(2)} MT</td>
                             <td className="p-3 text-right font-mono font-bold text-slate-800">₹{Math.round(row.avgRate).toLocaleString()}</td>
-                            <td className="p-3 text-right font-mono font-black text-slate-900">{formatIndianCurrency(row.grossValue)}</td>
-                            <td className="p-3 text-right font-mono text-emerald-800 font-bold">{formatIndianCurrency(row.paidAmount)}</td>
-                            <td className="p-3 text-right font-mono text-rose-800 font-bold">{formatIndianCurrency(row.pendingPayable)}</td>
                           </tr>
                         ))}
                     </tbody>
+                    <tfoot>
+                      <tr className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
+                        <td className="p-3">Total / Summary ({currentData.length} Entities)</td>
+                        <td className="p-3 text-center font-mono">{currentData.reduce((acc, r) => acc + r.dealCount, 0)}</td>
+                        <td className="p-3 text-right font-mono text-emerald-950">{currentData.reduce((acc, r) => acc + r.quantityMT, 0).toFixed(2)} MT</td>
+                        <td className="p-3 text-right font-mono text-slate-700">{currentData.reduce((acc, r) => acc + r.arrivedMT, 0).toFixed(2)} MT</td>
+                        <td className="p-3 text-right font-mono text-slate-800">
+                          ₹{currentData.length > 0 ? Math.round(currentData.reduce((acc, r) => acc + (r.avgRate * r.quantityMT), 0) / (currentData.reduce((acc, r) => acc + r.quantityMT, 0) || 1)).toLocaleString() : 0}
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               );
