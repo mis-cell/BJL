@@ -278,8 +278,69 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   // Active Sub-Analysis View for Dimensional Tabs
   const [subAnalysisMode, setSubAnalysisMode] = useState<'VOLUME' | 'DEDUCTION' | 'CHECKPOINTS' | 'PREMIUM' | 'RANKING'>('VOLUME');
 
-  // Aggregation Helper Function for multi-dimensional analysis
-  const aggregateByDimension = (keyGetter: (t: ReportTransactionLine) => string) => {
+  // Combine transactions and allSaudaRecords to ensure every broker/entity with a Sauda or P.O. in the session is included
+  const allDimensionRecords = useMemo(() => {
+    const txnList = [...transactions];
+    const existingPoSaudas = new Set(txnList.map(t => `${t.poNo}_${t.saudaNo}`));
+    
+    allSaudaRecords.forEach(r => {
+      const key = `${r.poNo}_${r.saudaNo}`;
+      if (!existingPoSaudas.has(key)) {
+        txnList.push({
+          txnId: r.id || r.poNo || r.saudaNo,
+          saudaNo: r.saudaNo || '-',
+          poNo: r.poNo || '-',
+          date: r.date || '',
+          month: r.month || '',
+          financialYear: r.financialYear || '',
+          supplier: r.supplier || 'Unassigned',
+          broker: r.broker || 'Direct',
+          agency: r.agency || '-',
+          area: r.area || '-',
+          grade: r.grade || '-',
+          quantityMT: Number(r.quantityMT || 0),
+          purchaseRate: Number(r.rate || 0),
+          baseRate: Number(r.rate || 0),
+          rateVariance: 0,
+          rateVariancePct: 0,
+          grossPurchaseValue: Number(r.grossValue || (r.quantityMT * r.rate * 10) || 0),
+          baseRateValue: Number(r.grossValue || 0),
+          premiumRate: 0,
+          premiumAmount: 0,
+          premiumPct: 0,
+          deductionAmount: 0,
+          deductionPct: 0,
+          moisturePct: 0,
+          gradeDownQty: 0,
+          effectiveCost: Number(r.rate || 0),
+          realizationRate: Number(r.rate || 0),
+          realizationValue: Number(r.grossValue || 0),
+          grossProfit: 0,
+          profitPct: 0,
+          profitStatus: 'BREAK-EVEN',
+          saudaStatus: 'IN_PROGRESS',
+          arrivalStatus: 'PENDING',
+          inspectionStatus: 'PENDING',
+          paymentStatus: 'PENDING',
+          settlementStatus: 'PENDING',
+          arrivedWeightMT: 0,
+          pendingWeightMT: Number(r.quantityMT || 0),
+          paidAmount: 0,
+          pendingPayable: Number(r.grossValue || 0),
+          claimAmount: 0,
+          claimSettled: 0,
+          isDelayed: false,
+          isAbnormal: false,
+          abnormalReasons: []
+        });
+      }
+    });
+
+    return txnList;
+  }, [transactions, allSaudaRecords]);
+
+  // Aggregation Helper Function for multi-dimensional analysis across all session records
+  const aggregateByDimension = (keyGetter: (t: ReportTransactionLine) => string, customSource?: ReportTransactionLine[]) => {
     const map = new Map<string, {
       key: string;
       dealCount: number;
@@ -306,7 +367,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       poGrossValue: number;
     }>();
 
-    filteredList.forEach(t => {
+    const source = customSource || allDimensionRecords;
+
+    source.forEach(t => {
       const rawKey = keyGetter(t) || 'Unassigned';
       const key = rawKey.trim() || 'Unassigned';
       const existing = map.get(key) || {
@@ -393,12 +456,12 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     return list.sort((a, b) => b.grossValue - a.grossValue);
   };
 
-  const brokerData = useMemo(() => aggregateByDimension(t => t.broker), [filteredList]);
-  const agencyData = useMemo(() => aggregateByDimension(t => t.agency), [filteredList]);
-  const areaData = useMemo(() => aggregateByDimension(t => t.area), [filteredList]);
-  const gradeData = useMemo(() => aggregateByDimension(t => t.grade), [filteredList]);
-  const supplierData = useMemo(() => aggregateByDimension(t => t.supplier), [filteredList]);
-  const monthData = useMemo(() => aggregateByDimension(t => t.month || (t.date ? t.date.substring(0, 7) : 'Unknown')), [filteredList]);
+  const brokerData = useMemo(() => aggregateByDimension(t => t.broker), [allDimensionRecords]);
+  const agencyData = useMemo(() => aggregateByDimension(t => t.agency), [allDimensionRecords]);
+  const areaData = useMemo(() => aggregateByDimension(t => t.area), [allDimensionRecords]);
+  const gradeData = useMemo(() => aggregateByDimension(t => t.grade), [allDimensionRecords]);
+  const supplierData = useMemo(() => aggregateByDimension(t => t.supplier), [allDimensionRecords]);
+  const monthData = useMemo(() => aggregateByDimension(t => t.month || (t.date ? t.date.substring(0, 7) : 'Unknown')), [allDimensionRecords]);
 
   // CSV Export
   const handleExportCSV = () => {
