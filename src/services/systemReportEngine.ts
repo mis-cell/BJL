@@ -111,6 +111,14 @@ export interface SystemReportDataset {
   transactions: ReportTransactionLine[];
   filtered: ReportTransactionLine[];
   allPoSummary: AllPoSummary;
+  brokerSettlementMap: Record<string, {
+    moistureClaim: number;
+    dustClaim: number;
+    gradedownClaim: number;
+    shortExcess: number;
+    allDeductionValue: number;
+    details: any[];
+  }>;
   masterLists: {
     brokers: string[];
     suppliers: string[];
@@ -281,7 +289,10 @@ export async function loadAndProcessSystemReportData(): Promise<{
       markas,
       saudas,
       saudaQualityList,
-      settlements
+      settlements,
+      mrSettMaster,
+      mrSettDetail,
+      mRSetts
     ] = await Promise.all([
       dbModule.fetchAll('purchase_master').catch(() => []),
       dbModule.fetchAll('purchase_detail_master').catch(() => []),
@@ -301,8 +312,190 @@ export async function loadAndProcessSystemReportData(): Promise<{
       dbModule.fetchAll('marka_master').catch(() => []),
       dbModule.fetchAll('sauda_master').catch(() => []),
       dbModule.fetchAll('sauda_quality_details').catch(() => []),
-      dbModule.fetchAll('settlement_master').catch(() => [])
+      dbModule.fetchAll('settlement_master').catch(() => []),
+      dbModule.fetchAll('mr_settlement_master').catch(() => []),
+      dbModule.fetchAll('mr_settlement_detail').catch(() => []),
+      dbModule.fetchAll('m_r_settlement').catch(() => [])
     ]);
+
+    // Build early broker and entity lookups to properly resolve settlement brokers
+    const brokerMap = new Map<string, string>();
+    (brokers || []).forEach((b: any) => {
+      const bCode = String(b.brok_code || b.broker_code || b.code || '').trim().toUpperCase();
+      const bName = String(b.brok_name || b.broker_name || b.name || '').trim();
+      if (bCode && bName) {
+        brokerMap.set(bCode, bName);
+        brokerMap.set(bName.toUpperCase(), bName);
+      } else if (bName) {
+        brokerMap.set(bName.toUpperCase(), bName);
+      }
+    });
+
+    const mrToMasterMap = new Map<string, any>();
+    const poToBrokerMap = new Map<string, string>();
+    const mrToBrokerMap = new Map<string, string>();
+    const poToSaudaMap = new Map<string, string>();
+    const saudaToBrokerMap = new Map<string, string>();
+
+    (pos || []).forEach((p: any) => {
+      const pNo = String(p.po_no || '').trim().toUpperCase();
+      const brk = String(p.broker || '').trim();
+      const sNo = String(p.sauda_no || '').trim();
+      if (pNo) {
+        if (brk) poToBrokerMap.set(pNo, brokerMap.get(brk.toUpperCase()) || brk);
+        if (sNo) poToSaudaMap.set(pNo, sNo);
+      }
+    });
+
+    (scps || []).forEach((s: any) => {
+      const pNo = String(s.po_no || '').trim().toUpperCase();
+      const sNo = String(s.sauda_no || '').trim();
+      const brk = String(s.broker || '').trim();
+      if (pNo) {
+        if (brk) poToBrokerMap.set(pNo, brokerMap.get(brk.toUpperCase()) || brk);
+        if (sNo) poToSaudaMap.set(pNo, sNo);
+      }
+    });
+
+    (saudas || []).forEach((s: any) => {
+      const sNo = String(s.sauda_no || '').trim().toUpperCase();
+      const brk = String(s.broker || '').trim();
+      if (sNo && brk) {
+        saudaToBrokerMap.set(sNo, brokerMap.get(brk.toUpperCase()) || brk);
+      }
+    });
+
+    (mrSettMaster || []).forEach((m: any) => {
+      const mrNo = String(m.mr_no || '').trim().toUpperCase();
+      if (mrNo) {
+        mrToMasterMap.set(mrNo, m);
+        const brk = String(m.broker || '').trim();
+        if (brk) mrToBrokerMap.set(mrNo, brokerMap.get(brk.toUpperCase()) || brk);
+      }
+      const pNo = String(m.po_no || '').trim().toUpperCase();
+      const brk = String(m.broker || '').trim();
+      if (pNo && brk) {
+        poToBrokerMap.set(pNo, brokerMap.get(brk.toUpperCase()) || brk);
+      }
+    });
+
+    const brokerSettlementMap: Record<string, {
+      moistureClaim: number;
+      dustClaim: number;
+      gradedownClaim: number;
+      shortExcess: number;
+      allDeductionValue: number;
+      details: any[];
+    }> = {};
+
+    const processedMrKeySet = new Set<string>();
+
+    const processSettlementRow = (r: any, sourceTag?: string) => {
+      let rawBrk = String(r.broker || r.broker_name || r.brok_name || '').trim();
+      const mrNo = String(r.mr_no || r.material_received_no || '').trim().toUpperCase();
+      const poNo = String(r.po_no || r.contract_po_no || '').trim().toUpperCase();
+      const saudaNo = String(r.sauda_no || poToSaudaMap.get(poNo) || '').trim().toUpperCase();
+
+      if (!rawBrk && mrNo) {
+        rawBrk = mrToBrokerMap.get(mrNo) || '';
+      }
+      if (!rawBrk && poNo) {
+        rawBrk = poToBrokerMap.get(poNo) || '';
+      }
+      if (!rawBrk && saudaNo) {
+        rawBrk = saudaToBrokerMap.get(saudaNo) || '';
+      }
+
+      const broker = brokerMap.get(rawBrk.toUpperCase()) || rawBrk || 'Direct';
+      if (!broker || broker === '-') return;
+
+      const moisture = Number(r.summary_delivery_claim || r.moist_sett || r.moist_final || r.moist_claim || r.moisture_claim || 0);
+      const dust = Number(r.summary_rate_wt_claim || r.dust_sett || r.dust_final || r.dust_claim || r.dust_claim || 0);
+      const gradedown = Number(r.summary_misc_less || r.gd_sett || r.gd_final || r.gd_claim || r.val_less_amt || r.val_less_amount || r.gradedown_claim || 0);
+      const short = Number(r.val_ex_short || r.short_excess || (r.challan_weight && r.electronic_scale_net ? Math.max(0, Number(r.challan_weight) - Number(r.electronic_scale_net)) : 0) || 0);
+      const deductionVal = Number(r.summary_less_amount || r.summary_deduction_amount || r.claim_settlement || r.deductions || r.deduction_amount || 0);
+
+      const upperKey = broker.toUpperCase();
+      if (!brokerSettlementMap[upperKey]) {
+        brokerSettlementMap[upperKey] = {
+          moistureClaim: 0,
+          dustClaim: 0,
+          gradedownClaim: 0,
+          shortExcess: 0,
+          allDeductionValue: 0,
+          details: []
+        };
+      }
+
+      brokerSettlementMap[upperKey].moistureClaim += moisture;
+      brokerSettlementMap[upperKey].dustClaim += dust;
+      brokerSettlementMap[upperKey].gradedownClaim += gradedown;
+      brokerSettlementMap[upperKey].shortExcess += short;
+      brokerSettlementMap[upperKey].allDeductionValue += (deductionVal > 0 ? deductionVal : (moisture + dust + gradedown + short));
+
+      brokerSettlementMap[upperKey].details.push({
+        broker,
+        mr_no: r.mr_no || r.material_received_no || (mrNo || '-'),
+        po_no: r.po_no || r.contract_po_no || (poNo || '-'),
+        summary_delivery_claim: moisture,
+        summary_rate_wt_claim: dust,
+        summary_misc_less: gradedown,
+        summary_less_amount: Number(r.summary_less_amount || 0),
+        val_less_amt: Number(r.val_less_amt || 0),
+        val_less_amount: Number(r.val_less_amount || 0),
+        val_ex_short: short,
+        summary_deduction_type: r.summary_deduction_type || r.adjust_type || '-',
+        summary_deduction_rate: Number(r.summary_deduction_rate || 0),
+        summary_deduction_qty: Number(r.summary_deduction_qty || r.quantity || 0),
+        summary_deduction_amount: Number(r.summary_deduction_amount || 0),
+        deductions: Number(r.deductions || r.deduction_amount || deductionVal || 0),
+        lorry_number: r.lorry_number || r.lorry_no || '-'
+      });
+
+      if (mrNo) processedMrKeySet.add(mrNo);
+    };
+
+    // 1. Process mr_settlement_master
+    (mrSettMaster || []).forEach(r => processSettlementRow(r, 'master'));
+
+    // 2. Process mr_settlement_detail (for details not already covered or adding detail records)
+    (mrSettDetail || []).forEach(d => {
+      const mrNo = String(d.mr_no || '').trim().toUpperCase();
+      const parentMaster = mrNo ? mrToMasterMap.get(mrNo) : null;
+      if (parentMaster) {
+        // Enriched row
+        processSettlementRow({
+          ...parentMaster,
+          ...d,
+          broker: parentMaster.broker || d.broker,
+          po_no: parentMaster.po_no || d.po_no
+        }, 'detail');
+      } else {
+        processSettlementRow(d, 'detail');
+      }
+    });
+
+    // 3. Process m_r_settlement table
+    (mRSetts || []).forEach(m => processSettlementRow(m, 'mr_settlement'));
+
+    // 4. Process settlements and inspections
+    (settlements || []).forEach(s => processSettlementRow(s, 'settlement'));
+    (inspections || []).forEach((i: any) => {
+      const mrNo = String(i.mr_no || i.arrival_no || '').trim().toUpperCase();
+      if (!processedMrKeySet.has(mrNo)) {
+        processSettlementRow({
+          broker: i.broker,
+          mr_no: i.mr_no || i.arrival_no,
+          po_no: i.po_no,
+          summary_delivery_claim: i.actual_moisture > 14 ? (i.actual_moisture - 14) * 100 : 0,
+          summary_rate_wt_claim: i.dust_claim || 0,
+          summary_misc_less: i.grade_down_qty || i.deduction_qty || 0,
+          val_ex_short: i.short_excess || 0,
+          summary_deduction_amount: i.deduction_amount || 0,
+          lorry_number: i.lorry_number || i.lorry_no
+        }, 'inspection');
+      }
+    });
 
     // Build Master Lookup Maps
     const gradeMap = new Map<string, string>();
@@ -432,18 +625,6 @@ export async function loadAndProcessSystemReportData(): Promise<{
         areaMap.set(arName, arName);
       } else if (arName) {
         areaMap.set(arName, arName);
-      }
-    });
-
-    const brokerMap = new Map<string, string>();
-    (brokers || []).forEach((b: any) => {
-      const bCode = String(b.brok_code || b.broker_code || b.code || '').trim().toUpperCase();
-      const bName = String(b.brok_name || b.broker_name || b.name || '').trim();
-      if (bCode && bName) {
-        brokerMap.set(bCode, bName);
-        brokerMap.set(bName.toUpperCase(), bName);
-      } else if (bName) {
-        brokerMap.set(bName.toUpperCase(), bName);
       }
     });
 
@@ -1152,6 +1333,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
     return {
       allTransactions: transactionLines,
       allPoSummary,
+      brokerSettlementMap,
       masterLists: {
         brokers: Array.from(brokerSet).sort(),
         suppliers: Array.from(supplierSet).sort(),

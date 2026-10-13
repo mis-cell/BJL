@@ -81,6 +81,9 @@ export type EntityType =
   | 'lorry_weighments'
   | 'payment_master'
   | 'payment_details'
+  | 'mr_settlement_master'
+  | 'mr_settlement_detail'
+  | 'm_r_settlement'
   | 'mr_settlement_master';
 
 function extractMissingColumn(msg?: string): string | null {

@@ -797,8 +797,8 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                            activeTab === 'GRADE' ? 'Grade Name' : 
                            'Broker Name'}
                         </th>
-                        <th className="p-3 text-center">Sauda Count</th>
-                        <th className="p-3 text-right">Contract Weight (MT)</th>
+                        <th className="p-3 text-center">Contract Sauda</th>
+                        <th className="p-3 text-right">Contract MT</th>
                         <th className="p-3 text-right">Arrived Weight (MT)</th>
                         <th className="p-3 text-right">Avg Rate (₹/Qtl)</th>
                       </tr>
@@ -855,51 +855,100 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
             if (subAnalysisMode === 'DEDUCTION') {
               return (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-xs">
                   <table className="w-full text-xs text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b">
-                        <th className="p-3">Entity Name</th>
-                        <th className="p-3 text-center">Deals</th>
+                        <th className="p-3">
+                          {activeTab === 'BROKER' ? 'Broker Name' : 
+                           activeTab === 'SUPPLIER' ? 'Supplier Name' : 
+                           activeTab === 'AGENCY' ? 'Agency Name' : 
+                           activeTab === 'AREA' ? 'Area Name' : 
+                           activeTab === 'GRADE' ? 'Grade Name' : 
+                           'Broker Name'}
+                        </th>
+                        <th className="p-3 text-center">Contract Sauda</th>
                         <th className="p-3 text-right">Contract MT</th>
-                        <th className="p-3 text-right text-rose-700">Total Deduction (₹)</th>
-                        <th className="p-3 text-right">Deduction % of Value</th>
-                        <th className="p-3 text-right">Avg Moisture %</th>
-                        <th className="p-3 text-center">Status</th>
+                        <th className="p-3 text-right">Mousiter Claim/sett</th>
+                        <th className="p-3 text-right">Dust Claim/Sett</th>
+                        <th className="p-3 text-right">Gradedown Claim/sett</th>
+                        <th className="p-3 text-right">Short/Excess</th>
+                        <th className="p-3 text-right text-rose-700">all deduction Value</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium">
+                    <tbody className="divide-y divide-slate-100 font-medium font-mono">
                       {currentData.map((row, idx) => {
-                        const dedPct = row.grossValue > 0 ? (row.deductionAmount / row.grossValue) * 100 : 0;
+                        const settInfo = dataset.brokerSettlementMap?.[row.key.toUpperCase()] || {
+                          moistureClaim: 0,
+                          dustClaim: 0,
+                          gradedownClaim: 0,
+                          shortExcess: 0,
+                          allDeductionValue: row.deductionAmount
+                        };
                         return (
-                          <tr key={idx} className="hover:bg-slate-50 transition">
-                            <td className="p-3 font-bold text-slate-900">{row.key}</td>
-                            <td className="p-3 text-center font-mono">{row.dealCount}</td>
-                            <td className="p-3 text-right font-mono">{row.quantityMT.toFixed(2)} MT</td>
-                            <td className="p-3 text-right font-mono font-black text-rose-700">
-                              {row.deductionAmount > 0 ? `-₹${Math.round(row.deductionAmount).toLocaleString()}` : '₹0'}
+                          <tr
+                            key={idx}
+                            onClick={() => {
+                              if (activeTab === 'BROKER') {
+                                setSelectedBrokerModalBroker(row.key);
+                              }
+                            }}
+                            className={`transition ${activeTab === 'BROKER' ? 'hover:bg-emerald-50/70 cursor-pointer' : 'hover:bg-slate-50'}`}
+                          >
+                            <td className="p-3 font-bold text-slate-900 font-sans flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-mono flex items-center justify-center font-bold">
+                                {idx + 1}
+                              </span>
+                              <span>{row.key}</span>
                             </td>
-                            <td className="p-3 text-right font-mono font-bold text-slate-800">
-                              {dedPct.toFixed(2)}%
-                            </td>
-                            <td className="p-3 text-right font-mono text-slate-700">
-                              {row.avgMoisture > 0 ? `${row.avgMoisture.toFixed(1)}%` : 'Standard'}
-                            </td>
-                            <td className="p-3 text-center">
-                              {dedPct > 1 ? (
-                                <span className="bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                  ⚠️ High Deduction Claim
-                                </span>
-                              ) : (
-                                <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                  ✓ Standard Quality
-                                </span>
-                              )}
-                            </td>
+                            <td className="p-3 text-center font-bold text-slate-700">{row.dealCount}</td>
+                            <td className="p-3 text-right font-bold text-emerald-950">{row.quantityMT.toFixed(2)} MT</td>
+                            <td className="p-3 text-right text-slate-700">{settInfo.moistureClaim > 0 ? `₹${Math.round(settInfo.moistureClaim).toLocaleString()}` : '—'}</td>
+                            <td className="p-3 text-right text-slate-700">{settInfo.dustClaim > 0 ? `₹${Math.round(settInfo.dustClaim).toLocaleString()}` : '—'}</td>
+                            <td className="p-3 text-right text-slate-700">{settInfo.gradedownClaim > 0 ? `₹${Math.round(settInfo.gradedownClaim).toLocaleString()}` : '—'}</td>
+                            <td className="p-3 text-right text-slate-700">{settInfo.shortExcess !== 0 ? `₹${Math.round(settInfo.shortExcess).toLocaleString()}` : '—'}</td>
+                            <td className="p-3 text-right font-black text-rose-700">{settInfo.allDeductionValue > 0 ? `₹${Math.round(settInfo.allDeductionValue).toLocaleString()}` : (row.deductionAmount > 0 ? `₹${Math.round(row.deductionAmount).toLocaleString()}` : '₹0')}</td>
                           </tr>
                         );
                       })}
                     </tbody>
+                    <tfoot>
+                      <tr className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
+                        <td className="p-3 font-sans">Total / Summary ({currentData.length} Entities)</td>
+                        <td className="p-3 text-center font-mono">{currentData.reduce((acc, r) => acc + r.dealCount, 0)}</td>
+                        <td className="p-3 text-right font-mono text-emerald-950">{currentData.reduce((acc, r) => acc + r.quantityMT, 0).toFixed(2)} MT</td>
+                        <td className="p-3 text-right font-mono text-slate-800">
+                          ₹{Math.round(currentData.reduce((acc, r) => {
+                            const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
+                            return acc + (sett?.moistureClaim || 0);
+                          }, 0)).toLocaleString()}
+                        </td>
+                        <td className="p-3 text-right font-mono text-slate-800">
+                          ₹{Math.round(currentData.reduce((acc, r) => {
+                            const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
+                            return acc + (sett?.dustClaim || 0);
+                          }, 0)).toLocaleString()}
+                        </td>
+                        <td className="p-3 text-right font-mono text-slate-800">
+                          ₹{Math.round(currentData.reduce((acc, r) => {
+                            const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
+                            return acc + (sett?.gradedownClaim || 0);
+                          }, 0)).toLocaleString()}
+                        </td>
+                        <td className="p-3 text-right font-mono text-slate-800">
+                          ₹{Math.round(currentData.reduce((acc, r) => {
+                            const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
+                            return acc + (sett?.shortExcess || 0);
+                          }, 0)).toLocaleString()}
+                        </td>
+                        <td className="p-3 text-right font-mono text-rose-800 font-black">
+                          ₹{Math.round(currentData.reduce((acc, r) => {
+                            const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
+                            return acc + (sett?.allDeductionValue || r.deductionAmount || 0);
+                          }, 0)).toLocaleString()}
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               );
@@ -1382,48 +1431,85 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                 <table className="w-full text-xs text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider border-b">
-                      <th className="p-3.5 w-16 text-center">Sl. No.</th>
-                      <th className="p-3.5">Broker Name</th>
-                      <th className="p-3.5">P.O. Number / Sauda Number</th>
-                      <th className="p-3.5 text-right">Contract Weight</th>
-                      <th className="p-3.5 text-right">Arrived Weight</th>
-                      <th className="p-3.5 text-right">Sauda B Rate</th>
+                      <th className="p-3.5 w-14 text-center">#</th>
+                      <th className="p-3.5">broker</th>
+                      <th className="p-3.5">mr_no</th>
+                      <th className="p-3.5">po_no</th>
+                      <th className="p-3.5 text-right">summary_delivery_claim</th>
+                      <th className="p-3.5 text-right">summary_rate_wt_claim</th>
+                      <th className="p-3.5 text-right">summary_misc_less</th>
+                      <th className="p-3.5 text-right">summary_less_amount</th>
+                      <th className="p-3.5 text-right">val_less_amt</th>
+                      <th className="p-3.5 text-right">val_less_amount</th>
+                      <th className="p-3.5 text-right">val_ex_short</th>
+                      <th className="p-3.5">summary_deduction_type</th>
+                      <th className="p-3.5 text-right">summary_deduction_rate</th>
+                      <th className="p-3.5 text-right">summary_deduction_qty</th>
+                      <th className="p-3.5 text-right">summary_deduction_amount</th>
+                      <th className="p-3.5 text-right">deductions</th>
+                      <th className="p-3.5">lorry_number</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium">
+                  <tbody className="divide-y divide-slate-100 font-medium font-mono text-[11px]">
                     {(() => {
-                      const target = selectedBrokerModalBroker.trim().toLowerCase();
-                      const matchedTxns = transactions.filter(t => (t.broker || 'Direct').trim().toLowerCase() === target);
-                      const matchedRecords = matchedTxns.length > 0 ? matchedTxns : allSaudaRecords.filter(r => (r.broker || 'Direct').trim().toLowerCase() === target);
+                      const target = selectedBrokerModalBroker.trim().toUpperCase();
+                      const settInfo = dataset.brokerSettlementMap?.[target];
+                      const details = settInfo?.details || [];
 
-                      if (matchedRecords.length > 0) {
-                        return matchedRecords.map((item: any, idx: number) => {
-                          const brokerName = item.broker || selectedBrokerModalBroker;
-                          const saudaPo = item.saudaNo && item.poNo && item.saudaNo !== item.poNo
-                            ? `${item.saudaNo} / ${item.poNo}`
-                            : (item.saudaNo || item.poNo || '—');
-                          const contractWt = Number(item.quantityMT || 0) > 0 ? `${Number(item.quantityMT || 0).toFixed(2)} MT` : '—';
-                          const arrivedWt = Number(item.arrivedWeightMT || 0) > 0 ? `${Number(item.arrivedWeightMT || 0).toFixed(2)} MT` : '—';
-                          const rateVal = Number(item.purchaseRate || item.baseRate || item.rate || 0);
-                          const rateDisplay = rateVal > 0 ? `₹${rateVal.toLocaleString()}` : '—';
+                      if (details.length > 0) {
+                        return details.map((item: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-slate-50 transition">
+                            <td className="p-3.5 text-center font-bold text-slate-500">{idx + 1}</td>
+                            <td className="p-3.5 font-bold text-slate-900 font-sans">{item.broker || selectedBrokerModalBroker}</td>
+                            <td className="p-3.5 font-bold text-slate-800">{item.mr_no || '—'}</td>
+                            <td className="p-3.5 font-bold text-slate-800">{item.po_no || '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700">{item.summary_delivery_claim ? `₹${Number(item.summary_delivery_claim).toLocaleString()}` : '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700">{item.summary_rate_wt_claim ? `₹${Number(item.summary_rate_wt_claim).toLocaleString()}` : '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700">{item.summary_misc_less ? `₹${Number(item.summary_misc_less).toLocaleString()}` : '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700">{item.summary_less_amount ? `₹${Number(item.summary_less_amount).toLocaleString()}` : '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700">{item.val_less_amt ? `₹${Number(item.val_less_amt).toLocaleString()}` : '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700">{item.val_less_amount ? `₹${Number(item.val_less_amount).toLocaleString()}` : '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700">{item.val_ex_short ? `₹${Number(item.val_ex_short).toLocaleString()}` : '—'}</td>
+                            <td className="p-3.5 text-slate-800">{item.summary_deduction_type || '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700">{item.summary_deduction_rate ? `${item.summary_deduction_rate}` : '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700">{item.summary_deduction_qty ? `${item.summary_deduction_qty}` : '—'}</td>
+                            <td className="p-3.5 text-right text-rose-700 font-bold">{item.summary_deduction_amount ? `₹${Number(item.summary_deduction_amount).toLocaleString()}` : '—'}</td>
+                            <td className="p-3.5 text-right text-rose-700 font-bold">{item.deductions ? `₹${Number(item.deductions).toLocaleString()}` : '—'}</td>
+                            <td className="p-3.5 text-slate-800">{item.lorry_number || '—'}</td>
+                          </tr>
+                        ));
+                      }
 
-                          return (
-                            <tr key={item.txnId || item.id || idx} className="hover:bg-slate-50 transition">
-                              <td className="p-3.5 text-center font-mono font-bold text-slate-500">{idx + 1}</td>
-                              <td className="p-3.5 font-bold text-slate-900">{brokerName}</td>
-                              <td className="p-3.5 font-mono font-bold text-slate-800">{saudaPo}</td>
-                              <td className="p-3.5 text-right font-mono font-bold text-emerald-950">{contractWt}</td>
-                              <td className="p-3.5 text-right font-mono text-slate-700">{arrivedWt}</td>
-                              <td className="p-3.5 text-right font-mono font-bold text-slate-900">{rateDisplay}</td>
-                            </tr>
-                          );
-                        });
+                      // Fallback to matched transactions
+                      const matchedTxns = transactions.filter(t => (t.broker || 'Direct').trim().toLowerCase() === selectedBrokerModalBroker.trim().toLowerCase());
+                      if (matchedTxns.length > 0) {
+                        return matchedTxns.map((item: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-slate-50 transition">
+                            <td className="p-3.5 text-center font-bold text-slate-500">{idx + 1}</td>
+                            <td className="p-3.5 font-bold text-slate-900 font-sans">{item.broker || selectedBrokerModalBroker}</td>
+                            <td className="p-3.5 text-slate-800">{item.mrNo || '—'}</td>
+                            <td className="p-3.5 text-slate-800">{item.poNo || '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700">—</td>
+                            <td className="p-3.5 text-right text-slate-700">—</td>
+                            <td className="p-3.5 text-right text-slate-700">—</td>
+                            <td className="p-3.5 text-right text-slate-700">—</td>
+                            <td className="p-3.5 text-right text-slate-700">—</td>
+                            <td className="p-3.5 text-right text-slate-700">—</td>
+                            <td className="p-3.5 text-right text-slate-700">—</td>
+                            <td className="p-3.5 text-slate-800">—</td>
+                            <td className="p-3.5 text-right text-slate-700">—</td>
+                            <td className="p-3.5 text-right text-slate-700">—</td>
+                            <td className="p-3.5 text-right text-rose-700 font-bold">{item.deductionAmount ? `₹${Math.round(item.deductionAmount).toLocaleString()}` : '—'}</td>
+                            <td className="p-3.5 text-right text-rose-700 font-bold">{item.deductionAmount ? `₹${Math.round(item.deductionAmount).toLocaleString()}` : '—'}</td>
+                            <td className="p-3.5 text-slate-800">—</td>
+                          </tr>
+                        ));
                       }
 
                       return (
                         <tr>
-                          <td colSpan={6} className="p-12 text-center text-slate-400">
-                            No Sauda records found for broker {selectedBrokerModalBroker}.
+                          <td colSpan={17} className="p-12 text-center text-slate-400">
+                            No settlement or Sauda records found for broker {selectedBrokerModalBroker}.
                           </td>
                         </tr>
                       );
