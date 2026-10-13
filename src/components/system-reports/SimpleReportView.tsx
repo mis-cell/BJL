@@ -494,20 +494,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     return list.sort((a, b) => b.grossValue - a.grossValue);
   }, [allDimensionRecords, dataset.masterLists.brokers]);
 
-  // Track active transacting brokers vs full master directory
-  const [brokerDisplayFilter, setBrokerDisplayFilter] = useState<'ACTIVE' | 'ALL'>('ACTIVE');
-
-  const activeBrokersCount = useMemo(() => {
-    return brokerData.filter(b => b.dealCount > 0 || b.quantityMT > 0).length;
-  }, [brokerData]);
-
-  const displayedBrokerData = useMemo(() => {
-    if (brokerDisplayFilter === 'ACTIVE') {
-      return brokerData.filter(b => b.dealCount > 0 || b.quantityMT > 0);
-    }
-    return brokerData;
-  }, [brokerData, brokerDisplayFilter]);
-
   const agencyData = useMemo(() => aggregateByDimension(t => t.agency), [allDimensionRecords]);
   const areaData = useMemo(() => aggregateByDimension(t => t.area), [allDimensionRecords]);
   const gradeData = useMemo(() => aggregateByDimension(t => t.grade), [allDimensionRecords]);
@@ -589,13 +575,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
         {[
           /* { id: 'OVERVIEW' as const, label: 'Overview & Charts', icon: BarChart3 }, */
           /* { id: 'ALL_DEALS' as const, label: 'All Transactions', icon: FileText, count: filteredList.length }, */
-          { 
-            id: 'BROKER' as const, 
-            label: 'Broker Wise', 
-            icon: Users, 
-            count: brokerDisplayFilter === 'ACTIVE' ? activeBrokersCount : brokerData.length,
-            badge: `${activeBrokersCount} Active / ${brokerData.length}`
-          },
+          { id: 'BROKER' as const, label: 'Broker Wise', icon: Users, count: brokerData.length },
           { id: 'AGENCY' as const, label: 'Agency Wise', icon: Building2, count: agencyData.length },
           { id: 'AREA' as const, label: 'Area Wise', icon: Package, count: areaData.length },
           { id: 'GRADE' as const, label: 'Grade Wise', icon: Award, count: gradeData.length },
@@ -619,11 +599,11 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             >
               <Icon className="w-3.5 h-3.5" />
               <span>{tab.label}</span>
-              {(tab.badge || tab.count !== undefined) && (
+              {tab.count !== undefined && (
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
                   isActive ? 'bg-slate-950 text-yellow-400' : 'bg-slate-800 text-slate-400'
                 }`}>
-                  {tab.badge || tab.count}
+                  {tab.count}
                 </span>
               )}
             </button>
@@ -634,57 +614,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       {/* ================= TAB 1: DIMENSIONAL BREAKDOWN CONTENT ================= */}
       {activeTab !== 'ALLSAUDA' && activeTab !== 'OVERVIEW' && activeTab !== 'DEDUCTION' && activeTab !== 'CHECKPOINTS' && activeTab !== 'ALL_DEALS' && (
         <div className="space-y-4">
-
-          {/* Broker Directory Status Banner for Broker Wise */}
-          {activeTab === 'BROKER' && (
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-emerald-50 via-[#F3F9F1] to-white border border-emerald-200/90 rounded-2xl p-3.5 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-white font-bold text-sm shadow-xs">
-                  🤝
-                </span>
-                <div>
-                  <div className="text-xs font-black text-emerald-950 flex items-center gap-2 flex-wrap">
-                    <span>BROKER DIRECTORY STATUS:</span>
-                    <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full text-[11px] font-black border border-emerald-300">
-                      {activeBrokersCount} Active Transacting
-                    </span>
-                    <span className="text-slate-400 font-normal">/</span>
-                    <span className="text-slate-700 font-bold">
-                      {brokerData.length} Total Master Directory
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 mt-0.5">
-                    100% of all Sauda, Check Point, and Final P.O. contracts this session belong to these <strong>{activeBrokersCount} transacting brokers</strong>.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-emerald-300 shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => setBrokerDisplayFilter('ACTIVE')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5 ${
-                    brokerDisplayFilter === 'ACTIVE'
-                      ? 'bg-[#174C2C] text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <span>✓ Transacted Deals ({activeBrokersCount})</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBrokerDisplayFilter('ALL')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5 ${
-                    brokerDisplayFilter === 'ALL'
-                      ? 'bg-[#174C2C] text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <span>All Master Directory ({brokerData.length})</span>
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* Sub-Analysis Filter Bar */}
 <div className="flex w-full flex-wrap items-stretch gap-2 rounded-2xl border border-[#DCE7D9] bg-gradient-to-br from-white via-[#FAFCF9] to-[#F1F6EF] p-3 shadow-[0_4px_16px_rgba(23,76,44,0.06)]">
@@ -743,7 +672,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
           {/* Render Active Sub-View Data */}
           {(() => {
             const totalcurrentData = (
-              activeTab === 'BROKER' ? displayedBrokerData :
+              activeTab === 'BROKER' ? brokerData :
               activeTab === 'AGENCY' ? agencyData :
               activeTab === 'AREA' ? areaData :
               activeTab === 'GRADE' ? gradeData :
