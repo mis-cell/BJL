@@ -437,25 +437,25 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
     const brokerMap = new Map<string, string>();
     (brokers || []).forEach((b: any) => {
-      const bCode = String(b.broker_code || '').trim().toUpperCase();
-      const bName = String(b.broker_name || b.name || '').trim().toUpperCase();
+      const bCode = String(b.brok_code || b.broker_code || b.code || '').trim().toUpperCase();
+      const bName = String(b.brok_name || b.broker_name || b.name || '').trim();
       if (bCode && bName) {
         brokerMap.set(bCode, bName);
-        brokerMap.set(bName, bName);
+        brokerMap.set(bName.toUpperCase(), bName);
       } else if (bName) {
-        brokerMap.set(bName, bName);
+        brokerMap.set(bName.toUpperCase(), bName);
       }
     });
 
     const supplyMap = new Map<string, string>();
     (suppliers || []).forEach((s: any) => {
-      const sCode = String(s.supply_code || s.supplier_code || '').trim().toUpperCase();
-      const sName = String(s.supply_name || s.supplier_name || s.name || '').trim().toUpperCase();
+      const sCode = String(s.supp_code || s.supply_code || s.supplier_code || s.code || '').trim().toUpperCase();
+      const sName = String(s.supp_name || s.supply_name || s.supplier_name || s.name || '').trim();
       if (sCode && sName) {
         supplyMap.set(sCode, sName);
-        supplyMap.set(sName, sName);
+        supplyMap.set(sName.toUpperCase(), sName);
       } else if (sName) {
-        supplyMap.set(sName, sName);
+        supplyMap.set(sName.toUpperCase(), sName);
       }
     });
 
@@ -965,11 +965,11 @@ export async function loadAndProcessSystemReportData(): Promise<{
     const poSet = new Set<string>();
 
     (brokers || []).forEach((b: any) => {
-      const name = String(b.broker_name || b.name || '').trim();
+      const name = String(b.brok_name || b.broker_name || b.name || '').trim();
       if (name && name.toUpperCase() !== 'DIRECT' && name !== '-') brokerSet.add(name);
     });
     (suppliers || []).forEach((s: any) => {
-      const name = String(s.supply_name || s.supplier_name || s.name || '').trim();
+      const name = String(s.supp_name || s.supply_name || s.supplier_name || s.name || '').trim();
       if (name && name !== '-') supplierSet.add(name);
     });
     (agencies || []).forEach((a: any) => {
