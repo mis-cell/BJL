@@ -620,7 +620,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
   {[
     { id: 'VOLUME' as const, label: 'Business Provided', sub: 'Volume & Rate', icon: '📦' },
-    { id: 'DEDUCTION' as const, label: 'All Types Deduction', sub: 'Moisture & Grade Down', icon: '✂️' },
+    { id: 'DEDUCTION' as const, label: 'Deduction', sub: 'Moisture & Grade Down', icon: '✂️' },
     { id: 'CHECKPOINTS' as const, label: 'Checkpoints Pipeline', sub: 'Sauda to Settlement', icon: '🚚' },
     { id: 'PREMIUM' as const, label: 'Premium Given', sub: 'Premium Analysis', icon: '💰' },
     { id: 'RANKING' as const, label: 'Ranking Cards', sub: 'Best, Medium, Lower', icon: '🏆' },
@@ -854,6 +854,20 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             }
 
             if (subAnalysisMode === 'DEDUCTION') {
+              // Ensure brokers with settlement deduction records are included even if zero active Saudas
+              const deductionRows = activeTab === 'BROKER'
+                ? rawCurrentData.filter(row => {
+                    const sett = dataset.brokerSettlementMap?.[row.key.toUpperCase()];
+                    return row.dealCount > 0 || (sett && (sett.allDeductionValue > 0 || sett.details?.length > 0));
+                  }).sort((a, b) => {
+                    const settA = dataset.brokerSettlementMap?.[a.key.toUpperCase()];
+                    const settB = dataset.brokerSettlementMap?.[b.key.toUpperCase()];
+                    const dedA = settA?.allDeductionValue || a.deductionAmount || 0;
+                    const dedB = settB?.allDeductionValue || b.deductionAmount || 0;
+                    return dedB - dedA;
+                  })
+                : currentData;
+
               return (
                 <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-xs">
                   <table className="w-full text-xs text-left border-collapse">
@@ -869,15 +883,15 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                         </th>
                         <th className="p-3 text-center">Contract Sauda</th>
                         <th className="p-3 text-right">Contract MT</th>
-                        <th className="p-3 text-right">Mousiter Claim/sett</th>
+                        <th className="p-3 text-right">Moisture Claim/Sett</th>
                         <th className="p-3 text-right">Dust Claim/Sett</th>
-                        <th className="p-3 text-right">Gradedown Claim/sett</th>
+                        <th className="p-3 text-right">Gradedown Claim/Sett</th>
                         <th className="p-3 text-right">Short/Excess</th>
-                        <th className="p-3 text-right text-rose-700">all deduction Value</th>
+                        <th className="p-3 text-right text-rose-700 font-black">Deduction</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium font-mono">
-                      {currentData.map((row, idx) => {
+                      {deductionRows.map((row, idx) => {
                         const settInfo = dataset.brokerSettlementMap?.[row.key.toUpperCase()] || {
                           moistureClaim: 0,
                           dustClaim: 0,
@@ -914,35 +928,35 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                     </tbody>
                     <tfoot>
                       <tr className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
-                        <td className="p-3 font-sans">Total / Summary ({currentData.length} Entities)</td>
-                        <td className="p-3 text-center font-mono">{currentData.reduce((acc, r) => acc + r.dealCount, 0)}</td>
-                        <td className="p-3 text-right font-mono text-emerald-950">{currentData.reduce((acc, r) => acc + r.quantityMT, 0).toFixed(2)} MT</td>
+                        <td className="p-3 font-sans">Total / Summary ({deductionRows.length} Entities)</td>
+                        <td className="p-3 text-center font-mono">{deductionRows.reduce((acc, r) => acc + r.dealCount, 0)}</td>
+                        <td className="p-3 text-right font-mono text-emerald-950">{deductionRows.reduce((acc, r) => acc + r.quantityMT, 0).toFixed(2)} MT</td>
                         <td className="p-3 text-right font-mono text-slate-800">
-                          ₹{Math.round(currentData.reduce((acc, r) => {
+                          ₹{Math.round(deductionRows.reduce((acc, r) => {
                             const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
                             return acc + (sett?.moistureClaim || 0);
                           }, 0)).toLocaleString()}
                         </td>
                         <td className="p-3 text-right font-mono text-slate-800">
-                          ₹{Math.round(currentData.reduce((acc, r) => {
+                          ₹{Math.round(deductionRows.reduce((acc, r) => {
                             const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
                             return acc + (sett?.dustClaim || 0);
                           }, 0)).toLocaleString()}
                         </td>
                         <td className="p-3 text-right font-mono text-slate-800">
-                          ₹{Math.round(currentData.reduce((acc, r) => {
+                          ₹{Math.round(deductionRows.reduce((acc, r) => {
                             const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
                             return acc + (sett?.gradedownClaim || 0);
                           }, 0)).toLocaleString()}
                         </td>
                         <td className="p-3 text-right font-mono text-slate-800">
-                          ₹{Math.round(currentData.reduce((acc, r) => {
+                          ₹{Math.round(deductionRows.reduce((acc, r) => {
                             const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
                             return acc + (sett?.shortExcess || 0);
                           }, 0)).toLocaleString()}
                         </td>
                         <td className="p-3 text-right font-mono text-rose-800 font-black">
-                          ₹{Math.round(currentData.reduce((acc, r) => {
+                          ₹{Math.round(deductionRows.reduce((acc, r) => {
                             const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
                             return acc + (sett?.allDeductionValue || r.deductionAmount || 0);
                           }, 0)).toLocaleString()}

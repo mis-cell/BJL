@@ -379,6 +379,14 @@ export async function loadAndProcessSystemReportData(): Promise<{
       }
     });
 
+    // Group details by mr_no for reliable joining
+    const detailsByMr = new Map<string, any[]>();
+    (mrSettDetail || []).forEach((d: any) => {
+      const mr = String(d.mr_no || '').trim().toUpperCase();
+      if (!detailsByMr.has(mr)) detailsByMr.set(mr, []);
+      detailsByMr.get(mr)!.push(d);
+    });
+
     const brokerSettlementMap: Record<string, {
       moistureClaim: number;
       dustClaim: number;
@@ -388,36 +396,11 @@ export async function loadAndProcessSystemReportData(): Promise<{
       details: any[];
     }> = {};
 
-    const processedMrKeySet = new Set<string>();
-
-    const processSettlementRow = (r: any, sourceTag?: string) => {
-      let rawBrk = String(r.broker || r.broker_name || r.brok_name || '').trim();
-      const mrNo = String(r.mr_no || r.material_received_no || '').trim().toUpperCase();
-      const poNo = String(r.po_no || r.contract_po_no || '').trim().toUpperCase();
-      const saudaNo = String(r.sauda_no || poToSaudaMap.get(poNo) || '').trim().toUpperCase();
-
-      if (!rawBrk && mrNo) {
-        rawBrk = mrToBrokerMap.get(mrNo) || '';
-      }
-      if (!rawBrk && poNo) {
-        rawBrk = poToBrokerMap.get(poNo) || '';
-      }
-      if (!rawBrk && saudaNo) {
-        rawBrk = saudaToBrokerMap.get(saudaNo) || '';
-      }
-
-      const broker = brokerMap.get(rawBrk.toUpperCase()) || rawBrk || 'Direct';
-      if (!broker || broker === '-') return;
-
-      const moisture = Number(r.summary_delivery_claim || r.moist_sett || r.moist_final || r.moist_claim || r.moisture_claim || 0);
-      const dust = Number(r.summary_rate_wt_claim || r.dust_sett || r.dust_final || r.dust_claim || r.dust_claim || 0);
-      const gradedown = Number(r.summary_misc_less || r.gd_sett || r.gd_final || r.gd_claim || r.val_less_amt || r.val_less_amount || r.gradedown_claim || 0);
-      const short = Number(r.val_ex_short || r.short_excess || (r.challan_weight && r.electronic_scale_net ? Math.max(0, Number(r.challan_weight) - Number(r.electronic_scale_net)) : 0) || 0);
-      const deductionVal = Number(r.summary_less_amount || r.summary_deduction_amount || r.claim_settlement || r.deductions || r.deduction_amount || 0);
-
-      const upperKey = broker.toUpperCase();
-      if (!brokerSettlementMap[upperKey]) {
-        brokerSettlementMap[upperKey] = {
+    const getBrokerEntry = (name: string) => {
+      const cleanName = brokerMap.get(name.toUpperCase()) || name || 'Direct';
+      const upper = cleanName.toUpperCase();
+      if (!brokerSettlementMap[upper]) {
+        brokerSettlementMap[upper] = {
           moistureClaim: 0,
           dustClaim: 0,
           gradedownClaim: 0,
@@ -426,57 +409,218 @@ export async function loadAndProcessSystemReportData(): Promise<{
           details: []
         };
       }
-
-      brokerSettlementMap[upperKey].moistureClaim += moisture;
-      brokerSettlementMap[upperKey].dustClaim += dust;
-      brokerSettlementMap[upperKey].gradedownClaim += gradedown;
-      brokerSettlementMap[upperKey].shortExcess += short;
-      brokerSettlementMap[upperKey].allDeductionValue += (deductionVal > 0 ? deductionVal : (moisture + dust + gradedown + short));
-
-      brokerSettlementMap[upperKey].details.push({
-        broker,
-        mr_no: r.mr_no || r.material_received_no || (mrNo || '-'),
-        po_no: r.po_no || r.contract_po_no || (poNo || '-'),
-        summary_delivery_claim: moisture,
-        summary_rate_wt_claim: dust,
-        summary_misc_less: gradedown,
-        summary_less_amount: Number(r.summary_less_amount || 0),
-        val_less_amt: Number(r.val_less_amt || 0),
-        val_less_amount: Number(r.val_less_amount || 0),
-        val_ex_short: short,
-        summary_deduction_type: r.summary_deduction_type || r.adjust_type || '-',
-        summary_deduction_rate: Number(r.summary_deduction_rate || 0),
-        summary_deduction_qty: Number(r.summary_deduction_qty || r.quantity || 0),
-        summary_deduction_amount: Number(r.summary_deduction_amount || 0),
-        deductions: Number(r.deductions || r.deduction_amount || deductionVal || 0),
-        lorry_number: r.lorry_number || r.lorry_no || '-'
-      });
-
-      if (mrNo) processedMrKeySet.add(mrNo);
+      return { entry: brokerSettlementMap[upper], cleanName };
     };
 
-    // 1. Process mr_settlement_master
-    (mrSettMaster || []).forEach(r => processSettlementRow(r, 'master'));
+    const processedMrKeySet = new Set<string>();
 
-    // 2. Process mr_settlement_detail (for details not already covered or adding detail records)
-    (mrSettDetail || []).forEach(d => {
-      const mrNo = String(d.mr_no || '').trim().toUpperCase();
-      const parentMaster = mrNo ? mrToMasterMap.get(mrNo) : null;
-      if (parentMaster) {
-        // Enriched row
-        processSettlementRow({
-          ...parentMaster,
-          ...d,
-          broker: parentMaster.broker || d.broker,
-          po_no: parentMaster.po_no || d.po_no
-        }, 'detail');
+    const processSettlementRow = (s: any, src: string = 'settlement') => {
+      const mrNo = String(s.mr_no || s.arrival_no || '').trim().toUpperCase();
+      if (mrNo) processedMrKeySet.add(mrNo);
+      let rawBrk = String(s.broker || '').trim();
+      const poNo = String(s.po_no || '').trim().toUpperCase();
+      const saudaNo = String(s.sauda_no || (poNo ? poToSaudaMap.get(poNo) : '') || '').trim().toUpperCase();
+
+      if (!rawBrk && mrNo) rawBrk = mrToBrokerMap.get(mrNo) || '';
+      if (!rawBrk && poNo) rawBrk = poToBrokerMap.get(poNo) || '';
+      if (!rawBrk && saudaNo) rawBrk = saudaToBrokerMap.get(saudaNo) || '';
+
+      const { entry, cleanName } = getBrokerEntry(rawBrk);
+
+      const moist = Number(s.summary_delivery_claim || s.moist_claim || s.moist_sett || 0);
+      const dust = Number(s.summary_rate_wt_claim || s.dust_claim || s.dust_sett || 0);
+      const gd = Number(s.summary_misc_less || s.gd_claim || s.gd_sett || 0);
+      const short = Number(s.val_ex_short || s.short_excess || 0);
+      const ded = Number(s.val_less_amt || s.val_less_amount || s.summary_deduction_amount || s.summary_less_amount || s.claim_settlement || s.deduction_amount || (moist + dust + gd + short) || 0);
+
+      entry.moistureClaim += moist;
+      entry.dustClaim += dust;
+      entry.gradedownClaim += gd;
+      entry.shortExcess += short;
+      entry.allDeductionValue += (ded > 0 ? ded : (moist + dust + gd + short));
+
+      entry.details.push({
+        broker: cleanName,
+        mr_no: mrNo || '-',
+        po_no: poNo || '-',
+        summary_delivery_claim: moist,
+        summary_rate_wt_claim: dust,
+        summary_misc_less: gd,
+        summary_less_amount: ded,
+        val_less_amt: Number(s.val_less_amt || 0),
+        val_less_amount: Number(s.val_less_amount || 0),
+        val_ex_short: short,
+        summary_deduction_type: s.summary_deduction_type || '-',
+        summary_deduction_rate: Number(s.summary_deduction_rate || 0),
+        summary_deduction_qty: Number(s.summary_deduction_qty || 0),
+        summary_deduction_amount: ded,
+        deductions: ded,
+        lorry_number: s.lorry_number || s.lorry_no || '-'
+      });
+    };
+
+    // 1. Process mr_settlement_master with its child details
+    (mrSettMaster || []).forEach((m: any) => {
+      const mrNo = String(m.mr_no || '').trim().toUpperCase();
+      processedMrKeySet.add(mrNo);
+      let rawBrk = String(m.broker || '').trim();
+      const poNo = String(m.po_no || '').trim().toUpperCase();
+      const saudaNo = String(m.sauda_no || poToSaudaMap.get(poNo) || '').trim().toUpperCase();
+
+      if (!rawBrk && mrNo) rawBrk = mrToBrokerMap.get(mrNo) || '';
+      if (!rawBrk && poNo) rawBrk = poToBrokerMap.get(poNo) || '';
+      if (!rawBrk && saudaNo) rawBrk = saudaToBrokerMap.get(saudaNo) || '';
+
+      const { entry, cleanName } = getBrokerEntry(rawBrk);
+
+      const mrDetails = detailsByMr.get(mrNo) || [];
+      let mrMoist = 0;
+      let mrDust = 0;
+      let mrGd = 0;
+      let mrClaimSett = 0;
+
+      if (mrDetails.length > 0) {
+        mrDetails.forEach(d => {
+          mrMoist += Number(d.moist_sett || d.moist_claim || 0);
+          mrDust += Number(d.dust_sett || d.dust_claim || 0);
+          mrGd += Number(d.gd_sett || d.gd_claim || 0);
+          mrClaimSett += Number(d.claim_settlement || 0);
+        });
       } else {
-        processSettlementRow(d, 'detail');
+        mrMoist = Number(m.summary_delivery_claim || m.summary_rate_wt_claim || 0);
+      }
+
+      const short = Number(m.val_ex_short || 0);
+      const dedVal = Number(m.val_less_amt || m.val_less_amount || m.summary_deduction_amount || m.summary_less_amount || 0) || mrClaimSett;
+
+      entry.moistureClaim += mrMoist;
+      entry.dustClaim += mrDust;
+      entry.gradedownClaim += mrGd;
+      entry.shortExcess += short;
+      entry.allDeductionValue += (dedVal > 0 ? dedVal : (mrMoist + mrDust + mrGd + short));
+
+      if (mrDetails.length > 0) {
+        mrDetails.forEach(d => {
+          entry.details.push({
+            broker: cleanName,
+            mr_no: m.mr_no || d.mr_no || '-',
+            po_no: m.po_no || d.po_no || '-',
+            summary_delivery_claim: Number(d.moist_sett || d.moist_claim || m.summary_delivery_claim || 0),
+            summary_rate_wt_claim: Number(d.dust_sett || d.dust_claim || m.summary_rate_wt_claim || 0),
+            summary_misc_less: Number(d.gd_sett || d.gd_claim || m.summary_misc_less || 0),
+            summary_less_amount: Number(m.summary_less_amount || d.claim_settlement || 0),
+            val_less_amt: Number(m.val_less_amt || 0),
+            val_less_amount: Number(m.val_less_amount || 0),
+            val_ex_short: short,
+            summary_deduction_type: d.adjust_type || m.summary_deduction_type || '-',
+            summary_deduction_rate: Number(m.summary_deduction_rate || d.rate_value || 0),
+            summary_deduction_qty: Number(d.quantity || m.summary_deduction_qty || 0),
+            summary_deduction_amount: Number(d.claim_settlement || m.summary_deduction_amount || 0),
+            deductions: Number(d.claim_settlement || m.summary_deduction_amount || dedVal || 0),
+            lorry_number: m.lorry_number || m.lorry_no || '-'
+          });
+        });
+      } else {
+        entry.details.push({
+          broker: cleanName,
+          mr_no: m.mr_no || '-',
+          po_no: m.po_no || '-',
+          summary_delivery_claim: Number(m.summary_delivery_claim || mrMoist || 0),
+          summary_rate_wt_claim: Number(m.summary_rate_wt_claim || mrDust || 0),
+          summary_misc_less: Number(m.summary_misc_less || mrGd || 0),
+          summary_less_amount: Number(m.summary_less_amount || 0),
+          val_less_amt: Number(m.val_less_amt || 0),
+          val_less_amount: Number(m.val_less_amount || 0),
+          val_ex_short: short,
+          summary_deduction_type: m.summary_deduction_type || '-',
+          summary_deduction_rate: Number(m.summary_deduction_rate || 0),
+          summary_deduction_qty: Number(m.summary_deduction_qty || 0),
+          summary_deduction_amount: Number(m.summary_deduction_amount || 0),
+          deductions: dedVal,
+          lorry_number: m.lorry_number || m.lorry_no || '-'
+        });
+      }
+    });
+
+    // 2. Process any mr_settlement_detail with no master
+    (mrSettDetail || []).forEach((d: any) => {
+      const mrNo = String(d.mr_no || '').trim().toUpperCase();
+      if (!processedMrKeySet.has(mrNo)) {
+        processedMrKeySet.add(mrNo);
+        let rawBrk = String(d.broker || '').trim();
+        if (!rawBrk && mrNo) rawBrk = mrToBrokerMap.get(mrNo) || '';
+        const { entry, cleanName } = getBrokerEntry(rawBrk);
+
+        const moist = Number(d.moist_sett || d.moist_claim || 0);
+        const dust = Number(d.dust_sett || d.dust_claim || 0);
+        const gd = Number(d.gd_sett || d.gd_claim || 0);
+        const claimSett = Number(d.claim_settlement || 0);
+
+        entry.moistureClaim += moist;
+        entry.dustClaim += dust;
+        entry.gradedownClaim += gd;
+        entry.allDeductionValue += claimSett || (moist + dust + gd);
+
+        entry.details.push({
+          broker: cleanName,
+          mr_no: d.mr_no || '-',
+          po_no: d.po_no || '-',
+          summary_delivery_claim: moist,
+          summary_rate_wt_claim: dust,
+          summary_misc_less: gd,
+          summary_less_amount: claimSett,
+          val_less_amt: 0,
+          val_less_amount: 0,
+          val_ex_short: 0,
+          summary_deduction_type: d.adjust_type || '-',
+          summary_deduction_rate: Number(d.rate_value || 0),
+          summary_deduction_qty: Number(d.quantity || 0),
+          summary_deduction_amount: claimSett,
+          deductions: claimSett,
+          lorry_number: '-'
+        });
       }
     });
 
     // 3. Process m_r_settlement table
-    (mRSetts || []).forEach(m => processSettlementRow(m, 'mr_settlement'));
+    (mRSetts || []).forEach(m => {
+      const mrNo = String(m.mr_no || '').trim().toUpperCase();
+      if (!processedMrKeySet.has(mrNo)) {
+        let rawBrk = String(m.broker || '').trim();
+        if (!rawBrk && mrNo) rawBrk = mrToBrokerMap.get(mrNo) || '';
+        const { entry, cleanName } = getBrokerEntry(rawBrk);
+        const moist = Number(m.moist_claim || m.moist_sett || 0);
+        const dust = Number(m.dust_claim || m.dust_sett || 0);
+        const gd = Number(m.gd_claim || m.gd_sett || 0);
+        const short = Number(m.val_ex_short || m.short_excess || 0);
+        const ded = Number(m.claim_settlement || m.deductions || (moist + dust + gd + short) || 0);
+
+        entry.moistureClaim += moist;
+        entry.dustClaim += dust;
+        entry.gradedownClaim += gd;
+        entry.shortExcess += short;
+        entry.allDeductionValue += ded;
+
+        entry.details.push({
+          broker: cleanName,
+          mr_no: m.mr_no || '-',
+          po_no: m.po_no || '-',
+          summary_delivery_claim: moist,
+          summary_rate_wt_claim: dust,
+          summary_misc_less: gd,
+          summary_less_amount: ded,
+          val_less_amt: 0,
+          val_less_amount: 0,
+          val_ex_short: short,
+          summary_deduction_type: '-',
+          summary_deduction_rate: 0,
+          summary_deduction_qty: 0,
+          summary_deduction_amount: ded,
+          deductions: ded,
+          lorry_number: m.lorry_number || '-'
+        });
+      }
+    });
 
     // 4. Process settlements and inspections
     (settlements || []).forEach(s => processSettlementRow(s, 'settlement'));
