@@ -475,31 +475,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
       {/* ================= TAB 1: DIMENSIONAL BREAKDOWN CONTENT ================= */}
       {activeTab !== 'ALLSAUDA' && activeTab !== 'OVERVIEW' && activeTab !== 'DEDUCTION' && activeTab !== 'CHECKPOINTS' && activeTab !== 'ALL_DEALS' && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-3 gap-3">
-            <div>
-              <h3 className="text-base font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-emerald-600" />
-                {activeTab === 'BROKER' && 'Broker Wise Report & Analytics'}
-                {activeTab === 'AGENCY' && 'Agency Wise Report & Analytics'}
-                {activeTab === 'AREA' && 'Area Wise Report & Analytics'}
-                {activeTab === 'GRADE' && 'Grade Wise Report & Analytics'}
-                {activeTab === 'SUPPLIER' && 'Supplier / Party Wise Report & Analytics'}
-                {activeTab === 'MONTH' && 'Monthly Progress & Analytics'}
-              </h3>
-              {/* <p className="text-xs text-slate-500 mt-0.5">
-                Toggle below to analyze Deductions, Pipeline Checkpoints, Premium, Performance Rankings, or Abnormal Data.
-              </p> */}
-            </div>
-            {/* {onOpenManagementView && (
-              <button
-                onClick={onOpenManagementView}
-                className="text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer self-start md:self-auto"
-              >
-                Full Management Matrix (P1-P4) →1
-              </button>
-            )} */}
-          </div>
+        <div className="space-y-4">
 
           {/* Sub-Analysis Filter Bar */}
 <div className="flex w-full flex-wrap items-stretch gap-2 rounded-2xl border border-[#DCE7D9] bg-gradient-to-br from-white via-[#FAFCF9] to-[#F1F6EF] p-3 shadow-[0_4px_16px_rgba(23,76,44,0.06)]">
