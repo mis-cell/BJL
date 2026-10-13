@@ -1187,6 +1187,61 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                     return (
                       <tr
                         key={t.id || t.poNo || t.saudaNo || idx}
+                        onClick={() => {
+                          const foundTxn = transactions.find(tx => (t.poNo && tx.poNo === t.poNo) || (t.saudaNo && tx.saudaNo === t.saudaNo));
+                          if (foundTxn) {
+                            setSelectedTxn(foundTxn);
+                          } else {
+                            const constructed: ReportTransactionLine = {
+                              txnId: t.id || t.poNo || t.saudaNo || `sauda-${idx}`,
+                              saudaNo: t.saudaNo || '-',
+                              poNo: t.poNo || '-',
+                              date: t.date || getTodayISODate(),
+                              month: t.month || (t.date ? t.date.substring(0, 7) : ''),
+                              financialYear: t.financialYear || '2024-25',
+                              supplier: t.supplier || 'Unassigned',
+                              broker: t.broker || 'Direct',
+                              agency: t.agency || '-',
+                              area: t.area || '-',
+                              grade: t.grade || '-',
+                              quantityMT: Number(t.quantityMT || 0),
+                              purchaseRate: Number(t.rate || 0),
+                              baseRate: Number(t.rate || 0),
+                              rateVariance: 0,
+                              rateVariancePct: 0,
+                              grossPurchaseValue: Number(t.grossValue || (t.quantityMT * t.rate * 10) || 0),
+                              baseRateValue: Number(t.grossValue || 0),
+                              premiumRate: 0,
+                              premiumAmount: 0,
+                              premiumPct: 0,
+                              deductionAmount: 0,
+                              deductionPct: 0,
+                              moisturePct: 0,
+                              gradeDownQty: 0,
+                              effectiveCost: Number(t.rate || 0),
+                              realizationRate: Number(t.rate || 0),
+                              realizationValue: Number(t.grossValue || 0),
+                              grossProfit: 0,
+                              profitPct: 0,
+                              profitStatus: 'BREAK-EVEN',
+                              saudaStatus: t.status?.toLowerCase().includes('settled') || t.status?.toLowerCase().includes('complete') ? 'COMPLETED' : 'IN_PROGRESS',
+                              arrivalStatus: t.status?.toLowerCase().includes('arrival') ? 'COMPLETED' : 'PENDING',
+                              inspectionStatus: 'PENDING',
+                              paymentStatus: t.status?.toLowerCase().includes('paid') || t.status?.toLowerCase().includes('settled') ? 'PAID' : 'PENDING',
+                              settlementStatus: t.status?.toLowerCase().includes('settled') ? 'SETTLED' : 'PENDING',
+                              arrivedWeightMT: t.status?.toLowerCase().includes('arrival') || t.status?.toLowerCase().includes('settled') ? Number(t.quantityMT || 0) : 0,
+                              pendingWeightMT: t.status?.toLowerCase().includes('arrival') || t.status?.toLowerCase().includes('settled') ? 0 : Number(t.quantityMT || 0),
+                              paidAmount: t.status?.toLowerCase().includes('paid') || t.status?.toLowerCase().includes('settled') ? Number(t.grossValue || 0) : 0,
+                              pendingPayable: t.status?.toLowerCase().includes('paid') || t.status?.toLowerCase().includes('settled') ? 0 : Number(t.grossValue || 0),
+                              claimAmount: 0,
+                              claimSettled: 0,
+                              isDelayed: false,
+                              isAbnormal: false,
+                              abnormalReasons: [t.status || 'Active in Pipeline']
+                            };
+                            setSelectedTxn(constructed);
+                          }
+                        }}
                         className="hover:bg-emerald-50/60 transition cursor-pointer"
                       >
                         <td className="p-3 text-slate-700 font-mono text-[11px] whitespace-nowrap">
@@ -1267,10 +1322,10 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
         )}
       </div>
       )}
-      {/*<SimpleDealSlipModal
+      <SimpleDealSlipModal
         transaction={selectedTxn}
         onClose={() => setSelectedTxn(null)}
-      /> */}
+      />
 
     </div>
   );

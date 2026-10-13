@@ -58,6 +58,54 @@ export const SimpleDealSlipModal: React.FC<SimpleDealSlipModalProps> = ({
 
         {/* Slip Body */}
         <div className="p-6 space-y-5 text-slate-800">
+
+          {/* Sauda & PO Pipeline Current Status / Progress */}
+          {(() => {
+            const isFullComplete = t.pendingWeightMT <= 0.01 && t.paymentStatus === 'PAID';
+            const currentStepName = 
+              isFullComplete ? 'Full Complete (Settled)' :
+              t.paymentStatus === 'PAID' ? 'Step 6: Settlement Closed' :
+              t.paidAmount > 0 ? 'Step 5: Payment Operation' :
+              (t.moisturePct > 0 || t.deductionAmount > 0) ? 'Step 4: Mill Inspection' :
+              t.pendingWeightMT <= 0.01 ? 'Step 3: Final Arrival' :
+              t.arrivedWeightMT > 0 ? 'Step 2: Temporary Arrival' : 'Step 1: Sauda Check Point';
+
+            return (
+              <div className="p-4 bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl space-y-3 shadow-md">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-yellow-400 flex items-center gap-1.5">
+                    <span>🚀</span> Sauda & P.O. Pipeline Status
+                  </span>
+                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-full ${
+                    isFullComplete ? 'bg-emerald-400 text-slate-950' : 'bg-amber-400 text-slate-950'
+                  }`}>
+                    {isFullComplete ? '✓ FULL COMPLETE' : `STOPPED AT: ${currentStepName}`}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1">
+                  {[
+                    { step: 1, name: 'Sauda Check', done: true },
+                    { step: 2, name: 'Temp Arrival', done: t.arrivedWeightMT > 0 || isFullComplete },
+                    { step: 3, name: 'Final Arrival', done: t.pendingWeightMT <= 0.01 || isFullComplete },
+                    { step: 4, name: 'Inspection', done: t.moisturePct > 0 || t.deductionAmount > 0 || t.arrivedWeightMT > 0 || isFullComplete },
+                    { step: 5, name: 'Payment', done: t.paidAmount > 0 || isFullComplete },
+                    { step: 6, name: 'Settlement', done: t.paymentStatus === 'PAID' || isFullComplete }
+                  ].map((st, i) => (
+                    <div key={i} className={`p-2 rounded-xl border text-center ${
+                      st.done ? 'bg-emerald-950/90 border-emerald-500 text-emerald-200' : 'bg-slate-800/80 border-slate-700 text-slate-400'
+                    }`}>
+                      <span className="text-[9px] font-mono block opacity-80">Step {st.step}</span>
+                      <strong className="text-[11px] font-bold block mt-0.5 truncate">{st.name}</strong>
+                      <span className="text-[10px] mt-1 block font-bold">
+                        {st.done ? '🟢 Done' : '⏳ Pending'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           
           {/* Sauda / PO Identification Header */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
