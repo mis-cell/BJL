@@ -627,7 +627,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             </th>
                           </tr>
                           <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b">
-                            <th className="p-2.5 text-center bg-emerald-50">Deals</th>
+                            <th className="p-2.5 text-center bg-emerald-50">Contract Sauda</th>
                             <th className="p-2.5 text-right bg-emerald-50">Contract Wt (MT)</th>
                             <th className="p-2.5 text-right bg-emerald-50">Avg Rate (₹)</th>
                             <th className="p-2.5 text-right bg-emerald-50 border-r border-slate-200">Sauda Value</th>
@@ -674,8 +674,15 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                   <table className="w-full text-xs text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b">
-                        <th className="p-3">Rank / Entity Name</th>
-                        <th className="p-3 text-center">Deals</th>
+                        <th className="p-3">
+                          {activeTab === 'BROKER' ? 'Broker Name' : 
+                           activeTab === 'SUPPLIER' ? 'Supplier Name' : 
+                           activeTab === 'AGENCY' ? 'Agency Name' : 
+                           activeTab === 'AREA' ? 'Area Name' : 
+                           activeTab === 'GRADE' ? 'Grade Name' : 
+                           'Broker Name'}
+                        </th>
+                        <th className="p-3 text-center">Contract Sauda</th>
                         <th className="p-3 text-right">Contract Weight (MT)</th>
                         <th className="p-3 text-right">Arrived Weight (MT)</th>
                         <th className="p-3 text-right">Avg Rate (₹/Qtl)</th>

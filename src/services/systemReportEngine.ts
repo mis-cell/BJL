@@ -805,275 +805,152 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
       const details = findPoDetails(poNo, saudaNo);
 
+      // Aggregate details to create exactly 1 unsplit transaction record per Sauda/PO number
+      let grade = po.grade || po.quality || '-';
+      let purchaseRate = Number(po.b_rate || 0);
+      let quantityMT = Number(po.total_contract_mt || po.quantity || 0);
+
       if (details.length > 0) {
-        details.forEach((line: any, dIdx: number) => {
-          const rawGName = String(line.grade_name || line.grade || '').trim();
-          const rawGCode = String(line.grade_code || line.quality || '').trim();
-          const grade = resolveGradeName(rawGName, rawGCode, saudaNo, poNo);
+        const gradeNames = details.map(d => resolveGradeName(String(d.grade_name || d.grade || '').trim(), String(d.grade_code || d.quality || '').trim(), saudaNo, poNo)).filter(Boolean);
+        if (gradeNames.length > 0) {
+          grade = Array.from(new Set(gradeNames)).join(', ');
+        }
 
-          const rawItemAgency = String(line.agency_name || line.agency || '').trim();
-          const rawItemAgencyCode = String(line.agency_code || '').trim();
-          const itemAgency = agencyMap.get(rawItemAgency.toUpperCase()) || agencyMap.get(rawItemAgencyCode.toUpperCase()) || (rawItemAgency && rawItemAgency.toUpperCase() !== 'BALES' ? rawItemAgency : agency);
+        const detailsTotalQty = details.reduce((acc: number, d: any) => acc + (Number(d.weight_mt || d.qty) || 0), 0);
+        if (quantityMT === 0) quantityMT = detailsTotalQty;
 
-          const totalPoContract = Number(po.total_contract_mt || po.quantity || 0);
-          let quantityMT = Number(line.weight_mt || line.qty || 0);
-          if (quantityMT === 0 && details.length > 0 && totalPoContract > 0) {
-            quantityMT = Number((totalPoContract / details.length).toFixed(3));
-          }
-          if (quantityMT === 0) quantityMT = totalPoContract;
-
-          const purchaseRate = Number(line.rate_qntl || line.rate || po.b_rate || 0);
-          const baseRate = baseRateMap.get(date) || Number(po.b_rate || defaultLatestBaseRate || purchaseRate);
-          const rateVariance = purchaseRate - baseRate;
-          const rateVariancePct = baseRate > 0 ? (rateVariance / baseRate) * 100 : 0;
-          //const grossPurchaseValue = quantityMT * purchaseRate * 10;
-          const grossPurchaseValue = paymentByPo.get(poNo) || paymentByPo.get(saudaNo) || 0;
-          const baseRateValue = quantityMT * baseRate * 10;
-
-          // Real explicit premium resolution strictly from payment_master & payment_details:
-          const poKeys = getPoKeys(poNo);
-          let headerPrem = { rate: 0, amount: 0, source: '' };
-          for (const k of poKeys) {
-            if (premiumLookupMap.has(k)) {
-              headerPrem = premiumLookupMap.get(k)!;
-              break;
-            }
-          }
-
-          let premiumRate = 0;
-          let premiumAmount = 0;
-
-          const cleanPoKey = poNo.toUpperCase().replace(/[^A-Z0-9]/g, '');
-          const matchedMrs = unifiedPremiums.byPoMap.get(cleanPoKey) || [];
-          const poTotalPremium = matchedMrs.reduce((s, m) => s + m.totalPremiumAmount, 0);
-          const poAvgRate = matchedMrs.length > 0 ? (matchedMrs[0].avgPremiumRatePerQtl || 0) : 0;
-
-          if (poTotalPremium > 0) {
-            if (details.length > 1) {
-              const baseShare = Math.floor((poTotalPremium / details.length) * 100) / 100;
-              premiumAmount = (dIdx === details.length - 1)
-                ? Number((poTotalPremium - (baseShare * (details.length - 1))).toFixed(2))
-                : baseShare;
-            } else {
-              premiumAmount = poTotalPremium;
-            }
-            premiumRate = poAvgRate;
-          }
-
-          const premiumPct = grossPurchaseValue > 0 ? (premiumAmount / grossPurchaseValue) * 100 : 0;
-
-          const inspInfo = inspectionDeductionByPo.get(poNo) || inspectionDeductionByPo.get(saudaNo) || { deduction: 0, moisture: 0, gradeDown: 0 };
-          const deductionAmount = inspInfo.deduction;
-          const deductionPct = grossPurchaseValue > 0 ? (deductionAmount / grossPurchaseValue) * 100 : 0;
-          const moisturePct = inspInfo.moisture;
-          const gradeDownQty = inspInfo.gradeDown;
-
-          //const effectiveCost = grossPurchaseValue - deductionAmount;
-          const effectiveCost = grossPurchaseValue;
-          const realizationRate = Number(po.realization_rate || baseRate || purchaseRate);
-          const realizationValue = quantityMT * realizationRate * 10;
-          const grossProfit = realizationValue - effectiveCost;
-          const profitPct = effectiveCost > 0 ? (grossProfit / effectiveCost) * 100 : 0;
-
-          let profitStatus: ReportTransactionLine['profitStatus'] = 'PROFITABLE';
-          if (grossProfit < -100) profitStatus = 'LOSS';
-          else if (Math.abs(grossProfit) <= 100) profitStatus = 'BREAK-EVEN';
-          else if (profitPct < 1.0) profitStatus = 'NON-PROFITABLE';
-
-          const arrivedWeightMT = arrivalByPo.get(poNo) || arrivalByPo.get(saudaNo) || 0;
-          const pendingWeightMT = Math.max(0, quantityMT - arrivedWeightMT);
-          const paidAmount = paymentByPo.get(poNo) || paymentByPo.get(saudaNo) || 0;
-          const pendingPayable = Math.max(0, effectiveCost - paidAmount - deductionAmount);
-          //const pendingPayable = pendingpaymentByPo.get(poNo) || pendingpaymentByPo.get(saudaNo) || 0;
-
-          const deliveryToDate = po.delivery_to;
-          const isDelayed = deliveryToDate ? new Date() > new Date(deliveryToDate) && pendingWeightMT > 0 : false;
-
-          const abnormalReasons: string[] = [];
-          if (moisturePct > 18.0) abnormalReasons.push(`High Moisture (${moisturePct.toFixed(1)}%)`);
-          if (premiumRate > 100) abnormalReasons.push(`High Premium (+₹${premiumRate.toFixed(0)}/Qtl)`);
-          if (deductionPct > 3) abnormalReasons.push(`High Deduction (${deductionPct.toFixed(1)}%)`);
-          if (isDelayed) abnormalReasons.push(`Overdue Delivery (${pendingWeightMT.toFixed(2)} MT pending)`);
-          if (gradeDownQty > 0) abnormalReasons.push(`Grade Down (${gradeDownQty} MT)`);
-
-          const matchedMrNo = matchedMrs.map(m => m.mrNo).filter(Boolean).join(', ') || undefined;
-          const matchedVoucherNo = matchedMrs.map(m => m.voucherNo).filter(Boolean).join(', ') || undefined;
-
-          transactionLines.push({
-            txnId: `TXN-${String(txnCounter++).padStart(5, '0')}`,
-            saudaNo,
-            poNo,
-            mrNo: matchedMrNo,
-            voucherNo: matchedVoucherNo,
-            date,
-            month: getYearMonth(date),
-            financialYear: getFinancialYear(date),
-            supplier,
-            broker,
-            agency: itemAgency,
-            area,
-            grade,
-            quantityMT,
-            purchaseRate,
-            baseRate,
-            rateVariance,
-            rateVariancePct,
-            grossPurchaseValue,
-            baseRateValue,
-            premiumRate,
-            premiumAmount,
-            premiumPct,
-            deductionAmount,
-            deductionPct,
-            moisturePct,
-            gradeDownQty,
-            effectiveCost,
-            realizationRate,
-            realizationValue,
-            grossProfit,
-            profitPct,
-            profitStatus,
-            saudaStatus: pendingWeightMT === 0 ? 'COMPLETED' : (isDelayed ? 'DELAYED' : 'IN_PROGRESS'),
-            arrivalStatus: arrivedWeightMT >= quantityMT ? 'COMPLETED' : (arrivedWeightMT > 0 ? 'IN_TRANSIT' : 'PENDING'),
-            inspectionStatus: inspInfo.deduction > 0 || inspInfo.moisture > 0 ? 'COMPLETED' : 'PENDING',
-            paymentStatus: paidAmount >= effectiveCost && effectiveCost > 0 ? 'PAID' : (paidAmount > 0 ? 'PARTIAL' : 'PENDING'),
-            settlementStatus: pendingPayable === 0 ? 'SETTLED' : 'PENDING',
-            arrivedWeightMT,
-            pendingWeightMT,
-            paidAmount,
-            pendingPayable,
-            claimAmount: deductionAmount > 5000 ? deductionAmount : 0,
-            claimSettled: deductionAmount > 5000 && pendingPayable === 0 ? deductionAmount : 0,
-            isDelayed,
-            isAbnormal: abnormalReasons.length > 0,
-            abnormalReasons
-          });
-        });
+        const weightedRateSum = details.reduce((acc: number, d: any) => {
+          const q = Number(d.weight_mt || d.qty) || 1;
+          const r = Number(d.rate_qntl || d.rate || po.b_rate || 0);
+          return acc + (q * r);
+        }, 0);
+        const calcWeight = detailsTotalQty > 0 ? detailsTotalQty : details.length;
+        if (weightedRateSum > 0) purchaseRate = Number((weightedRateSum / calcWeight).toFixed(2));
       } else {
         const rawGName = String(po.grade_name || po.grade || po.quality || '').trim();
         const rawGCode = String(po.grade_code || (po.quality_details && po.quality_details[0]?.quality) || '').trim();
-        const grade = resolveGradeName(rawGName, rawGCode, saudaNo, poNo);
-
-        const quantityMT = Number(po.total_contract_mt || po.quantity || 0);
-        const purchaseRate = Number(po.b_rate || 0);
-        const baseRate = baseRateMap.get(date) || Number(po.b_rate || defaultLatestBaseRate || purchaseRate);
-        const rateVariance = purchaseRate - baseRate;
-        const rateVariancePct = baseRate > 0 ? (rateVariance / baseRate) * 100 : 0;
-        const grossPurchaseValue = quantityMT * purchaseRate * 10;
-        const baseRateValue = quantityMT * baseRate * 10;
-
-        // Real explicit premium resolution (matched strictly by PO number):
-        const poKeys = getPoKeys(poNo);
-        let headerPrem = { rate: 0, amount: 0, source: '' };
-        for (const k of poKeys) {
-          if (premiumLookupMap.has(k)) {
-            headerPrem = premiumLookupMap.get(k)!;
-            break;
-          }
-        }
-
-        const cleanPoKey = poNo.toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const matchedMrs = unifiedPremiums.byPoMap.get(cleanPoKey) || [];
-        const poTotalPremium = matchedMrs.reduce((s, m) => s + m.totalPremiumAmount, 0);
-        const poAvgRate = matchedMrs.length > 0 ? (matchedMrs[0].avgPremiumRatePerQtl || 0) : 0;
-
-        let premiumRate = 0;
-        let premiumAmount = 0;
-
-        if (poTotalPremium > 0) {
-          premiumAmount = poTotalPremium;
-          premiumRate = poAvgRate;
-        }
-        if (premiumRate === 0 && premiumAmount > 0 && quantityMT > 0) {
-          premiumRate = premiumAmount / (quantityMT * 10);
-        }
-        const premiumPct = grossPurchaseValue > 0 ? (premiumAmount / grossPurchaseValue) * 100 : 0;
-
-        const inspInfo = inspectionDeductionByPo.get(poNo) || inspectionDeductionByPo.get(saudaNo) || { deduction: 0, moisture: 0, gradeDown: 0 };
-        const deductionAmount = inspInfo.deduction;
-        const deductionPct = grossPurchaseValue > 0 ? (deductionAmount / grossPurchaseValue) * 100 : 0;
-        const moisturePct = inspInfo.moisture;
-        const gradeDownQty = inspInfo.gradeDown;
-
-        const effectiveCost = grossPurchaseValue + premiumAmount - deductionAmount;
-        const realizationRate = Number(po.realization_rate || baseRate || purchaseRate);
-        const realizationValue = quantityMT * realizationRate * 10;
-        const grossProfit = realizationValue - effectiveCost;
-        const profitPct = effectiveCost > 0 ? (grossProfit / effectiveCost) * 100 : 0;
-
-        let profitStatus: ReportTransactionLine['profitStatus'] = 'PROFITABLE';
-        if (grossProfit < -100) profitStatus = 'LOSS';
-        else if (Math.abs(grossProfit) <= 100) profitStatus = 'BREAK-EVEN';
-        else if (profitPct < 1.0) profitStatus = 'NON-PROFITABLE';
-
-        const arrivedWeightMT = arrivalByPo.get(poNo) || arrivalByPo.get(saudaNo) || 0;
-        const pendingWeightMT = Math.max(0, quantityMT - arrivedWeightMT);
-        const paidAmount = paymentByPo.get(poNo) || paymentByPo.get(saudaNo) || 0;
-        const pendingPayable = Math.max(0, effectiveCost - paidAmount);
-
-        const deliveryToDate = po.delivery_to;
-        const isDelayed = deliveryToDate ? new Date() > new Date(deliveryToDate) && pendingWeightMT > 0 : false;
-
-        const abnormalReasons: string[] = [];
-        if (moisturePct > 18.0) abnormalReasons.push(`High Moisture (${moisturePct.toFixed(1)}%)`);
-        if (premiumRate > 100) abnormalReasons.push(`High Premium (+₹${premiumRate.toFixed(0)}/Qtl)`);
-        if (deductionPct > 3) abnormalReasons.push(`High Deduction (${deductionPct.toFixed(1)}%)`);
-        if (isDelayed) abnormalReasons.push(`Overdue Delivery (${pendingWeightMT.toFixed(2)} MT pending)`);
-        if (gradeDownQty > 0) abnormalReasons.push(`Grade Down (${gradeDownQty} MT)`);
-
-        const matchedMrNo = matchedMrs.map(m => m.mrNo).filter(Boolean).join(', ') || undefined;
-        const matchedVoucherNo = matchedMrs.map(m => m.voucherNo).filter(Boolean).join(', ') || undefined;
-
-        transactionLines.push({
-          txnId: `TXN-${String(txnCounter++).padStart(5, '0')}`,
-          saudaNo,
-          poNo,
-          mrNo: matchedMrNo,
-          voucherNo: matchedVoucherNo,
-          date,
-          month: getYearMonth(date),
-          financialYear: getFinancialYear(date),
-          supplier,
-          broker,
-          agency,
-          area,
-          grade,
-          quantityMT,
-          purchaseRate,
-          baseRate,
-          rateVariance,
-          rateVariancePct,
-          grossPurchaseValue,
-          baseRateValue,
-          premiumRate,
-          premiumAmount,
-          premiumPct,
-          deductionAmount,
-          deductionPct,
-          moisturePct,
-          gradeDownQty,
-          effectiveCost,
-          realizationRate,
-          realizationValue,
-          grossProfit,
-          profitPct,
-          profitStatus,
-          saudaStatus: pendingWeightMT === 0 ? 'COMPLETED' : (isDelayed ? 'DELAYED' : 'IN_PROGRESS'),
-          arrivalStatus: arrivedWeightMT >= quantityMT ? 'COMPLETED' : (arrivedWeightMT > 0 ? 'IN_TRANSIT' : 'PENDING'),
-          inspectionStatus: inspInfo.deduction > 0 || inspInfo.moisture > 0 ? 'COMPLETED' : 'PENDING',
-          paymentStatus: paidAmount >= effectiveCost && effectiveCost > 0 ? 'PAID' : (paidAmount > 0 ? 'PARTIAL' : 'PENDING'),
-          settlementStatus: pendingPayable === 0 ? 'SETTLED' : 'PENDING',
-          arrivedWeightMT,
-          pendingWeightMT,
-          paidAmount,
-          pendingPayable,
-          claimAmount: deductionAmount > 5000 ? deductionAmount : 0,
-          claimSettled: deductionAmount > 5000 && pendingPayable === 0 ? deductionAmount : 0,
-          isDelayed,
-          isAbnormal: abnormalReasons.length > 0,
-          abnormalReasons
-        });
+        grade = resolveGradeName(rawGName, rawGCode, saudaNo, poNo);
       }
+
+      if (quantityMT === 0) quantityMT = Number(po.total_wt_in_ton || po.wt_per_lorry || 0);
+
+      const baseRate = baseRateMap.get(date) || Number(po.b_rate || defaultLatestBaseRate || purchaseRate);
+      const rateVariance = purchaseRate - baseRate;
+      const rateVariancePct = baseRate > 0 ? (rateVariance / baseRate) * 100 : 0;
+      const grossPurchaseValue = quantityMT * purchaseRate * 10;
+      const baseRateValue = quantityMT * baseRate * 10;
+
+      // Real explicit premium resolution (matched strictly by PO number):
+      const poKeys = getPoKeys(poNo);
+      let headerPrem = { rate: 0, amount: 0, source: '' };
+      for (const k of poKeys) {
+        if (premiumLookupMap.has(k)) {
+          headerPrem = premiumLookupMap.get(k)!;
+          break;
+        }
+      }
+
+      const cleanPoKey = poNo.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const matchedMrs = unifiedPremiums.byPoMap.get(cleanPoKey) || [];
+      const poTotalPremium = matchedMrs.reduce((s, m) => s + m.totalPremiumAmount, 0);
+      const poAvgRate = matchedMrs.length > 0 ? (matchedMrs[0].avgPremiumRatePerQtl || 0) : 0;
+
+      let premiumRate = 0;
+      let premiumAmount = 0;
+
+      if (poTotalPremium > 0) {
+        premiumAmount = poTotalPremium;
+        premiumRate = poAvgRate;
+      }
+      if (premiumRate === 0 && premiumAmount > 0 && quantityMT > 0) {
+        premiumRate = premiumAmount / (quantityMT * 10);
+      }
+      const premiumPct = grossPurchaseValue > 0 ? (premiumAmount / grossPurchaseValue) * 100 : 0;
+
+      const inspInfo = inspectionDeductionByPo.get(poNo) || inspectionDeductionByPo.get(saudaNo) || { deduction: 0, moisture: 0, gradeDown: 0 };
+      const deductionAmount = inspInfo.deduction;
+      const deductionPct = grossPurchaseValue > 0 ? (deductionAmount / grossPurchaseValue) * 100 : 0;
+      const moisturePct = inspInfo.moisture;
+      const gradeDownQty = inspInfo.gradeDown;
+
+      const effectiveCost = grossPurchaseValue + premiumAmount - deductionAmount;
+      const realizationRate = Number(po.realization_rate || baseRate || purchaseRate);
+      const realizationValue = quantityMT * realizationRate * 10;
+      const grossProfit = realizationValue - effectiveCost;
+      const profitPct = effectiveCost > 0 ? (grossProfit / effectiveCost) * 100 : 0;
+
+      let profitStatus: ReportTransactionLine['profitStatus'] = 'PROFITABLE';
+      if (grossProfit < -100) profitStatus = 'LOSS';
+      else if (Math.abs(grossProfit) <= 100) profitStatus = 'BREAK-EVEN';
+      else if (profitPct < 1.0) profitStatus = 'NON-PROFITABLE';
+
+      const arrivedWeightMT = arrivalByPo.get(poNo) || arrivalByPo.get(saudaNo) || 0;
+      const pendingWeightMT = Math.max(0, quantityMT - arrivedWeightMT);
+      const paidAmount = paymentByPo.get(poNo) || paymentByPo.get(saudaNo) || 0;
+      const pendingPayable = Math.max(0, effectiveCost - paidAmount);
+
+      const deliveryToDate = po.delivery_to;
+      const isDelayed = deliveryToDate ? new Date() > new Date(deliveryToDate) && pendingWeightMT > 0 : false;
+
+      const abnormalReasons: string[] = [];
+      if (moisturePct > 18.0) abnormalReasons.push(`High Moisture (${moisturePct.toFixed(1)}%)`);
+      if (premiumRate > 100) abnormalReasons.push(`High Premium (+₹${premiumRate.toFixed(0)}/Qtl)`);
+      if (deductionPct > 3) abnormalReasons.push(`High Deduction (${deductionPct.toFixed(1)}%)`);
+      if (isDelayed) abnormalReasons.push(`Overdue Delivery (${pendingWeightMT.toFixed(2)} MT pending)`);
+      if (gradeDownQty > 0) abnormalReasons.push(`Grade Down (${gradeDownQty} MT)`);
+
+      const matchedMrNo = matchedMrs.map(m => m.mrNo).filter(Boolean).join(', ') || undefined;
+      const matchedVoucherNo = matchedMrs.map(m => m.voucherNo).filter(Boolean).join(', ') || undefined;
+
+      transactionLines.push({
+        txnId: `TXN-${String(txnCounter++).padStart(5, '0')}`,
+        saudaNo,
+        poNo,
+        mrNo: matchedMrNo,
+        voucherNo: matchedVoucherNo,
+        date,
+        month: getYearMonth(date),
+        financialYear: getFinancialYear(date),
+        supplier,
+        broker,
+        agency,
+        area,
+        grade,
+        quantityMT,
+        purchaseRate,
+        baseRate,
+        rateVariance,
+        rateVariancePct,
+        grossPurchaseValue,
+        baseRateValue,
+        premiumRate,
+        premiumAmount,
+        premiumPct,
+        deductionAmount,
+        deductionPct,
+        moisturePct,
+        gradeDownQty,
+        effectiveCost,
+        realizationRate,
+        realizationValue,
+        grossProfit,
+        profitPct,
+        profitStatus,
+        saudaStatus: pendingWeightMT === 0 ? 'COMPLETED' : (isDelayed ? 'DELAYED' : 'IN_PROGRESS'),
+        arrivalStatus: arrivedWeightMT >= quantityMT ? 'COMPLETED' : (arrivedWeightMT > 0 ? 'IN_TRANSIT' : 'PENDING'),
+        inspectionStatus: inspInfo.deduction > 0 || inspInfo.moisture > 0 ? 'COMPLETED' : 'PENDING',
+        paymentStatus: paidAmount >= effectiveCost && effectiveCost > 0 ? 'PAID' : (paidAmount > 0 ? 'PARTIAL' : 'PENDING'),
+        settlementStatus: pendingPayable === 0 ? 'SETTLED' : 'PENDING',
+        arrivedWeightMT,
+        pendingWeightMT,
+        paidAmount,
+        pendingPayable,
+        claimAmount: deductionAmount > 5000 ? deductionAmount : 0,
+        claimSettled: deductionAmount > 5000 && pendingPayable === 0 ? deductionAmount : 0,
+        isDelayed,
+        isAbnormal: abnormalReasons.length > 0,
+        abnormalReasons
+      });
     });
 
     // Populate master lists for dropdowns
