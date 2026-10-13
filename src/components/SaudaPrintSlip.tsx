@@ -233,7 +233,7 @@ export default function SaudaPrintSlip({ sauda }: Props) {
              <div className="flex flex-1 items-end">
                 <span className="whitespace-nowrap mr-2 text-black font-bold shrink-0">Penalty :</span>
                 <span className="flex-1 border-b border-black border-dotted text-center pb-0.5 font-bold text-black">
-                   {sauda.shipment_penalty ? `${sauda.shipment_penalty}/Per day` : '5/Per day'}
+                   {sauda.shipment_penalty ? `${sauda.shipment_penalty}/Per day` : '0/Per day'}
                 </span>
              </div>
           </div>
