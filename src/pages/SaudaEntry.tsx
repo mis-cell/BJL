@@ -690,13 +690,31 @@ export default function SaudaEntry({
       const qdRows = formData.quality_details || [];
       for (let i = 0; i < qdRows.length; i++) {
         const row = qdRows[i];
-        if (row.quality || row.qty || row.rs || row.agency || row.marka || (row.agencies && row.agencies.length > 0) || (row.markas && row.markas.length > 0)) {
+        if(row.agencies && row.agencies.length === 0){
+           alert(`Please select or fill agency in Row ${i + 1}.`);
+           return;
+        }
+        if(formData.unit_type === 'BALES' && row.markas && row.markas.length === 0){
+           alert(`Please select or fill marks in Row ${i + 1}.`);
+           return;
+        }
+        if (!row.quality || row.quality.trim() === "") {
+          alert(`Please select or fill in Quality in Row ${i + 1}.`);
+          return;
+        }
+        
+        if (row.rs === "" || row.rs === null || row.rs === undefined || Number(row.rs) === 0) {
+          alert(`Please select or fill in RS in Row ${i + 1}.`);
+          return;
+        }
+        /* if (row.quality || row.qty || row.rs || row.agency || row.marka || (row.agencies && row.agencies.length > 0) || (row.markas && row.markas.length > 0)) {
           if (!row.quality) {
             alert(`Please select or fill in Quality in Row ${i + 1}.`);
             return;
           }
-        }
+        } */
       }
+      
 
       if (!formData.b_rate || Number(formData.b_rate) <= 0) {
         alert("B. Rate (Rs.) is required.");
