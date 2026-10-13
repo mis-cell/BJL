@@ -575,11 +575,11 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
         {[
           /* { id: 'OVERVIEW' as const, label: 'Overview & Charts', icon: BarChart3 }, */
           /* { id: 'ALL_DEALS' as const, label: 'All Transactions', icon: FileText, count: filteredList.length }, */
-          { id: 'BROKER' as const, label: 'Broker Wise', icon: Users, count: brokerData.length },
-          { id: 'AGENCY' as const, label: 'Agency Wise', icon: Building2, count: agencyData.length },
-          { id: 'AREA' as const, label: 'Area Wise', icon: Package, count: areaData.length },
-          { id: 'GRADE' as const, label: 'Grade Wise', icon: Award, count: gradeData.length },
-          { id: 'SUPPLIER' as const, label: 'Supplier Wise', icon: Users, count: supplierData.length },
+          { id: 'BROKER' as const, label: 'Broker Wise', icon: Users, count: brokerData.filter(b => b.dealCount > 0).length },
+          { id: 'AGENCY' as const, label: 'Agency Wise', icon: Building2, count: agencyData.filter(a => a.dealCount > 0).length },
+          { id: 'AREA' as const, label: 'Area Wise', icon: Package, count: areaData.filter(a => a.dealCount > 0).length },
+          { id: 'GRADE' as const, label: 'Grade Wise', icon: Award, count: gradeData.filter(g => g.dealCount > 0).length },
+          { id: 'SUPPLIER' as const, label: 'Supplier Wise', icon: Users, count: supplierData.filter(s => s.dealCount > 0).length },
           { id: 'MONTH' as const, label: 'Month Wise', icon: Calendar, count: monthData.length },
           { id: 'DEDUCTION' as const, label: 'Deductions & Quality', icon: Scissors },
           { id: 'CHECKPOINTS' as const, label: 'Checkpoints Pipeline', icon: Truck },
@@ -671,13 +671,14 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
           {/* Render Active Sub-View Data */}
           {(() => {
-            const totalcurrentData = (
+            const rawCurrentData = (
               activeTab === 'BROKER' ? brokerData :
               activeTab === 'AGENCY' ? agencyData :
               activeTab === 'AREA' ? areaData :
               activeTab === 'GRADE' ? gradeData :
               activeTab === 'SUPPLIER' ? supplierData : monthData
             );
+            const totalcurrentData = rawCurrentData.filter(item => item.dealCount > 0);
             const currentData = activeTab === 'MONTH' ? [...totalcurrentData].sort((a, b) => { const [yearA, monthA] = String(a.key).split('-').map(Number); const [yearB, monthB] = String(b.key).split('-').map(Number); return ( new Date(yearB, monthB - 1).getTime() - new Date(yearA, monthA - 1).getTime() ); }) : totalcurrentData;
 
             if (subAnalysisMode === 'VOLUME') {
