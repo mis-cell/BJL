@@ -149,7 +149,7 @@ export default function SaudaPrintSlip({ sauda }: Props) {
              <div className="flex flex-1 items-end">
                 <span className="whitespace-nowrap mr-2 text-black font-bold shrink-0">Units/Lorry :</span>
                 <span className="flex-1 border-b border-black border-dotted text-center pb-0.5 font-bold text-black uppercase">
-                   {sauda.units_per_lorry_type || ''}
+                   {sauda.units_per_lorry !== undefined && sauda.units_per_lorry !== null && sauda.units_per_lorry !== '' ? sauda.units_per_lorry : (sauda.units_per_lorry_type || '')}
                 </span>
              </div>
           </div>

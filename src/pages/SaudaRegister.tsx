@@ -1623,7 +1623,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                   {!isUser10 && <th className="px-3 py-2 text-center">Session</th>}
                   <th className={cn("py-2 text-left whitespace-nowrap min-w-[130px]", isUser10 ? "px-2" : "px-4")}>Broker</th>
                   {!isUser10 && <th className="px-4 py-2 text-left">Supplier</th>}
-                  {!isUser10 && <th className="px-3 py-2 text-center">Unit/Lorry</th>}
+                  {!isUser10 && <th className="px-3 py-2 text-center">Units/Lorry</th>}
                   {!isUser10 && <th className="px-3 py-2 text-center bg-amber-50/70 text-amber-950 font-black">Unit</th>}
                   {!isUser10 && <th className="px-4 py-2 text-right bg-blue-50/60 text-blue-900">B. Rate</th>}
                   <th className={cn("py-2 text-center whitespace-nowrap min-w-[130px]", isUser10 ? "px-2" : "px-3")}>Status</th>
@@ -1682,8 +1682,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                         </td>
                       )}
                       {!isUser10 && (
-                        <td className="px-3 text-center text-slate-700">
-                          {entry.units_per_lorry_type}
+                        <td className="px-3 text-center text-slate-700 font-mono font-semibold">
+                          {entry.units_per_lorry !== undefined && entry.units_per_lorry !== null && entry.units_per_lorry !== ''
+                            ? entry.units_per_lorry 
+                            : (entry.units_per_lorry_type && !isNaN(Number(entry.units_per_lorry_type)) ? entry.units_per_lorry_type : '-')}
                         </td>
                       )}
                       {!isUser10 && (
