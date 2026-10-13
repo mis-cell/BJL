@@ -58,8 +58,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
   
-  // Selected Slip Modal
+  // Selected Slip Modal & Broker Full-Screen Modal
   const [selectedTxn, setSelectedTxn] = useState<ReportTransactionLine | null>(null);
+  const [selectedBrokerModalBroker, setSelectedBrokerModalBroker] = useState<string | null>(null);
 
   // Sauda records from sauda_master, sauda_check_point, purchase_master (Sauda / PO level, exactly 1 row per Sauda, NOT split by grade)
   const allSaudaRecords = useMemo(() => {
@@ -700,7 +701,15 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                           );
                         })
                         .map((row, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50 transition">
+                          <tr
+                            key={idx}
+                            onClick={() => {
+                              if (activeTab === 'BROKER') {
+                                setSelectedBrokerModalBroker(row.key);
+                              }
+                            }}
+                            className={`transition ${activeTab === 'BROKER' ? 'hover:bg-emerald-50/60 cursor-pointer' : 'hover:bg-slate-50'}`}
+                          >
                             <td className="p-3 font-bold text-slate-900 flex items-center gap-2">
                               <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-mono flex items-center justify-center font-bold">
                                 {idx + 1}
@@ -1187,62 +1196,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                     return (
                       <tr
                         key={t.id || t.poNo || t.saudaNo || idx}
-                        onClick={() => {
-                          const foundTxn = transactions.find(tx => (t.poNo && tx.poNo === t.poNo) || (t.saudaNo && tx.saudaNo === t.saudaNo));
-                          if (foundTxn) {
-                            setSelectedTxn(foundTxn);
-                          } else {
-                            const constructed: ReportTransactionLine = {
-                              txnId: t.id || t.poNo || t.saudaNo || `sauda-${idx}`,
-                              saudaNo: t.saudaNo || '-',
-                              poNo: t.poNo || '-',
-                              date: t.date || getTodayISODate(),
-                              month: t.month || (t.date ? t.date.substring(0, 7) : ''),
-                              financialYear: t.financialYear || '2024-25',
-                              supplier: t.supplier || 'Unassigned',
-                              broker: t.broker || 'Direct',
-                              agency: t.agency || '-',
-                              area: t.area || '-',
-                              grade: t.grade || '-',
-                              quantityMT: Number(t.quantityMT || 0),
-                              purchaseRate: Number(t.rate || 0),
-                              baseRate: Number(t.rate || 0),
-                              rateVariance: 0,
-                              rateVariancePct: 0,
-                              grossPurchaseValue: Number(t.grossValue || (t.quantityMT * t.rate * 10) || 0),
-                              baseRateValue: Number(t.grossValue || 0),
-                              premiumRate: 0,
-                              premiumAmount: 0,
-                              premiumPct: 0,
-                              deductionAmount: 0,
-                              deductionPct: 0,
-                              moisturePct: 0,
-                              gradeDownQty: 0,
-                              effectiveCost: Number(t.rate || 0),
-                              realizationRate: Number(t.rate || 0),
-                              realizationValue: Number(t.grossValue || 0),
-                              grossProfit: 0,
-                              profitPct: 0,
-                              profitStatus: 'BREAK-EVEN',
-                              saudaStatus: t.status?.toLowerCase().includes('settled') || t.status?.toLowerCase().includes('complete') ? 'COMPLETED' : 'IN_PROGRESS',
-                              arrivalStatus: t.status?.toLowerCase().includes('arrival') ? 'COMPLETED' : 'PENDING',
-                              inspectionStatus: 'PENDING',
-                              paymentStatus: t.status?.toLowerCase().includes('paid') || t.status?.toLowerCase().includes('settled') ? 'PAID' : 'PENDING',
-                              settlementStatus: t.status?.toLowerCase().includes('settled') ? 'SETTLED' : 'PENDING',
-                              arrivedWeightMT: t.status?.toLowerCase().includes('arrival') || t.status?.toLowerCase().includes('settled') ? Number(t.quantityMT || 0) : 0,
-                              pendingWeightMT: t.status?.toLowerCase().includes('arrival') || t.status?.toLowerCase().includes('settled') ? 0 : Number(t.quantityMT || 0),
-                              paidAmount: t.status?.toLowerCase().includes('paid') || t.status?.toLowerCase().includes('settled') ? Number(t.grossValue || 0) : 0,
-                              pendingPayable: t.status?.toLowerCase().includes('paid') || t.status?.toLowerCase().includes('settled') ? 0 : Number(t.grossValue || 0),
-                              claimAmount: 0,
-                              claimSettled: 0,
-                              isDelayed: false,
-                              isAbnormal: false,
-                              abnormalReasons: [t.status || 'Active in Pipeline']
-                            };
-                            setSelectedTxn(constructed);
-                          }
-                        }}
-                        className="hover:bg-emerald-50/60 transition cursor-pointer"
+                        className="hover:bg-slate-50 transition"
                       >
                         <td className="p-3 text-slate-700 font-mono text-[11px] whitespace-nowrap">
                           {t.date || '-'}
@@ -1326,6 +1280,99 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
         transaction={selectedTxn}
         onClose={() => setSelectedTxn(null)}
       />
+
+      {/* BROKER WISE FULL SCREEN DETAILS POPUP */}
+      {selectedBrokerModalBroker && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col p-3 md:p-6 animate-in fade-in duration-200">
+          <div className="bg-white w-full h-full rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
+            {/* Modal Header */}
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
+              <div>
+                <span className="text-xs uppercase tracking-wider text-emerald-400 font-bold block">Broker Wise Sauda Details Report</span>
+                <h2 className="text-lg font-black tracking-wide flex items-center gap-2 mt-0.5">
+                  <Users className="w-5 h-5 text-emerald-400" />
+                  <span>Broker: {selectedBrokerModalBroker}</span>
+                </h2>
+              </div>
+              <button
+                onClick={() => setSelectedBrokerModalBroker(null)}
+                className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition cursor-pointer"
+                title="Close Full-Screen View"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Body / Table */}
+            <div className="flex-1 overflow-auto p-6 bg-slate-50 space-y-4">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider border-b">
+                      <th className="p-3.5 w-16 text-center">Sl. No.</th>
+                      <th className="p-3.5">Broker Name</th>
+                      <th className="p-3.5">P.O. Number / Sauda Number</th>
+                      <th className="p-3.5 text-right">Contract Weight</th>
+                      <th className="p-3.5 text-right">Arrived Weight</th>
+                      <th className="p-3.5 text-right">Sauda B Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {(() => {
+                      const target = selectedBrokerModalBroker.trim().toLowerCase();
+                      const matchedTxns = transactions.filter(t => (t.broker || 'Direct').trim().toLowerCase() === target);
+                      const matchedRecords = matchedTxns.length > 0 ? matchedTxns : allSaudaRecords.filter(r => (r.broker || 'Direct').trim().toLowerCase() === target);
+
+                      if (matchedRecords.length > 0) {
+                        return matchedRecords.map((item: any, idx: number) => {
+                          const brokerName = item.broker || selectedBrokerModalBroker;
+                          const saudaPo = item.saudaNo && item.poNo && item.saudaNo !== item.poNo
+                            ? `${item.saudaNo} / ${item.poNo}`
+                            : (item.saudaNo || item.poNo || '—');
+                          const contractWt = Number(item.quantityMT || 0) > 0 ? `${Number(item.quantityMT || 0).toFixed(2)} MT` : '—';
+                          const arrivedWt = Number(item.arrivedWeightMT || 0) > 0 ? `${Number(item.arrivedWeightMT || 0).toFixed(2)} MT` : '—';
+                          const rateVal = Number(item.purchaseRate || item.baseRate || item.rate || 0);
+                          const rateDisplay = rateVal > 0 ? `₹${rateVal.toLocaleString()}` : '—';
+
+                          return (
+                            <tr key={item.txnId || item.id || idx} className="hover:bg-slate-50 transition">
+                              <td className="p-3.5 text-center font-mono font-bold text-slate-500">{idx + 1}</td>
+                              <td className="p-3.5 font-bold text-slate-900">{brokerName}</td>
+                              <td className="p-3.5 font-mono font-bold text-slate-800">{saudaPo}</td>
+                              <td className="p-3.5 text-right font-mono font-bold text-emerald-950">{contractWt}</td>
+                              <td className="p-3.5 text-right font-mono text-slate-700">{arrivedWt}</td>
+                              <td className="p-3.5 text-right font-mono font-bold text-slate-900">{rateDisplay}</td>
+                            </tr>
+                          );
+                        });
+                      }
+
+                      return (
+                        <tr>
+                          <td colSpan={6} className="p-12 text-center text-slate-400">
+                            No Sauda records found for broker {selectedBrokerModalBroker}.
+                          </td>
+                        </tr>
+                      );
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-white px-6 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+              <span>Showing all Sauda records for broker: <strong>{selectedBrokerModalBroker}</strong></span>
+              <button
+                onClick={() => setSelectedBrokerModalBroker(null)}
+                className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition cursor-pointer"
+              >
+                Close View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
