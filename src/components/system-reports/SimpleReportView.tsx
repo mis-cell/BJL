@@ -45,6 +45,15 @@ type TabDimension =
   | 'ALLSAUDA'
   | 'ALL_DEALS';
 
+const formatClaimSett = (claim: number | undefined | null, sett: number | undefined | null): string => {
+  const c = Number(claim || 0);
+  const s = Number(sett || 0);
+  if (c === 0 && s === 0) return '—';
+  const cStr = c % 1 === 0 ? c.toString() : c.toFixed(1);
+  const sStr = s % 1 === 0 ? s.toString() : s.toFixed(1);
+  return `${cStr} / ${sStr}`;
+};
+
 export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   dataset,
   onOpenManagementView
@@ -884,18 +893,23 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                           </th>
                           <th className="p-3 text-center">Contract Sauda</th>
                           <th className="p-3 text-right">Contract MT</th>
-                          <th className="p-3 text-right" title="Moisture Claim in Percentage (%)">Moisture Claim/Sett (%)</th>
-                          <th className="p-3 text-right" title="Dust Claim in Percentage (%)">Dust Claim/Sett (%)</th>
-                          <th className="p-3 text-right" title="Gradedown Claim in Percentage (%)">Gradedown Claim/Sett (%)</th>
+                          <th className="p-3 text-right" title="Moisture Claim / Settlement in % (Claim / Sett)">Moisture Claim/Sett (%)</th>
+                          <th className="p-3 text-right" title="Dust Claim / Settlement in % (Claim / Sett)">Dust Claim/Sett (%)</th>
+                          <th className="p-3 text-right" title="Gradedown Claim / Settlement in % (Claim / Sett)">Gradedown Claim/Sett (%)</th>
                           <th className="p-3 text-right" title="Shortage/Excess Deduction calculated in Amount (₹)">Short / Excess (₹)</th>
+                          <th className="p-3 text-left" title="Specific Deduction Types applied (e.g. Katta, Bardan, Quality, etc.)">Deduction Type</th>
+                          <th className="p-3 text-right" title="Explicit Deduction Amount in Rupees">Deduction Amount (₹)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-medium font-mono">
                         {deductionRows.map((row, idx) => {
                           const settInfo = dataset.brokerSettlementMap?.[row.key.toUpperCase()] || {
                             moistureClaim: 0,
+                            moistureSett: 0,
                             dustClaim: 0,
+                            dustSett: 0,
                             gradedownClaim: 0,
+                            gradedownSett: 0,
                             moistCount: 0,
                             dustCount: 0,
                             gdCount: 0,
@@ -905,26 +919,27 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             allDeductionValue: row.deductionAmount
                           };
 
-                          const moistVal = settInfo.moistureClaim > 0
-                            ? (settInfo.moistCount && settInfo.moistCount > 1
-                                ? (settInfo.moistureClaim / settInfo.moistCount).toFixed(2)
-                                : settInfo.moistureClaim.toFixed(2)) + '%'
-                            : '—';
+                          const moistVal = formatClaimSett(
+                            settInfo.moistCount && settInfo.moistCount > 1 ? (settInfo.moistureClaim / settInfo.moistCount) : settInfo.moistureClaim,
+                            settInfo.moistCount && settInfo.moistCount > 1 ? (settInfo.moistureSett / settInfo.moistCount) : settInfo.moistureSett
+                          );
 
-                          const dustVal = settInfo.dustClaim > 0
-                            ? (settInfo.dustCount && settInfo.dustCount > 1
-                                ? (settInfo.dustClaim / settInfo.dustCount).toFixed(2)
-                                : settInfo.dustClaim.toFixed(2)) + '%'
-                            : '—';
+                          const dustVal = formatClaimSett(
+                            settInfo.dustCount && settInfo.dustCount > 1 ? (settInfo.dustClaim / settInfo.dustCount) : settInfo.dustClaim,
+                            settInfo.dustCount && settInfo.dustCount > 1 ? (settInfo.dustSett / settInfo.dustCount) : settInfo.dustSett
+                          );
 
-                          const gdVal = settInfo.gradedownClaim > 0
-                            ? (settInfo.gdCount && settInfo.gdCount > 1
-                                ? (settInfo.gradedownClaim / settInfo.gdCount).toFixed(2)
-                                : settInfo.gradedownClaim.toFixed(2)) + '%'
-                            : '—';
+                          const gdVal = formatClaimSett(
+                            settInfo.gdCount && settInfo.gdCount > 1 ? (settInfo.gradedownClaim / settInfo.gdCount) : settInfo.gradedownClaim,
+                            settInfo.gdCount && settInfo.gdCount > 1 ? (settInfo.gradedownSett / settInfo.gdCount) : settInfo.gradedownSett
+                          );
 
                           const shortExcessVal = settInfo.shortExcess !== 0
                             ? `₹${Math.round(settInfo.shortExcess).toLocaleString()}`
+                            : '—';
+
+                          const dedAmountVal = (settInfo.otherDeductionAmount || 0) > 0
+                            ? `₹${Math.round(settInfo.otherDeductionAmount || 0).toLocaleString()}`
                             : '—';
 
                           return (
@@ -949,6 +964,20 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                               <td className="p-3 text-right text-slate-700 font-mono font-semibold">{dustVal}</td>
                               <td className="p-3 text-right text-slate-700 font-mono font-semibold">{gdVal}</td>
                               <td className="p-3 text-right text-slate-700 font-mono">{shortExcessVal}</td>
+                              <td className="p-3 text-left font-sans text-slate-700">
+                                {settInfo.deductionTypes && settInfo.deductionTypes.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {settInfo.deductionTypes.map((dt, dIdx) => (
+                                      <span key={dIdx} className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold border border-slate-200">
+                                        {dt}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+                              <td className="p-3 text-right font-mono font-semibold text-slate-800">{dedAmountVal}</td>
                             </tr>
                           );
                         })}
@@ -960,32 +989,51 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                           <td className="p-3 text-right font-mono text-emerald-950">{deductionRows.reduce((acc, r) => acc + r.quantityMT, 0).toFixed(2)} MT</td>
                           <td className="p-3 text-right font-mono text-slate-800">
                             {(() => {
-                              const withMoist = deductionRows.filter(r => (dataset.brokerSettlementMap?.[r.key.toUpperCase()]?.moistureClaim || 0) > 0);
+                              const withMoist = deductionRows.filter(r => {
+                                const s = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
+                                return (s?.moistureClaim || 0) > 0 || (s?.moistureSett || 0) > 0;
+                              });
                               if (withMoist.length === 0) return '—';
-                              const avg = withMoist.reduce((acc, r) => acc + (dataset.brokerSettlementMap?.[r.key.toUpperCase()]?.moistureClaim || 0), 0) / withMoist.length;
-                              return `${avg.toFixed(2)}% Avg`;
+                              const cAvg = withMoist.reduce((acc, r) => acc + (dataset.brokerSettlementMap?.[r.key.toUpperCase()]?.moistureClaim || 0), 0) / withMoist.length;
+                              const sAvg = withMoist.reduce((acc, r) => acc + (dataset.brokerSettlementMap?.[r.key.toUpperCase()]?.moistureSett || 0), 0) / withMoist.length;
+                              return formatClaimSett(cAvg, sAvg);
                             })()}
                           </td>
                           <td className="p-3 text-right font-mono text-slate-800">
                             {(() => {
-                              const withDust = deductionRows.filter(r => (dataset.brokerSettlementMap?.[r.key.toUpperCase()]?.dustClaim || 0) > 0);
+                              const withDust = deductionRows.filter(r => {
+                                const s = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
+                                return (s?.dustClaim || 0) > 0 || (s?.dustSett || 0) > 0;
+                              });
                               if (withDust.length === 0) return '—';
-                              const avg = withDust.reduce((acc, r) => acc + (dataset.brokerSettlementMap?.[r.key.toUpperCase()]?.dustClaim || 0), 0) / withDust.length;
-                              return `${avg.toFixed(2)}% Avg`;
+                              const cAvg = withDust.reduce((acc, r) => acc + (dataset.brokerSettlementMap?.[r.key.toUpperCase()]?.dustClaim || 0), 0) / withDust.length;
+                              const sAvg = withDust.reduce((acc, r) => acc + (dataset.brokerSettlementMap?.[r.key.toUpperCase()]?.dustSett || 0), 0) / withDust.length;
+                              return formatClaimSett(cAvg, sAvg);
                             })()}
                           </td>
                           <td className="p-3 text-right font-mono text-slate-800">
                             {(() => {
-                              const withGd = deductionRows.filter(r => (dataset.brokerSettlementMap?.[r.key.toUpperCase()]?.gradedownClaim || 0) > 0);
+                              const withGd = deductionRows.filter(r => {
+                                const s = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
+                                return (s?.gradedownClaim || 0) > 0 || (s?.gradedownSett || 0) > 0;
+                              });
                               if (withGd.length === 0) return '—';
-                              const avg = withGd.reduce((acc, r) => acc + (dataset.brokerSettlementMap?.[r.key.toUpperCase()]?.gradedownClaim || 0), 0) / withGd.length;
-                              return `${avg.toFixed(2)}% Avg`;
+                              const cAvg = withGd.reduce((acc, r) => acc + (dataset.brokerSettlementMap?.[r.key.toUpperCase()]?.gradedownClaim || 0), 0) / withGd.length;
+                              const sAvg = withGd.reduce((acc, r) => acc + (dataset.brokerSettlementMap?.[r.key.toUpperCase()]?.gradedownSett || 0), 0) / withGd.length;
+                              return formatClaimSett(cAvg, sAvg);
                             })()}
                           </td>
                           <td className="p-3 text-right font-mono text-slate-800">
                             ₹{Math.round(deductionRows.reduce((acc, r) => {
                               const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
                               return acc + (sett?.shortExcess || 0);
+                            }, 0)).toLocaleString()}
+                          </td>
+                          <td className="p-3 text-left font-mono text-slate-500">—</td>
+                          <td className="p-3 text-right font-mono text-slate-800">
+                            ₹{Math.round(deductionRows.reduce((acc, r) => {
+                              const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
+                              return acc + (sett?.otherDeductionAmount || 0);
                             }, 0)).toLocaleString()}
                           </td>
                         </tr>
@@ -1477,9 +1525,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                       <th className="p-3.5">Broker</th>
                       <th className="p-3.5">MR No</th>
                       <th className="p-3.5">PO No</th>
-                      <th className="p-3.5 text-right" title="Moisture Claim in %">Moisture Claim (%)</th>
-                      <th className="p-3.5 text-right" title="Dust Claim in %">Dust Claim (%)</th>
-                      <th className="p-3.5 text-right" title="Gradedown Claim in %">Gradedown Claim (%)</th>
+                      <th className="p-3.5 text-right" title="Moisture Claim / Settlement in %">Moisture Claim/Sett (%)</th>
+                      <th className="p-3.5 text-right" title="Dust Claim / Settlement in %">Dust Claim/Sett (%)</th>
+                      <th className="p-3.5 text-right" title="Gradedown Claim / Settlement in %">Gradedown Claim/Sett (%)</th>
                       <th className="p-3.5 text-right" title="Weight Shortage/Excess in Rupees">Short / Excess (₹)</th>
                       <th className="p-3.5">Vehicle / Lorry No</th>
                     </tr>
@@ -1497,10 +1545,16 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             <td className="p-3.5 font-bold text-slate-900 font-sans">{item.broker || selectedBrokerModalBroker}</td>
                             <td className="p-3.5 font-bold text-slate-800">{item.mr_no || '—'}</td>
                             <td className="p-3.5 font-bold text-slate-800">{item.po_no || '—'}</td>
-                            <td className="p-3.5 text-right text-slate-700 font-semibold">{item.summary_delivery_claim ? `${Number(item.summary_delivery_claim).toFixed(2)}%` : '—'}</td>
-                            <td className="p-3.5 text-right text-slate-700 font-semibold">{item.summary_rate_wt_claim ? `${Number(item.summary_rate_wt_claim).toFixed(2)}%` : '—'}</td>
-                            <td className="p-3.5 text-right text-slate-700 font-semibold">{item.summary_misc_less ? `${Number(item.summary_misc_less).toFixed(2)}%` : '—'}</td>
-                            <td className="p-3.5 text-right text-slate-700">{item.val_ex_short ? `₹${Number(item.val_ex_short).toLocaleString()}` : '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700 font-semibold font-mono">
+                              {formatClaimSett(item.moist_claim, item.moist_sett)}
+                            </td>
+                            <td className="p-3.5 text-right text-slate-700 font-semibold font-mono">
+                              {formatClaimSett(item.dust_claim, item.dust_sett)}
+                            </td>
+                            <td className="p-3.5 text-right text-slate-700 font-semibold font-mono">
+                              {formatClaimSett(item.gd_claim, item.gd_sett)}
+                            </td>
+                            <td className="p-3.5 text-right text-slate-700 font-mono">{item.val_ex_short ? `₹${Number(item.val_ex_short).toLocaleString()}` : '—'}</td>
                             <td className="p-3.5 text-slate-800">{item.lorry_number || '—'}</td>
                           </tr>
                         ));
@@ -1515,10 +1569,10 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             <td className="p-3.5 font-bold text-slate-900 font-sans">{item.broker || selectedBrokerModalBroker}</td>
                             <td className="p-3.5 text-slate-800">{item.mrNo || '—'}</td>
                             <td className="p-3.5 text-slate-800">{item.poNo || '—'}</td>
-                            <td className="p-3.5 text-right text-slate-700">{item.moisturePct ? `${Number(item.moisturePct).toFixed(2)}%` : '—'}</td>
-                            <td className="p-3.5 text-right text-slate-700">—</td>
-                            <td className="p-3.5 text-right text-slate-700">—</td>
-                            <td className="p-3.5 text-right text-slate-700">—</td>
+                            <td className="p-3.5 text-right text-slate-700 font-mono">{item.moisturePct ? formatClaimSett(item.moisturePct, 0) : '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700 font-mono">—</td>
+                            <td className="p-3.5 text-right text-slate-700 font-mono">—</td>
+                            <td className="p-3.5 text-right text-slate-700 font-mono">—</td>
                             <td className="p-3.5 text-slate-800">—</td>
                           </tr>
                         ));

@@ -113,8 +113,11 @@ export interface SystemReportDataset {
   allPoSummary: AllPoSummary;
   brokerSettlementMap: Record<string, {
     moistureClaim: number;
+    moistureSett: number;
     dustClaim: number;
+    dustSett: number;
     gradedownClaim: number;
+    gradedownSett: number;
     shortExcess: number;
     otherDeductionAmount?: number;
     deductionTypes?: string[];
@@ -393,19 +396,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       detailsByMr.get(mr)!.push(d);
     });
 
-    const brokerSettlementMap: Record<string, {
-      moistureClaim: number;
-      dustClaim: number;
-      gradedownClaim: number;
-      shortExcess: number;
-      otherDeductionAmount?: number;
-      deductionTypes?: string[];
-      allDeductionValue: number;
-      moistCount?: number;
-      dustCount?: number;
-      gdCount?: number;
-      details: any[];
-    }> = {};
+    const brokerSettlementMap: SystemReportDataset['brokerSettlementMap'] = {};
 
     const addDeductionTypeToEntry = (entry: any, rawType: any) => {
       if (!rawType) return;
@@ -425,8 +416,11 @@ export async function loadAndProcessSystemReportData(): Promise<{
       if (!brokerSettlementMap[upper]) {
         brokerSettlementMap[upper] = {
           moistureClaim: 0,
+          moistureSett: 0,
           dustClaim: 0,
+          dustSett: 0,
           gradedownClaim: 0,
+          gradedownSett: 0,
           moistCount: 0,
           dustCount: 0,
           gdCount: 0,
@@ -455,9 +449,12 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
       const { entry, cleanName } = getBrokerEntry(rawBrk);
 
-      const moist = Number(s.summary_delivery_claim || s.moist_claim || s.moist_sett || 0);
-      const dust = Number(s.summary_rate_wt_claim || s.dust_claim || s.dust_sett || 0);
-      const gd = Number(s.summary_misc_less || s.gd_claim || s.gd_sett || 0);
+      const moistClaim = Number(s.moist_claim ?? s.claim_moisture ?? s.summary_delivery_claim ?? 0);
+      const moistSett = Number(s.moist_sett ?? 0);
+      const dustClaim = Number(s.dust_claim ?? s.claim_dust ?? s.summary_rate_wt_claim ?? 0);
+      const dustSett = Number(s.dust_sett ?? 0);
+      const gdClaim = Number(s.gd_claim ?? s.claim_grade_down ?? s.summary_misc_less ?? 0);
+      const gdSett = Number(s.gd_sett ?? 0);
       const short = Number(s.val_ex_short || s.short_excess || 0);
       
       const rawDedType = s.summary_deduction_type || s.deduction_type || s.adjust_type || '';
@@ -466,9 +463,21 @@ export async function loadAndProcessSystemReportData(): Promise<{
       const specificOtherDed = Number(s.summary_deduction_amount || s.val_less_amt || s.val_less_amount || s.deduction_amount || 0);
       const totalDedAmt = Number(s.val_less_amt || s.val_less_amount || s.summary_deduction_amount || s.summary_less_amount || s.claim_settlement || s.deduction_amount || (short + specificOtherDed) || 0);
 
-      if (moist > 0) { entry.moistureClaim += moist; entry.moistCount = (entry.moistCount || 0) + 1; }
-      if (dust > 0) { entry.dustClaim += dust; entry.dustCount = (entry.dustCount || 0) + 1; }
-      if (gd > 0) { entry.gradedownClaim += gd; entry.gdCount = (entry.gdCount || 0) + 1; }
+      if (moistClaim > 0 || moistSett > 0) {
+        entry.moistureClaim += moistClaim;
+        entry.moistureSett += moistSett;
+        entry.moistCount = (entry.moistCount || 0) + 1;
+      }
+      if (dustClaim > 0 || dustSett > 0) {
+        entry.dustClaim += dustClaim;
+        entry.dustSett += dustSett;
+        entry.dustCount = (entry.dustCount || 0) + 1;
+      }
+      if (gdClaim > 0 || gdSett > 0) {
+        entry.gradedownClaim += gdClaim;
+        entry.gradedownSett += gdSett;
+        entry.gdCount = (entry.gdCount || 0) + 1;
+      }
       entry.shortExcess += short;
       entry.otherDeductionAmount = (entry.otherDeductionAmount || 0) + specificOtherDed;
       entry.allDeductionValue += (totalDedAmt > 0 ? totalDedAmt : (short + specificOtherDed));
@@ -477,9 +486,15 @@ export async function loadAndProcessSystemReportData(): Promise<{
         broker: cleanName,
         mr_no: mrNo || '-',
         po_no: poNo || '-',
-        summary_delivery_claim: moist,
-        summary_rate_wt_claim: dust,
-        summary_misc_less: gd,
+        moist_claim: moistClaim,
+        moist_sett: moistSett,
+        dust_claim: dustClaim,
+        dust_sett: dustSett,
+        gd_claim: gdClaim,
+        gd_sett: gdSett,
+        summary_delivery_claim: moistClaim || moistSett,
+        summary_rate_wt_claim: dustClaim || dustSett,
+        summary_misc_less: gdClaim || gdSett,
         summary_less_amount: totalDedAmt,
         val_less_amt: Number(s.val_less_amt || 0),
         val_less_amount: Number(s.val_less_amount || 0),
@@ -508,21 +523,32 @@ export async function loadAndProcessSystemReportData(): Promise<{
       const { entry, cleanName } = getBrokerEntry(rawBrk);
 
       const mrDetails = detailsByMr.get(mrNo) || [];
-      let mrMoist = 0;
-      let mrDust = 0;
-      let mrGd = 0;
+      let mrMoistClaim = 0;
+      let mrMoistSett = 0;
+      let mrDustClaim = 0;
+      let mrDustSett = 0;
+      let mrGdClaim = 0;
+      let mrGdSett = 0;
       let mrClaimSett = 0;
 
       if (mrDetails.length > 0) {
         mrDetails.forEach(d => {
-          mrMoist += Number(d.moist_sett || d.moist_claim || 0);
-          mrDust += Number(d.dust_sett || d.dust_claim || 0);
-          mrGd += Number(d.gd_sett || d.gd_claim || 0);
+          mrMoistClaim += Number(d.moist_claim || 0);
+          mrMoistSett += Number(d.moist_sett || 0);
+          mrDustClaim += Number(d.dust_claim || 0);
+          mrDustSett += Number(d.dust_sett || 0);
+          mrGdClaim += Number(d.gd_claim || 0);
+          mrGdSett += Number(d.gd_sett || 0);
           mrClaimSett += Number(d.claim_settlement || 0);
           addDeductionTypeToEntry(entry, d.adjust_type || d.deduction_type);
         });
       } else {
-        mrMoist = Number(m.summary_delivery_claim || m.summary_rate_wt_claim || 0);
+        mrMoistClaim = Number(m.moist_claim || m.summary_delivery_claim || 0);
+        mrMoistSett = Number(m.moist_sett || 0);
+        mrDustClaim = Number(m.dust_claim || m.summary_rate_wt_claim || 0);
+        mrDustSett = Number(m.dust_sett || 0);
+        mrGdClaim = Number(m.gd_claim || m.summary_misc_less || 0);
+        mrGdSett = Number(m.gd_sett || 0);
       }
 
       const rawType = m.summary_deduction_type || '';
@@ -535,9 +561,21 @@ export async function loadAndProcessSystemReportData(): Promise<{
       const specificOtherDed = Number(m.summary_deduction_amount || m.val_less_amt || m.val_less_amount || 0);
       const dedVal = Number(m.val_less_amt || m.val_less_amount || m.summary_deduction_amount || m.summary_less_amount || 0) || mrClaimSett;
 
-      if (mrMoist > 0) { entry.moistureClaim += mrMoist; entry.moistCount = (entry.moistCount || 0) + 1; }
-      if (mrDust > 0) { entry.dustClaim += mrDust; entry.dustCount = (entry.dustCount || 0) + 1; }
-      if (mrGd > 0) { entry.gradedownClaim += mrGd; entry.gdCount = (entry.gdCount || 0) + 1; }
+      if (mrMoistClaim > 0 || mrMoistSett > 0) {
+        entry.moistureClaim += mrMoistClaim;
+        entry.moistureSett += mrMoistSett;
+        entry.moistCount = (entry.moistCount || 0) + 1;
+      }
+      if (mrDustClaim > 0 || mrDustSett > 0) {
+        entry.dustClaim += mrDustClaim;
+        entry.dustSett += mrDustSett;
+        entry.dustCount = (entry.dustCount || 0) + 1;
+      }
+      if (mrGdClaim > 0 || mrGdSett > 0) {
+        entry.gradedownClaim += mrGdClaim;
+        entry.gradedownSett += mrGdSett;
+        entry.gdCount = (entry.gdCount || 0) + 1;
+      }
       entry.shortExcess += short;
       entry.otherDeductionAmount = (entry.otherDeductionAmount || 0) + specificOtherDed;
       entry.allDeductionValue += (dedVal > 0 ? dedVal : (short + specificOtherDed));
@@ -548,9 +586,15 @@ export async function loadAndProcessSystemReportData(): Promise<{
             broker: cleanName,
             mr_no: m.mr_no || d.mr_no || '-',
             po_no: m.po_no || d.po_no || '-',
-            summary_delivery_claim: Number(d.moist_sett || d.moist_claim || m.summary_delivery_claim || 0),
-            summary_rate_wt_claim: Number(d.dust_sett || d.dust_claim || m.summary_rate_wt_claim || 0),
-            summary_misc_less: Number(d.gd_sett || d.gd_claim || m.summary_misc_less || 0),
+            moist_claim: Number(d.moist_claim || 0),
+            moist_sett: Number(d.moist_sett || 0),
+            dust_claim: Number(d.dust_claim || 0),
+            dust_sett: Number(d.dust_sett || 0),
+            gd_claim: Number(d.gd_claim || 0),
+            gd_sett: Number(d.gd_sett || 0),
+            summary_delivery_claim: Number(d.moist_claim || d.moist_sett || m.summary_delivery_claim || 0),
+            summary_rate_wt_claim: Number(d.dust_claim || d.dust_sett || m.summary_rate_wt_claim || 0),
+            summary_misc_less: Number(d.gd_claim || d.gd_sett || m.summary_misc_less || 0),
             summary_less_amount: Number(m.summary_less_amount || d.claim_settlement || 0),
             val_less_amt: Number(m.val_less_amt || 0),
             val_less_amount: Number(m.val_less_amount || 0),
@@ -568,9 +612,15 @@ export async function loadAndProcessSystemReportData(): Promise<{
           broker: cleanName,
           mr_no: m.mr_no || '-',
           po_no: m.po_no || '-',
-          summary_delivery_claim: Number(m.summary_delivery_claim || mrMoist || 0),
-          summary_rate_wt_claim: Number(m.summary_rate_wt_claim || mrDust || 0),
-          summary_misc_less: Number(m.summary_misc_less || mrGd || 0),
+          moist_claim: mrMoistClaim,
+          moist_sett: mrMoistSett,
+          dust_claim: mrDustClaim,
+          dust_sett: mrDustSett,
+          gd_claim: mrGdClaim,
+          gd_sett: mrGdSett,
+          summary_delivery_claim: mrMoistClaim || mrMoistSett,
+          summary_rate_wt_claim: mrDustClaim || mrDustSett,
+          summary_misc_less: mrGdClaim || mrGdSett,
           summary_less_amount: Number(m.summary_less_amount || 0),
           val_less_amt: Number(m.val_less_amt || 0),
           val_less_amount: Number(m.val_less_amount || 0),
@@ -594,15 +644,30 @@ export async function loadAndProcessSystemReportData(): Promise<{
         if (!rawBrk && mrNo) rawBrk = mrToBrokerMap.get(mrNo) || '';
         const { entry, cleanName } = getBrokerEntry(rawBrk);
 
-        const moist = Number(d.moist_sett || d.moist_claim || 0);
-        const dust = Number(d.dust_sett || d.dust_claim || 0);
-        const gd = Number(d.gd_sett || d.gd_claim || 0);
+        const moistClaim = Number(d.moist_claim || 0);
+        const moistSett = Number(d.moist_sett || 0);
+        const dustClaim = Number(d.dust_claim || 0);
+        const dustSett = Number(d.dust_sett || 0);
+        const gdClaim = Number(d.gd_claim || 0);
+        const gdSett = Number(d.gd_sett || 0);
         const claimSett = Number(d.claim_settlement || 0);
         addDeductionTypeToEntry(entry, d.adjust_type || d.deduction_type);
 
-        if (moist > 0) { entry.moistureClaim += moist; entry.moistCount = (entry.moistCount || 0) + 1; }
-        if (dust > 0) { entry.dustClaim += dust; entry.dustCount = (entry.dustCount || 0) + 1; }
-        if (gd > 0) { entry.gradedownClaim += gd; entry.gdCount = (entry.gdCount || 0) + 1; }
+        if (moistClaim > 0 || moistSett > 0) {
+          entry.moistureClaim += moistClaim;
+          entry.moistureSett += moistSett;
+          entry.moistCount = (entry.moistCount || 0) + 1;
+        }
+        if (dustClaim > 0 || dustSett > 0) {
+          entry.dustClaim += dustClaim;
+          entry.dustSett += dustSett;
+          entry.dustCount = (entry.dustCount || 0) + 1;
+        }
+        if (gdClaim > 0 || gdSett > 0) {
+          entry.gradedownClaim += gdClaim;
+          entry.gradedownSett += gdSett;
+          entry.gdCount = (entry.gdCount || 0) + 1;
+        }
         entry.otherDeductionAmount = (entry.otherDeductionAmount || 0) + claimSett;
         entry.allDeductionValue += claimSett;
 
@@ -610,9 +675,15 @@ export async function loadAndProcessSystemReportData(): Promise<{
           broker: cleanName,
           mr_no: d.mr_no || '-',
           po_no: d.po_no || '-',
-          summary_delivery_claim: moist,
-          summary_rate_wt_claim: dust,
-          summary_misc_less: gd,
+          moist_claim: moistClaim,
+          moist_sett: moistSett,
+          dust_claim: dustClaim,
+          dust_sett: dustSett,
+          gd_claim: gdClaim,
+          gd_sett: gdSett,
+          summary_delivery_claim: moistClaim || moistSett,
+          summary_rate_wt_claim: dustClaim || dustSett,
+          summary_misc_less: gdClaim || gdSett,
           summary_less_amount: claimSett,
           val_less_amt: 0,
           val_less_amount: 0,
@@ -634,15 +705,30 @@ export async function loadAndProcessSystemReportData(): Promise<{
         let rawBrk = String(m.broker || '').trim();
         if (!rawBrk && mrNo) rawBrk = mrToBrokerMap.get(mrNo) || '';
         const { entry, cleanName } = getBrokerEntry(rawBrk);
-        const moist = Number(m.moist_claim || m.moist_sett || 0);
-        const dust = Number(m.dust_claim || m.dust_sett || 0);
-        const gd = Number(m.gd_claim || m.gd_sett || 0);
+        const moistClaim = Number(m.moist_claim || 0);
+        const moistSett = Number(m.moist_sett || 0);
+        const dustClaim = Number(m.dust_claim || 0);
+        const dustSett = Number(m.dust_sett || 0);
+        const gdClaim = Number(m.gd_claim || 0);
+        const gdSett = Number(m.gd_sett || 0);
         const short = Number(m.val_ex_short || m.short_excess || 0);
         const ded = Number(m.claim_settlement || m.deductions || (short) || 0);
 
-        if (moist > 0) { entry.moistureClaim += moist; entry.moistCount = (entry.moistCount || 0) + 1; }
-        if (dust > 0) { entry.dustClaim += dust; entry.dustCount = (entry.dustCount || 0) + 1; }
-        if (gd > 0) { entry.gradedownClaim += gd; entry.gdCount = (entry.gdCount || 0) + 1; }
+        if (moistClaim > 0 || moistSett > 0) {
+          entry.moistureClaim += moistClaim;
+          entry.moistureSett += moistSett;
+          entry.moistCount = (entry.moistCount || 0) + 1;
+        }
+        if (dustClaim > 0 || dustSett > 0) {
+          entry.dustClaim += dustClaim;
+          entry.dustSett += dustSett;
+          entry.dustCount = (entry.dustCount || 0) + 1;
+        }
+        if (gdClaim > 0 || gdSett > 0) {
+          entry.gradedownClaim += gdClaim;
+          entry.gradedownSett += gdSett;
+          entry.gdCount = (entry.gdCount || 0) + 1;
+        }
         entry.shortExcess += short;
         entry.allDeductionValue += ded;
 
@@ -650,9 +736,15 @@ export async function loadAndProcessSystemReportData(): Promise<{
           broker: cleanName,
           mr_no: m.mr_no || '-',
           po_no: m.po_no || '-',
-          summary_delivery_claim: moist,
-          summary_rate_wt_claim: dust,
-          summary_misc_less: gd,
+          moist_claim: moistClaim,
+          moist_sett: moistSett,
+          dust_claim: dustClaim,
+          dust_sett: dustSett,
+          gd_claim: gdClaim,
+          gd_sett: gdSett,
+          summary_delivery_claim: moistClaim || moistSett,
+          summary_rate_wt_claim: dustClaim || dustSett,
+          summary_misc_less: gdClaim || gdSett,
           summary_less_amount: ded,
           val_less_amt: 0,
           val_less_amount: 0,
