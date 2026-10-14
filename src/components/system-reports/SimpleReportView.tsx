@@ -45,13 +45,12 @@ type TabDimension =
   | 'ALLSAUDA'
   | 'ALL_DEALS';
 
-const formatClaimSett = (claim: number | undefined | null, sett: number | undefined | null): string => {
-  const c = Number(claim || 0);
+const formatSettVal = (sett: number | undefined | null, claim: number | undefined | null): string => {
   const s = Number(sett || 0);
-  if (c === 0 && s === 0) return '—';
-  const cStr = c % 1 === 0 ? c.toString() : c.toFixed(1);
-  const sStr = s % 1 === 0 ? s.toString() : s.toFixed(1);
-  return `${cStr} / ${sStr}`;
+  const c = Number(claim || 0);
+  const val = s > 0 ? s : (c > 0 ? c : 0);
+  if (val <= 0) return '—';
+  return `${val.toFixed(2)}%`;
 };
 
 export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
@@ -933,15 +932,15 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                           // Strictly ignore and exclude rows where value is 0
                           const moistAvg = (settInfo.inspMoistCount && settInfo.inspMoistCount > 0)
                             ? (settInfo.inspMoistSum! / settInfo.inspMoistCount!)
-                            : (settInfo.moistureSettAvg ?? (settInfo.moistCount && settInfo.moistCount > 0 ? settInfo.moistureClaim / settInfo.moistCount : 0));
+                            : (settInfo.moistureSettAvg || 0);
 
                           const dustAvg = (settInfo.inspDustCount && settInfo.inspDustCount > 0)
                             ? (settInfo.inspDustSum! / settInfo.inspDustCount!)
-                            : (settInfo.dustSettAvg ?? (settInfo.dustCount && settInfo.dustCount > 0 ? settInfo.dustClaim / settInfo.dustCount : 0));
+                            : (settInfo.dustSettAvg || 0);
 
                           const gdAvg = (settInfo.inspGdCount && settInfo.inspGdCount > 0)
                             ? (settInfo.inspGdSum! / settInfo.inspGdCount!)
-                            : (settInfo.gradedownSettAvg ?? (settInfo.gdCount && settInfo.gdCount > 0 ? settInfo.gradedownClaim / settInfo.gdCount : 0));
+                            : (settInfo.gradedownSettAvg || 0);
 
                           const moistVal = moistAvg > 0 ? `${moistAvg.toFixed(2)}%` : '—';
                           const dustVal = dustAvg > 0 ? `${dustAvg.toFixed(2)}%` : '—';
@@ -1006,14 +1005,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                               let totalCount = 0;
                               deductionRows.forEach(r => {
                                 const s = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
-                                if (s) {
-                                  if (s.inspMoistCount && s.inspMoistCount > 0) {
-                                    totalSum += s.inspMoistSum || 0;
-                                    totalCount += s.inspMoistCount;
-                                  } else if (s.moistCount && s.moistCount > 0) {
-                                    totalSum += s.moistureClaim || 0;
-                                    totalCount += s.moistCount;
-                                  }
+                                if (s && s.inspMoistCount && s.inspMoistCount > 0) {
+                                  totalSum += s.inspMoistSum || 0;
+                                  totalCount += s.inspMoistCount;
                                 }
                               });
                               if (totalCount === 0) return '—';
@@ -1026,14 +1020,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                               let totalCount = 0;
                               deductionRows.forEach(r => {
                                 const s = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
-                                if (s) {
-                                  if (s.inspDustCount && s.inspDustCount > 0) {
-                                    totalSum += s.inspDustSum || 0;
-                                    totalCount += s.inspDustCount;
-                                  } else if (s.dustCount && s.dustCount > 0) {
-                                    totalSum += s.dustClaim || 0;
-                                    totalCount += s.dustCount;
-                                  }
+                                if (s && s.inspDustCount && s.inspDustCount > 0) {
+                                  totalSum += s.inspDustSum || 0;
+                                  totalCount += s.inspDustCount;
                                 }
                               });
                               if (totalCount === 0) return '—';
@@ -1046,14 +1035,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                               let totalCount = 0;
                               deductionRows.forEach(r => {
                                 const s = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
-                                if (s) {
-                                  if (s.inspGdCount && s.inspGdCount > 0) {
-                                    totalSum += s.inspGdSum || 0;
-                                    totalCount += s.inspGdCount;
-                                  } else if (s.gdCount && s.gdCount > 0) {
-                                    totalSum += s.gradedownClaim || 0;
-                                    totalCount += s.gdCount;
-                                  }
+                                if (s && s.inspGdCount && s.inspGdCount > 0) {
+                                  totalSum += s.inspGdSum || 0;
+                                  totalCount += s.inspGdCount;
                                 }
                               });
                               if (totalCount === 0) return '—';
@@ -1583,13 +1567,13 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             <td className="p-3.5 font-bold text-slate-800">{item.mr_no || '—'}</td>
                             <td className="p-3.5 font-bold text-slate-800">{item.po_no || '—'}</td>
                             <td className="p-3.5 text-right text-slate-700 font-semibold font-mono">
-                              {formatClaimSett(item.moist_claim, item.moist_sett)}
+                              {formatSettVal(item.moist_sett, item.moist_claim)}
                             </td>
                             <td className="p-3.5 text-right text-slate-700 font-semibold font-mono">
-                              {formatClaimSett(item.dust_claim, item.dust_sett)}
+                              {formatSettVal(item.dust_sett, item.dust_claim)}
                             </td>
                             <td className="p-3.5 text-right text-slate-700 font-semibold font-mono">
-                              {formatClaimSett(item.gd_claim, item.gd_sett)}
+                              {formatSettVal(item.gd_sett, item.gd_claim)}
                             </td>
                             <td className="p-3.5 text-right text-slate-700 font-mono">{item.val_ex_short ? `₹${Number(item.val_ex_short).toLocaleString()}` : '—'}</td>
                             <td className="p-3.5 text-slate-800">{item.lorry_number || '—'}</td>
@@ -1630,19 +1614,19 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                     const details = settInfo?.details || [];
                     if (details.length === 0) return null;
 
-                    const moistRows = details.filter((d: any) => Number(d.moist_claim || 0) > 0);
-                    const dustRows = details.filter((d: any) => Number(d.dust_claim || 0) > 0);
-                    const gdRows = details.filter((d: any) => Number(d.gd_claim || 0) > 0);
+                    const moistRows = details.filter((d: any) => Number(d.moist_sett || d.moist_claim || 0) > 0);
+                    const dustRows = details.filter((d: any) => Number(d.dust_sett || d.dust_claim || 0) > 0);
+                    const gdRows = details.filter((d: any) => Number(d.gd_sett || d.gd_claim || 0) > 0);
                     const totalShort = details.reduce((acc: number, d: any) => acc + Number(d.val_ex_short || 0), 0);
 
                     const moistAvgStr = moistRows.length > 0
-                      ? `${(moistRows.reduce((acc: number, d: any) => acc + Number(d.moist_claim), 0) / moistRows.length).toFixed(2)}%`
+                      ? `${(moistRows.reduce((acc: number, d: any) => acc + Number(d.moist_sett || d.moist_claim || 0), 0) / moistRows.length).toFixed(2)}%`
                       : '—';
                     const dustAvgStr = dustRows.length > 0
-                      ? `${(dustRows.reduce((acc: number, d: any) => acc + Number(d.dust_claim), 0) / dustRows.length).toFixed(2)}%`
+                      ? `${(dustRows.reduce((acc: number, d: any) => acc + Number(d.dust_sett || d.dust_claim || 0), 0) / dustRows.length).toFixed(2)}%`
                       : '—';
                     const gdAvgStr = gdRows.length > 0
-                      ? `${(gdRows.reduce((acc: number, d: any) => acc + Number(d.gd_claim), 0) / gdRows.length).toFixed(2)}%`
+                      ? `${(gdRows.reduce((acc: number, d: any) => acc + Number(d.gd_sett || d.gd_claim || 0), 0) / gdRows.length).toFixed(2)}%`
                       : '—';
 
                     return (

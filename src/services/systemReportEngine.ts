@@ -565,7 +565,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
         mrMoistSett = Number(m.moist_sett || 0);
         mrDustClaim = Number(m.dust_claim || m.summary_rate_wt_claim || 0);
         mrDustSett = Number(m.dust_sett || 0);
-        mrGdClaim = Number(m.gd_claim || m.summary_misc_less || 0);
+        mrGdClaim = Number(m.gd_claim || 0);
         mrGdSett = Number(m.gd_sett || 0);
       }
 
@@ -798,10 +798,51 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
       const { entry, cleanName } = getBrokerEntry(rawBrk);
 
-      // Extract values strictly from the specified database mappings
-      const claimMoist = Number(insp.claim_moisture ?? insp.moisture_claim ?? 0);
-      const claimDust = Number(insp.claim_dust ?? insp.dust_claim ?? 0);
-      const claimGd = Number(insp.claim_grade_down ?? insp.grade_down_claim ?? 0);
+      // Extract values strictly from the specified database mappings:
+      // Moisture Sett (%): claim_moisture
+      // Dust Sett (%): claim_dust
+      // Gradedown Sett (%): claim_grade_down
+      let claimMoist = Number(insp.claim_moisture ?? insp.moisture_claim ?? 0);
+      let claimDust = Number(insp.claim_dust ?? insp.dust_claim ?? 0);
+      let claimGd = Number(insp.claim_grade_down ?? insp.grade_down_claim ?? 0);
+      let settMoist = Number(insp.settlement_moisture ?? 0);
+      let settDust = Number(insp.settlement_dust ?? 0);
+      let settGd = Number(insp.settlement_grade_down ?? 0);
+
+      const rawGrid = insp.grid_details || insp.details;
+      if (rawGrid) {
+        try {
+          const arr = typeof rawGrid === 'string' ? JSON.parse(rawGrid) : rawGrid;
+          if (Array.isArray(arr) && arr.length > 0) {
+            if (claimMoist === 0) {
+              const f = arr.find((x: any) => Number(x.claim_moisture || x.moisture_claim || 0) > 0);
+              if (f) claimMoist = Number(f.claim_moisture || f.moisture_claim || 0);
+            }
+            if (claimDust === 0) {
+              const f = arr.find((x: any) => Number(x.claim_dust || x.dust_claim || 0) > 0);
+              if (f) claimDust = Number(f.claim_dust || f.dust_claim || 0);
+            }
+            if (claimGd === 0) {
+              const f = arr.find((x: any) => Number(x.claim_grade_down || x.grade_down_claim || 0) > 0);
+              if (f) claimGd = Number(f.claim_grade_down || f.grade_down_claim || 0);
+            }
+            if (settMoist === 0) {
+              const f = arr.find((x: any) => Number(x.settlement_moisture || 0) > 0);
+              if (f) settMoist = Number(f.settlement_moisture || 0);
+            }
+            if (settDust === 0) {
+              const f = arr.find((x: any) => Number(x.settlement_dust || 0) > 0);
+              if (f) settDust = Number(f.settlement_dust || 0);
+            }
+            if (settGd === 0) {
+              const f = arr.find((x: any) => Number(x.settlement_grade_down || 0) > 0);
+              if (f) settGd = Number(f.settlement_grade_down || 0);
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
 
       // SUM(field_value) / COUNT(rows where field_value > 0). Values <= 0 are strictly excluded.
       if (!isNaN(claimMoist) && claimMoist > 0) {
@@ -835,8 +876,11 @@ export async function loadAndProcessSystemReportData(): Promise<{
       const existingDetail = entry.details.find((d: any) => d.mr_no && mrNo && String(d.mr_no).trim().toUpperCase() === mrNo);
       if (existingDetail) {
         if ((!existingDetail.moist_claim || existingDetail.moist_claim === 0) && claimMoist > 0) existingDetail.moist_claim = claimMoist;
+        if ((!existingDetail.moist_sett || existingDetail.moist_sett === 0) && settMoist > 0) existingDetail.moist_sett = settMoist;
         if ((!existingDetail.dust_claim || existingDetail.dust_claim === 0) && claimDust > 0) existingDetail.dust_claim = claimDust;
+        if ((!existingDetail.dust_sett || existingDetail.dust_sett === 0) && settDust > 0) existingDetail.dust_sett = settDust;
         if ((!existingDetail.gd_claim || existingDetail.gd_claim === 0) && claimGd > 0) existingDetail.gd_claim = claimGd;
+        if ((!existingDetail.gd_sett || existingDetail.gd_sett === 0) && settGd > 0) existingDetail.gd_sett = settGd;
         if (!existingDetail.lorry_number || existingDetail.lorry_number === '-') {
           existingDetail.lorry_number = insp.lorry_number || insp.lorry_no || '-';
         }
@@ -846,11 +890,11 @@ export async function loadAndProcessSystemReportData(): Promise<{
           mr_no: mrNo || '-',
           po_no: poNo || '-',
           moist_claim: claimMoist,
-          moist_sett: Number(insp.settlement_moisture || 0),
+          moist_sett: settMoist,
           dust_claim: claimDust,
-          dust_sett: Number(insp.settlement_dust || 0),
+          dust_sett: settDust,
           gd_claim: claimGd,
-          gd_sett: Number(insp.settlement_grade_down || 0),
+          gd_sett: settGd,
           summary_delivery_claim: claimMoist,
           summary_rate_wt_claim: claimDust,
           summary_misc_less: claimGd,
@@ -868,25 +912,27 @@ export async function loadAndProcessSystemReportData(): Promise<{
       }
     });
 
-    // Finalize averages for all broker entries
+    // Finalize averages for all broker entries strictly using material_inspection formula:
+    // SUM(field_value) / COUNT(rows where field_value > 0)
+    // Any broker with count 0 gets 0 (displays as '—'), never falling back to unrelated fields.
     Object.values(brokerSettlementMap).forEach(entry => {
       // 1. Moisture Sett (%): SUM(claim_moisture) / COUNT(claim_moisture > 0)
-      const moistCount = entry.inspMoistCount && entry.inspMoistCount > 0 ? entry.inspMoistCount : (entry.moistCount || 0);
-      const moistSum = entry.inspMoistSum && entry.inspMoistSum > 0 ? entry.inspMoistSum : (entry.moistureClaim || 0);
+      const moistCount = (entry.inspMoistCount || 0);
+      const moistSum = (entry.inspMoistSum || 0);
       entry.moistureSettAvg = moistCount > 0 ? (moistSum / moistCount) : 0;
       entry.moistureClaim = moistSum;
       entry.moistCount = moistCount;
 
       // 2. Dust Sett (%): SUM(claim_dust) / COUNT(claim_dust > 0)
-      const dustCount = entry.inspDustCount && entry.inspDustCount > 0 ? entry.inspDustCount : (entry.dustCount || 0);
-      const dustSum = entry.inspDustSum && entry.inspDustSum > 0 ? entry.inspDustSum : (entry.dustClaim || 0);
+      const dustCount = (entry.inspDustCount || 0);
+      const dustSum = (entry.inspDustSum || 0);
       entry.dustSettAvg = dustCount > 0 ? (dustSum / dustCount) : 0;
       entry.dustClaim = dustSum;
       entry.dustCount = dustCount;
 
       // 3. Gradedown Sett (%): SUM(claim_grade_down) / COUNT(claim_grade_down > 0)
-      const gdCount = entry.inspGdCount && entry.inspGdCount > 0 ? entry.inspGdCount : (entry.gdCount || 0);
-      const gdSum = entry.inspGdSum && entry.inspGdSum > 0 ? entry.inspGdSum : (entry.gradedownClaim || 0);
+      const gdCount = (entry.inspGdCount || 0);
+      const gdSum = (entry.inspGdSum || 0);
       entry.gradedownSettAvg = gdCount > 0 ? (gdSum / gdCount) : 0;
       entry.gradedownClaim = gdSum;
       entry.gdCount = gdCount;
