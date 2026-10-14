@@ -21,8 +21,7 @@ import {
   Award,
   Scissors,
   Users,
-  PieChart,
-  Info
+  PieChart
 } from 'lucide-react';
 import { SystemReportDataset, ReportTransactionLine, normalizeToISODate, getTodayISODate } from '../../services/systemReportEngine';
 import { SimpleDealSlipModal } from './SimpleDealSlipModal';
@@ -871,30 +870,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
               return (
                 <div className="space-y-3">
-                  {/* Deduction Type & Parameter Guide Banner */}
-                  <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-950 shadow-xs">
-                    <div className="flex items-start gap-2.5">
-                      <Info className="w-4 h-4 text-emerald-700 mt-0.5 shrink-0" />
-                      <div className="flex-1">
-                        <div className="font-bold text-emerald-900 text-[12px]">Deduction & Claim Breakdown Explained:</div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1.5 text-[11px] text-emerald-900">
-                          <div className="bg-white/80 p-2 rounded-lg border border-emerald-200/60">
-                            <span className="font-bold text-emerald-950 block">1. Quality Claims (%)</span>
-                            <span>Moisture, Dust, & Gradedown are measured in <strong>percentage (%)</strong> based on lab & mill inspection specs.</span>
-                          </div>
-                          <div className="bg-white/80 p-2 rounded-lg border border-emerald-200/60">
-                            <span className="font-bold text-emerald-950 block">2. Short & Excess (₹)</span>
-                            <span>Actual shortage or excess weight value calculated directly in <strong>Rupees (₹)</strong> on arrival.</span>
-                          </div>
-                          <div className="bg-white/80 p-2 rounded-lg border border-emerald-200/60">
-                            <span className="font-bold text-emerald-950 block">3. Deduction Type & Amount (₹)</span>
-                            <span>Specific categories (e.g., <em>Karda, Tare / Bags, Hamali, Misc Less</em>) showing the deduction type & net total.</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-xs bg-white">
                     <table className="w-full text-xs text-left border-collapse">
                       <thead>
@@ -1556,10 +1531,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                       <th className="p-3.5 text-right" title="Gradedown Claim in %">Gradedown Claim (%)</th>
                       <th className="p-3.5 text-right" title="Weight Shortage/Excess in Rupees">Short / Excess (₹)</th>
                       <th className="p-3.5">Deduction Type</th>
-                      <th className="p-3.5 text-right">Deduction Rate</th>
-                      <th className="p-3.5 text-right">Deduction Qty</th>
-                      <th className="p-3.5 text-right">Deduction Amount (₹)</th>
-                      <th className="p-3.5 text-right text-rose-700">Total Net Deduction (₹)</th>
                       <th className="p-3.5">Vehicle / Lorry No</th>
                     </tr>
                   </thead>
@@ -1589,10 +1560,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                                 <span className="text-slate-400">—</span>
                               )}
                             </td>
-                            <td className="p-3.5 text-right text-slate-700">{item.summary_deduction_rate ? `${item.summary_deduction_rate}` : '—'}</td>
-                            <td className="p-3.5 text-right text-slate-700">{item.summary_deduction_qty ? `${item.summary_deduction_qty}` : '—'}</td>
-                            <td className="p-3.5 text-right text-slate-700 font-bold">{item.summary_deduction_amount ? `₹${Number(item.summary_deduction_amount).toLocaleString()}` : '—'}</td>
-                            <td className="p-3.5 text-right text-rose-700 font-bold">{item.deductions ? `₹${Number(item.deductions).toLocaleString()}` : '—'}</td>
                             <td className="p-3.5 text-slate-800">{item.lorry_number || '—'}</td>
                           </tr>
                         ));
@@ -1618,10 +1585,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                                 </span>
                               ) : '—'}
                             </td>
-                            <td className="p-3.5 text-right text-slate-700">—</td>
-                            <td className="p-3.5 text-right text-slate-700">—</td>
-                            <td className="p-3.5 text-right text-slate-700 font-bold">{item.deductionAmount ? `₹${Math.round(item.deductionAmount).toLocaleString()}` : '—'}</td>
-                            <td className="p-3.5 text-right text-rose-700 font-bold">{item.deductionAmount ? `₹${Math.round(item.deductionAmount).toLocaleString()}` : '—'}</td>
                             <td className="p-3.5 text-slate-800">—</td>
                           </tr>
                         ));
@@ -1629,7 +1592,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
                       return (
                         <tr>
-                          <td colSpan={14} className="p-12 text-center text-slate-400">
+                          <td colSpan={10} className="p-12 text-center text-slate-400">
                             No settlement or Sauda records found for broker {selectedBrokerModalBroker}.
                           </td>
                         </tr>
