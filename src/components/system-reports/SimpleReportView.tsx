@@ -890,7 +890,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                           <th className="p-3 text-right" title="Shortage/Excess Deduction calculated in Amount (₹)">Short / Excess (₹)</th>
                           <th className="p-3 text-left" title="Specific Deduction Types applied (e.g. Karda, Tare, Misc Less)">Deduction Type</th>
                           <th className="p-3 text-right" title="Specific Deduction Amount (₹)">Deduction Amount (₹)</th>
-                          <th className="p-3 text-right text-rose-700 font-black" title="Total Net Deductions (Short/Excess + Quality + Other Deductions)">Total Net Deduction (₹)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-medium font-mono">
@@ -940,10 +939,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                                 ? `₹${Math.round(row.deductionAmount).toLocaleString()}`
                                 : '—');
 
-                          const totalNetDed = settInfo.allDeductionValue > 0
-                            ? settInfo.allDeductionValue
-                            : ((settInfo.shortExcess || 0) + (settInfo.otherDeductionAmount || 0) || row.deductionAmount || 0);
-
                           return (
                             <tr
                               key={idx}
@@ -980,9 +975,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                                 )}
                               </td>
                               <td className="p-3 text-right text-slate-700 font-mono">{otherDedVal}</td>
-                              <td className="p-3 text-right font-black text-rose-700 font-mono">
-                                {totalNetDed > 0 ? `₹${Math.round(totalNetDed).toLocaleString()}` : '₹0'}
-                              </td>
                             </tr>
                           );
                         })}
@@ -1029,12 +1021,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             ₹{Math.round(deductionRows.reduce((acc, r) => {
                               const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
                               return acc + (sett?.otherDeductionAmount || 0);
-                            }, 0)).toLocaleString()}
-                          </td>
-                          <td className="p-3 text-right font-mono text-rose-800 font-black">
-                            ₹{Math.round(deductionRows.reduce((acc, r) => {
-                              const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
-                              return acc + (sett?.allDeductionValue || r.deductionAmount || 0);
                             }, 0)).toLocaleString()}
                           </td>
                         </tr>
