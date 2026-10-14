@@ -125,6 +125,15 @@ export interface SystemReportDataset {
     moistCount?: number;
     dustCount?: number;
     gdCount?: number;
+    inspMoistSum?: number;
+    inspMoistCount?: number;
+    inspDustSum?: number;
+    inspDustCount?: number;
+    inspGdSum?: number;
+    inspGdCount?: number;
+    moistureSettAvg?: number;
+    dustSettAvg?: number;
+    gradedownSettAvg?: number;
     details: any[];
   }>;
   masterLists: {
@@ -428,6 +437,15 @@ export async function loadAndProcessSystemReportData(): Promise<{
           otherDeductionAmount: 0,
           deductionTypes: [],
           allDeductionValue: 0,
+          inspMoistSum: 0,
+          inspMoistCount: 0,
+          inspDustSum: 0,
+          inspDustCount: 0,
+          inspGdSum: 0,
+          inspGdCount: 0,
+          moistureSettAvg: 0,
+          dustSettAvg: 0,
+          gradedownSettAvg: 0,
           details: []
         };
       }
@@ -759,25 +777,119 @@ export async function loadAndProcessSystemReportData(): Promise<{
       }
     });
 
-    // 4. Process settlements and inspections
+    // 4. Process settlements
     (settlements || []).forEach(s => processSettlementRow(s, 'settlement'));
-    (inspections || []).forEach((i: any) => {
-      const mrNo = String(i.mr_no || i.arrival_no || '').trim().toUpperCase();
-      if (!processedMrKeySet.has(mrNo)) {
-        const rawType = i.deduction_types || i.summary_deduction_type || i.deduction_type;
-        processSettlementRow({
-          broker: i.broker,
-          mr_no: i.mr_no || i.arrival_no,
-          po_no: i.po_no,
-          summary_delivery_claim: i.claim_moisture || (i.actual_moisture > 14 ? (i.actual_moisture - 14) : 0),
-          summary_rate_wt_claim: i.dust_claim || 0,
-          summary_misc_less: i.grade_down_qty || i.deduction_qty || 0,
-          val_ex_short: i.short_excess || 0,
-          summary_deduction_type: rawType || '-',
-          summary_deduction_amount: i.deduction_amount || 0,
-          lorry_number: i.lorry_number || i.lorry_no
-        }, 'inspection');
+
+    // 5. Dedicated calculation for Broker Wise Deductions from material_inspection:
+    // Moisture Sett (%): claim_moisture
+    // Dust Sett (%): claim_dust
+    // Gradedown Sett (%): claim_grade_down
+    // Formula: SUM(field_value) / COUNT(rows where field_value > 0)
+    // Rows where value is 0 or non-positive are strictly ignored and excluded from the count.
+    (inspections || []).forEach((insp: any) => {
+      let rawBrk = String(insp.broker_name || insp.broker || '').trim();
+      const mrNo = String(insp.mr_no || insp.arrival_no || '').trim().toUpperCase();
+      const poNo = String(insp.po_no || '').trim().toUpperCase();
+      const saudaNo = String(insp.sauda_no || (poNo ? poToSaudaMap.get(poNo) : '') || '').trim().toUpperCase();
+
+      if (!rawBrk && mrNo) rawBrk = mrToBrokerMap.get(mrNo) || '';
+      if (!rawBrk && poNo) rawBrk = poToBrokerMap.get(poNo) || '';
+      if (!rawBrk && saudaNo) rawBrk = saudaToBrokerMap.get(saudaNo) || '';
+
+      const { entry, cleanName } = getBrokerEntry(rawBrk);
+
+      // Extract values strictly from the specified database mappings
+      const claimMoist = Number(insp.claim_moisture ?? insp.moisture_claim ?? 0);
+      const claimDust = Number(insp.claim_dust ?? insp.dust_claim ?? 0);
+      const claimGd = Number(insp.claim_grade_down ?? insp.grade_down_claim ?? 0);
+
+      // SUM(field_value) / COUNT(rows where field_value > 0). Values <= 0 are strictly excluded.
+      if (!isNaN(claimMoist) && claimMoist > 0) {
+        entry.inspMoistSum = (entry.inspMoistSum || 0) + claimMoist;
+        entry.inspMoistCount = (entry.inspMoistCount || 0) + 1;
       }
+
+      if (!isNaN(claimDust) && claimDust > 0) {
+        entry.inspDustSum = (entry.inspDustSum || 0) + claimDust;
+        entry.inspDustCount = (entry.inspDustCount || 0) + 1;
+      }
+
+      if (!isNaN(claimGd) && claimGd > 0) {
+        entry.inspGdSum = (entry.inspGdSum || 0) + claimGd;
+        entry.inspGdCount = (entry.inspGdCount || 0) + 1;
+      }
+
+      const short = Number(insp.short_excess || insp.val_ex_short || 0);
+      const dedAmt = Number(insp.deduction_amount || 0);
+      const dedType = insp.deduction_type || insp.deduction_types || insp.summary_deduction_type || '';
+      addDeductionTypeToEntry(entry, dedType);
+
+      if (mrNo && !processedMrKeySet.has(mrNo)) {
+        processedMrKeySet.add(mrNo);
+        entry.shortExcess += short;
+        entry.otherDeductionAmount = (entry.otherDeductionAmount || 0) + dedAmt;
+        entry.allDeductionValue += (dedAmt > 0 ? dedAmt : short);
+      }
+
+      // Populate details array for modal drill-down
+      const existingDetail = entry.details.find((d: any) => d.mr_no && mrNo && String(d.mr_no).trim().toUpperCase() === mrNo);
+      if (existingDetail) {
+        if ((!existingDetail.moist_claim || existingDetail.moist_claim === 0) && claimMoist > 0) existingDetail.moist_claim = claimMoist;
+        if ((!existingDetail.dust_claim || existingDetail.dust_claim === 0) && claimDust > 0) existingDetail.dust_claim = claimDust;
+        if ((!existingDetail.gd_claim || existingDetail.gd_claim === 0) && claimGd > 0) existingDetail.gd_claim = claimGd;
+        if (!existingDetail.lorry_number || existingDetail.lorry_number === '-') {
+          existingDetail.lorry_number = insp.lorry_number || insp.lorry_no || '-';
+        }
+      } else {
+        entry.details.push({
+          broker: cleanName,
+          mr_no: mrNo || '-',
+          po_no: poNo || '-',
+          moist_claim: claimMoist,
+          moist_sett: Number(insp.settlement_moisture || 0),
+          dust_claim: claimDust,
+          dust_sett: Number(insp.settlement_dust || 0),
+          gd_claim: claimGd,
+          gd_sett: Number(insp.settlement_grade_down || 0),
+          summary_delivery_claim: claimMoist,
+          summary_rate_wt_claim: claimDust,
+          summary_misc_less: claimGd,
+          summary_less_amount: dedAmt,
+          val_less_amt: 0,
+          val_less_amount: 0,
+          val_ex_short: short,
+          summary_deduction_type: dedType || '-',
+          summary_deduction_rate: Number(insp.deduction_rate || 0),
+          summary_deduction_qty: Number(insp.deduction_qty || 0),
+          summary_deduction_amount: dedAmt,
+          deductions: dedAmt || short,
+          lorry_number: insp.lorry_number || insp.lorry_no || '-'
+        });
+      }
+    });
+
+    // Finalize averages for all broker entries
+    Object.values(brokerSettlementMap).forEach(entry => {
+      // 1. Moisture Sett (%): SUM(claim_moisture) / COUNT(claim_moisture > 0)
+      const moistCount = entry.inspMoistCount && entry.inspMoistCount > 0 ? entry.inspMoistCount : (entry.moistCount || 0);
+      const moistSum = entry.inspMoistSum && entry.inspMoistSum > 0 ? entry.inspMoistSum : (entry.moistureClaim || 0);
+      entry.moistureSettAvg = moistCount > 0 ? (moistSum / moistCount) : 0;
+      entry.moistureClaim = moistSum;
+      entry.moistCount = moistCount;
+
+      // 2. Dust Sett (%): SUM(claim_dust) / COUNT(claim_dust > 0)
+      const dustCount = entry.inspDustCount && entry.inspDustCount > 0 ? entry.inspDustCount : (entry.dustCount || 0);
+      const dustSum = entry.inspDustSum && entry.inspDustSum > 0 ? entry.inspDustSum : (entry.dustClaim || 0);
+      entry.dustSettAvg = dustCount > 0 ? (dustSum / dustCount) : 0;
+      entry.dustClaim = dustSum;
+      entry.dustCount = dustCount;
+
+      // 3. Gradedown Sett (%): SUM(claim_grade_down) / COUNT(claim_grade_down > 0)
+      const gdCount = entry.inspGdCount && entry.inspGdCount > 0 ? entry.inspGdCount : (entry.gdCount || 0);
+      const gdSum = entry.inspGdSum && entry.inspGdSum > 0 ? entry.inspGdSum : (entry.gradedownClaim || 0);
+      entry.gradedownSettAvg = gdCount > 0 ? (gdSum / gdCount) : 0;
+      entry.gradedownClaim = gdSum;
+      entry.gdCount = gdCount;
     });
 
     // Build Master Lookup Maps
