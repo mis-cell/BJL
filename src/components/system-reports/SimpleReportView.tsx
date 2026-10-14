@@ -69,11 +69,8 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
   
   const [selectedTxn, setSelectedTxn] = useState<ReportTransactionLine | null>(null);
-  const [selectedEntityModal, setSelectedEntityModal] = useState<{
-    key: string;
-    category: TabDimension;
-    activeModalTab: 'DEDUCTION' | 'CHECKPOINTS' | 'PIPELINE' | 'PREMIUM';
-  } | null>(null);
+  const [selectedBrokerModalBroker, setSelectedBrokerModalBroker] = useState<string | null>(null);
+  const [selectedPremiumModalBroker, setSelectedPremiumModalBroker] = useState<string | null>(null);
 
   // Sauda records from sauda_master, sauda_check_point, purchase_master (Sauda / PO level, exactly 1 row per Sauda, NOT split by grade)
   const allSaudaRecords = useMemo(() => {
@@ -469,23 +466,18 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
       existing.saudaCheckpointCount += 1;
       
-      const hasAmad = Boolean(t.hasAmadArrival || t.arrivedWeightMT > 0 || (t.mrCount && t.mrCount > 0) || t.arrivalStatus !== 'PENDING');
-      const hasFinal = Boolean(t.hasFinalArrival || (t.fmrCount && t.fmrCount > 0) || (t.pendingWeightMT <= 0.01 && hasAmad));
-      const hasInsp = Boolean(t.hasInspection || (t.inspCount && t.inspCount > 0) || t.inspectionStatus === 'COMPLETED' || t.moisturePct > 0 || t.deductionAmount > 0);
-      const hasPay = Boolean(t.paidAmount > 0 || (t.payCount && t.payCount > 0) || t.paymentStatus === 'PAID');
-      const hasSett = Boolean(t.settlementStatus === 'SETTLED' || (t.settCount && t.settCount > 0) || t.paymentStatus === 'PAID' || t.pendingPayable === 0);
+      const hasAmad = Boolean(t.hasAmadArrival || t.arrivedWeightMT > 0 || t.arrivalStatus !== 'PENDING');
+      const hasFinal = Boolean(t.hasFinalArrival || (t.pendingWeightMT <= 0.01 && hasAmad));
+      const hasInsp = Boolean(t.hasInspection || t.inspectionStatus === 'COMPLETED' || t.moisturePct > 0 || t.deductionAmount > 0);
+      const hasPay = Boolean(t.paidAmount > 0);
+      const hasSett = Boolean(t.paymentStatus === 'PAID' || t.settlementStatus === 'SETTLED');
 
-      const addMr = t.mrCount && t.mrCount > 0 ? t.mrCount : (hasAmad ? 1 : 0);
-      const addFmr = t.fmrCount && t.fmrCount > 0 ? t.fmrCount : (hasFinal ? 1 : 0);
-      const addInsp = t.inspCount && t.inspCount > 0 ? t.inspCount : (hasInsp ? 1 : 0);
-      const addPay = t.payCount && t.payCount > 0 ? t.payCount : (hasPay ? 1 : 0);
-      const addSett = t.settCount && t.settCount > 0 ? t.settCount : (hasSett ? 1 : 0);
-
-      existing.tempArrivalCount += addMr;
-      existing.finalArrivalCount += addFmr;
-      existing.millInspectionCount += addInsp;
-      existing.paymentOperationCount += addPay;
-      existing.settlementCount += addSett;
+      // Sequential progression: downstream activity implies upstream completion
+      if (hasAmad || hasFinal || hasInsp || hasPay || hasSett) existing.tempArrivalCount += 1;
+      if (hasFinal || hasInsp || hasPay || hasSett) existing.finalArrivalCount += 1;
+      if (hasInsp || (hasFinal && (hasPay || hasSett))) existing.millInspectionCount += 1;
+      if (hasPay) existing.paymentOperationCount += 1;
+      if (hasSett) existing.settlementCount += 1;
 
       map.set(key, existing);
     });
@@ -494,12 +486,19 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       const avgRate = item.quantityMT > 0 ? (item.grossValue / (item.quantityMT * 10)) : 0;
       const avgMoisture = item.moistureCount > 0 ? (item.moistureSum / item.moistureCount) : 0;
       
+      // Strict sequential workflow pipeline enforcement:
+      // Stage 1: Sauda Deals
+      // Stage 2: Temporary Arrival <= Stage 1
+      // Stage 3: Final Arrival <= Stage 2
+      // Stage 4: Mill Inspection <= Stage 3
+      // Stage 5: Payment Operation <= Stage 4
+      // Stage 6: Settlement <= Stage 5
       const s1 = item.saudaCheckpointCount;
-      const s2 = item.tempArrivalCount;
-      const s3 = item.finalArrivalCount;
-      const s4 = item.millInspectionCount;
-      const s5 = item.paymentOperationCount;
-      const s6 = item.settlementCount;
+      const s2 = Math.min(s1, item.tempArrivalCount);
+      const s3 = Math.min(s2, item.finalArrivalCount);
+      const s4 = Math.min(s3, item.millInspectionCount);
+      const s5 = Math.min(s4, item.paymentOperationCount);
+      const s6 = Math.min(s5, item.settlementCount);
 
       let tier: 'BEST' | 'MEDIUM' | 'LOWER' = 'MEDIUM';
       if (item.abnormalDeals === 0 && item.deductionAmount === 0 && item.quantityMT >= 10) {
@@ -563,119 +562,9 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     return list.sort((a, b) => b.grossValue - a.grossValue);
   }, [allDimensionRecords, dataset.masterLists.brokers]);
 
-  const agencyData = useMemo(() => {
-    const list = aggregateByDimension(t => t.agency);
-    const existingKeys = new Set(list.map(item => item.key.toLowerCase()));
-    (dataset.masterLists.agencies || []).forEach(a => {
-      const aName = String(a).trim();
-      if (aName && !existingKeys.has(aName.toLowerCase())) {
-        list.push({
-          key: aName,
-          dealCount: 0,
-          quantityMT: 0,
-          arrivedMT: 0,
-          pendingMT: 0,
-          grossValue: 0,
-          deductionAmount: 0,
-          premiumAmount: 0,
-          paidAmount: 0,
-          pendingPayable: 0,
-          avgRate: 0,
-          abnormalDeals: 0,
-          moistureSum: 0,
-          moistureCount: 0,
-          saudaCheckpointCount: 0,
-          tempArrivalCount: 0,
-          finalArrivalCount: 0,
-          millInspectionCount: 0,
-          paymentOperationCount: 0,
-          settlementCount: 0,
-          poCount: 0,
-          poQuantityMT: 0,
-          poGrossValue: 0,
-          avgMoisture: 0,
-          tier: 'MEDIUM'
-        });
-      }
-    });
-    return list.sort((a, b) => b.grossValue - a.grossValue);
-  }, [allDimensionRecords, dataset.masterLists.agencies]);
-
-  const areaData = useMemo(() => {
-    const list = aggregateByDimension(t => t.area);
-    const existingKeys = new Set(list.map(item => item.key.toLowerCase()));
-    (dataset.masterLists.areas || []).forEach(a => {
-      const aName = String(a).trim();
-      if (aName && !existingKeys.has(aName.toLowerCase())) {
-        list.push({
-          key: aName,
-          dealCount: 0,
-          quantityMT: 0,
-          arrivedMT: 0,
-          pendingMT: 0,
-          grossValue: 0,
-          deductionAmount: 0,
-          premiumAmount: 0,
-          paidAmount: 0,
-          pendingPayable: 0,
-          avgRate: 0,
-          abnormalDeals: 0,
-          moistureSum: 0,
-          moistureCount: 0,
-          saudaCheckpointCount: 0,
-          tempArrivalCount: 0,
-          finalArrivalCount: 0,
-          millInspectionCount: 0,
-          paymentOperationCount: 0,
-          settlementCount: 0,
-          poCount: 0,
-          poQuantityMT: 0,
-          poGrossValue: 0,
-          avgMoisture: 0,
-          tier: 'MEDIUM'
-        });
-      }
-    });
-    return list.sort((a, b) => b.grossValue - a.grossValue);
-  }, [allDimensionRecords, dataset.masterLists.areas]);
-
-  const gradeData = useMemo(() => {
-    const list = aggregateByDimension(t => t.grade);
-    const existingKeys = new Set(list.map(item => item.key.toLowerCase()));
-    (dataset.masterLists.grades || []).forEach(g => {
-      const gName = String(g).trim();
-      if (gName && !existingKeys.has(gName.toLowerCase())) {
-        list.push({
-          key: gName,
-          dealCount: 0,
-          quantityMT: 0,
-          arrivedMT: 0,
-          pendingMT: 0,
-          grossValue: 0,
-          deductionAmount: 0,
-          premiumAmount: 0,
-          paidAmount: 0,
-          pendingPayable: 0,
-          avgRate: 0,
-          abnormalDeals: 0,
-          moistureSum: 0,
-          moistureCount: 0,
-          saudaCheckpointCount: 0,
-          tempArrivalCount: 0,
-          finalArrivalCount: 0,
-          millInspectionCount: 0,
-          paymentOperationCount: 0,
-          settlementCount: 0,
-          poCount: 0,
-          poQuantityMT: 0,
-          poGrossValue: 0,
-          avgMoisture: 0,
-          tier: 'MEDIUM'
-        });
-      }
-    });
-    return list.sort((a, b) => b.grossValue - a.grossValue);
-  }, [allDimensionRecords, dataset.masterLists.grades]);
+  const agencyData = useMemo(() => aggregateByDimension(t => t.agency), [allDimensionRecords]);
+  const areaData = useMemo(() => aggregateByDimension(t => t.area), [allDimensionRecords]);
+  const gradeData = useMemo(() => aggregateByDimension(t => t.grade), [allDimensionRecords]);
 
   const supplierData = useMemo(() => {
     const list = aggregateByDimension(t => t.supplier);
@@ -715,46 +604,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     return list.sort((a, b) => b.grossValue - a.grossValue);
   }, [allDimensionRecords, dataset.masterLists.suppliers]);
 
-  const monthData = useMemo(() => {
-    if (dataset.metrics?.monthInspectionSummaries?.length) {
-      return dataset.metrics.monthInspectionSummaries.map(m => {
-        const monthKey = `${m.year}-${String(m.monthIndex + 1).padStart(2, '0')}`;
-        const matchingDeals = allDimensionRecords.filter(t => t.month === monthKey || (t.date && t.date.startsWith(monthKey))).length;
-        const totalPaid = m.paymentPaidAmount || 0;
-        const payCount = m.paymentCount || 0;
-        const settCount = payCount > 0 ? Math.max(0, payCount - 4) : 0; // matches 305 for August (309-4)
-
-        return {
-          key: monthKey,
-          dealCount: matchingDeals || m.temporaryArrivalsCount || 0,
-          quantityMT: Number((m.temporaryArrivalsWeightMt || 0).toFixed(1)),
-          arrivedMT: Number((m.temporaryArrivalsWeightMt || 0).toFixed(1)),
-          pendingMT: 0,
-          grossValue: totalPaid,
-          deductionAmount: m.totalClaimAmount || 0,
-          premiumAmount: m.premiumTotalSum || 0,
-          paidAmount: totalPaid,
-          pendingPayable: 0,
-          avgRate: 0,
-          abnormalDeals: 0,
-          moistureSum: m.avgMoisture * (m.temporaryArrivalsWeightMt || 1),
-          moistureCount: m.temporaryArrivalsWeightMt || 1,
-          saudaCheckpointCount: matchingDeals || m.temporaryArrivalsCount || 0,
-          tempArrivalCount: m.temporaryArrivalsCount || 0,
-          finalArrivalCount: m.finalArrivalsCount || 0,
-          millInspectionCount: m.inspectionCount || 0,
-          paymentOperationCount: payCount,
-          settlementCount: settCount,
-          poCount: matchingDeals,
-          poQuantityMT: m.temporaryArrivalsWeightMt || 0,
-          poGrossValue: totalPaid,
-          avgMoisture: m.avgMoisture || 0,
-          tier: 'MEDIUM' as const
-        };
-      }).sort((a, b) => b.key.localeCompare(a.key));
-    }
-    return aggregateByDimension(t => t.month || (t.date ? t.date.substring(0, 7) : 'Unknown'));
-  }, [allDimensionRecords, dataset.metrics]);
+  const monthData = useMemo(() => aggregateByDimension(t => t.month || (t.date ? t.date.substring(0, 7) : 'Unknown')), [allDimensionRecords]);
 
   // CSV Export
   const handleExportCSV = () => {
@@ -895,7 +745,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               activeTab === 'GRADE' ? gradeData :
               activeTab === 'SUPPLIER' ? supplierData : monthData
             );
-            const totalcurrentData = rawCurrentData.filter(item => item.dealCount > 0 || item.saudaCheckpointCount > 0 || item.tempArrivalCount > 0 || item.quantityMT > 0 || item.arrivedMT > 0 || item.grossValue > 0 || item.deductionAmount > 0 || item.premiumAmount > 0);
+            const totalcurrentData = rawCurrentData.filter(item => item.dealCount > 0);
             const currentData = activeTab === 'MONTH' ? [...totalcurrentData].sort((a, b) => { const [yearA, monthA] = String(a.key).split('-').map(Number); const [yearB, monthB] = String(b.key).split('-').map(Number); return ( new Date(yearB, monthB - 1).getTime() - new Date(yearA, monthA - 1).getTime() ); }) : totalcurrentData;
 
             if (subAnalysisMode === 'VOLUME') {
@@ -973,17 +823,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-medium font-mono text-[11px]">
                           {currentData.map((row, idx) => (
-                            <tr
-                              key={idx}
-                              onClick={() => {
-                                setSelectedEntityModal({
-                                  key: row.key,
-                                  category: 'MONTH',
-                                  activeModalTab: 'CHECKPOINTS'
-                                });
-                              }}
-                              className="hover:bg-emerald-50/60 transition cursor-pointer"
-                            >
+                            <tr key={idx} className="hover:bg-slate-50 transition">
                               <td className="p-2.5 font-bold text-slate-900 font-sans border-r border-slate-200 flex items-center gap-1.5">
                                 <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] flex items-center justify-center font-bold">
                                   {idx + 1}
@@ -1045,13 +885,11 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                           <tr
                             key={idx}
                             onClick={() => {
-                              setSelectedEntityModal({
-                                key: row.key,
-                                category: activeTab,
-                                activeModalTab: 'CHECKPOINTS'
-                              });
+                              if (activeTab === 'BROKER') {
+                                setSelectedBrokerModalBroker(row.key);
+                              }
                             }}
-                            className="transition hover:bg-emerald-50/60 cursor-pointer"
+                            className={`transition ${activeTab === 'BROKER' ? 'hover:bg-emerald-50/60 cursor-pointer' : 'hover:bg-slate-50'}`}
                           >
                             <td className="p-3 font-bold text-slate-900 flex items-center gap-2">
                               <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-mono flex items-center justify-center font-bold">
@@ -1416,13 +1254,11 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                               <tr
                                 key={idx}
                                 onClick={() => {
-                                  setSelectedEntityModal({
-                                    key: row.key,
-                                    category: activeTab,
-                                    activeModalTab: 'DEDUCTION'
-                                  });
+                                  if (activeTab === 'BROKER') {
+                                    setSelectedBrokerModalBroker(row.key);
+                                  }
                                 }}
-                                className="transition hover:bg-emerald-50/70 cursor-pointer"
+                                className={`transition ${activeTab === 'BROKER' ? 'hover:bg-emerald-50/70 cursor-pointer' : 'hover:bg-slate-50'}`}
                               >
                                 <td className="p-3 font-bold text-slate-900 font-sans flex items-center gap-2">
                                   <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-mono flex items-center justify-center font-bold">
@@ -1546,17 +1382,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
                       {currentData.map((row, idx) => (
-                        <tr
-                          key={idx}
-                          onClick={() => {
-                            setSelectedEntityModal({
-                              key: row.key,
-                              category: activeTab,
-                              activeModalTab: 'CHECKPOINTS'
-                            });
-                          }}
-                          className="hover:bg-emerald-50/60 transition cursor-pointer"
-                        >
+                        <tr key={idx} className="hover:bg-slate-50 transition">
                           <td className="p-3 font-bold text-slate-900">{row.key}</td>
                           <td className="p-3 text-center font-mono font-bold text-emerald-900 bg-emerald-50/50">{row.saudaCheckpointCount} Deals</td>
                           <td className="p-3 text-center font-mono font-bold text-blue-900 bg-blue-50/50">{row.tempArrivalCount} Arrivals</td>
@@ -1724,31 +1550,27 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             <tr
                               key={idx}
                               onClick={() => {
-                                setSelectedEntityModal({
-                                  key: row.key,
-                                  category: activeTab,
-                                  activeModalTab: 'PREMIUM'
-                                });
+                                if (activeTab === 'BROKER') {
+                                  setSelectedPremiumModalBroker(row.key);
+                                }
                               }}
-                              className="transition hover:bg-emerald-50/70 cursor-pointer"
+                              className={`transition ${activeTab === 'BROKER' ? 'hover:bg-emerald-50/70 cursor-pointer' : 'hover:bg-slate-50'}`}
                             >
                               <td className="p-3 font-bold text-slate-900 flex items-center gap-2">
                                 <span>{row.key}</span>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedEntityModal({
-                                      key: row.key,
-                                      category: activeTab,
-                                      activeModalTab: 'PREMIUM'
-                                    });
-                                  }}
-                                  className="text-[9px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded font-mono font-bold transition shadow-2xs cursor-pointer inline-flex items-center gap-1 border border-emerald-300"
-                                  title="Click Details to view premium transactions"
-                                >
-                                  Click Details ↗
-                                </button>
+                                {activeTab === 'BROKER' && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedPremiumModalBroker(row.key);
+                                    }}
+                                    className="text-[9px] bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded font-mono font-bold transition shadow-2xs cursor-pointer inline-flex items-center gap-1 border border-emerald-300"
+                                    title="Click Details to view broker premium transactions"
+                                  >
+                                    Click Details ↗
+                                  </button>
+                                )}
                               </td>
                               <td className="p-3 text-center font-mono font-bold text-slate-700">{row.dealCount}</td>
                               <td className="p-3 text-right font-mono font-bold text-slate-800">{row.quantityMT.toFixed(2)} MT</td>
@@ -1855,17 +1677,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                     .filter(s => s.deductionAmount > 0)
                     .sort((a, b) => b.deductionAmount - a.deductionAmount)
                     .map((s, idx) => (
-                      <tr
-                        key={idx}
-                        onClick={() => {
-                          setSelectedEntityModal({
-                            key: s.key,
-                            category: 'SUPPLIER',
-                            activeModalTab: 'DEDUCTION'
-                          });
-                        }}
-                        className="hover:bg-emerald-50/60 transition cursor-pointer"
-                      >
+                      <tr key={idx} className="hover:bg-slate-50">
                         <td className="p-2.5 font-bold text-slate-900">{s.key}</td>
                         <td className="p-2.5 text-center font-mono">{s.dealCount}</td>
                         <td className="p-2.5 text-right font-mono">{s.quantityMT.toFixed(2)} MT</td>
@@ -2142,494 +1954,260 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
         onClose={() => setSelectedTxn(null)}
       />
 
-      {/* UNIFIED CATEGORY WISE FULL SCREEN DETAILS POPUP MODAL */}
-      {selectedEntityModal && (() => {
-        const { key: entityKey, category, activeModalTab } = selectedEntityModal;
-
-        const categoryLabel = (
-          category === 'BROKER' ? 'Broker' :
-          category === 'AGENCY' ? 'Agency' :
-          category === 'AREA' ? 'Area' :
-          category === 'GRADE' ? 'Grade' :
-          category === 'SUPPLIER' ? 'Supplier' :
-          category === 'MONTH' ? 'Month' :
-          'Report'
-        );
-
-        const targetKey = entityKey.trim().toLowerCase();
-
-        // 1. Matched Transactions
-        const matchedTxns = transactions.filter(t => {
-          if (category === 'BROKER') return (t.broker || 'Direct').trim().toLowerCase() === targetKey;
-          if (category === 'AGENCY') return (t.agency || '-').trim().toLowerCase() === targetKey;
-          if (category === 'AREA') return (t.area || '-').trim().toLowerCase() === targetKey;
-          if (category === 'GRADE') return (t.grade || '-').trim().toLowerCase() === targetKey;
-          if (category === 'SUPPLIER') return (t.supplier || 'Unassigned').trim().toLowerCase() === targetKey;
-          if (category === 'MONTH') {
-            return t.month === entityKey || (t.date && (t.date === entityKey || t.date.startsWith(entityKey) || normalizeToISODate(t.date).startsWith(entityKey)));
-          }
-          return false;
-        });
-
-        // 2. Matched Sauda Records
-        const matchedSaudas = allSaudaRecords.filter(r => {
-          if (category === 'BROKER') return (r.broker || 'Direct').trim().toLowerCase() === targetKey;
-          if (category === 'AGENCY') return (r.agency || '-').trim().toLowerCase() === targetKey;
-          if (category === 'AREA') return (r.area || '-').trim().toLowerCase() === targetKey;
-          if (category === 'GRADE') return (r.grade || '-').trim().toLowerCase() === targetKey;
-          if (category === 'SUPPLIER') return (r.supplier || 'Unassigned').trim().toLowerCase() === targetKey;
-          if (category === 'MONTH') {
-            return r.month === entityKey || (r.date && (r.date === entityKey || r.date.startsWith(entityKey) || normalizeToISODate(r.date).startsWith(entityKey)));
-          }
-          return false;
-        });
-
-        // 3. Matched Settlement Details
-        let matchedSettlementDetails: any[] = [];
-        if (category === 'BROKER') {
-          const settInfo = dataset.brokerSettlementMap?.[entityKey.trim().toUpperCase()];
-          matchedSettlementDetails = settInfo?.details || [];
-        } else {
-          const validPoNos = new Set<string>();
-          const validMrNos = new Set<string>();
-          matchedTxns.forEach(t => {
-            if (t.poNo && t.poNo !== '-') validPoNos.add(t.poNo.trim().toUpperCase());
-            if (t.mrNo && t.mrNo !== '-') validMrNos.add(t.mrNo.trim().toUpperCase());
-          });
-          matchedSaudas.forEach(s => {
-            if (s.poNo && s.poNo !== '-') validPoNos.add(s.poNo.trim().toUpperCase());
-          });
-
-          const allSettlementEntries = Object.values(dataset.brokerSettlementMap || {});
-          allSettlementEntries.forEach(entry => {
-            (entry.details || []).forEach(detail => {
-              const dPo = String(detail.po_no || '').trim().toUpperCase();
-              const dMr = String(detail.mr_no || '').trim().toUpperCase();
-              if ((dPo && validPoNos.has(dPo)) || (dMr && validMrNos.has(dMr))) {
-                matchedSettlementDetails.push(detail);
-              }
-            });
-          });
-        }
-
-        // 4. Matched Premiums
-        const matchedPremiums = matchedTxns.filter(t => (t.premiumAmount || 0) > 0);
-
-        return (
-          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col p-3 md:p-6 animate-in fade-in duration-200">
-            <div className="bg-white w-full h-full rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
-              
-              {/* Modal Header */}
-              <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
-                <div>
-                  <span className="text-xs uppercase tracking-wider text-emerald-400 font-bold block">
-                    {categoryLabel} Wise Sauda Details Report
-                  </span>
-                  <h2 className="text-lg font-black tracking-wide flex items-center gap-2 mt-0.5">
-                    <Users className="w-5 h-5 text-emerald-400" />
-                    <span>{categoryLabel}: {entityKey}</span>
-                  </h2>
-                </div>
-                <button
-                  onClick={() => setSelectedEntityModal(null)}
-                  className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition cursor-pointer"
-                  title="Close Full-Screen View"
-                >
-                  <XCircle className="w-6 h-6" />
-                </button>
+      {/* BROKER WISE FULL SCREEN DETAILS POPUP */}
+      {selectedBrokerModalBroker && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col p-3 md:p-6 animate-in fade-in duration-200">
+          <div className="bg-white w-full h-full rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
+            {/* Modal Header */}
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
+              <div>
+                <span className="text-xs uppercase tracking-wider text-emerald-400 font-bold block">Broker Wise Sauda Details Report</span>
+                <h2 className="text-lg font-black tracking-wide flex items-center gap-2 mt-0.5">
+                  <Users className="w-5 h-5 text-emerald-400" />
+                  <span>Broker: {selectedBrokerModalBroker}</span>
+                </h2>
               </div>
+              <button
+                onClick={() => setSelectedBrokerModalBroker(null)}
+                className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition cursor-pointer"
+                title="Close Full-Screen View"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
 
-              {/* Modal Sub-Navigation Bar */}
-              <div className="bg-slate-100 px-6 py-2.5 border-b border-slate-200 flex items-center gap-2 overflow-x-auto select-none">
-                <button
-                  type="button"
-                  onClick={() => setSelectedEntityModal({ ...selectedEntityModal, activeModalTab: 'DEDUCTION' })}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-                    activeModalTab === 'DEDUCTION'
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-300'
-                  }`}
-                >
-                  <span>✂️</span> Deduction Details
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedEntityModal({ ...selectedEntityModal, activeModalTab: 'CHECKPOINTS' })}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-                    activeModalTab === 'CHECKPOINTS'
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-300'
-                  }`}
-                >
-                  <span>🟢</span> Checkpoint Details
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedEntityModal({ ...selectedEntityModal, activeModalTab: 'PIPELINE' })}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-                    activeModalTab === 'PIPELINE'
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-300'
-                  }`}
-                >
-                  <span>📊</span> Pipeline Details
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedEntityModal({ ...selectedEntityModal, activeModalTab: 'PREMIUM' })}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-                    activeModalTab === 'PREMIUM'
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-300'
-                  }`}
-                >
-                  <span>💰</span> Premium Details
-                </button>
-              </div>
+            {/* Modal Body / Table */}
+            <div className="flex-1 overflow-auto p-6 bg-slate-50 space-y-4">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider border-b">
+                      <th className="p-3.5 w-14 text-center">#</th>
+                      <th className="p-3.5">Broker</th>
+                      <th className="p-3.5">MR No</th>
+                      <th className="p-3.5">PO No</th>
+                      <th className="p-3.5 text-right" title="Moisture Sett (%) - claim_moisture from material_inspection">Moisture Sett (%)</th>
+                      <th className="p-3.5 text-right" title="Dust Sett (%) - claim_dust from material_inspection">Dust Sett (%)</th>
+                      <th className="p-3.5 text-right" title="Gradedown Sett (%) - claim_grade_down from material_inspection">Gradedown Sett (%)</th>
+                      <th className="p-3.5 text-right" title="Weight Shortage/Excess in Rupees">Short / Excess (₹)</th>
+                      <th className="p-3.5">Vehicle / Lorry No</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium font-mono text-[11px]">
+                    {(() => {
+                      const target = selectedBrokerModalBroker.trim().toUpperCase();
+                      const settInfo = dataset.brokerSettlementMap?.[target];
+                      const details = settInfo?.details || [];
 
-              {/* Modal Body */}
-              <div className="flex-1 overflow-auto p-6 bg-slate-50 space-y-4">
-
-                {/* 1. DEDUCTION DETAILS TAB */}
-                {activeModalTab === 'DEDUCTION' && (
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <table className="w-full text-xs text-left border-collapse">
-                      <thead>
-                        <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider border-b">
-                          <th className="p-3.5 w-14 text-center">#</th>
-                          <th className="p-3.5">{categoryLabel}</th>
-                          <th className="p-3.5">MR No</th>
-                          <th className="p-3.5">PO No</th>
-                          <th className="p-3.5 text-right">Moisture Sett (%)</th>
-                          <th className="p-3.5 text-right">Dust Sett (%)</th>
-                          <th className="p-3.5 text-right">Gradedown Sett (%)</th>
-                          <th className="p-3.5 text-right">Short / Excess (₹)</th>
-                          <th className="p-3.5">Vehicle / Lorry No</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 font-medium font-mono text-[11px]">
-                        {(() => {
-                          if (matchedSettlementDetails.length > 0) {
-                            return matchedSettlementDetails.map((item: any, idx: number) => (
-                              <tr key={idx} className="hover:bg-slate-50 transition">
-                                <td className="p-3.5 text-center font-bold text-slate-500">{idx + 1}</td>
-                                <td className="p-3.5 font-bold text-slate-900 font-sans">{item.broker || item.supplier || item.agency || entityKey}</td>
-                                <td className="p-3.5 font-bold text-slate-800">{item.mr_no || '—'}</td>
-                                <td className="p-3.5 font-bold text-slate-800">{item.po_no || '—'}</td>
-                                <td className="p-3.5 text-right text-slate-700 font-semibold font-mono">
-                                  {formatSettVal(item.moist_sett, item.moist_claim)}
-                                </td>
-                                <td className="p-3.5 text-right text-slate-700 font-semibold font-mono">
-                                  {formatSettVal(item.dust_sett, item.dust_claim)}
-                                </td>
-                                <td className="p-3.5 text-right text-slate-700 font-semibold font-mono">
-                                  {formatSettVal(item.gd_sett, item.gd_claim)}
-                                </td>
-                                <td className="p-3.5 text-right text-slate-700 font-mono">
-                                  {item.val_ex_short ? `₹${Number(item.val_ex_short).toLocaleString()}` : '—'}
-                                </td>
-                                <td className="p-3.5 text-slate-800">{item.lorry_number || '—'}</td>
-                              </tr>
-                            ));
-                          }
-
-                          if (matchedTxns.length > 0) {
-                            return matchedTxns.map((item: any, idx: number) => (
-                              <tr key={idx} className="hover:bg-slate-50 transition">
-                                <td className="p-3.5 text-center font-bold text-slate-500">{idx + 1}</td>
-                                <td className="p-3.5 font-bold text-slate-900 font-sans">{entityKey}</td>
-                                <td className="p-3.5 text-slate-800">{item.mrNo || '—'}</td>
-                                <td className="p-3.5 text-slate-800">{item.poNo || '—'}</td>
-                                <td className="p-3.5 text-right text-slate-700 font-mono">{item.moisturePct ? `${Number(item.moisturePct).toFixed(2)}%` : '—'}</td>
-                                <td className="p-3.5 text-right text-slate-700 font-mono">—</td>
-                                <td className="p-3.5 text-right text-slate-700 font-mono">—</td>
-                                <td className="p-3.5 text-right text-slate-700 font-mono">—</td>
-                                <td className="p-3.5 text-slate-800">—</td>
-                              </tr>
-                            ));
-                          }
-
-                          return (
-                            <tr>
-                              <td colSpan={9} className="p-12 text-center text-slate-400 font-sans font-medium">
-                                No settlement or Sauda deduction records found for {categoryLabel.toLowerCase()} {entityKey}.
-                              </td>
-                            </tr>
-                          );
-                        })()}
-                      </tbody>
-                      {(() => {
-                        const details = matchedSettlementDetails;
-                        if (details.length === 0) return null;
-
-                        const moistRows = details.filter((d: any) => Number(d.moist_sett || d.moist_claim || 0) > 0);
-                        const dustRows = details.filter((d: any) => Number(d.dust_sett || d.dust_claim || 0) > 0);
-                        const gdRows = details.filter((d: any) => Number(d.gd_sett || d.gd_claim || 0) > 0);
-                        const totalShort = details.reduce((acc: number, d: any) => acc + Number(d.val_ex_short || 0), 0);
-
-                        const moistAvgStr = moistRows.length > 0
-                          ? `${(moistRows.reduce((acc: number, d: any) => acc + Number(d.moist_sett || d.moist_claim || 0), 0) / moistRows.length).toFixed(2)}%`
-                          : '—';
-                        const dustAvgStr = dustRows.length > 0
-                          ? `${(dustRows.reduce((acc: number, d: any) => acc + Number(d.dust_sett || d.dust_claim || 0), 0) / dustRows.length).toFixed(2)}%`
-                          : '—';
-                        const gdAvgStr = gdRows.length > 0
-                          ? `${(gdRows.reduce((acc: number, d: any) => acc + Number(d.gd_sett || d.gd_claim || 0), 0) / gdRows.length).toFixed(2)}%`
-                          : '—';
-
-                        return (
-                          <tfoot>
-                            <tr className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300 text-[11px]">
-                              <td className="p-3.5 text-center font-mono">Total</td>
-                              <td className="p-3.5 font-sans" colSpan={3}>Average of Non-Zero ({details.length} Records)</td>
-                              <td className="p-3.5 text-right font-mono text-slate-800">{moistAvgStr}</td>
-                              <td className="p-3.5 text-right font-mono text-slate-800">{dustAvgStr}</td>
-                              <td className="p-3.5 text-right font-mono text-slate-800">{gdAvgStr}</td>
-                              <td className="p-3.5 text-right font-mono text-slate-800">{totalShort !== 0 ? `₹${Math.round(totalShort).toLocaleString()}` : '—'}</td>
-                              <td className="p-3.5 text-slate-400">—</td>
-                            </tr>
-                          </tfoot>
-                        );
-                      })()}
-                    </table>
-                  </div>
-                )}
-
-                {/* 2. CHECKPOINT DETAILS TAB */}
-                {activeModalTab === 'CHECKPOINTS' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-                      {(() => {
-                        const txns = matchedTxns;
-                        const s1 = txns.length || matchedSaudas.length;
-                        let s2 = 0, s3 = 0, s4 = 0, s5 = 0, s6 = 0;
-
-                        txns.forEach(t => {
-                          const hasAmad = Boolean(t.hasAmadArrival || t.arrivedWeightMT > 0 || t.arrivalStatus !== 'PENDING');
-                          const hasFinal = Boolean(t.hasFinalArrival || (t.pendingWeightMT <= 0.01 && hasAmad));
-                          const hasInsp = Boolean(t.hasInspection || t.inspectionStatus === 'COMPLETED' || t.moisturePct > 0 || t.deductionAmount > 0);
-                          const hasPay = Boolean(t.paidAmount > 0);
-                          const hasSett = Boolean(t.paymentStatus === 'PAID' || t.settlementStatus === 'SETTLED');
-
-                          if (hasAmad || hasFinal || hasInsp || hasPay || hasSett) s2 += 1;
-                          if (hasFinal || hasInsp || hasPay || hasSett) s3 += 1;
-                          if (hasInsp || (hasFinal && (hasPay || hasSett))) s4 += 1;
-                          if (hasPay) s5 += 1;
-                          if (hasSett) s6 += 1;
-                        });
-
-                        return [
-                          { label: '1. Sauda Check Point', count: s1, color: 'bg-emerald-50 border-emerald-200 text-emerald-900' },
-                          { label: '2. Temporary Arrival', count: s2, color: 'bg-blue-50 border-blue-200 text-blue-900' },
-                          { label: '3. Final Arrival', count: s3, color: 'bg-indigo-50 border-indigo-200 text-indigo-900' },
-                          { label: '4. Mill Inspection', count: s4, color: 'bg-purple-50 border-purple-200 text-purple-900' },
-                          { label: '5. Payment Operation', count: s5, color: 'bg-yellow-50 border-yellow-200 text-yellow-900' },
-                          { label: '6. Settlement', count: s6, color: 'bg-emerald-100 border-emerald-300 text-emerald-950' },
-                        ].map((st, i) => (
-                          <div key={i} className={`p-3 rounded-2xl border ${st.color}`}>
-                            <span className="text-[10px] font-bold uppercase block text-slate-500">{st.label}</span>
-                            <strong className="text-xl font-black font-mono block mt-1">{st.count} Deals</strong>
-                          </div>
+                      if (details.length > 0) {
+                        return details.map((item: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-slate-50 transition">
+                            <td className="p-3.5 text-center font-bold text-slate-500">{idx + 1}</td>
+                            <td className="p-3.5 font-bold text-slate-900 font-sans">{item.broker || selectedBrokerModalBroker}</td>
+                            <td className="p-3.5 font-bold text-slate-800">{item.mr_no || '—'}</td>
+                            <td className="p-3.5 font-bold text-slate-800">{item.po_no || '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700 font-semibold font-mono">
+                              {formatSettVal(item.moist_sett, item.moist_claim)}
+                            </td>
+                            <td className="p-3.5 text-right text-slate-700 font-semibold font-mono">
+                              {formatSettVal(item.dust_sett, item.dust_claim)}
+                            </td>
+                            <td className="p-3.5 text-right text-slate-700 font-semibold font-mono">
+                              {formatSettVal(item.gd_sett, item.gd_claim)}
+                            </td>
+                            <td className="p-3.5 text-right text-slate-700 font-mono">{item.val_ex_short ? `₹${Number(item.val_ex_short).toLocaleString()}` : '—'}</td>
+                            <td className="p-3.5 text-slate-800">{item.lorry_number || '—'}</td>
+                          </tr>
                         ));
-                      })()}
-                    </div>
+                      }
 
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                      <table className="w-full text-xs text-left border-collapse">
-                        <thead>
-                          <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider border-b">
-                            <th className="p-3.5 w-14 text-center">#</th>
-                            <th className="p-3.5">Sauda / PO No</th>
-                            <th className="p-3.5">Date</th>
-                            <th className="p-3.5">Supplier</th>
-                            <th className="p-3.5">Broker</th>
-                            <th className="p-3.5">Agency</th>
-                            <th className="p-3.5 text-right">Contract MT</th>
-                            <th className="p-3.5 text-right">Arrived MT</th>
-                            <th className="p-3.5 text-right">Rate (₹)</th>
+                      // Fallback to matched transactions
+                      const matchedTxns = transactions.filter(t => (t.broker || 'Direct').trim().toLowerCase() === selectedBrokerModalBroker.trim().toLowerCase());
+                      if (matchedTxns.length > 0) {
+                        return matchedTxns.map((item: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-slate-50 transition">
+                            <td className="p-3.5 text-center font-bold text-slate-500">{idx + 1}</td>
+                            <td className="p-3.5 font-bold text-slate-900 font-sans">{item.broker || selectedBrokerModalBroker}</td>
+                            <td className="p-3.5 text-slate-800">{item.mrNo || '—'}</td>
+                            <td className="p-3.5 text-slate-800">{item.poNo || '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700 font-mono">{item.moisturePct ? `${Number(item.moisturePct).toFixed(2)}%` : '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700 font-mono">—</td>
+                            <td className="p-3.5 text-right text-slate-700 font-mono">—</td>
+                            <td className="p-3.5 text-right text-slate-700 font-mono">—</td>
+                            <td className="p-3.5 text-slate-800">—</td>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 font-medium font-mono text-[11px]">
-                          {matchedTxns.length > 0 ? (
-                            matchedTxns.map((item, idx) => (
-                              <tr key={idx} className="hover:bg-slate-50 transition">
-                                <td className="p-3.5 text-center font-bold text-slate-500">{idx + 1}</td>
-                                <td className="p-3.5 font-bold text-slate-900 font-sans">{item.saudaNo || item.poNo || '—'}</td>
-                                <td className="p-3.5 text-slate-700">{item.date || '—'}</td>
-                                <td className="p-3.5 text-slate-800 font-sans">{item.supplier || '—'}</td>
-                                <td className="p-3.5 text-slate-800 font-sans">{item.broker || '—'}</td>
-                                <td className="p-3.5 text-slate-800 font-sans">{item.agency || '—'}</td>
-                                <td className="p-3.5 text-right font-bold text-emerald-950">{item.quantityMT.toFixed(2)} MT</td>
-                                <td className="p-3.5 text-right font-bold text-slate-800">{item.arrivedWeightMT.toFixed(2)} MT</td>
-                                <td className="p-3.5 text-right text-slate-800">₹{Math.round(item.purchaseRate || 0).toLocaleString()}</td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan={9} className="p-12 text-center text-slate-400 font-sans font-medium">
-                                No checkpoint records found for {categoryLabel.toLowerCase()} {entityKey}.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
+                        ));
+                      }
 
-                {/* 3. PIPELINE DETAILS TAB */}
-                {activeModalTab === 'PIPELINE' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                      <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
-                        <span className="text-xs font-bold text-emerald-900 uppercase block">Total Contract Quantity</span>
-                        <strong className="text-xl font-black text-emerald-950 font-mono block mt-1">
-                          {matchedTxns.reduce((acc, t) => acc + (t.quantityMT || 0), 0).toFixed(2)} MT
-                        </strong>
-                      </div>
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl">
-                        <span className="text-xs font-bold text-blue-900 uppercase block">Total Arrived Weight</span>
-                        <strong className="text-xl font-black text-blue-950 font-mono block mt-1">
-                          {matchedTxns.reduce((acc, t) => acc + (t.arrivedWeightMT || 0), 0).toFixed(2)} MT
-                        </strong>
-                      </div>
-                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl">
-                        <span className="text-xs font-bold text-amber-900 uppercase block">Total Paid Amount</span>
-                        <strong className="text-xl font-black text-amber-950 font-mono block mt-1">
-                          {formatIndianCurrency(matchedTxns.reduce((acc, t) => acc + (t.paidAmount || 0), 0))}
-                        </strong>
-                      </div>
-                      <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl">
-                        <span className="text-xs font-bold text-rose-900 uppercase block">Pending Payable</span>
-                        <strong className="text-xl font-black text-rose-950 font-mono block mt-1">
-                          {formatIndianCurrency(matchedTxns.reduce((acc, t) => acc + (t.pendingPayable || 0), 0))}
-                        </strong>
-                      </div>
-                    </div>
-
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                      <table className="w-full text-xs text-left border-collapse">
-                        <thead>
-                          <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider border-b">
-                            <th className="p-3.5 w-14 text-center">#</th>
-                            <th className="p-3.5">Sauda / PO</th>
-                            <th className="p-3.5">Party / Supplier</th>
-                            <th className="p-3.5 text-right">Contract MT</th>
-                            <th className="p-3.5 text-right">Arrived MT</th>
-                            <th className="p-3.5 text-right">Pending MT</th>
-                            <th className="p-3.5 text-right">Paid Amount</th>
-                            <th className="p-3.5 text-right text-rose-800">Pending Payable</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 font-medium font-mono text-[11px]">
-                          {matchedTxns.length > 0 ? (
-                            matchedTxns.map((item, idx) => (
-                              <tr key={idx} className="hover:bg-slate-50 transition">
-                                <td className="p-3.5 text-center font-bold text-slate-500">{idx + 1}</td>
-                                <td className="p-3.5 font-bold text-slate-900 font-sans">{item.saudaNo || item.poNo || '—'}</td>
-                                <td className="p-3.5 text-slate-800 font-sans">{item.supplier || '—'}</td>
-                                <td className="p-3.5 text-right font-bold text-emerald-950">{item.quantityMT.toFixed(2)} MT</td>
-                                <td className="p-3.5 text-right font-bold text-blue-900">{item.arrivedWeightMT.toFixed(2)} MT</td>
-                                <td className="p-3.5 text-right font-bold text-amber-900">{item.pendingWeightMT.toFixed(2)} MT</td>
-                                <td className="p-3.5 text-right font-bold text-emerald-800">{formatIndianCurrency(item.paidAmount)}</td>
-                                <td className="p-3.5 text-right font-bold text-rose-800">{formatIndianCurrency(item.pendingPayable)}</td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan={8} className="p-12 text-center text-slate-400 font-sans font-medium">
-                                No pipeline records found for {categoryLabel.toLowerCase()} {entityKey}.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* 4. PREMIUM DETAILS TAB */}
-                {activeModalTab === 'PREMIUM' && (
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <table className="w-full text-xs text-left border-collapse">
-                      <thead>
-                        <tr className="bg-emerald-50/80 text-slate-700 font-black uppercase text-[10px] tracking-wider border-b border-emerald-100">
-                          <th className="p-3.5 w-14 text-center">#</th>
-                          <th className="p-3.5">{categoryLabel}</th>
-                          <th className="p-3.5">MR No</th>
-                          <th className="p-3.5">PO No</th>
-                          <th className="p-3.5 text-right">Quantity MT</th>
-                          <th className="p-3.5 text-right">Premium Amount</th>
+                      return (
+                        <tr>
+                          <td colSpan={9} className="p-12 text-center text-slate-400">
+                            No settlement or Sauda records found for broker {selectedBrokerModalBroker}.
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 font-medium font-mono text-[11px]">
-                        {(() => {
-                          const displayList = matchedPremiums.length > 0 ? matchedPremiums : matchedTxns;
-                          if (displayList.length === 0) {
-                            return (
-                              <tr>
-                                <td colSpan={6} className="p-12 text-center text-slate-400 font-bold font-sans">
-                                  No premium records found for {categoryLabel.toLowerCase()} {entityKey}.
-                                </td>
-                              </tr>
-                            );
-                          }
+                      );
+                    })()}
+                  </tbody>
+                  {(() => {
+                    const target = selectedBrokerModalBroker.trim().toUpperCase();
+                    const settInfo = dataset.brokerSettlementMap?.[target];
+                    const details = settInfo?.details || [];
+                    if (details.length === 0) return null;
 
-                          return displayList.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-emerald-50/40 transition">
-                              <td className="p-3.5 text-center font-bold text-slate-500">{idx + 1}</td>
-                              <td className="p-3.5 font-bold text-slate-900 font-sans">{item.broker || item.agency || item.supplier || entityKey}</td>
-                              <td className="p-3.5 font-bold text-slate-800">{item.mrNo || '—'}</td>
-                              <td className="p-3.5 font-bold text-slate-800">{item.poNo || item.saudaNo || '—'}</td>
-                              <td className="p-3.5 text-right font-bold text-slate-800">{Number(item.quantityMT || 0).toFixed(2)} MT</td>
-                              <td className="p-3.5 text-right font-black font-mono text-emerald-800 bg-emerald-50/30">
-                                +₹{Number(item.premiumAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </td>
-                            </tr>
-                          ));
-                        })()}
-                      </tbody>
-                      {(() => {
-                        const displayList = matchedPremiums.length > 0 ? matchedPremiums : matchedTxns;
-                        if (displayList.length === 0) return null;
+                    const moistRows = details.filter((d: any) => Number(d.moist_sett || d.moist_claim || 0) > 0);
+                    const dustRows = details.filter((d: any) => Number(d.dust_sett || d.dust_claim || 0) > 0);
+                    const gdRows = details.filter((d: any) => Number(d.gd_sett || d.gd_claim || 0) > 0);
+                    const totalShort = details.reduce((acc: number, d: any) => acc + Number(d.val_ex_short || 0), 0);
 
-                        const totalPrem = displayList.reduce((acc, t) => acc + (t.premiumAmount || 0), 0);
+                    const moistAvgStr = moistRows.length > 0
+                      ? `${(moistRows.reduce((acc: number, d: any) => acc + Number(d.moist_sett || d.moist_claim || 0), 0) / moistRows.length).toFixed(2)}%`
+                      : '—';
+                    const dustAvgStr = dustRows.length > 0
+                      ? `${(dustRows.reduce((acc: number, d: any) => acc + Number(d.dust_sett || d.dust_claim || 0), 0) / dustRows.length).toFixed(2)}%`
+                      : '—';
+                    const gdAvgStr = gdRows.length > 0
+                      ? `${(gdRows.reduce((acc: number, d: any) => acc + Number(d.gd_sett || d.gd_claim || 0), 0) / gdRows.length).toFixed(2)}%`
+                      : '—';
 
-                        return (
-                          <tfoot>
-                            <tr className="bg-emerald-100/70 font-bold text-slate-900 border-t-2 border-emerald-300 text-[11px]">
-                              <td className="p-3.5 text-center font-mono font-black">Total</td>
-                              <td className="p-3.5 font-sans font-bold" colSpan={4}>
-                                Total Premium Records: {displayList.length}
-                              </td>
-                              <td className="p-3.5 text-right font-black font-mono text-emerald-950 text-xs">
-                                +₹{totalPrem.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </td>
-                            </tr>
-                          </tfoot>
-                        );
-                      })()}
-                    </table>
-                  </div>
-                )}
-
+                    return (
+                      <tfoot>
+                        <tr className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300 text-[11px]">
+                          <td className="p-3.5 text-center font-mono">Total</td>
+                          <td className="p-3.5 font-sans" colSpan={3}>Average of Non-Zero ({details.length} Records)</td>
+                          <td className="p-3.5 text-right font-mono text-slate-800">{moistAvgStr}</td>
+                          <td className="p-3.5 text-right font-mono text-slate-800">{dustAvgStr}</td>
+                          <td className="p-3.5 text-right font-mono text-slate-800">{gdAvgStr}</td>
+                          <td className="p-3.5 text-right font-mono text-slate-800">{totalShort !== 0 ? `₹${Math.round(totalShort).toLocaleString()}` : '—'}</td>
+                          <td className="p-3.5 text-slate-400">—</td>
+                        </tr>
+                      </tfoot>
+                    );
+                  })()}
+                </table>
               </div>
+            </div>
 
-              {/* Modal Footer */}
-              <div className="bg-white px-6 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-                <span>Showing details for {categoryLabel.toLowerCase()}: <strong>{entityKey}</strong></span>
-                <button
-                  onClick={() => setSelectedEntityModal(null)}
-                  className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition cursor-pointer"
-                >
-                  Close View
-                </button>
-              </div>
-
+            {/* Modal Footer */}
+            <div className="bg-white px-6 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+              <span>Showing all Sauda records for broker: <strong>{selectedBrokerModalBroker}</strong></span>
+              <button
+                onClick={() => setSelectedBrokerModalBroker(null)}
+                className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition cursor-pointer"
+              >
+                Close View
+              </button>
             </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
+
+      {/* PREMIUM GIVEN POPUP MODAL (ONLY FOR PREMIUM GIVEN / PREMIUM ANALYSIS) */}
+      {selectedPremiumModalBroker && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col p-3 md:p-6 animate-in fade-in duration-200">
+          <div className="bg-white w-full h-full rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-900 text-white px-6 py-4 flex items-center justify-between border-b border-emerald-800/40">
+              <div>
+                <span className="text-xs uppercase tracking-wider text-emerald-400 font-bold block">
+                  Premium Given / Premium Analysis Report
+                </span>
+                <h2 className="text-lg font-black tracking-wide flex items-center gap-2 mt-0.5">
+                  <span className="text-xl">💰</span>
+                  <span>Broker: {selectedPremiumModalBroker}</span>
+                </h2>
+              </div>
+              <button
+                onClick={() => setSelectedPremiumModalBroker(null)}
+                className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition cursor-pointer"
+                title="Close Full-Screen View"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Body / Table */}
+            <div className="flex-1 overflow-auto p-6 bg-slate-50 space-y-4">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-emerald-50/80 text-slate-700 font-black uppercase text-[10px] tracking-wider border-b border-emerald-100">
+                      <th className="p-3.5 w-14 text-center">#</th>
+                      <th className="p-3.5">Broker</th>
+                      <th className="p-3.5">MR No</th>
+                      <th className="p-3.5">PO No</th>
+                      <th className="p-3.5 text-right">Premium Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium font-mono text-[11px]">
+                    {(() => {
+                      const target = selectedPremiumModalBroker.trim().toLowerCase();
+                      const matched = transactions.filter(t => (t.broker || 'Direct').trim().toLowerCase() === target);
+                      const premOnly = matched.filter(t => (t.premiumAmount || 0) > 0);
+                      const displayList = premOnly.length > 0 ? premOnly : matched;
+
+                      if (displayList.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={5} className="p-12 text-center text-slate-400 font-bold font-sans">
+                              No premium records found for broker {selectedPremiumModalBroker}.
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return displayList.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-emerald-50/40 transition">
+                          <td className="p-3.5 text-center font-bold text-slate-500">{idx + 1}</td>
+                          <td className="p-3.5 font-bold text-slate-900 font-sans">{item.broker || selectedPremiumModalBroker}</td>
+                          <td className="p-3.5 font-bold text-slate-800">{item.mrNo || '—'}</td>
+                          <td className="p-3.5 font-bold text-slate-800">{item.poNo || item.saudaNo || '—'}</td>
+                          <td className="p-3.5 text-right font-black font-mono text-emerald-800 bg-emerald-50/30">
+                            +₹{Number(item.premiumAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ));
+                    })()}
+                  </tbody>
+                  {(() => {
+                    const target = selectedPremiumModalBroker.trim().toLowerCase();
+                    const matched = transactions.filter(t => (t.broker || 'Direct').trim().toLowerCase() === target);
+                    const premOnly = matched.filter(t => (t.premiumAmount || 0) > 0);
+                    const displayList = premOnly.length > 0 ? premOnly : matched;
+                    if (displayList.length === 0) return null;
+
+                    const totalPrem = displayList.reduce((acc, t) => acc + (t.premiumAmount || 0), 0);
+
+                    return (
+                      <tfoot>
+                        <tr className="bg-emerald-100/70 font-bold text-slate-900 border-t-2 border-emerald-300 text-[11px]">
+                          <td className="p-3.5 text-center font-mono font-black">Total</td>
+                          <td className="p-3.5 font-sans font-bold" colSpan={3}>
+                            Total Records: {displayList.length}
+                          </td>
+                          <td className="p-3.5 text-right font-black font-mono text-emerald-950 text-xs">
+                            +₹{totalPrem.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    );
+                  })()}
+                </table>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-white px-6 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+              <span>Showing premium records for broker: <strong>{selectedPremiumModalBroker}</strong></span>
+              <button
+                onClick={() => setSelectedPremiumModalBroker(null)}
+                className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition cursor-pointer"
+              >
+                Close View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

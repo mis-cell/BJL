@@ -100,21 +100,15 @@ export default function Reports({ onClose }: ReportsProps) {
   // Broker Settlement Map for Deductions & Claims
   const [brokerSettlementMap, setBrokerSettlementMap] = useState<SystemReportDataset['brokerSettlementMap']>({});
 
-  // Month Inspection Summaries for Pipeline Reports
-  const [monthSummaries, setMonthSummaries] = useState<any[]>([]);
-
   // Load Data
   const loadData = async () => {
     setLoading(true);
     try {
-      const { allTransactions: txns, masterLists: lists, allPoSummary: poSum, brokerSettlementMap: bMap, inspectionMetrics } = await loadAndProcessSystemReportData();
+      const { allTransactions: txns, masterLists: lists, allPoSummary: poSum, brokerSettlementMap: bMap } = await loadAndProcessSystemReportData();
       setAllTransactions(txns);
       setMasterLists(lists);
       if (poSum) setAllPoSummary(poSum);
       if (bMap) setBrokerSettlementMap(bMap);
-      if (inspectionMetrics?.monthInspectionSummaries) {
-        setMonthSummaries(inspectionMetrics.monthInspectionSummaries);
-      }
     } catch (err) {
       console.error('Error loading system report dataset:', err);
     } finally {
@@ -163,8 +157,8 @@ export default function Reports({ onClose }: ReportsProps) {
 
   // Aggregated Metrics
   const metrics = useMemo(() => {
-    return calculateReportMetrics(filteredTransactions, monthSummaries);
-  }, [filteredTransactions, monthSummaries]);
+    return calculateReportMetrics(filteredTransactions);
+  }, [filteredTransactions]);
 
   const dataset: SystemReportDataset = {
     transactions: allTransactions,

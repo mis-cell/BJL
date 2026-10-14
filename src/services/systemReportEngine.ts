@@ -1,6 +1,5 @@
 import { dbModule } from './dbModule';
 import { aggregatePremiumsFromTables } from './paymentCalculationEngine';
-import { computeInspectionMetrics } from './dashboardCalculationService';
 
 export interface ReportTransactionLine {
   txnId: string;
@@ -56,11 +55,6 @@ export interface ReportTransactionLine {
   hasAmadArrival?: boolean;
   hasFinalArrival?: boolean;
   hasInspection?: boolean;
-  mrCount?: number;
-  fmrCount?: number;
-  inspCount?: number;
-  payCount?: number;
-  settCount?: number;
 }
 
 export interface ReportFilterCriteria {
@@ -205,7 +199,6 @@ export interface SystemReportDataset {
     delayedCount: number;
     profitableCount: number;
     breakEvenCount: number;
-    monthInspectionSummaries?: any[];
   };
 }
 
@@ -295,7 +288,6 @@ export async function loadAndProcessSystemReportData(): Promise<{
   allTransactions: ReportTransactionLine[];
   allPoSummary: AllPoSummary;
   brokerSettlementMap?: SystemReportDataset['brokerSettlementMap'];
-  inspectionMetrics?: any;
   masterLists: SystemReportDataset['masterLists'];
 }> {
   try {
@@ -1186,44 +1178,6 @@ export async function loadAndProcessSystemReportData(): Promise<{
       }
     });
 
-    const poMrCountMap = new Map<string, number>();
-    (amad || []).forEach((a: any) => {
-      [a.po_no, a.sauda_no, a.temporary_arrival_no].filter(Boolean).forEach(k => {
-        const clean = String(k).toUpperCase().replace(/[^A-Z0-9]/g, '');
-        if (clean) poMrCountMap.set(clean, (poMrCountMap.get(clean) || 0) + 1);
-      });
-    });
-
-    const poFmrCountMap = new Map<string, number>();
-    (finals || []).forEach((f: any) => {
-      [f.po_no, f.sauda_no, f.arrival_no, f.final_arrival_no].filter(Boolean).forEach(k => {
-        const clean = String(k).toUpperCase().replace(/[^A-Z0-9]/g, '');
-        if (clean) poFmrCountMap.set(clean, (poFmrCountMap.get(clean) || 0) + 1);
-      });
-    });
-
-    const poInspCountMap = new Map<string, number>();
-    (inspections || []).forEach((i: any) => {
-      [i.po_no, i.mill_po_no, i.sauda_no, i.mr_no, i.arrival_no].filter(Boolean).forEach(k => {
-        const clean = String(k).toUpperCase().replace(/[^A-Z0-9]/g, '');
-        if (clean) poInspCountMap.set(clean, (poInspCountMap.get(clean) || 0) + 1);
-      });
-    });
-
-    const poPayCountMap = new Map<string, number>();
-    const poSettCountMap = new Map<string, number>();
-    (payments || []).forEach((p: any) => {
-      const keys = [p.po_no, p.sauda_no, p.mr_no, p.voucher_no].filter(Boolean);
-      const isSett = p.status === 'SETTLED' || p.payment_status === 'PAID' || p.settlement_status === 'SETTLED' || Number(p.paid_amount || 0) > 0;
-      keys.forEach(k => {
-        const clean = String(k).toUpperCase().replace(/[^A-Z0-9]/g, '');
-        if (clean) {
-          poPayCountMap.set(clean, (poPayCountMap.get(clean) || 0) + 1);
-          if (isSett) poSettCountMap.set(clean, (poSettCountMap.get(clean) || 0) + 1);
-        }
-      });
-    });
-
 
     const pendingpaymentByPo = new Map<string, number>();
     (settlements || []).forEach((p: any) => {
@@ -1651,12 +1605,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
         abnormalReasons,
         hasAmadArrival: Boolean(arrivedWeightMT > 0 || (poNo && amadSet.has(poNo.toUpperCase())) || (saudaNo && amadSet.has(saudaNo.toUpperCase()))),
         hasFinalArrival: Boolean((poNo && finalArrivalSet.has(poNo.toUpperCase())) || (saudaNo && finalArrivalSet.has(saudaNo.toUpperCase())) || pendingWeightMT <= 0.01),
-        hasInspection: Boolean((poNo && inspectionSet.has(poNo.toUpperCase())) || (saudaNo && inspectionSet.has(saudaNo.toUpperCase())) || inspInfo.hasInspection || inspInfo.deduction > 0 || inspInfo.moisture > 0),
-        mrCount: poMrCountMap.get(poNo.toUpperCase().replace(/[^A-Z0-9]/g, '')) || poMrCountMap.get(saudaNo.toUpperCase().replace(/[^A-Z0-9]/g, '')) || (arrivedWeightMT > 0 ? 1 : 0),
-        fmrCount: poFmrCountMap.get(poNo.toUpperCase().replace(/[^A-Z0-9]/g, '')) || poFmrCountMap.get(saudaNo.toUpperCase().replace(/[^A-Z0-9]/g, '')) || (pendingWeightMT <= 0.01 && arrivedWeightMT > 0 ? 1 : 0),
-        inspCount: poInspCountMap.get(poNo.toUpperCase().replace(/[^A-Z0-9]/g, '')) || poInspCountMap.get(saudaNo.toUpperCase().replace(/[^A-Z0-9]/g, '')) || (inspInfo.hasInspection ? 1 : 0),
-        payCount: poPayCountMap.get(poNo.toUpperCase().replace(/[^A-Z0-9]/g, '')) || poPayCountMap.get(saudaNo.toUpperCase().replace(/[^A-Z0-9]/g, '')) || (paidAmount > 0 ? 1 : 0),
-        settCount: poSettCountMap.get(poNo.toUpperCase().replace(/[^A-Z0-9]/g, '')) || poSettCountMap.get(saudaNo.toUpperCase().replace(/[^A-Z0-9]/g, '')) || (pendingPayable === 0 ? 1 : 0)
+        hasInspection: Boolean((poNo && inspectionSet.has(poNo.toUpperCase())) || (saudaNo && inspectionSet.has(saudaNo.toUpperCase())) || inspInfo.hasInspection || inspInfo.deduction > 0 || inspInfo.moisture > 0)
       });
     });
 
@@ -1933,24 +1882,10 @@ export async function loadAndProcessSystemReportData(): Promise<{
       finalPoMT
     };
 
-    const inspectionMetrics = computeInspectionMetrics({
-      inspections: inspections || [],
-      materialInspections: inspections || [],
-      millInspections: inspections || [],
-      arrivals: amad || [],
-      finalArrivals: finals || [],
-      saudaCheckPoints: scps || [],
-      paymentRecords: payments || [],
-      pos: pos || [],
-      settlements: settlements || [],
-      selectedYear: 2026
-    });
-
     return {
       allTransactions: transactionLines,
       allPoSummary,
       brokerSettlementMap,
-      inspectionMetrics,
       masterLists: {
         brokers: Array.from(brokerSet).sort(),
         suppliers: Array.from(supplierSet).sort(),
@@ -1996,7 +1931,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
 }
 
 // Compute all aggregated metrics from filtered transaction records
-export function calculateReportMetrics(txns: ReportTransactionLine[], monthSummaries?: any[]): SystemReportDataset['metrics'] {
+export function calculateReportMetrics(txns: ReportTransactionLine[]): SystemReportDataset['metrics'] {
   let totalBusinessValue = 0;
   let totalQuantityMT = 0;
   let totalPurchaseValue = 0;
@@ -2156,8 +2091,7 @@ export function calculateReportMetrics(txns: ReportTransactionLine[], monthSumma
     lossMakingCount,
     delayedCount,
     profitableCount,
-    breakEvenCount,
-    monthInspectionSummaries: monthSummaries
+    breakEvenCount
   };
 }
 
