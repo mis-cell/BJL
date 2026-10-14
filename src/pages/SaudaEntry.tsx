@@ -703,7 +703,7 @@ export default function SaudaEntry({
           return;
         }
         
-        if (row.rs === "" || row.rs === null || row.rs === undefined || Number(row.rs) === 0) {
+        if (row.rs === null || row.rs === undefined || Number(row.rs) === 0) {
           alert(`Please select or fill in RS in Row ${i + 1}.`);
           return;
         }
