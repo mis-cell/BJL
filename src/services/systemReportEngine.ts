@@ -409,11 +409,14 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
     const addDeductionTypeToEntry = (entry: any, rawType: any) => {
       if (!rawType) return;
-      const str = String(rawType).trim();
-      if (!str || str === '-' || str === '—' || str.toLowerCase() === 'none') return;
+      if (typeof rawType === 'object') {
+        rawType = rawType.deduction_type || rawType.adjust_type || rawType.type || rawType.name || '';
+      }
+      const str = String(rawType || '').trim();
+      if (!str || str === '-' || str === '—' || str.toLowerCase() === 'none' || str === '[object Object]') return;
       str.split(/[\n,;/]+/).forEach(t => {
         const clean = t.trim();
-        if (clean && !entry.deductionTypes.includes(clean)) {
+        if (clean && clean !== '[object Object]' && !entry.deductionTypes.includes(clean)) {
           entry.deductionTypes.push(clean);
         }
       });

@@ -21,7 +21,9 @@ import {
   Award,
   Scissors,
   Users,
-  PieChart
+  PieChart,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { SystemReportDataset, ReportTransactionLine, normalizeToISODate, getTodayISODate } from '../../services/systemReportEngine';
 import { SimpleDealSlipModal } from './SimpleDealSlipModal';
@@ -119,6 +121,21 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       setSortAsc(field === 'date' ? false : true);
     }
     setAllSaudaPage(1);
+  };
+
+  // Sorting for Broker Wise Deduction Table
+  type DeductionSortField = 'broker' | 'dealCount' | 'quantityMT' | 'moistureSett' | 'dustSett' | 'gradedownSett' | 'shortExcess' | 'deductionAmount';
+  const [deductionSortField, setDeductionSortField] = useState<DeductionSortField>('quantityMT');
+  const [deductionSortAsc, setDeductionSortAsc] = useState<boolean>(false);
+
+  const handleDeductionSort = (field: DeductionSortField) => {
+    if (deductionSortField === field) {
+      setDeductionSortAsc(prev => !prev);
+    } else {
+      setDeductionSortField(field);
+      // For broker name, default to ascending (A-Z). For numerical values, default to descending (highest first)
+      setDeductionSortAsc(field === 'broker' ? true : false);
+    }
   };
 
   // Filtered & Sorted All Sauda List (Each Sauda / PO is 1 row, full total weight, from sauda_master, scp, pm)
@@ -862,137 +879,378 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             }
 
             if (subAnalysisMode === 'DEDUCTION') {
-              // Ensure brokers with settlement deduction records are included even if zero active Saudas
-              const deductionRows = activeTab === 'BROKER'
-                ? rawCurrentData.filter(row => {
-                    const sett = dataset.brokerSettlementMap?.[row.key.toUpperCase()];
-                    return row.dealCount > 0 || (sett && (sett.allDeductionValue > 0 || sett.details?.length > 0));
-                  }).sort((a, b) => {
-                    const settA = dataset.brokerSettlementMap?.[a.key.toUpperCase()];
-                    const settB = dataset.brokerSettlementMap?.[b.key.toUpperCase()];
-                    const dedA = settA?.allDeductionValue || a.deductionAmount || 0;
-                    const dedB = settB?.allDeductionValue || b.deductionAmount || 0;
-                    return dedB - dedA;
-                  })
-                : currentData;
+              // 1. Filter: "If Here This Fields Have No Data Dont Shw The Brokere Here Moisture Sett (%), Dust Sett (%), Gradedown Sett (%), Short / Excess (₹)"
+              const baseList = (activeTab === 'BROKER' ? rawCurrentData : currentData);
+              const filteredDeductionRows = baseList.filter(row => {
+                const sett = dataset.brokerSettlementMap?.[row.key.toUpperCase()];
+                const moistAvg = sett && sett.inspMoistCount && sett.inspMoistCount > 0
+                  ? (sett.inspMoistSum! / sett.inspMoistCount!)
+                  : (sett?.moistureSettAvg || 0);
+                const dustAvg = sett && sett.inspDustCount && sett.inspDustCount > 0
+                  ? (sett.inspDustSum! / sett.inspDustCount!)
+                  : (sett?.dustSettAvg || 0);
+                const gdAvg = sett && sett.inspGdCount && sett.inspGdCount > 0
+                  ? (sett.inspGdSum! / sett.inspGdCount!)
+                  : (sett?.gradedownSettAvg || 0);
+                const shortExcess = sett ? (sett.shortExcess || 0) : 0;
+
+                // Must have non-zero data in at least one of these 4 fields
+                const hasDeductionData = moistAvg > 0 || dustAvg > 0 || gdAvg > 0 || shortExcess !== 0;
+                if (!hasDeductionData) return false;
+
+                if (searchQuery.trim()) {
+                  return row.key.toLowerCase().includes(searchQuery.toLowerCase().trim());
+                }
+                return true;
+              });
+
+              // 2. Sort by selected column
+              const deductionRows = [...filteredDeductionRows].sort((a, b) => {
+                const settA = dataset.brokerSettlementMap?.[a.key.toUpperCase()];
+                const settB = dataset.brokerSettlementMap?.[b.key.toUpperCase()];
+
+                let valA = 0;
+                let valB = 0;
+
+                switch (deductionSortField) {
+                  case 'quantityMT':
+                    valA = a.quantityMT || 0;
+                    valB = b.quantityMT || 0;
+                    break;
+                  case 'moistureSett':
+                    valA = settA && settA.inspMoistCount && settA.inspMoistCount > 0
+                      ? (settA.inspMoistSum! / settA.inspMoistCount!)
+                      : (settA?.moistureSettAvg || 0);
+                    valB = settB && settB.inspMoistCount && settB.inspMoistCount > 0
+                      ? (settB.inspMoistSum! / settB.inspMoistCount!)
+                      : (settB?.moistureSettAvg || 0);
+                    break;
+                  case 'dustSett':
+                    valA = settA && settA.inspDustCount && settA.inspDustCount > 0
+                      ? (settA.inspDustSum! / settA.inspDustCount!)
+                      : (settA?.dustSettAvg || 0);
+                    valB = settB && settB.inspDustCount && settB.inspDustCount > 0
+                      ? (settB.inspDustSum! / settB.inspDustCount!)
+                      : (settB?.dustSettAvg || 0);
+                    break;
+                  case 'gradedownSett':
+                    valA = settA && settA.inspGdCount && settA.inspGdCount > 0
+                      ? (settA.inspGdSum! / settA.inspGdCount!)
+                      : (settA?.gradedownSettAvg || 0);
+                    valB = settB && settB.inspGdCount && settB.inspGdCount > 0
+                      ? (settB.inspGdSum! / settB.inspGdCount!)
+                      : (settB?.gradedownSettAvg || 0);
+                    break;
+                  case 'dealCount':
+                    valA = a.dealCount || 0;
+                    valB = b.dealCount || 0;
+                    break;
+                  case 'shortExcess':
+                    valA = settA?.shortExcess || 0;
+                    valB = settB?.shortExcess || 0;
+                    break;
+                  case 'deductionAmount':
+                    valA = settA?.otherDeductionAmount || a.deductionAmount || 0;
+                    valB = settB?.otherDeductionAmount || b.deductionAmount || 0;
+                    break;
+                  case 'broker':
+                    return deductionSortAsc ? a.key.localeCompare(b.key) : b.key.localeCompare(a.key);
+                  default:
+                    valA = a.quantityMT || 0;
+                    valB = b.quantityMT || 0;
+                }
+
+                if (valA === valB) {
+                  return b.quantityMT - a.quantityMT;
+                }
+                return deductionSortAsc ? valA - valB : valB - valA;
+              });
 
               return (
                 <div className="space-y-3">
                   <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-xs bg-white">
                     <table className="w-full text-xs text-left border-collapse">
                       <thead>
-                        <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b">
-                          <th className="p-3">
-                            {activeTab === 'BROKER' ? 'Broker Name' : 
-                             activeTab === 'SUPPLIER' ? 'Supplier Name' : 
-                             activeTab === 'AGENCY' ? 'Agency Name' : 
-                             activeTab === 'AREA' ? 'Area Name' : 
-                             activeTab === 'GRADE' ? 'Grade Name' : 
-                             'Broker Name'}
+                        <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b select-none">
+                          <th 
+                            onClick={() => handleDeductionSort('broker')}
+                            className="p-3 cursor-pointer hover:bg-slate-200/90 transition group"
+                            title="Sort by Name"
+                          >
+                            <div className="inline-flex items-center gap-1.5">
+                              <span>
+                                {activeTab === 'BROKER' ? 'Broker Name' : 
+                                 activeTab === 'SUPPLIER' ? 'Supplier Name' : 
+                                 activeTab === 'AGENCY' ? 'Agency Name' : 
+                                 activeTab === 'AREA' ? 'Area Name' : 
+                                 activeTab === 'GRADE' ? 'Grade Name' : 
+                                 'Broker Name'}
+                              </span>
+                              <span className={`inline-flex items-center justify-center p-0.5 rounded transition ${
+                                deductionSortField === 'broker'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'text-slate-400 group-hover:text-slate-700 group-hover:bg-slate-200'
+                              }`}>
+                                {deductionSortField === 'broker' ? (
+                                  deductionSortAsc ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+                                )}
+                              </span>
+                            </div>
                           </th>
-                          <th className="p-3 text-center">Contract Sauda</th>
-                          <th className="p-3 text-right">Contract MT</th>
-                          <th className="p-3 text-right" title="Moisture Sett (%) - Average of claim_moisture (>0) from material_inspection: SUM / COUNT(>0)">Moisture Sett (%)</th>
-                          <th className="p-3 text-right" title="Dust Sett (%) - Average of claim_dust (>0) from material_inspection: SUM / COUNT(>0)">Dust Sett (%)</th>
-                          <th className="p-3 text-right" title="Gradedown Sett (%) - Average of claim_grade_down (>0) from material_inspection: SUM / COUNT(>0)">Gradedown Sett (%)</th>
-                          <th className="p-3 text-right" title="Shortage/Excess Deduction calculated in Amount (₹)">Short / Excess (₹)</th>
+                          <th 
+                            onClick={() => handleDeductionSort('dealCount')}
+                            className="p-3 text-center cursor-pointer hover:bg-slate-200/90 transition group"
+                            title="Sort by Contract Sauda Deals"
+                          >
+                            <div className="inline-flex items-center justify-center gap-1.5">
+                              <span>Contract Sauda</span>
+                              <span className={`inline-flex items-center justify-center p-0.5 rounded transition ${
+                                deductionSortField === 'dealCount'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'text-slate-400 group-hover:text-slate-700 group-hover:bg-slate-200'
+                              }`}>
+                                {deductionSortField === 'dealCount' ? (
+                                  deductionSortAsc ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+                                )}
+                              </span>
+                            </div>
+                          </th>
+                          <th 
+                            onClick={() => handleDeductionSort('quantityMT')}
+                            className="p-3 text-right cursor-pointer hover:bg-slate-200/90 transition group"
+                            title="Sort by Contract MT"
+                          >
+                            <div className="inline-flex items-center gap-1.5 justify-end">
+                              <span>Contract MT</span>
+                              <span className={`inline-flex items-center justify-center p-0.5 rounded transition ${
+                                deductionSortField === 'quantityMT'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'text-slate-400 group-hover:text-slate-700 group-hover:bg-slate-200'
+                              }`}>
+                                {deductionSortField === 'quantityMT' ? (
+                                  deductionSortAsc ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+                                )}
+                              </span>
+                            </div>
+                          </th>
+                          <th 
+                            onClick={() => handleDeductionSort('moistureSett')}
+                            className="p-3 text-right cursor-pointer hover:bg-slate-200/90 transition group"
+                            title="Sort by Moisture Sett (%) - Average of claim_moisture (>0) from material_inspection: SUM / COUNT(>0)"
+                          >
+                            <div className="inline-flex items-center gap-1.5 justify-end">
+                              <span>Moisture Sett (%)</span>
+                              <span className={`inline-flex items-center justify-center p-0.5 rounded transition ${
+                                deductionSortField === 'moistureSett'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'text-slate-400 group-hover:text-slate-700 group-hover:bg-slate-200'
+                              }`}>
+                                {deductionSortField === 'moistureSett' ? (
+                                  deductionSortAsc ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5" />
+                                )}
+                              </span>
+                            </div>
+                          </th>
+                          <th 
+                            onClick={() => handleDeductionSort('dustSett')}
+                            className="p-3 text-right cursor-pointer hover:bg-slate-200/90 transition group"
+                            title="Sort by Dust Sett (%) - Average of claim_dust (>0) from material_inspection: SUM / COUNT(>0)"
+                          >
+                            <div className="inline-flex items-center gap-1.5 justify-end">
+                              <span>Dust Sett (%)</span>
+                              <span className={`inline-flex items-center justify-center p-0.5 rounded transition ${
+                                deductionSortField === 'dustSett'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'text-slate-400 group-hover:text-slate-700 group-hover:bg-slate-200'
+                              }`}>
+                                {deductionSortField === 'dustSett' ? (
+                                  deductionSortAsc ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5" />
+                                )}
+                              </span>
+                            </div>
+                          </th>
+                          <th 
+                            onClick={() => handleDeductionSort('gradedownSett')}
+                            className="p-3 text-right cursor-pointer hover:bg-slate-200/90 transition group"
+                            title="Sort by Gradedown Sett (%) - Average of claim_grade_down (>0) from material_inspection: SUM / COUNT(>0)"
+                          >
+                            <div className="inline-flex items-center gap-1.5 justify-end">
+                              <span>Gradedown Sett (%)</span>
+                              <span className={`inline-flex items-center justify-center p-0.5 rounded transition ${
+                                deductionSortField === 'gradedownSett'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'text-slate-400 group-hover:text-slate-700 group-hover:bg-slate-200'
+                              }`}>
+                                {deductionSortField === 'gradedownSett' ? (
+                                  deductionSortAsc ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5" />
+                                )}
+                              </span>
+                            </div>
+                          </th>
+                          <th 
+                            onClick={() => handleDeductionSort('shortExcess')}
+                            className="p-3 text-right cursor-pointer hover:bg-slate-200/90 transition group"
+                            title="Sort by Shortage/Excess Deduction calculated in Amount (₹)"
+                          >
+                            <div className="inline-flex items-center gap-1.5 justify-end">
+                              <span>Short / Excess (₹)</span>
+                              <span className={`inline-flex items-center justify-center p-0.5 rounded transition ${
+                                deductionSortField === 'shortExcess'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'text-slate-400 group-hover:text-slate-700 group-hover:bg-slate-200'
+                              }`}>
+                                {deductionSortField === 'shortExcess' ? (
+                                  deductionSortAsc ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5" />
+                                )}
+                              </span>
+                            </div>
+                          </th>
                           <th className="p-3 text-left" title="Specific Deduction Types applied (e.g. Katta, Bardan, Quality, etc.)">Deduction Type</th>
-                          <th className="p-3 text-right" title="Explicit Deduction Amount in Rupees">Deduction Amount (₹)</th>
+                          <th 
+                            onClick={() => handleDeductionSort('deductionAmount')}
+                            className="p-3 text-right cursor-pointer hover:bg-slate-200/90 transition group"
+                            title="Sort by Explicit Deduction Amount in Rupees"
+                          >
+                            <div className="inline-flex items-center gap-1.5 justify-end">
+                              <span>Deduction Amount (₹)</span>
+                              <span className={`inline-flex items-center justify-center p-0.5 rounded transition ${
+                                deductionSortField === 'deductionAmount'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'text-slate-400 group-hover:text-slate-700 group-hover:bg-slate-200'
+                              }`}>
+                                {deductionSortField === 'deductionAmount' ? (
+                                  deductionSortAsc ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3.5 h-3.5" />
+                                )}
+                              </span>
+                            </div>
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-medium font-mono">
-                        {deductionRows.map((row, idx) => {
-                          const settInfo = dataset.brokerSettlementMap?.[row.key.toUpperCase()] || {
-                            moistureClaim: 0,
-                            moistureSett: 0,
-                            dustClaim: 0,
-                            dustSett: 0,
-                            gradedownClaim: 0,
-                            gradedownSett: 0,
-                            moistCount: 0,
-                            dustCount: 0,
-                            gdCount: 0,
-                            shortExcess: 0,
-                            otherDeductionAmount: 0,
-                            deductionTypes: [],
-                            allDeductionValue: row.deductionAmount,
-                            inspMoistSum: 0,
-                            inspMoistCount: 0,
-                            inspDustSum: 0,
-                            inspDustCount: 0,
-                            inspGdSum: 0,
-                            inspGdCount: 0,
-                            moistureSettAvg: 0,
-                            dustSettAvg: 0,
-                            gradedownSettAvg: 0,
-                            details: []
-                          };
+                        {deductionRows.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="p-8 text-center text-slate-400 font-sans font-medium">
+                              No brokers found with active Moisture, Dust, Gradedown, or Short/Excess deduction data.
+                            </td>
+                          </tr>
+                        ) : (
+                          deductionRows.map((row, idx) => {
+                            const settInfo = dataset.brokerSettlementMap?.[row.key.toUpperCase()] || {
+                              moistureClaim: 0,
+                              moistureSett: 0,
+                              dustClaim: 0,
+                              dustSett: 0,
+                              gradedownClaim: 0,
+                              gradedownSett: 0,
+                              moistCount: 0,
+                              dustCount: 0,
+                              gdCount: 0,
+                              shortExcess: 0,
+                              otherDeductionAmount: 0,
+                              deductionTypes: [],
+                              allDeductionValue: row.deductionAmount,
+                              inspMoistSum: 0,
+                              inspMoistCount: 0,
+                              inspDustSum: 0,
+                              inspDustCount: 0,
+                              inspGdSum: 0,
+                              inspGdCount: 0,
+                              moistureSettAvg: 0,
+                              dustSettAvg: 0,
+                              gradedownSettAvg: 0,
+                              details: []
+                            };
 
-                          // Average of non-zero values: SUM(field_value) / COUNT(rows where field_value > 0)
-                          // Strictly ignore and exclude rows where value is 0
-                          const moistAvg = (settInfo.inspMoistCount && settInfo.inspMoistCount > 0)
-                            ? (settInfo.inspMoistSum! / settInfo.inspMoistCount!)
-                            : (settInfo.moistureSettAvg || 0);
+                            // Average of non-zero values: SUM(field_value) / COUNT(rows where field_value > 0)
+                            // Strictly ignore and exclude rows where value is 0
+                            const moistAvg = (settInfo.inspMoistCount && settInfo.inspMoistCount > 0)
+                              ? (settInfo.inspMoistSum! / settInfo.inspMoistCount!)
+                              : (settInfo.moistureSettAvg || 0);
 
-                          const dustAvg = (settInfo.inspDustCount && settInfo.inspDustCount > 0)
-                            ? (settInfo.inspDustSum! / settInfo.inspDustCount!)
-                            : (settInfo.dustSettAvg || 0);
+                            const dustAvg = (settInfo.inspDustCount && settInfo.inspDustCount > 0)
+                              ? (settInfo.inspDustSum! / settInfo.inspDustCount!)
+                              : (settInfo.dustSettAvg || 0);
 
-                          const gdAvg = (settInfo.inspGdCount && settInfo.inspGdCount > 0)
-                            ? (settInfo.inspGdSum! / settInfo.inspGdCount!)
-                            : (settInfo.gradedownSettAvg || 0);
+                            const gdAvg = (settInfo.inspGdCount && settInfo.inspGdCount > 0)
+                              ? (settInfo.inspGdSum! / settInfo.inspGdCount!)
+                              : (settInfo.gradedownSettAvg || 0);
 
-                          const moistVal = moistAvg > 0 ? `${moistAvg.toFixed(2)}%` : '—';
-                          const dustVal = dustAvg > 0 ? `${dustAvg.toFixed(2)}%` : '—';
-                          const gdVal = gdAvg > 0 ? `${gdAvg.toFixed(2)}%` : '—';
+                            const moistVal = moistAvg > 0 ? `${moistAvg.toFixed(2)}%` : '—';
+                            const dustVal = dustAvg > 0 ? `${dustAvg.toFixed(2)}%` : '—';
+                            const gdVal = gdAvg > 0 ? `${gdAvg.toFixed(2)}%` : '—';
 
-                          const shortExcessVal = settInfo.shortExcess !== 0
-                            ? `₹${Math.round(settInfo.shortExcess).toLocaleString()}`
-                            : '—';
+                            const shortExcessVal = settInfo.shortExcess !== 0
+                              ? `₹${Math.round(settInfo.shortExcess).toLocaleString()}`
+                              : '—';
 
-                          const dedAmountVal = (settInfo.otherDeductionAmount || 0) > 0
-                            ? `₹${Math.round(settInfo.otherDeductionAmount || 0).toLocaleString()}`
-                            : '—';
+                            const dedAmountVal = (settInfo.otherDeductionAmount || 0) > 0
+                              ? `₹${Math.round(settInfo.otherDeductionAmount || 0).toLocaleString()}`
+                              : '—';
 
-                          return (
-                            <tr
-                              key={idx}
-                              onClick={() => {
-                                if (activeTab === 'BROKER') {
-                                  setSelectedBrokerModalBroker(row.key);
-                                }
-                              }}
-                              className={`transition ${activeTab === 'BROKER' ? 'hover:bg-emerald-50/70 cursor-pointer' : 'hover:bg-slate-50'}`}
-                            >
-                              <td className="p-3 font-bold text-slate-900 font-sans flex items-center gap-2">
-                                <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-mono flex items-center justify-center font-bold">
-                                  {idx + 1}
-                                </span>
-                                <span>{row.key}</span>
-                              </td>
-                              <td className="p-3 text-center font-bold text-slate-700">{row.dealCount}</td>
-                              <td className="p-3 text-right font-bold text-emerald-950">{row.quantityMT.toFixed(2)} MT</td>
-                              <td className="p-3 text-right text-slate-700 font-mono font-semibold">{moistVal}</td>
-                              <td className="p-3 text-right text-slate-700 font-mono font-semibold">{dustVal}</td>
-                              <td className="p-3 text-right text-slate-700 font-mono font-semibold">{gdVal}</td>
-                              <td className="p-3 text-right text-slate-700 font-mono">{shortExcessVal}</td>
-                              <td className="p-3 text-left font-sans text-slate-700">
-                                {settInfo.deductionTypes && settInfo.deductionTypes.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1">
-                                    {settInfo.deductionTypes.map((dt, dIdx) => (
-                                      <span key={dIdx} className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold border border-slate-200">
-                                        {dt}
-                                      </span>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span className="text-slate-400">—</span>
-                                )}
-                              </td>
-                              <td className="p-3 text-right font-mono font-semibold text-slate-800">{dedAmountVal}</td>
-                            </tr>
-                          );
-                        })}
+                            const cleanDeductionTypes = (settInfo.deductionTypes || []).filter((dt: any) => {
+                              const str = typeof dt === 'object' ? (dt.deduction_type || dt.adjust_type || '') : String(dt || '');
+                              return str && str.trim() !== '' && str.trim() !== '[object Object]';
+                            });
+
+                            return (
+                              <tr
+                                key={idx}
+                                onClick={() => {
+                                  if (activeTab === 'BROKER') {
+                                    setSelectedBrokerModalBroker(row.key);
+                                  }
+                                }}
+                                className={`transition ${activeTab === 'BROKER' ? 'hover:bg-emerald-50/70 cursor-pointer' : 'hover:bg-slate-50'}`}
+                              >
+                                <td className="p-3 font-bold text-slate-900 font-sans flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-mono flex items-center justify-center font-bold">
+                                    {idx + 1}
+                                  </span>
+                                  <span>{row.key}</span>
+                                </td>
+                                <td className="p-3 text-center font-bold text-slate-700">{row.dealCount}</td>
+                                <td className="p-3 text-right font-bold text-emerald-950">{row.quantityMT.toFixed(2)} MT</td>
+                                <td className="p-3 text-right text-slate-700 font-mono font-semibold">{moistVal}</td>
+                                <td className="p-3 text-right text-slate-700 font-mono font-semibold">{dustVal}</td>
+                                <td className="p-3 text-right text-slate-700 font-mono font-semibold">{gdVal}</td>
+                                <td className="p-3 text-right text-slate-700 font-mono">{shortExcessVal}</td>
+                                <td className="p-3 text-left font-sans text-slate-700">
+                                  {cleanDeductionTypes.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {cleanDeductionTypes.map((dt: any, dIdx: number) => {
+                                        const label = typeof dt === 'object' ? (dt.deduction_type || dt.adjust_type || '') : String(dt);
+                                        return (
+                                          <span key={dIdx} className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold border border-slate-200">
+                                            {label}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-400">—</span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-right font-mono font-semibold text-slate-800">{dedAmountVal}</td>
+                              </tr>
+                            );
+                          })
+                        )}
                       </tbody>
                       <tfoot>
                         <tr className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
