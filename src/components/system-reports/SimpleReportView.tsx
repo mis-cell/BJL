@@ -25,7 +25,7 @@ import {
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
-import { SystemReportDataset, ReportTransactionLine, normalizeToISODate, getTodayISODate } from '../../services/systemReportEngine';
+import { SystemReportDataset, ReportTransactionLine, normalizeToISODate, getTodayISODate, isInvalidAgency } from '../../services/systemReportEngine';
 import { SimpleDealSlipModal } from './SimpleDealSlipModal';
 import { formatIndianCurrency } from '../../lib/utils';
 
@@ -71,6 +71,10 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   const [selectedTxn, setSelectedTxn] = useState<ReportTransactionLine | null>(null);
   const [selectedBrokerModalBroker, setSelectedBrokerModalBroker] = useState<string | null>(null);
   const [selectedPremiumModalBroker, setSelectedPremiumModalBroker] = useState<string | null>(null);
+  const [selectedEntityModalInfo, setSelectedEntityModalInfo] = useState<{
+    entityName: string;
+    dimensionType: TabDimension;
+  } | null>(null);
 
   // Sauda records from sauda_master, sauda_check_point, purchase_master (Sauda / PO level, exactly 1 row per Sauda, NOT split by grade)
   const allSaudaRecords = useMemo(() => {
@@ -562,7 +566,10 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     return list.sort((a, b) => b.grossValue - a.grossValue);
   }, [allDimensionRecords, dataset.masterLists.brokers]);
 
-  const agencyData = useMemo(() => aggregateByDimension(t => t.agency), [allDimensionRecords]);
+  const agencyData = useMemo(() => {
+    const list = aggregateByDimension(t => t.agency);
+    return list.filter(item => !isInvalidAgency(item.key));
+  }, [allDimensionRecords]);
   const areaData = useMemo(() => aggregateByDimension(t => t.area), [allDimensionRecords]);
   const gradeData = useMemo(() => aggregateByDimension(t => t.grade), [allDimensionRecords]);
 
@@ -885,11 +892,10 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                           <tr
                             key={idx}
                             onClick={() => {
-                              if (activeTab === 'BROKER') {
-                                setSelectedBrokerModalBroker(row.key);
-                              }
+                              setSelectedEntityModalInfo({ entityName: row.key, dimensionType: activeTab });
+                              if (activeTab === 'BROKER') setSelectedBrokerModalBroker(row.key);
                             }}
-                            className={`transition ${activeTab === 'BROKER' ? 'hover:bg-emerald-50/60 cursor-pointer' : 'hover:bg-slate-50'}`}
+                            className="transition hover:bg-emerald-50/60 cursor-pointer"
                           >
                             <td className="p-3 font-bold text-slate-900 flex items-center gap-2">
                               <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-mono flex items-center justify-center font-bold">
@@ -1254,11 +1260,10 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                               <tr
                                 key={idx}
                                 onClick={() => {
-                                  if (activeTab === 'BROKER') {
-                                    setSelectedBrokerModalBroker(row.key);
-                                  }
+                                  setSelectedEntityModalInfo({ entityName: row.key, dimensionType: activeTab });
+                                  if (activeTab === 'BROKER') setSelectedBrokerModalBroker(row.key);
                                 }}
-                                className={`transition ${activeTab === 'BROKER' ? 'hover:bg-emerald-50/70 cursor-pointer' : 'hover:bg-slate-50'}`}
+                                className="transition hover:bg-emerald-50/70 cursor-pointer"
                               >
                                 <td className="p-3 font-bold text-slate-900 font-sans flex items-center gap-2">
                                   <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-mono flex items-center justify-center font-bold">
@@ -1954,21 +1959,37 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
         onClose={() => setSelectedTxn(null)}
       />
 
-      {/* BROKER WISE FULL SCREEN DETAILS POPUP */}
-      {selectedBrokerModalBroker && (
+      {/* FULL SCREEN DETAILS POPUP MODAL FOR AGENCY, BROKER, SUPPLIER, AREA, GRADE */}
+      {(selectedEntityModalInfo || selectedBrokerModalBroker) && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col p-3 md:p-6 animate-in fade-in duration-200">
           <div className="bg-white w-full h-full rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
             {/* Modal Header */}
             <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
               <div>
-                <span className="text-xs uppercase tracking-wider text-emerald-400 font-bold block">Broker Wise Sauda Details Report</span>
+                <span className="text-xs uppercase tracking-wider text-emerald-400 font-bold block">
+                  {selectedEntityModalInfo?.dimensionType === 'AGENCY' ? 'Agency Wise Sauda Details Report' :
+                   selectedEntityModalInfo?.dimensionType === 'BROKER' ? 'Broker Wise Sauda Details Report' :
+                   selectedEntityModalInfo?.dimensionType === 'SUPPLIER' ? 'Supplier Wise Sauda Details Report' :
+                   selectedEntityModalInfo?.dimensionType === 'AREA' ? 'Area Wise Sauda Details Report' :
+                   selectedEntityModalInfo?.dimensionType === 'GRADE' ? 'Grade Wise Sauda Details Report' :
+                   'Sauda Details Report'}
+                </span>
                 <h2 className="text-lg font-black tracking-wide flex items-center gap-2 mt-0.5">
-                  <Users className="w-5 h-5 text-emerald-400" />
-                  <span>Broker: {selectedBrokerModalBroker}</span>
+                  <Building2 className="w-5 h-5 text-emerald-400" />
+                  <span>
+                    {selectedEntityModalInfo?.dimensionType === 'AGENCY' ? 'Agency Name' :
+                     selectedEntityModalInfo?.dimensionType === 'BROKER' ? 'Broker Name' :
+                     selectedEntityModalInfo?.dimensionType === 'SUPPLIER' ? 'Supplier Name' :
+                     selectedEntityModalInfo?.dimensionType === 'AREA' ? 'Area Name' :
+                     selectedEntityModalInfo?.dimensionType === 'GRADE' ? 'Grade Name' : 'Entity'}: {selectedEntityModalInfo?.entityName || selectedBrokerModalBroker}
+                  </span>
                 </h2>
               </div>
               <button
-                onClick={() => setSelectedBrokerModalBroker(null)}
+                onClick={() => {
+                  setSelectedEntityModalInfo(null);
+                  setSelectedBrokerModalBroker(null);
+                }}
                 className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition cursor-pointer"
                 title="Close Full-Screen View"
               >
@@ -1981,9 +2002,15 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <table className="w-full text-xs text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider border-b">
+                    <tr className="bg-slate-100 text-slate-700 font-black uppercase text-[10px] tracking-wider border-b select-none">
                       <th className="p-3.5 w-14 text-center">#</th>
-                      <th className="p-3.5">Broker</th>
+                      <th className="p-3.5">
+                        {selectedEntityModalInfo?.dimensionType === 'AGENCY' ? 'Agency Name' :
+                         selectedEntityModalInfo?.dimensionType === 'BROKER' ? 'Broker Name' :
+                         selectedEntityModalInfo?.dimensionType === 'SUPPLIER' ? 'Supplier Name' :
+                         selectedEntityModalInfo?.dimensionType === 'AREA' ? 'Area Name' :
+                         selectedEntityModalInfo?.dimensionType === 'GRADE' ? 'Grade Name' : 'Agency Name'}
+                      </th>
                       <th className="p-3.5">MR No</th>
                       <th className="p-3.5">PO No</th>
                       <th className="p-3.5 text-right" title="Moisture Sett (%) - claim_moisture from material_inspection">Moisture Sett (%)</th>
@@ -1995,15 +2022,87 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium font-mono text-[11px]">
                     {(() => {
-                      const target = selectedBrokerModalBroker.trim().toUpperCase();
-                      const settInfo = dataset.brokerSettlementMap?.[target];
-                      const details = settInfo?.details || [];
+                      const entityName = selectedEntityModalInfo?.entityName || selectedBrokerModalBroker || '';
+                      const dimType = selectedEntityModalInfo?.dimensionType || 'BROKER';
+                      const target = entityName.trim().toUpperCase();
 
-                      if (details.length > 0) {
-                        return details.map((item: any, idx: number) => (
+                      let details: any[] = [];
+                      if (dimType === 'BROKER') {
+                        const settInfo = dataset.brokerSettlementMap?.[target];
+                        details = settInfo?.details || [];
+                      } else {
+                        const allDetails: any[] = [];
+                        Object.values(dataset.brokerSettlementMap || {}).forEach(s => {
+                          if (s && s.details) allDetails.push(...s.details);
+                        });
+                        details = allDetails.filter((d: any) => {
+                          if (dimType === 'AGENCY') return String(d.agency || d.purchase_unit_name || '').trim().toUpperCase() === target;
+                          if (dimType === 'SUPPLIER') return String(d.supplier || '').trim().toUpperCase() === target;
+                          if (dimType === 'AREA') return String(d.area || '').trim().toUpperCase() === target;
+                          if (dimType === 'GRADE') return String(d.grade || '').trim().toUpperCase() === target;
+                          return false;
+                        });
+                      }
+
+                      // Fallback to matched transactions if details are empty
+                      if (details.length === 0) {
+                        const matchedTxns = transactions.filter(t => {
+                          if (dimType === 'AGENCY') return String(t.agency || '').trim().toUpperCase() === target;
+                          if (dimType === 'BROKER') return (t.broker || 'Direct').trim().toUpperCase() === target;
+                          if (dimType === 'SUPPLIER') return (t.supplier || '').trim().toUpperCase() === target;
+                          if (dimType === 'AREA') return (t.area || '').trim().toUpperCase() === target;
+                          if (dimType === 'GRADE') return (t.grade || '').trim().toUpperCase() === target;
+                          return false;
+                        });
+
+                        if (matchedTxns.length > 0) {
+                          details = matchedTxns.map((t: any) => ({
+                            broker: t.broker || 'Direct',
+                            agency: t.agency || '—',
+                            supplier: t.supplier || '—',
+                            area: t.area || '—',
+                            grade: t.grade || '—',
+                            mr_no: t.mrNo || '—',
+                            po_no: t.poNo || t.saudaNo || '—',
+                            moist_sett: t.moisturePct || 0,
+                            moist_claim: t.moisturePct || 0,
+                            dust_sett: 0,
+                            dust_claim: 0,
+                            gd_sett: 0,
+                            gd_claim: 0,
+                            val_ex_short: 0,
+                            lorry_number: '—'
+                          }));
+                        }
+                      }
+
+                      if (details.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={9} className="p-12 text-center text-slate-400 font-sans font-bold">
+                              No settlement or Sauda records found for {entityName}.
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return details.map((item: any, idx: number) => {
+                        const displayEntityName = dimType === 'AGENCY'
+                          ? (item.agency && !isInvalidAgency(item.agency) ? item.agency : entityName)
+                          : dimType === 'BROKER'
+                          ? (item.broker || entityName)
+                          : dimType === 'SUPPLIER'
+                          ? (item.supplier || entityName)
+                          : dimType === 'AREA'
+                          ? (item.area || entityName)
+                          : dimType === 'GRADE'
+                          ? (item.grade || entityName)
+                          : entityName;
+
+                        return (
                           <tr key={idx} className="hover:bg-slate-50 transition">
                             <td className="p-3.5 text-center font-bold text-slate-500">{idx + 1}</td>
-                            <td className="p-3.5 font-bold text-slate-900 font-sans">{item.broker || selectedBrokerModalBroker}</td>
+                            <td className="p-3.5 font-bold text-slate-900 font-sans">{displayEntityName}</td>
                             <td className="p-3.5 font-bold text-slate-800">{item.mr_no || '—'}</td>
                             <td className="p-3.5 font-bold text-slate-800">{item.po_no || '—'}</td>
                             <td className="p-3.5 text-right text-slate-700 font-semibold font-mono">
@@ -2015,43 +2114,38 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             <td className="p-3.5 text-right text-slate-700 font-semibold font-mono">
                               {formatSettVal(item.gd_sett, item.gd_claim)}
                             </td>
-                            <td className="p-3.5 text-right text-slate-700 font-mono">{item.val_ex_short ? `₹${Number(item.val_ex_short).toLocaleString()}` : '—'}</td>
-                            <td className="p-3.5 text-slate-800">{item.lorry_number || '—'}</td>
+                            <td className="p-3.5 text-right text-slate-700 font-mono">
+                              {item.val_ex_short ? `₹${Number(item.val_ex_short).toLocaleString()}` : '—'}
+                            </td>
+                            <td className="p-3.5 text-slate-800">{item.lorry_number || item.vehicle_no || '—'}</td>
                           </tr>
-                        ));
-                      }
-
-                      // Fallback to matched transactions
-                      const matchedTxns = transactions.filter(t => (t.broker || 'Direct').trim().toLowerCase() === selectedBrokerModalBroker.trim().toLowerCase());
-                      if (matchedTxns.length > 0) {
-                        return matchedTxns.map((item: any, idx: number) => (
-                          <tr key={idx} className="hover:bg-slate-50 transition">
-                            <td className="p-3.5 text-center font-bold text-slate-500">{idx + 1}</td>
-                            <td className="p-3.5 font-bold text-slate-900 font-sans">{item.broker || selectedBrokerModalBroker}</td>
-                            <td className="p-3.5 text-slate-800">{item.mrNo || '—'}</td>
-                            <td className="p-3.5 text-slate-800">{item.poNo || '—'}</td>
-                            <td className="p-3.5 text-right text-slate-700 font-mono">{item.moisturePct ? `${Number(item.moisturePct).toFixed(2)}%` : '—'}</td>
-                            <td className="p-3.5 text-right text-slate-700 font-mono">—</td>
-                            <td className="p-3.5 text-right text-slate-700 font-mono">—</td>
-                            <td className="p-3.5 text-right text-slate-700 font-mono">—</td>
-                            <td className="p-3.5 text-slate-800">—</td>
-                          </tr>
-                        ));
-                      }
-
-                      return (
-                        <tr>
-                          <td colSpan={9} className="p-12 text-center text-slate-400">
-                            No settlement or Sauda records found for broker {selectedBrokerModalBroker}.
-                          </td>
-                        </tr>
-                      );
+                        );
+                      });
                     })()}
                   </tbody>
                   {(() => {
-                    const target = selectedBrokerModalBroker.trim().toUpperCase();
-                    const settInfo = dataset.brokerSettlementMap?.[target];
-                    const details = settInfo?.details || [];
+                    const entityName = selectedEntityModalInfo?.entityName || selectedBrokerModalBroker || '';
+                    const dimType = selectedEntityModalInfo?.dimensionType || 'BROKER';
+                    const target = entityName.trim().toUpperCase();
+
+                    let details: any[] = [];
+                    if (dimType === 'BROKER') {
+                      const settInfo = dataset.brokerSettlementMap?.[target];
+                      details = settInfo?.details || [];
+                    } else {
+                      const allDetails: any[] = [];
+                      Object.values(dataset.brokerSettlementMap || {}).forEach(s => {
+                        if (s && s.details) allDetails.push(...s.details);
+                      });
+                      details = allDetails.filter((d: any) => {
+                        if (dimType === 'AGENCY') return String(d.agency || d.purchase_unit_name || '').trim().toUpperCase() === target;
+                        if (dimType === 'SUPPLIER') return String(d.supplier || '').trim().toUpperCase() === target;
+                        if (dimType === 'AREA') return String(d.area || '').trim().toUpperCase() === target;
+                        if (dimType === 'GRADE') return String(d.grade || '').trim().toUpperCase() === target;
+                        return false;
+                      });
+                    }
+
                     if (details.length === 0) return null;
 
                     const moistRows = details.filter((d: any) => Number(d.moist_sett || d.moist_claim || 0) > 0);
@@ -2089,9 +2183,12 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
             {/* Modal Footer */}
             <div className="bg-white px-6 py-3 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-              <span>Showing all Sauda records for broker: <strong>{selectedBrokerModalBroker}</strong></span>
+              <span>Showing all Sauda records for: <strong>{selectedEntityModalInfo?.entityName || selectedBrokerModalBroker}</strong></span>
               <button
-                onClick={() => setSelectedBrokerModalBroker(null)}
+                onClick={() => {
+                  setSelectedEntityModalInfo(null);
+                  setSelectedBrokerModalBroker(null);
+                }}
                 className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition cursor-pointer"
               >
                 Close View

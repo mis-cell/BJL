@@ -202,6 +202,19 @@ export interface SystemReportDataset {
   };
 }
 
+export const INVALID_AGENCY_SET = new Set([
+  '-', 'DRUMS', 'LOOSE', 'BALES', 'DRUM', 'LOOSE JUTE', 'UNASSIGNED', 'N/A', 'NONE', 'DIRECT', 'BALES/LOOSE', 'LOOSE/DRUMS', 'NO AGENCY', ''
+]);
+
+export function isInvalidAgency(agencyStr?: string | null): boolean {
+  if (!agencyStr) return true;
+  const clean = String(agencyStr).trim().toUpperCase();
+  if (!clean || clean === '-') return true;
+  if (INVALID_AGENCY_SET.has(clean)) return true;
+  if (clean.includes('DRUM') || clean.includes('LOOSE') || clean.includes('BALE')) return true;
+  return false;
+}
+
 // Helper to normalize any date string format to standard YYYY-MM-DD
 export function normalizeToISODate(dateStr?: string | null): string {
   if (!dateStr) return new Date().toISOString().split('T')[0];
@@ -1451,7 +1464,8 @@ export async function loadAndProcessSystemReportData(): Promise<{
       const broker = brokerMap.get(rawBrk.toUpperCase()) || rawBrk || 'Direct';
 
       const rawAgency = String(po.agency || po.purchase_unit_name || '').trim();
-      const agency = agencyMap.get(rawAgency.toUpperCase()) || (rawAgency.toUpperCase() !== 'BALES' ? rawAgency : '-');
+      const resolvedAgency = agencyMap.get(rawAgency.toUpperCase()) || rawAgency;
+      const agency = isInvalidAgency(resolvedAgency) ? '-' : resolvedAgency;
 
       const rawArea = String(po.area || '').trim();
       const area = areaMap.get(rawArea.toUpperCase()) || rawArea || '-';
@@ -1707,7 +1721,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
     });
     (agencies || []).forEach((a: any) => {
       const name = String(a.agency_name || a.name || '').trim();
-      if (name && name !== '-') agencySet.add(name);
+      if (name && !isInvalidAgency(name)) agencySet.add(name);
     });
     (areas || []).forEach((ar: any) => {
       const name = String(ar.area_name || ar.name || '').trim();
@@ -1721,7 +1735,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
     transactionLines.forEach(t => {
       if (t.broker && t.broker !== 'Direct') brokerSet.add(t.broker);
       if (t.supplier && t.supplier !== 'Unassigned Supplier' && t.supplier !== 'Direct Supplier') supplierSet.add(t.supplier);
-      if (t.agency && t.agency !== '-') agencySet.add(t.agency);
+      if (t.agency && !isInvalidAgency(t.agency)) agencySet.add(t.agency);
       if (t.area && t.area !== '-') areaSet.add(t.area);
       if (t.grade && t.grade !== '-') gradeSet.add(t.grade);
       if (t.month) monthSet.add(t.month);
@@ -2100,6 +2114,10 @@ export function groupTransactionsByDimension(
   txns: ReportTransactionLine[],
   dimension: 'broker' | 'agency' | 'area' | 'grade' | 'supplier' | 'month' | 'saudaNo' | 'poNo'
 ) {
+  if (dimension === 'agency') {
+    txns = txns.filter(t => !isInvalidAgency(t.agency));
+  }
+
   const map = new Map<string, {
     key: string;
     quantityMT: number;
