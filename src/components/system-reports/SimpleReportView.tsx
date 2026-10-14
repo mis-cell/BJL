@@ -888,8 +888,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                           <th className="p-3 text-right" title="Dust Claim in Percentage (%)">Dust Claim/Sett (%)</th>
                           <th className="p-3 text-right" title="Gradedown Claim in Percentage (%)">Gradedown Claim/Sett (%)</th>
                           <th className="p-3 text-right" title="Shortage/Excess Deduction calculated in Amount (₹)">Short / Excess (₹)</th>
-                          <th className="p-3 text-left" title="Specific Deduction Types applied (e.g. Karda, Tare, Misc Less)">Deduction Type</th>
-                          <th className="p-3 text-right" title="Specific Deduction Amount (₹)">Deduction Amount (₹)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-medium font-mono">
@@ -929,16 +927,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             ? `₹${Math.round(settInfo.shortExcess).toLocaleString()}`
                             : '—';
 
-                          const deductionTypes = (settInfo.deductionTypes && settInfo.deductionTypes.length > 0)
-                            ? settInfo.deductionTypes
-                            : (settInfo.allDeductionValue > 0 || row.deductionAmount > 0 ? ['Settlement Deduction'] : []);
-
-                          const otherDedVal = (settInfo.otherDeductionAmount && settInfo.otherDeductionAmount > 0)
-                            ? `₹${Math.round(settInfo.otherDeductionAmount).toLocaleString()}`
-                            : (row.deductionAmount > 0 && settInfo.shortExcess === 0
-                                ? `₹${Math.round(row.deductionAmount).toLocaleString()}`
-                                : '—');
-
                           return (
                             <tr
                               key={idx}
@@ -961,20 +949,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                               <td className="p-3 text-right text-slate-700 font-mono font-semibold">{dustVal}</td>
                               <td className="p-3 text-right text-slate-700 font-mono font-semibold">{gdVal}</td>
                               <td className="p-3 text-right text-slate-700 font-mono">{shortExcessVal}</td>
-                              <td className="p-3 text-left font-sans">
-                                {deductionTypes.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1">
-                                    {deductionTypes.map((type, tIdx) => (
-                                      <span key={tIdx} className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
-                                        {type}
-                                      </span>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span className="text-slate-400">—</span>
-                                )}
-                              </td>
-                              <td className="p-3 text-right text-slate-700 font-mono">{otherDedVal}</td>
                             </tr>
                           );
                         })}
@@ -1012,15 +986,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             ₹{Math.round(deductionRows.reduce((acc, r) => {
                               const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
                               return acc + (sett?.shortExcess || 0);
-                            }, 0)).toLocaleString()}
-                          </td>
-                          <td className="p-3 text-left font-sans text-[11px] text-slate-600">
-                            All Claim Types
-                          </td>
-                          <td className="p-3 text-right font-mono text-slate-800">
-                            ₹{Math.round(deductionRows.reduce((acc, r) => {
-                              const sett = dataset.brokerSettlementMap?.[r.key.toUpperCase()];
-                              return acc + (sett?.otherDeductionAmount || 0);
                             }, 0)).toLocaleString()}
                           </td>
                         </tr>
@@ -1516,7 +1481,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                       <th className="p-3.5 text-right" title="Dust Claim in %">Dust Claim (%)</th>
                       <th className="p-3.5 text-right" title="Gradedown Claim in %">Gradedown Claim (%)</th>
                       <th className="p-3.5 text-right" title="Weight Shortage/Excess in Rupees">Short / Excess (₹)</th>
-                      <th className="p-3.5">Deduction Type</th>
                       <th className="p-3.5">Vehicle / Lorry No</th>
                     </tr>
                   </thead>
@@ -1537,15 +1501,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             <td className="p-3.5 text-right text-slate-700 font-semibold">{item.summary_rate_wt_claim ? `${Number(item.summary_rate_wt_claim).toFixed(2)}%` : '—'}</td>
                             <td className="p-3.5 text-right text-slate-700 font-semibold">{item.summary_misc_less ? `${Number(item.summary_misc_less).toFixed(2)}%` : '—'}</td>
                             <td className="p-3.5 text-right text-slate-700">{item.val_ex_short ? `₹${Number(item.val_ex_short).toLocaleString()}` : '—'}</td>
-                            <td className="p-3.5 text-slate-800 font-sans">
-                              {item.summary_deduction_type && item.summary_deduction_type !== '-' ? (
-                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
-                                  {item.summary_deduction_type}
-                                </span>
-                              ) : (
-                                <span className="text-slate-400">—</span>
-                              )}
-                            </td>
                             <td className="p-3.5 text-slate-800">{item.lorry_number || '—'}</td>
                           </tr>
                         ));
@@ -1564,13 +1519,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                             <td className="p-3.5 text-right text-slate-700">—</td>
                             <td className="p-3.5 text-right text-slate-700">—</td>
                             <td className="p-3.5 text-right text-slate-700">—</td>
-                            <td className="p-3.5 text-slate-800 font-sans">
-                              {item.deductionAmount > 0 ? (
-                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
-                                  Standard Deduction
-                                </span>
-                              ) : '—'}
-                            </td>
                             <td className="p-3.5 text-slate-800">—</td>
                           </tr>
                         ));
@@ -1578,7 +1526,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
                       return (
                         <tr>
-                          <td colSpan={10} className="p-12 text-center text-slate-400">
+                          <td colSpan={9} className="p-12 text-center text-slate-400">
                             No settlement or Sauda records found for broker {selectedBrokerModalBroker}.
                           </td>
                         </tr>
