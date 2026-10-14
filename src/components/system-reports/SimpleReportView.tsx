@@ -138,6 +138,21 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     }
   };
 
+  // Sorting for Premium Given Table
+  type PremiumSortField = 'broker' | 'dealCount' | 'quantityMT' | 'premiumAmount';
+  const [premiumSortField, setPremiumSortField] = useState<PremiumSortField>('premiumAmount');
+  const [premiumSortAsc, setPremiumSortAsc] = useState<boolean>(false);
+
+  const handlePremiumSort = (field: PremiumSortField) => {
+    if (premiumSortField === field) {
+      setPremiumSortAsc(prev => !prev);
+    } else {
+      setPremiumSortField(field);
+      // For broker name, default to ascending (A-Z). For numbers/premium, default to descending (highest first)
+      setPremiumSortAsc(field === 'broker' ? true : false);
+    }
+  };
+
   // Filtered & Sorted All Sauda List (Each Sauda / PO is 1 row, full total weight, from sauda_master, scp, pm)
   const filteredSaudaList = useMemo(() => {
     let list = [...allSaudaRecords];
@@ -1385,49 +1400,200 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             }
 
             if (subAnalysisMode === 'PREMIUM') {
+              // 1. Filter: Show only rows where Total Premium Given (₹) > 0
+              const filteredPremiumRows = currentData.filter(row => {
+                if (!row.premiumAmount || row.premiumAmount <= 0) return false;
+                if (searchQuery.trim()) {
+                  return row.key.toLowerCase().includes(searchQuery.toLowerCase().trim());
+                }
+                return true;
+              });
+
+              // 2. Sort by selected column (default: highest premium first)
+              const sortedPremiumRows = [...filteredPremiumRows].sort((a, b) => {
+                let valA = 0;
+                let valB = 0;
+
+                switch (premiumSortField) {
+                  case 'broker':
+                    return premiumSortAsc ? a.key.localeCompare(b.key) : b.key.localeCompare(a.key);
+                  case 'dealCount':
+                    valA = a.dealCount || 0;
+                    valB = b.dealCount || 0;
+                    break;
+                  case 'quantityMT':
+                    valA = a.quantityMT || 0;
+                    valB = b.quantityMT || 0;
+                    break;
+                  case 'premiumAmount':
+                  default:
+                    valA = a.premiumAmount || 0;
+                    valB = b.premiumAmount || 0;
+                    break;
+                }
+
+                if (valA === valB) {
+                  return b.quantityMT - a.quantityMT;
+                }
+                return premiumSortAsc ? valA - valB : valB - valA;
+              });
+
+              const totalDeals = sortedPremiumRows.reduce((acc, r) => acc + (r.dealCount || 0), 0);
+              const totalMT = sortedPremiumRows.reduce((acc, r) => acc + (r.quantityMT || 0), 0);
+              const totalPremium = sortedPremiumRows.reduce((acc, r) => acc + (r.premiumAmount || 0), 0);
+
+              const entityHeaderName = (
+                activeTab === 'BROKER' ? 'Broker Name' :
+                activeTab === 'SUPPLIER' ? 'Supplier Name' :
+                activeTab === 'AGENCY' ? 'Agency Name' :
+                activeTab === 'AREA' ? 'Area Name' :
+                activeTab === 'GRADE' ? 'Grade Name' :
+                'Broker Name'
+              );
+
               return (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b">
-                        <th className="p-3">Entity Name</th>
-                        <th className="p-3 text-center">Deals</th>
-                        <th className="p-3 text-right">Contract MT</th>
-                        <th className="p-3 text-right text-emerald-700">Total Premium Given (₹)</th>
-                        {/* <th className="p-3 text-right">Avg Premium Rate (₹/Qtl)</th> */}
-                       {/*  <th className="p-3 text-center">Premium Status</th> */}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium">
-                      {currentData.map((row, idx) => {
-                        const premRate = row.quantityMT > 0 ? (row.premiumAmount / (row.quantityMT * 10)) : 0;
-                        return (
-                          <tr key={idx} className="hover:bg-slate-50 transition">
-                            <td className="p-3 font-bold text-slate-900">{row.key}</td>
-                            <td className="p-3 text-center font-mono">{row.dealCount}</td>
-                            <td className="p-3 text-right font-mono">{row.quantityMT.toFixed(2)} MT</td>
-                            <td className="p-3 text-right font-mono font-black text-emerald-800">
-                              {row.premiumAmount > 0 ? `+₹${Math.round(row.premiumAmount).toLocaleString()}` : '₹0'}
+                <div className="space-y-3">
+                  <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-xs bg-white">
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b select-none">
+                          <th
+                            onClick={() => handlePremiumSort('broker')}
+                            className="p-3 cursor-pointer hover:bg-slate-200/90 transition group"
+                            title="Sort by Name"
+                          >
+                            <div className="inline-flex items-center gap-1.5">
+                              <span>{entityHeaderName}</span>
+                              <span className={`inline-flex items-center justify-center p-0.5 rounded transition ${
+                                premiumSortField === 'broker'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'text-slate-400 group-hover:text-slate-700 group-hover:bg-slate-200'
+                              }`}>
+                                {premiumSortField === 'broker' ? (
+                                  premiumSortAsc ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+                                )}
+                              </span>
+                            </div>
+                          </th>
+                          <th
+                            onClick={() => handlePremiumSort('dealCount')}
+                            className="p-3 text-center cursor-pointer hover:bg-slate-200/90 transition group"
+                            title="Sort by Deals"
+                          >
+                            <div className="inline-flex items-center justify-center gap-1.5">
+                              <span>Deals</span>
+                              <span className={`inline-flex items-center justify-center p-0.5 rounded transition ${
+                                premiumSortField === 'dealCount'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'text-slate-400 group-hover:text-slate-700 group-hover:bg-slate-200'
+                              }`}>
+                                {premiumSortField === 'dealCount' ? (
+                                  premiumSortAsc ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+                                )}
+                              </span>
+                            </div>
+                          </th>
+                          <th
+                            onClick={() => handlePremiumSort('quantityMT')}
+                            className="p-3 text-right cursor-pointer hover:bg-slate-200/90 transition group"
+                            title="Sort by Contract MT"
+                          >
+                            <div className="inline-flex items-center justify-end gap-1.5">
+                              <span>Contract MT</span>
+                              <span className={`inline-flex items-center justify-center p-0.5 rounded transition ${
+                                premiumSortField === 'quantityMT'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'text-slate-400 group-hover:text-slate-700 group-hover:bg-slate-200'
+                              }`}>
+                                {premiumSortField === 'quantityMT' ? (
+                                  premiumSortAsc ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+                                )}
+                              </span>
+                            </div>
+                          </th>
+                          <th
+                            onClick={() => handlePremiumSort('premiumAmount')}
+                            className="p-3 text-right cursor-pointer hover:bg-emerald-100/90 transition group bg-emerald-50/70"
+                            title="Sort by Total Premium Given"
+                          >
+                            <div className="inline-flex items-center justify-end gap-1.5">
+                              <span className="text-emerald-800 font-black">Total Premium Given (₹)</span>
+                              <span className={`inline-flex items-center justify-center p-0.5 rounded transition ${
+                                premiumSortField === 'premiumAmount'
+                                  ? 'bg-emerald-700 text-white shadow-xs'
+                                  : 'text-emerald-700 group-hover:text-emerald-950 group-hover:bg-emerald-200'
+                              }`}>
+                                {premiumSortField === 'premiumAmount' ? (
+                                  premiumSortAsc ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ArrowUpDown className="w-3 h-3 opacity-60 group-hover:opacity-100" />
+                                )}
+                              </span>
+                            </div>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium">
+                        {sortedPremiumRows.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="p-8 text-center text-slate-400 font-bold">
+                              No records found with positive premium given.
                             </td>
-                            {/* <td className="p-3 text-right font-mono font-bold text-slate-800">
-                              ₹{premRate.toFixed(2)}
-                            </td> */}
-                            {/* <td className="p-3 text-center">
-                              {row.premiumAmount > 0 ? (
-                                <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                  🌟 Premium Granted
-                                </span>
-                              ) : (
-                                <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                                  Standard Base Rate
-                                </span>
-                              )}
-                            </td> */}
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                        ) : (
+                          sortedPremiumRows.map((row, idx) => (
+                            <tr
+                              key={idx}
+                              onClick={() => {
+                                if (activeTab === 'BROKER') {
+                                  setSelectedBrokerModalBroker(row.key);
+                                }
+                              }}
+                              className={`transition ${activeTab === 'BROKER' ? 'hover:bg-emerald-50/70 cursor-pointer' : 'hover:bg-slate-50'}`}
+                            >
+                              <td className="p-3 font-bold text-slate-900 flex items-center gap-2">
+                                <span>{row.key}</span>
+                                {activeTab === 'BROKER' && (
+                                  <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono font-normal">
+                                    Click Details ↗
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 text-center font-mono font-bold text-slate-700">{row.dealCount}</td>
+                              <td className="p-3 text-right font-mono font-bold text-slate-800">{row.quantityMT.toFixed(2)} MT</td>
+                              <td className="p-3 text-right font-mono font-black text-emerald-800 bg-emerald-50/30">
+                                +₹{Math.round(row.premiumAmount).toLocaleString()}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                      {sortedPremiumRows.length > 0 && (
+                        <tfoot>
+                          <tr className="bg-slate-100/90 font-bold border-t-2 border-slate-300 text-slate-900">
+                            <td className="p-3 uppercase text-[11px] font-black text-slate-900">
+                              TOTAL ({sortedPremiumRows.length} {activeTab === 'BROKER' ? 'Brokers' : 'Entities'})
+                            </td>
+                            <td className="p-3 text-center font-mono font-black text-slate-900 text-xs">
+                              {totalDeals} Deals
+                            </td>
+                            <td className="p-3 text-right font-mono font-black text-slate-900 text-xs">
+                              {totalMT.toFixed(2)} MT
+                            </td>
+                            <td className="p-3 text-right font-mono font-black text-emerald-800 text-xs bg-emerald-100/50">
+                              +₹{Math.round(totalPremium).toLocaleString()}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      )}
+                    </table>
+                  </div>
                 </div>
               );
             }
