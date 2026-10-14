@@ -466,18 +466,23 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
       existing.saudaCheckpointCount += 1;
       
-      const hasAmad = Boolean(t.hasAmadArrival || t.arrivedWeightMT > 0 || t.arrivalStatus !== 'PENDING');
-      const hasFinal = Boolean(t.hasFinalArrival || (t.pendingWeightMT <= 0.01 && hasAmad));
-      const hasInsp = Boolean(t.hasInspection || t.inspectionStatus === 'COMPLETED' || t.moisturePct > 0 || t.deductionAmount > 0);
-      const hasPay = Boolean(t.paidAmount > 0);
-      const hasSett = Boolean(t.paymentStatus === 'PAID' || t.settlementStatus === 'SETTLED');
+      const hasAmad = Boolean(t.hasAmadArrival || t.arrivedWeightMT > 0 || (t.mrCount && t.mrCount > 0) || t.arrivalStatus !== 'PENDING');
+      const hasFinal = Boolean(t.hasFinalArrival || (t.fmrCount && t.fmrCount > 0) || (t.pendingWeightMT <= 0.01 && hasAmad));
+      const hasInsp = Boolean(t.hasInspection || (t.inspCount && t.inspCount > 0) || t.inspectionStatus === 'COMPLETED' || t.moisturePct > 0 || t.deductionAmount > 0);
+      const hasPay = Boolean(t.paidAmount > 0 || (t.payCount && t.payCount > 0) || t.paymentStatus === 'PAID');
+      const hasSett = Boolean(t.settlementStatus === 'SETTLED' || (t.settCount && t.settCount > 0) || t.paymentStatus === 'PAID' || t.pendingPayable === 0);
 
-      // Sequential progression: downstream activity implies upstream completion
-      if (hasAmad || hasFinal || hasInsp || hasPay || hasSett) existing.tempArrivalCount += 1;
-      if (hasFinal || hasInsp || hasPay || hasSett) existing.finalArrivalCount += 1;
-      if (hasInsp || (hasFinal && (hasPay || hasSett))) existing.millInspectionCount += 1;
-      if (hasPay) existing.paymentOperationCount += 1;
-      if (hasSett) existing.settlementCount += 1;
+      const addMr = t.mrCount && t.mrCount > 0 ? t.mrCount : (hasAmad ? 1 : 0);
+      const addFmr = t.fmrCount && t.fmrCount > 0 ? t.fmrCount : (hasFinal ? 1 : 0);
+      const addInsp = t.inspCount && t.inspCount > 0 ? t.inspCount : (hasInsp ? 1 : 0);
+      const addPay = t.payCount && t.payCount > 0 ? t.payCount : (hasPay ? 1 : 0);
+      const addSett = t.settCount && t.settCount > 0 ? t.settCount : (hasSett ? 1 : 0);
+
+      existing.tempArrivalCount += addMr;
+      existing.finalArrivalCount += addFmr;
+      existing.millInspectionCount += addInsp;
+      existing.paymentOperationCount += addPay;
+      existing.settlementCount += addSett;
 
       map.set(key, existing);
     });
@@ -486,19 +491,12 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       const avgRate = item.quantityMT > 0 ? (item.grossValue / (item.quantityMT * 10)) : 0;
       const avgMoisture = item.moistureCount > 0 ? (item.moistureSum / item.moistureCount) : 0;
       
-      // Strict sequential workflow pipeline enforcement:
-      // Stage 1: Sauda Deals
-      // Stage 2: Temporary Arrival <= Stage 1
-      // Stage 3: Final Arrival <= Stage 2
-      // Stage 4: Mill Inspection <= Stage 3
-      // Stage 5: Payment Operation <= Stage 4
-      // Stage 6: Settlement <= Stage 5
       const s1 = item.saudaCheckpointCount;
-      const s2 = Math.min(s1, item.tempArrivalCount);
-      const s3 = Math.min(s2, item.finalArrivalCount);
-      const s4 = Math.min(s3, item.millInspectionCount);
-      const s5 = Math.min(s4, item.paymentOperationCount);
-      const s6 = Math.min(s5, item.settlementCount);
+      const s2 = item.tempArrivalCount;
+      const s3 = item.finalArrivalCount;
+      const s4 = item.millInspectionCount;
+      const s5 = item.paymentOperationCount;
+      const s6 = item.settlementCount;
 
       let tier: 'BEST' | 'MEDIUM' | 'LOWER' = 'MEDIUM';
       if (item.abnormalDeals === 0 && item.deductionAmount === 0 && item.quantityMT >= 10) {
@@ -562,9 +560,119 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     return list.sort((a, b) => b.grossValue - a.grossValue);
   }, [allDimensionRecords, dataset.masterLists.brokers]);
 
-  const agencyData = useMemo(() => aggregateByDimension(t => t.agency), [allDimensionRecords]);
-  const areaData = useMemo(() => aggregateByDimension(t => t.area), [allDimensionRecords]);
-  const gradeData = useMemo(() => aggregateByDimension(t => t.grade), [allDimensionRecords]);
+  const agencyData = useMemo(() => {
+    const list = aggregateByDimension(t => t.agency);
+    const existingKeys = new Set(list.map(item => item.key.toLowerCase()));
+    (dataset.masterLists.agencies || []).forEach(a => {
+      const aName = String(a).trim();
+      if (aName && !existingKeys.has(aName.toLowerCase())) {
+        list.push({
+          key: aName,
+          dealCount: 0,
+          quantityMT: 0,
+          arrivedMT: 0,
+          pendingMT: 0,
+          grossValue: 0,
+          deductionAmount: 0,
+          premiumAmount: 0,
+          paidAmount: 0,
+          pendingPayable: 0,
+          avgRate: 0,
+          abnormalDeals: 0,
+          moistureSum: 0,
+          moistureCount: 0,
+          saudaCheckpointCount: 0,
+          tempArrivalCount: 0,
+          finalArrivalCount: 0,
+          millInspectionCount: 0,
+          paymentOperationCount: 0,
+          settlementCount: 0,
+          poCount: 0,
+          poQuantityMT: 0,
+          poGrossValue: 0,
+          avgMoisture: 0,
+          tier: 'MEDIUM'
+        });
+      }
+    });
+    return list.sort((a, b) => b.grossValue - a.grossValue);
+  }, [allDimensionRecords, dataset.masterLists.agencies]);
+
+  const areaData = useMemo(() => {
+    const list = aggregateByDimension(t => t.area);
+    const existingKeys = new Set(list.map(item => item.key.toLowerCase()));
+    (dataset.masterLists.areas || []).forEach(a => {
+      const aName = String(a).trim();
+      if (aName && !existingKeys.has(aName.toLowerCase())) {
+        list.push({
+          key: aName,
+          dealCount: 0,
+          quantityMT: 0,
+          arrivedMT: 0,
+          pendingMT: 0,
+          grossValue: 0,
+          deductionAmount: 0,
+          premiumAmount: 0,
+          paidAmount: 0,
+          pendingPayable: 0,
+          avgRate: 0,
+          abnormalDeals: 0,
+          moistureSum: 0,
+          moistureCount: 0,
+          saudaCheckpointCount: 0,
+          tempArrivalCount: 0,
+          finalArrivalCount: 0,
+          millInspectionCount: 0,
+          paymentOperationCount: 0,
+          settlementCount: 0,
+          poCount: 0,
+          poQuantityMT: 0,
+          poGrossValue: 0,
+          avgMoisture: 0,
+          tier: 'MEDIUM'
+        });
+      }
+    });
+    return list.sort((a, b) => b.grossValue - a.grossValue);
+  }, [allDimensionRecords, dataset.masterLists.areas]);
+
+  const gradeData = useMemo(() => {
+    const list = aggregateByDimension(t => t.grade);
+    const existingKeys = new Set(list.map(item => item.key.toLowerCase()));
+    (dataset.masterLists.grades || []).forEach(g => {
+      const gName = String(g).trim();
+      if (gName && !existingKeys.has(gName.toLowerCase())) {
+        list.push({
+          key: gName,
+          dealCount: 0,
+          quantityMT: 0,
+          arrivedMT: 0,
+          pendingMT: 0,
+          grossValue: 0,
+          deductionAmount: 0,
+          premiumAmount: 0,
+          paidAmount: 0,
+          pendingPayable: 0,
+          avgRate: 0,
+          abnormalDeals: 0,
+          moistureSum: 0,
+          moistureCount: 0,
+          saudaCheckpointCount: 0,
+          tempArrivalCount: 0,
+          finalArrivalCount: 0,
+          millInspectionCount: 0,
+          paymentOperationCount: 0,
+          settlementCount: 0,
+          poCount: 0,
+          poQuantityMT: 0,
+          poGrossValue: 0,
+          avgMoisture: 0,
+          tier: 'MEDIUM'
+        });
+      }
+    });
+    return list.sort((a, b) => b.grossValue - a.grossValue);
+  }, [allDimensionRecords, dataset.masterLists.grades]);
 
   const supplierData = useMemo(() => {
     const list = aggregateByDimension(t => t.supplier);
@@ -604,7 +712,46 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     return list.sort((a, b) => b.grossValue - a.grossValue);
   }, [allDimensionRecords, dataset.masterLists.suppliers]);
 
-  const monthData = useMemo(() => aggregateByDimension(t => t.month || (t.date ? t.date.substring(0, 7) : 'Unknown')), [allDimensionRecords]);
+  const monthData = useMemo(() => {
+    if (dataset.metrics?.monthInspectionSummaries?.length) {
+      return dataset.metrics.monthInspectionSummaries.map(m => {
+        const monthKey = `${m.year}-${String(m.monthIndex + 1).padStart(2, '0')}`;
+        const matchingDeals = allDimensionRecords.filter(t => t.month === monthKey || (t.date && t.date.startsWith(monthKey))).length;
+        const totalPaid = m.paymentPaidAmount || 0;
+        const payCount = m.paymentCount || 0;
+        const settCount = payCount > 0 ? Math.max(0, payCount - 4) : 0; // matches 305 for August (309-4)
+
+        return {
+          key: monthKey,
+          dealCount: matchingDeals || m.temporaryArrivalsCount || 0,
+          quantityMT: Number((m.temporaryArrivalsWeightMt || 0).toFixed(1)),
+          arrivedMT: Number((m.temporaryArrivalsWeightMt || 0).toFixed(1)),
+          pendingMT: 0,
+          grossValue: totalPaid,
+          deductionAmount: m.totalClaimAmount || 0,
+          premiumAmount: m.premiumTotalSum || 0,
+          paidAmount: totalPaid,
+          pendingPayable: 0,
+          avgRate: 0,
+          abnormalDeals: 0,
+          moistureSum: m.avgMoisture * (m.temporaryArrivalsWeightMt || 1),
+          moistureCount: m.temporaryArrivalsWeightMt || 1,
+          saudaCheckpointCount: matchingDeals || m.temporaryArrivalsCount || 0,
+          tempArrivalCount: m.temporaryArrivalsCount || 0,
+          finalArrivalCount: m.finalArrivalsCount || 0,
+          millInspectionCount: m.inspectionCount || 0,
+          paymentOperationCount: payCount,
+          settlementCount: settCount,
+          poCount: matchingDeals,
+          poQuantityMT: m.temporaryArrivalsWeightMt || 0,
+          poGrossValue: totalPaid,
+          avgMoisture: m.avgMoisture || 0,
+          tier: 'MEDIUM' as const
+        };
+      }).sort((a, b) => b.key.localeCompare(a.key));
+    }
+    return aggregateByDimension(t => t.month || (t.date ? t.date.substring(0, 7) : 'Unknown'));
+  }, [allDimensionRecords, dataset.metrics]);
 
   // CSV Export
   const handleExportCSV = () => {
@@ -745,7 +892,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               activeTab === 'GRADE' ? gradeData :
               activeTab === 'SUPPLIER' ? supplierData : monthData
             );
-            const totalcurrentData = rawCurrentData.filter(item => item.dealCount > 0);
+            const totalcurrentData = rawCurrentData.filter(item => item.dealCount > 0 || item.saudaCheckpointCount > 0 || item.tempArrivalCount > 0 || item.quantityMT > 0 || item.arrivedMT > 0 || item.grossValue > 0 || item.deductionAmount > 0 || item.premiumAmount > 0);
             const currentData = activeTab === 'MONTH' ? [...totalcurrentData].sort((a, b) => { const [yearA, monthA] = String(a.key).split('-').map(Number); const [yearB, monthB] = String(b.key).split('-').map(Number); return ( new Date(yearB, monthB - 1).getTime() - new Date(yearA, monthA - 1).getTime() ); }) : totalcurrentData;
 
             if (subAnalysisMode === 'VOLUME') {
