@@ -1116,18 +1116,19 @@ export async function loadAndProcessSystemReportData(): Promise<{
     });
 
     // Inspection deductions & quality
-    const inspectionDeductionByPo = new Map<string, { deduction: number; moisture: number; gradeDown: number }>();
+    const inspectionDeductionByPo = new Map<string, { deduction: number; moisture: number; gradeDown: number; hasInspection: boolean }>();
     (inspections || []).forEach((i: any) => {
       const poKey = i.po_no || i.mr_no || i.arrival_no;
       if (poKey) {
-        const prev = inspectionDeductionByPo.get(poKey) || { deduction: 0, moisture: 0, gradeDown: 0 };
+        const prev = inspectionDeductionByPo.get(poKey) || { deduction: 0, moisture: 0, gradeDown: 0, hasInspection: false };
         const ded = Number(i.deduction_amount || 0);
         const moist = Number(i.actual_moisture || i.claim_moisture || 0);
         const gd = Number(i.grade_down_qty || i.deduction_qty || 0);
         inspectionDeductionByPo.set(poKey, {
           deduction: prev.deduction + ded,
           moisture: Math.max(prev.moisture, moist),
-          gradeDown: prev.gradeDown + gd
+          gradeDown: prev.gradeDown + gd,
+          hasInspection: true
         });
       }
     });
@@ -1492,7 +1493,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       }
       const premiumPct = grossPurchaseValue > 0 ? (premiumAmount / grossPurchaseValue) * 100 : 0;
 
-      const inspInfo = inspectionDeductionByPo.get(poNo) || inspectionDeductionByPo.get(saudaNo) || { deduction: 0, moisture: 0, gradeDown: 0 };
+      const inspInfo = inspectionDeductionByPo.get(poNo) || inspectionDeductionByPo.get(saudaNo) || { deduction: 0, moisture: 0, gradeDown: 0, hasInspection: false };
       const deductionAmount = inspInfo.deduction;
       const deductionPct = grossPurchaseValue > 0 ? (deductionAmount / grossPurchaseValue) * 100 : 0;
       const moisturePct = inspInfo.moisture;
@@ -1563,7 +1564,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
         profitStatus,
         saudaStatus: pendingWeightMT === 0 ? 'COMPLETED' : (isDelayed ? 'DELAYED' : 'IN_PROGRESS'),
         arrivalStatus: arrivedWeightMT >= quantityMT ? 'COMPLETED' : (arrivedWeightMT > 0 ? 'IN_TRANSIT' : 'PENDING'),
-        inspectionStatus: inspInfo.deduction > 0 || inspInfo.moisture > 0 ? 'COMPLETED' : 'PENDING',
+        inspectionStatus: inspInfo.hasInspection || inspInfo.deduction > 0 || inspInfo.moisture > 0 ? 'COMPLETED' : 'PENDING',
         paymentStatus: paidAmount >= effectiveCost && effectiveCost > 0 ? 'PAID' : (paidAmount > 0 ? 'PARTIAL' : 'PENDING'),
         settlementStatus: pendingPayable === 0 ? 'SETTLED' : 'PENDING',
         arrivedWeightMT,

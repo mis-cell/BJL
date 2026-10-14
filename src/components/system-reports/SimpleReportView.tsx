@@ -452,9 +452,13 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       existing.saudaCheckpointCount += 1;
       if (t.arrivedWeightMT > 0) existing.tempArrivalCount += 1;
       if (t.pendingWeightMT <= 0.01) existing.finalArrivalCount += 1;
-      if (t.moisturePct > 0 || t.deductionAmount > 0) existing.millInspectionCount += 1;
-      if (t.paidAmount > 0) existing.paymentOperationCount += 1;
-      if (t.paymentStatus === 'PAID') existing.settlementCount += 1;
+      const isInspected = Boolean(t.inspectionStatus === 'COMPLETED' || t.moisturePct > 0 || t.deductionAmount > 0);
+      if (isInspected) {
+        existing.millInspectionCount += 1;
+        // Payment Operation and Settlement strictly require completed Mill Inspection
+        if (t.paidAmount > 0) existing.paymentOperationCount += 1;
+        if (t.paymentStatus === 'PAID') existing.settlementCount += 1;
+      }
 
       map.set(key, existing);
     });
@@ -463,6 +467,12 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       const avgRate = item.quantityMT > 0 ? (item.grossValue / (item.quantityMT * 10)) : 0;
       const avgMoisture = item.moistureCount > 0 ? (item.moistureSum / item.moistureCount) : 0;
       
+      // Strict sequential workflow pipeline enforcement:
+      // Stage 5 (Payment Operation) count can NEVER exceed Stage 4 (Mill Inspection) count.
+      // Stage 6 (Settlement) count can NEVER exceed Stage 5 (Payment Operation) count.
+      const boundedPaymentOperation = Math.min(item.paymentOperationCount, item.millInspectionCount);
+      const boundedSettlement = Math.min(item.settlementCount, boundedPaymentOperation);
+
       let tier: 'BEST' | 'MEDIUM' | 'LOWER' = 'MEDIUM';
       if (item.abnormalDeals === 0 && item.deductionAmount === 0 && item.quantityMT >= 10) {
         tier = 'BEST';
@@ -472,6 +482,8 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
       return {
         ...item,
+        paymentOperationCount: boundedPaymentOperation,
+        settlementCount: boundedSettlement,
         avgRate,
         avgMoisture,
         tier
@@ -1559,20 +1571,32 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-            {[
-              { label: 'Sauda Check Point', count: transactions.length, status: 'Completed', color: 'bg-emerald-50 border-emerald-200 text-emerald-900' },
-              { label: 'Temporary Arrival', count: transactions.filter(t => t.arrivedWeightMT > 0).length, status: 'Active', color: 'bg-blue-50 border-blue-200 text-blue-900' },
-              { label: 'Final Arrival', count: transactions.filter(t => t.pendingWeightMT <= 0.01).length, status: 'In Progress', color: 'bg-indigo-50 border-indigo-200 text-indigo-900' },
-              { label: 'Mill Inspection', count: transactions.filter(t => t.moisturePct > 0 || t.deductionAmount > 0).length, status: 'Inspected', color: 'bg-purple-50 border-purple-200 text-purple-900' },
-              { label: 'Payment Operation', count: transactions.filter(t => t.paidAmount > 0).length, status: 'Processing', color: 'bg-yellow-50 border-yellow-200 text-yellow-900' },
-              { label: 'Settlement', count: transactions.filter(t => t.paymentStatus === 'PAID').length, status: 'Closed', color: 'bg-emerald-100 border-emerald-300 text-emerald-950' },
-            ].map((st, i) => (
-              <div key={i} className={`p-3 rounded-2xl border ${st.color}`}>
-                <span className="text-[10px] font-bold uppercase block text-slate-500">{st.label}</span>
-                <strong className="text-xl font-black font-mono block mt-1">{st.count}</strong>
-                <span className="text-[9px] font-bold uppercase tracking-wider block mt-1 text-slate-600">{st.status}</span>
-              </div>
-            ))}
+            {(() => {
+              const saudaCount = transactions.length;
+              const tempCount = transactions.filter(t => t.arrivedWeightMT > 0).length;
+              const finalCount = transactions.filter(t => t.pendingWeightMT <= 0.01).length;
+              const isInspectedFn = (t: ReportTransactionLine) => Boolean(t.inspectionStatus === 'COMPLETED' || t.moisturePct > 0 || t.deductionAmount > 0);
+              const inspCount = transactions.filter(isInspectedFn).length;
+              const rawPaidCount = transactions.filter(t => isInspectedFn(t) && t.paidAmount > 0).length;
+              const paidCount = Math.min(inspCount, rawPaidCount);
+              const rawSettledCount = transactions.filter(t => isInspectedFn(t) && t.paymentStatus === 'PAID').length;
+              const settledCount = Math.min(paidCount, rawSettledCount);
+
+              return [
+                { label: 'Sauda Check Point', count: saudaCount, status: 'Completed', color: 'bg-emerald-50 border-emerald-200 text-emerald-900' },
+                { label: 'Temporary Arrival', count: tempCount, status: 'Active', color: 'bg-blue-50 border-blue-200 text-blue-900' },
+                { label: 'Final Arrival', count: finalCount, status: 'In Progress', color: 'bg-indigo-50 border-indigo-200 text-indigo-900' },
+                { label: 'Mill Inspection', count: inspCount, status: 'Inspected', color: 'bg-purple-50 border-purple-200 text-purple-900' },
+                { label: 'Payment Operation', count: paidCount, status: 'Processing', color: 'bg-yellow-50 border-yellow-200 text-yellow-900' },
+                { label: 'Settlement', count: settledCount, status: 'Closed', color: 'bg-emerald-100 border-emerald-300 text-emerald-950' },
+              ].map((st, i) => (
+                <div key={i} className={`p-3 rounded-2xl border ${st.color}`}>
+                  <span className="text-[10px] font-bold uppercase block text-slate-500">{st.label}</span>
+                  <strong className="text-xl font-black font-mono block mt-1">{st.count}</strong>
+                  <span className="text-[9px] font-bold uppercase tracking-wider block mt-1 text-slate-600">{st.status}</span>
+                </div>
+              ));
+            })()}
           </div>
         </div>
       )}
