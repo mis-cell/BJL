@@ -462,7 +462,7 @@ export function usePurchaseOrderFormLogic({
       total_contract_mt: sauda.total_wt_in_ton ? Number(sauda.total_wt_in_ton).toFixed(3) : '0.000',
       contract_po_no: sauda.contract_no || sauda.sauda_no || resolvedPoDisplayNo,
       contract_date: sauda.date || todayStr,
-      delivery_from: sauda.shipment_date || todayStr,
+      delivery_from: sauda.date || todayStr,
       delivery_to: sauda.shipment_date || todayStr,
       grace_days: sauda.shipment_days ? sauda.shipment_days.toString() : '0',
       delivery_penalty: sauda.shipment_penalty ? sauda.shipment_penalty.toString() : '0',
