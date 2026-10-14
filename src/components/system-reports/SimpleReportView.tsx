@@ -450,15 +450,19 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       }
 
       existing.saudaCheckpointCount += 1;
-      if (t.arrivedWeightMT > 0) existing.tempArrivalCount += 1;
-      if (t.pendingWeightMT <= 0.01) existing.finalArrivalCount += 1;
-      const isInspected = Boolean(t.inspectionStatus === 'COMPLETED' || t.moisturePct > 0 || t.deductionAmount > 0);
-      if (isInspected) {
-        existing.millInspectionCount += 1;
-        // Payment Operation and Settlement strictly require completed Mill Inspection
-        if (t.paidAmount > 0) existing.paymentOperationCount += 1;
-        if (t.paymentStatus === 'PAID') existing.settlementCount += 1;
-      }
+      
+      const hasAmad = Boolean(t.hasAmadArrival || t.arrivedWeightMT > 0 || t.arrivalStatus !== 'PENDING');
+      const hasFinal = Boolean(t.hasFinalArrival || (t.pendingWeightMT <= 0.01 && hasAmad));
+      const hasInsp = Boolean(t.hasInspection || t.inspectionStatus === 'COMPLETED' || t.moisturePct > 0 || t.deductionAmount > 0);
+      const hasPay = Boolean(t.paidAmount > 0);
+      const hasSett = Boolean(t.paymentStatus === 'PAID' || t.settlementStatus === 'SETTLED');
+
+      // Sequential progression: downstream activity implies upstream completion
+      if (hasAmad || hasFinal || hasInsp || hasPay || hasSett) existing.tempArrivalCount += 1;
+      if (hasFinal || hasInsp || hasPay || hasSett) existing.finalArrivalCount += 1;
+      if (hasInsp || (hasFinal && (hasPay || hasSett))) existing.millInspectionCount += 1;
+      if (hasPay) existing.paymentOperationCount += 1;
+      if (hasSett) existing.settlementCount += 1;
 
       map.set(key, existing);
     });
@@ -468,10 +472,18 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       const avgMoisture = item.moistureCount > 0 ? (item.moistureSum / item.moistureCount) : 0;
       
       // Strict sequential workflow pipeline enforcement:
-      // Stage 5 (Payment Operation) count can NEVER exceed Stage 4 (Mill Inspection) count.
-      // Stage 6 (Settlement) count can NEVER exceed Stage 5 (Payment Operation) count.
-      const boundedPaymentOperation = Math.min(item.paymentOperationCount, item.millInspectionCount);
-      const boundedSettlement = Math.min(item.settlementCount, boundedPaymentOperation);
+      // Stage 1: Sauda Deals
+      // Stage 2: Temporary Arrival <= Stage 1
+      // Stage 3: Final Arrival <= Stage 2
+      // Stage 4: Mill Inspection <= Stage 3
+      // Stage 5: Payment Operation <= Stage 4
+      // Stage 6: Settlement <= Stage 5
+      const s1 = item.saudaCheckpointCount;
+      const s2 = Math.min(s1, item.tempArrivalCount);
+      const s3 = Math.min(s2, item.finalArrivalCount);
+      const s4 = Math.min(s3, item.millInspectionCount);
+      const s5 = Math.min(s4, item.paymentOperationCount);
+      const s6 = Math.min(s5, item.settlementCount);
 
       let tier: 'BEST' | 'MEDIUM' | 'LOWER' = 'MEDIUM';
       if (item.abnormalDeals === 0 && item.deductionAmount === 0 && item.quantityMT >= 10) {
@@ -482,8 +494,12 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
       return {
         ...item,
-        paymentOperationCount: boundedPaymentOperation,
-        settlementCount: boundedSettlement,
+        saudaCheckpointCount: s1,
+        tempArrivalCount: s2,
+        finalArrivalCount: s3,
+        millInspectionCount: s4,
+        paymentOperationCount: s5,
+        settlementCount: s6,
         avgRate,
         avgMoisture,
         tier
@@ -1573,22 +1589,40 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             {(() => {
               const saudaCount = transactions.length;
-              const tempCount = transactions.filter(t => t.arrivedWeightMT > 0).length;
-              const finalCount = transactions.filter(t => t.pendingWeightMT <= 0.01).length;
-              const isInspectedFn = (t: ReportTransactionLine) => Boolean(t.inspectionStatus === 'COMPLETED' || t.moisturePct > 0 || t.deductionAmount > 0);
-              const inspCount = transactions.filter(isInspectedFn).length;
-              const rawPaidCount = transactions.filter(t => isInspectedFn(t) && t.paidAmount > 0).length;
-              const paidCount = Math.min(inspCount, rawPaidCount);
-              const rawSettledCount = transactions.filter(t => isInspectedFn(t) && t.paymentStatus === 'PAID').length;
-              const settledCount = Math.min(paidCount, rawSettledCount);
+              let rawTemp = 0;
+              let rawFinal = 0;
+              let rawInsp = 0;
+              let rawPaid = 0;
+              let rawSettled = 0;
+
+              transactions.forEach(t => {
+                const hasAmad = Boolean(t.hasAmadArrival || t.arrivedWeightMT > 0 || t.arrivalStatus !== 'PENDING');
+                const hasFinal = Boolean(t.hasFinalArrival || (t.pendingWeightMT <= 0.01 && hasAmad));
+                const hasInsp = Boolean(t.hasInspection || t.inspectionStatus === 'COMPLETED' || t.moisturePct > 0 || t.deductionAmount > 0);
+                const hasPay = Boolean(t.paidAmount > 0);
+                const hasSett = Boolean(t.paymentStatus === 'PAID' || t.settlementStatus === 'SETTLED');
+
+                if (hasAmad || hasFinal || hasInsp || hasPay || hasSett) rawTemp += 1;
+                if (hasFinal || hasInsp || hasPay || hasSett) rawFinal += 1;
+                if (hasInsp || (hasFinal && (hasPay || hasSett))) rawInsp += 1;
+                if (hasPay) rawPaid += 1;
+                if (hasSett) rawSettled += 1;
+              });
+
+              const s1 = saudaCount;
+              const s2 = Math.min(s1, rawTemp);
+              const s3 = Math.min(s2, rawFinal);
+              const s4 = Math.min(s3, rawInsp);
+              const s5 = Math.min(s4, rawPaid);
+              const s6 = Math.min(s5, rawSettled);
 
               return [
-                { label: 'Sauda Check Point', count: saudaCount, status: 'Completed', color: 'bg-emerald-50 border-emerald-200 text-emerald-900' },
-                { label: 'Temporary Arrival', count: tempCount, status: 'Active', color: 'bg-blue-50 border-blue-200 text-blue-900' },
-                { label: 'Final Arrival', count: finalCount, status: 'In Progress', color: 'bg-indigo-50 border-indigo-200 text-indigo-900' },
-                { label: 'Mill Inspection', count: inspCount, status: 'Inspected', color: 'bg-purple-50 border-purple-200 text-purple-900' },
-                { label: 'Payment Operation', count: paidCount, status: 'Processing', color: 'bg-yellow-50 border-yellow-200 text-yellow-900' },
-                { label: 'Settlement', count: settledCount, status: 'Closed', color: 'bg-emerald-100 border-emerald-300 text-emerald-950' },
+                { label: 'Sauda Check Point', count: s1, status: 'Completed', color: 'bg-emerald-50 border-emerald-200 text-emerald-900' },
+                { label: 'Temporary Arrival', count: s2, status: 'Active', color: 'bg-blue-50 border-blue-200 text-blue-900' },
+                { label: 'Final Arrival', count: s3, status: 'In Progress', color: 'bg-indigo-50 border-indigo-200 text-indigo-900' },
+                { label: 'Mill Inspection', count: s4, status: 'Inspected', color: 'bg-purple-50 border-purple-200 text-purple-900' },
+                { label: 'Payment Operation', count: s5, status: 'Processing', color: 'bg-yellow-50 border-yellow-200 text-yellow-900' },
+                { label: 'Settlement', count: s6, status: 'Closed', color: 'bg-emerald-100 border-emerald-300 text-emerald-950' },
               ].map((st, i) => (
                 <div key={i} className={`p-3 rounded-2xl border ${st.color}`}>
                   <span className="text-[10px] font-bold uppercase block text-slate-500">{st.label}</span>

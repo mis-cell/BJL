@@ -52,6 +52,9 @@ export interface ReportTransactionLine {
   abnormalReasons: string[];
   mrNo?: string;
   voucherNo?: string;
+  hasAmadArrival?: boolean;
+  hasFinalArrival?: boolean;
+  hasInspection?: boolean;
 }
 
 export interface ReportFilterCriteria {
@@ -1099,25 +1102,49 @@ export async function loadAndProcessSystemReportData(): Promise<{
 
     // Arrival by PO and Sauda
     const arrivalByPo = new Map<string, number>();
+    const finalArrivalSet = new Set<string>();
     (finals || []).forEach((f: any) => {
       const wt = Number(f.electronic_net_weight || f.weight_reduced || 0);
-      if (f.po_no) arrivalByPo.set(f.po_no, (arrivalByPo.get(f.po_no) || 0) + wt);
-      if (f.contract_po_no) arrivalByPo.set(f.contract_po_no, (arrivalByPo.get(f.contract_po_no) || 0) + wt);
-      if (f.sauda_no) arrivalByPo.set(f.sauda_no, (arrivalByPo.get(f.sauda_no) || 0) + wt);
-      if (f.arrival_no) arrivalByPo.set(f.arrival_no, (arrivalByPo.get(f.arrival_no) || 0) + wt);
+      if (f.po_no) {
+        arrivalByPo.set(f.po_no, (arrivalByPo.get(f.po_no) || 0) + wt);
+        finalArrivalSet.add(String(f.po_no).trim().toUpperCase());
+      }
+      if (f.contract_po_no) {
+        arrivalByPo.set(f.contract_po_no, (arrivalByPo.get(f.contract_po_no) || 0) + wt);
+        finalArrivalSet.add(String(f.contract_po_no).trim().toUpperCase());
+      }
+      if (f.sauda_no) {
+        arrivalByPo.set(f.sauda_no, (arrivalByPo.get(f.sauda_no) || 0) + wt);
+        finalArrivalSet.add(String(f.sauda_no).trim().toUpperCase());
+      }
+      if (f.arrival_no) {
+        arrivalByPo.set(f.arrival_no, (arrivalByPo.get(f.arrival_no) || 0) + wt);
+        finalArrivalSet.add(String(f.arrival_no).trim().toUpperCase());
+      }
+      if (f.mr_no) finalArrivalSet.add(String(f.mr_no).trim().toUpperCase());
+      if (f.final_arrival_no) finalArrivalSet.add(String(f.final_arrival_no).trim().toUpperCase());
     });
 
+    const amadSet = new Set<string>();
     (amad || []).forEach((a: any) => {
       const key = a.po_no || a.temporary_arrival_no;
       if (key && !arrivalByPo.has(key)) {
         const wt = Number(a.weight_qtl ? a.weight_qtl / 10 : 0);
         if (wt > 0) arrivalByPo.set(key, wt);
       }
+      if (a.po_no) amadSet.add(String(a.po_no).trim().toUpperCase());
+      if (a.temporary_arrival_no) amadSet.add(String(a.temporary_arrival_no).trim().toUpperCase());
+      if (a.sauda_no) amadSet.add(String(a.sauda_no).trim().toUpperCase());
     });
 
     // Inspection deductions & quality
     const inspectionDeductionByPo = new Map<string, { deduction: number; moisture: number; gradeDown: number; hasInspection: boolean }>();
+    const inspectionSet = new Set<string>();
     (inspections || []).forEach((i: any) => {
+      if (i.po_no) inspectionSet.add(String(i.po_no).trim().toUpperCase());
+      if (i.mr_no) inspectionSet.add(String(i.mr_no).trim().toUpperCase());
+      if (i.arrival_no) inspectionSet.add(String(i.arrival_no).trim().toUpperCase());
+      if (i.sauda_no) inspectionSet.add(String(i.sauda_no).trim().toUpperCase());
       const poKey = i.po_no || i.mr_no || i.arrival_no;
       if (poKey) {
         const prev = inspectionDeductionByPo.get(poKey) || { deduction: 0, moisture: 0, gradeDown: 0, hasInspection: false };
@@ -1575,7 +1602,10 @@ export async function loadAndProcessSystemReportData(): Promise<{
         claimSettled: deductionAmount > 5000 && pendingPayable === 0 ? deductionAmount : 0,
         isDelayed,
         isAbnormal: abnormalReasons.length > 0,
-        abnormalReasons
+        abnormalReasons,
+        hasAmadArrival: Boolean(arrivedWeightMT > 0 || (poNo && amadSet.has(poNo.toUpperCase())) || (saudaNo && amadSet.has(saudaNo.toUpperCase()))),
+        hasFinalArrival: Boolean((poNo && finalArrivalSet.has(poNo.toUpperCase())) || (saudaNo && finalArrivalSet.has(saudaNo.toUpperCase())) || pendingWeightMT <= 0.01),
+        hasInspection: Boolean((poNo && inspectionSet.has(poNo.toUpperCase())) || (saudaNo && inspectionSet.has(saudaNo.toUpperCase())) || inspInfo.hasInspection || inspInfo.deduction > 0 || inspInfo.moisture > 0)
       });
     });
 
