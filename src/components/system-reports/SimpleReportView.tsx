@@ -316,7 +316,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
   }, [transactions, selectedMonth, searchQuery, sortField, sortAsc]);
 
   // Active Sub-Analysis View for Dimensional Tabs
-  const [subAnalysisMode, setSubAnalysisMode] = useState<'VOLUME' | 'DEDUCTION' | 'CHECKPOINTS' | 'PREMIUM' | 'RANKING'>('VOLUME');
+  const [subAnalysisMode, setSubAnalysisMode] = useState<'VOLUME' | 'DEDUCTION' | 'CHECKPOINTS' | 'PREMIUM'>('VOLUME');
 
   // Combine transactions and allSaudaRecords to ensure every broker/entity with a Sauda or P.O. in the session is included
   const allDimensionRecords = useMemo(() => {
@@ -691,7 +691,6 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     { id: 'DEDUCTION' as const, label: 'Deduction', sub: 'Moisture & Grade Down', icon: '✂️' },
     { id: 'CHECKPOINTS' as const, label: 'Checkpoints Pipeline', sub: 'Sauda to Settlement', icon: '🚚' },
     { id: 'PREMIUM' as const, label: 'Premium Given', sub: 'Premium Analysis', icon: '💰' },
-    { id: 'RANKING' as const, label: 'Ranking Cards', sub: 'Best, Medium, Lower', icon: '🏆' },
   ].map((item) => {
     const isActive = subAnalysisMode === item.id;
 
@@ -1606,56 +1605,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               );
             }
 
-            if (subAnalysisMode === 'RANKING') {
-              const bests = currentData.filter(d => d.tier === 'BEST');
-              const mediums = currentData.filter(d => d.tier === 'MEDIUM');
-              const lowers = currentData.filter(d => d.tier === 'LOWER');
-
-              return (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
-                      <span className="text-xs font-black uppercase text-emerald-900 block">🥇 Best Performers ({bests.length})</span>
-                      <p className="text-[10px] text-emerald-700 mt-1">High business volume, prompt delivery, and zero quality issues.</p>
-                      <div className="mt-2 space-y-1">
-                        {bests.slice(0, 5).map((b, i) => (
-                          <div key={i} className="flex justify-between text-xs font-bold text-emerald-950">
-                            <span>{b.key}</span>
-                            <span className="font-mono">{b.quantityMT.toFixed(1)} MT</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl">
-                      <span className="text-xs font-black uppercase text-blue-900 block">🥈 Medium Performers ({mediums.length})</span>
-                      <p className="text-[10px] text-blue-700 mt-1">Steady volume with average performance and standard settlement.</p>
-                      <div className="mt-2 space-y-1">
-                        {mediums.slice(0, 5).map((m, i) => (
-                          <div key={i} className="flex justify-between text-xs font-bold text-blue-950">
-                            <span>{m.key}</span>
-                            <span className="font-mono">{m.quantityMT.toFixed(1)} MT</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl">
-                      <span className="text-xs font-black uppercase text-rose-900 block">🥉 Lower Performers ({lowers.length})</span>
-                      <p className="text-[10px] text-rose-700 mt-1">Low volume, high deduction claims, or quality issues.</p>
-                      <div className="mt-2 space-y-1">
-                        {lowers.slice(0, 5).map((l, i) => (
-                          <div key={i} className="flex justify-between text-xs font-bold text-rose-950">
-                            <span>{l.key}</span>
-                            <span className="font-mono">{l.quantityMT.toFixed(1)} MT</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
+            return null;
 
 
 
