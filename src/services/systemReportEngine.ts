@@ -1609,6 +1609,83 @@ export async function loadAndProcessSystemReportData(): Promise<{
       });
     });
 
+    // Track attached MRs from unifiedPremiums
+    const attachedMrKeys = new Set<string>();
+    transactionLines.forEach(t => {
+      if (t.mrNo) {
+        t.mrNo.split(',').forEach(m => {
+          const k = m.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+          if (k) attachedMrKeys.add(k);
+        });
+      }
+    });
+
+    // Ensure 100% parity with Dashboard: include all unattached MRs with Premium from the unified engine
+    unifiedPremiums.mrsWithPremium.forEach(pm => {
+      if (!attachedMrKeys.has(pm.cleanMr)) {
+        attachedMrKeys.add(pm.cleanMr);
+        const qtyMT = pm.totalQuantityQtl > 0 ? pm.totalQuantityQtl / 10 : 0;
+        const rawBrk = String(pm.broker || '').trim();
+        const broker = brokerMap.get(rawBrk.toUpperCase()) || rawBrk || 'Direct';
+        const rawSupp = String(pm.supplier || pm.partyName || '').trim();
+        const supplier = supplyMap.get(rawSupp.toUpperCase()) || rawSupp || 'Unassigned Supplier';
+        const date = pm.paymentDate || '2026-09-30';
+
+        transactionLines.push({
+          txnId: `TXN-PREM-${String(txnCounter++).padStart(5, '0')}`,
+          saudaNo: pm.poNo || pm.mrNo,
+          poNo: pm.poNo || pm.mrNo,
+          mrNo: pm.mrNo,
+          voucherNo: pm.voucherNo,
+          date,
+          month: getYearMonth(date),
+          financialYear: getFinancialYear(date),
+          supplier,
+          broker,
+          agency: '-',
+          area: '-',
+          grade: pm.grades?.map(g => g.grade).filter(Boolean).join(', ') || '-',
+          quantityMT: qtyMT,
+          purchaseRate: 0,
+          baseRate: 0,
+          rateVariance: 0,
+          rateVariancePct: 0,
+          grossPurchaseValue: 0,
+          baseRateValue: 0,
+          premiumRate: pm.avgPremiumRatePerQtl,
+          premiumAmount: pm.totalPremiumAmount,
+          premiumPct: 0,
+          deductionAmount: 0,
+          deductionPct: 0,
+          moisturePct: 0,
+          gradeDownQty: 0,
+          effectiveCost: pm.totalPremiumAmount,
+          realizationRate: 0,
+          realizationValue: 0,
+          grossProfit: 0,
+          profitPct: 0,
+          profitStatus: 'PROFITABLE',
+          saudaStatus: 'COMPLETED',
+          arrivalStatus: 'COMPLETED',
+          inspectionStatus: 'COMPLETED',
+          paymentStatus: 'PAID',
+          settlementStatus: 'SETTLED',
+          arrivedWeightMT: qtyMT,
+          pendingWeightMT: 0,
+          paidAmount: pm.totalPremiumAmount,
+          pendingPayable: 0,
+          claimAmount: 0,
+          claimSettled: 0,
+          isDelayed: false,
+          isAbnormal: false,
+          abnormalReasons: [],
+          hasAmadArrival: true,
+          hasFinalArrival: true,
+          hasInspection: true
+        });
+      }
+    });
+
     // Populate master lists for dropdowns and totals
     const brokerSet = new Set<string>();
     const supplierSet = new Set<string>();
