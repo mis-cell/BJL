@@ -1380,6 +1380,57 @@ export async function loadAndProcessSystemReportData(): Promise<{
       return Array.from(new Set(keys));
     };
 
+    const saudaToAgencyLookup = new Map<string, string>();
+    const getCleanNumberKey = (str?: string | null): string => {
+      if (!str) return '';
+      const clean = String(str).trim().toUpperCase();
+      const numOnly = clean.replace(/[^0-9]/g, '');
+      return numOnly ? String(parseInt(numOnly, 10)) : clean;
+    };
+
+    (saudas || []).forEach((s: any) => {
+      let ag = String(s.agency || '').trim();
+      if (isInvalidAgency(ag)) ag = '';
+      if (!ag && Array.isArray(s.quality_details)) {
+        for (const q of s.quality_details) {
+          if (q.agency && !isInvalidAgency(q.agency)) {
+            ag = String(q.agency).trim();
+            break;
+          }
+        }
+      }
+      if (ag) {
+        const resolved = agencyMap.get(ag.toUpperCase()) || ag;
+        if (s.sauda_no) {
+          saudaToAgencyLookup.set(String(s.sauda_no).trim().toUpperCase(), resolved);
+          const numKey = getCleanNumberKey(s.sauda_no);
+          if (numKey) saudaToAgencyLookup.set(numKey, resolved);
+        }
+        if (s.po_no) {
+          saudaToAgencyLookup.set(String(s.po_no).trim().toUpperCase(), resolved);
+          const numKey = getCleanNumberKey(s.po_no);
+          if (numKey) saudaToAgencyLookup.set(numKey, resolved);
+        }
+      }
+    });
+
+    const resolvePoAgency = (item: any): string => {
+      let rawAgency = String(item.agency || item.purchase_unit_name || '').trim();
+      if (isInvalidAgency(rawAgency)) rawAgency = '';
+
+      const sNoCandidate = item.sauda_no || item.po_no || item.contract_po_no;
+      if (!rawAgency && sNoCandidate) {
+        const k1 = String(sNoCandidate).trim().toUpperCase();
+        const k2 = getCleanNumberKey(sNoCandidate);
+        rawAgency = saudaToAgencyLookup.get(k1) || saudaToAgencyLookup.get(k2) || '';
+      }
+
+      if (rawAgency && !isInvalidAgency(rawAgency)) {
+        return agencyMap.get(rawAgency.toUpperCase()) || rawAgency;
+      }
+      return 'Direct Purchase / Head Office';
+    };
+
     const uniquePosList: any[] = [];
     const seenPosKeys = new Set<string>();
 
@@ -1402,7 +1453,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
         contract_date: normalizeToISODate(s.date || s.b_date || s.created_at),
         supplier: s.supplier || s.challan_supplier || s.party_name,
         broker: s.broker,
-        agency: s.agency,
+        agency: resolvePoAgency(s),
         area: s.area,
         grade: s.quality || s.grade,
         total_contract_mt: Number(s.total_wt_in_ton || s.wt_per_lorry || 0),
@@ -1420,7 +1471,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
         contract_date: normalizeToISODate(sc.po_date || sc.contract_date || sc.created_at),
         supplier: sc.supplier || sc.challan_supplier || sc.party_name,
         broker: sc.broker,
-        agency: sc.agency,
+        agency: resolvePoAgency(sc),
         area: sc.area,
         grade: sc.grade || sc.quality,
         total_contract_mt: Number(sc.total_contract_mt || sc.quantity || 0),
@@ -1438,7 +1489,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
         contract_date: normalizeToISODate(p.po_date || p.contract_date || p.created_at),
         supplier: p.supplier || p.challan_supplier || p.party_name,
         broker: p.broker,
-        agency: p.agency,
+        agency: resolvePoAgency(p),
         area: p.area,
         grade: p.grade || p.quality,
         total_contract_mt: Number(p.total_contract_mt || p.quantity || 0),
@@ -1463,9 +1514,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       const rawBrk = String(po.broker || '').trim();
       const broker = brokerMap.get(rawBrk.toUpperCase()) || rawBrk || 'Direct';
 
-      const rawAgency = String(po.agency || po.purchase_unit_name || '').trim();
-      const resolvedAgency = agencyMap.get(rawAgency.toUpperCase()) || rawAgency;
-      const agency = isInvalidAgency(resolvedAgency) ? '-' : resolvedAgency;
+      const agency = resolvePoAgency(po);
 
       const rawArea = String(po.area || '').trim();
       const area = areaMap.get(rawArea.toUpperCase()) || rawArea || '-';
