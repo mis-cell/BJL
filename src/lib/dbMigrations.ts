@@ -4,49 +4,104 @@ export async function runDatabaseMigrations() {
   if (!supabase) return;
   try {
     if (typeof window !== 'undefined') {
-      const isPatched = localStorage.getItem('bjl_app_db_patched_v7') || sessionStorage.getItem('bjl_app_db_patched_v7');
+      const isPatched = localStorage.getItem('bjl_app_db_patched_v9') || sessionStorage.getItem('bjl_app_db_patched_v9');
       if (isPatched) return;
-      localStorage.setItem('bjl_app_db_patched_v7', '1');
-      sessionStorage.setItem('bjl_app_db_patched_v7', '1');
+      localStorage.setItem('bjl_app_db_patched_v9', '1');
+      sessionStorage.setItem('bjl_app_db_patched_v9', '1');
     }
+
+    // Direct deletion of specified Saudas via Supabase REST API and cleanup of Saudas already in Sauda Check Point
+    (async () => {
+      try {
+        const rawList = [
+          // Batch 2 (55 saudas)
+          'BJCL/2026-2027/0650', 'BJCL/2026-2027/0585', 'BJCL/2026-2027/0580', 'BJCL/2026-2027/0579',
+          'BJCL/2026-2027/0557', 'BJCL/2026-2027/0549', 'BJCL/2026-2027/0528', 'BJCL/2026-2027/0539',
+          'BJCL/2026-2027/0525', 'BJCL/2026-2027/0524', 'BJCL/2026-2027/0523', 'BJCL/2026-2027/0522',
+          'BJCL/2026-2027/0521', 'BJCL/2026-2027/0520', 'BJCL/2026-2027/0518', 'BJCL/2026-2027/0517',
+          'BJCL/2026-2027/0516', 'BJCL/2026-2027/0515', 'BJCL/2026-2027/0514', 'BJCL/2026-2027/0513',
+          'BJCL/2026-2027/0512', 'BJCL/2026-2027/0511', 'BJCL/2026-2027/0510', 'BJCL/2026-2027/0509',
+          'BJCL/2026-2027/0508', 'BJCL/2026-2027/0507', 'BJCL/2026-2027/0506', 'BJCL/2026-2027/0505',
+          'BJCL/2026-2027/0504', 'BJCL/2026-2027/0503', 'BJCL/2026-2027/0502', 'BJCL/2026-2027/0501',
+          'BJCL/2026-2027/0500', 'BJCL/2026-2027/0499', 'BJCL/2026-2027/0498', 'BJCL/2026-2027/0497',
+          'BJCL/2026-2027/0496', 'BJCL/2026-2027/0495', 'BJCL/2026-2027/0494', 'BJCL/2026-2027/0493',
+          'BJCL/2026-2027/0492', 'BJCL/2026-2027/0491', 'BJCL/2026-2027/0490', 'BJCL/2026-2027/0489',
+          'BJCL/2026-2027/0486', 'BJCL/2026-2027/0485', 'BJCL/2026-2027/0484', 'BJCL/2026-2027/0483',
+          'BJCL/2026-2027/0482', 'BJCL/2026-2027/0481', 'BJCL/2026-2027/0480', 'BJCL/2026-2027/0478',
+          'BJCL/2026-2027/0477', 'BJCL/2026-2027/0476', 'BJCL/2026-2027/0475',
+          // Batch 1 (125 saudas)
+          'BJCL/2026-2027/0666', 'BJCL/2026-2027/0653', 'BJCL/2026-2027/0654', 'BJCL/2026-2027/0639',
+          'BJCL/2026-2027/0648', 'BJCL/2026-2027/0640', 'BJCL/2026-2027/0645', 'BJCL/2026-2027/0643',
+          'BJCL/2026-2027/0641', 'BJCL/2026-2027/0638', 'BJCL/2026-2027/0642', 'BJCL/2026-2027/0637',
+          'BJCL/2026-2027/0644', 'BJCL/2026-2027/0636', 'BJCL/2026-2027/0646', 'BJCL/2026-2027/0649',
+          'BJCL/2026-2027/0652', 'BJCL/2026-2027/0651', 'BJCL/2026-2027/0647', 'BJCL/2026-2027/0634',
+          'BJCL/2026-2027/0631', 'BJCL/2026-2027/0632', 'BJCL/2026-2027/0633', 'BJCL/2026-2027/0630',
+          'BJCL/2026-2027/0629', 'BJCL/2026-2027/0628', 'BJCL/2026-2027/0613', 'BJCL/2026-2027/0620',
+          'BJCL/2026-2027/0621', 'BJCL/2026-2027/0609', 'BJCL/2026-2027/0615', 'BJCL/2026-2027/0624',
+          'BJCL/2026-2027/0618', 'BJCL/2026-2027/0616', 'BJCL/2026-2027/0625', 'BJCL/2026-2027/0612',
+          'BJCL/2026-2027/0619', 'BJCL/2026-2027/0607', 'BJCL/2026-2027/0622', 'BJCL/2026-2027/0617',
+          'BJCL/2026-2027/0611', 'BJCL/2026-2027/0605', 'BJCL/2026-2027/0606', 'BJCL/2026-2027/0614',
+          'BJCL/2026-2027/0610', 'BJCL/2026-2027/0608', 'BJCL/2026-2027/0623', 'BJCL/2026-2027/0626',
+          'BJCL/2026-2027/0604', 'BJCL/2026-2027/0603', 'BJCL/2026-2027/0599', 'BJCL/2026-2027/0592',
+          'BJCL/2026-2027/0591', 'BJCL/2026-2027/0594', 'BJCL/2026-2027/0596', 'BJCL/2026-2027/0590',
+          'BJCL/2026-2027/0600', 'BJCL/2026-2027/0602', 'BJCL/2026-2027/0597', 'BJCL/2026-2027/0601',
+          'BJCL/2026-2027/0593', 'BJCL/2026-2027/0595', 'BJCL/2026-2027/0598', 'BJCL/2026-2027/0589',
+          'BJCL/2026-2027/0588', 'BJCL/2026-2027/0586', 'BJCL/2026-2027/0587', 'BJCL/2026-2027/0584',
+          'BJCL/2026-2027/0578', 'BJCL/2026-2027/0573', 'BJCL/2026-2027/0583', 'BJCL/2026-2027/0572',
+          'BJCL/2026-2027/0574', 'BJCL/2026-2027/0581', 'BJCL/2026-2027/0577', 'BJCL/2026-2027/0582',
+          'BJCL/2026-2027/0575', 'BJCL/2026-2027/0576', 'BJCL/2026-2027/0567', 'BJCL/2026-2027/0570',
+          'BJCL/2026-2027/0566', 'BJCL/2026-2027/0569', 'BJCL/2026-2027/0568', 'BJCL/2026-2027/0571',
+          'BJCL/2026-2027/0561', 'BJCL/2026-2027/0529', 'BJCL/2026-2027/0541', 'BJCL/2026-2027/0542',
+          'BJCL/2026-2027/0530', 'BJCL/2026-2027/0550', 'BJCL/2026-2027/0548', 'BJCL/2026-2027/0536',
+          'BJCL/2026-2027/0538', 'BJCL/2026-2027/0531', 'BJCL/2026-2027/0534', 'BJCL/2026-2027/0527',
+          'BJCL/2026-2027/0543', 'BJCL/2026-2027/0537', 'BJCL/2026-2027/0564', 'BJCL/2026-2027/0554',
+          'BJCL/2026-2027/0563', 'BJCL/2026-2027/0562', 'BJCL/2026-2027/0552', 'BJCL/2026-2027/0553',
+          'BJCL/2026-2027/0560', 'BJCL/2026-2027/0565', 'BJCL/2026-2027/0546', 'BJCL/2026-2027/0544',
+          'BJCL/2026-2027/0551', 'BJCL/2026-2027/0559', 'BJCL/2026-2027/0556', 'BJCL/2026-2027/0532',
+          'BJCL/2026-2027/0533', 'BJCL/2026-2027/0540', 'BJCL/2026-2027/0535', 'BJCL/2026-2027/0545',
+          'BJCL/2026-2027/0555', 'BJCL/2026-2027/0547', 'BJCL/2026-2027/0558', 'BJCL/2026-2027/0526',
+          'BJCL/2026-2027/0519', 'BJCL/2026-2027/0488', 'BJCL/2026-2027/0487', 'BJCL/2026-2027/0479'
+        ];
+
+        // Also fetch all POs saved in sauda_check_point to automatically purge them from sauda_master
+        const { data: savedCheckPoints } = await supabase.from('sauda_check_point').select('po_no, contract_po_no, sauda_no');
+        const checkPointNumbers = (savedCheckPoints || []).flatMap((c: any) => [
+          c.po_no, c.contract_po_no, c.sauda_no
+        ]).filter(Boolean);
+
+        const allNumbersToDelete = Array.from(new Set([...rawList, ...checkPointNumbers]));
+
+        // Generate full variations (with prefix, bare digits, padded)
+        const allVariations = new Set<string>();
+        allNumbersToDelete.forEach(num => {
+          const s = String(num).trim();
+          if (!s) return;
+          allVariations.add(s);
+          allVariations.add(s.toUpperCase());
+          const cleanDigits = s.replace(/[^0-9]/g, '').replace(/^20262027/, '').replace(/^0+/, '');
+          if (cleanDigits) {
+            allVariations.add(cleanDigits);
+            allVariations.add(cleanDigits.padStart(4, '0'));
+            allVariations.add(`BJCL/2026-2027/${cleanDigits.padStart(4, '0')}`);
+            allVariations.add(`BJC/${cleanDigits.padStart(4, '0')}`);
+          }
+        });
+
+        const targetArray = Array.from(allVariations);
+        for (let i = 0; i < targetArray.length; i += 50) {
+          const chunk = targetArray.slice(i, i + 50);
+          await supabase.from('sauda_quality_details').delete().in('sauda_no', chunk);
+          await supabase.from('sauda_master').delete().in('sauda_no', chunk);
+        }
+      } catch (err) {
+        console.warn("Direct sauda cleanup error:", err);
+      }
+    })();
+
     await supabase.rpc("exec_sql", { 
       query: `
         DO $$ 
-        BEGIN 
-          -- Delete specified Sauda numbers from sauda_quality_details and sauda_master
-          DELETE FROM sauda_quality_details WHERE sauda_no IN (
-            'BJCL/2026-2027/0650', 'BJCL/2026-2027/0585', 'BJCL/2026-2027/0580', 'BJCL/2026-2027/0579',
-            'BJCL/2026-2027/0557', 'BJCL/2026-2027/0549', 'BJCL/2026-2027/0528', 'BJCL/2026-2027/0539',
-            'BJCL/2026-2027/0525', 'BJCL/2026-2027/0524', 'BJCL/2026-2027/0523', 'BJCL/2026-2027/0522',
-            'BJCL/2026-2027/0521', 'BJCL/2026-2027/0520', 'BJCL/2026-2027/0518', 'BJCL/2026-2027/0517',
-            'BJCL/2026-2027/0516', 'BJCL/2026-2027/0515', 'BJCL/2026-2027/0514', 'BJCL/2026-2027/0513',
-            'BJCL/2026-2027/0512', 'BJCL/2026-2027/0511', 'BJCL/2026-2027/0510', 'BJCL/2026-2027/0509',
-            'BJCL/2026-2027/0508', 'BJCL/2026-2027/0507', 'BJCL/2026-2027/0506', 'BJCL/2026-2027/0505',
-            'BJCL/2026-2027/0504', 'BJCL/2026-2027/0503', 'BJCL/2026-2027/0502', 'BJCL/2026-2027/0501',
-            'BJCL/2026-2027/0500', 'BJCL/2026-2027/0499', 'BJCL/2026-2027/0498', 'BJCL/2026-2027/0497',
-            'BJCL/2026-2027/0496', 'BJCL/2026-2027/0495', 'BJCL/2026-2027/0494', 'BJCL/2026-2027/0493',
-            'BJCL/2026-2027/0492', 'BJCL/2026-2027/0491', 'BJCL/2026-2027/0490', 'BJCL/2026-2027/0489',
-            'BJCL/2026-2027/0486', 'BJCL/2026-2027/0485', 'BJCL/2026-2027/0484', 'BJCL/2026-2027/0483',
-            'BJCL/2026-2027/0482', 'BJCL/2026-2027/0481', 'BJCL/2026-2027/0480', 'BJCL/2026-2027/0478',
-            'BJCL/2026-2027/0477', 'BJCL/2026-2027/0476', 'BJCL/2026-2027/0475'
-          );
-
-          DELETE FROM sauda_master WHERE sauda_no IN (
-            'BJCL/2026-2027/0650', 'BJCL/2026-2027/0585', 'BJCL/2026-2027/0580', 'BJCL/2026-2027/0579',
-            'BJCL/2026-2027/0557', 'BJCL/2026-2027/0549', 'BJCL/2026-2027/0528', 'BJCL/2026-2027/0539',
-            'BJCL/2026-2027/0525', 'BJCL/2026-2027/0524', 'BJCL/2026-2027/0523', 'BJCL/2026-2027/0522',
-            'BJCL/2026-2027/0521', 'BJCL/2026-2027/0520', 'BJCL/2026-2027/0518', 'BJCL/2026-2027/0517',
-            'BJCL/2026-2027/0516', 'BJCL/2026-2027/0515', 'BJCL/2026-2027/0514', 'BJCL/2026-2027/0513',
-            'BJCL/2026-2027/0512', 'BJCL/2026-2027/0511', 'BJCL/2026-2027/0510', 'BJCL/2026-2027/0509',
-            'BJCL/2026-2027/0508', 'BJCL/2026-2027/0507', 'BJCL/2026-2027/0506', 'BJCL/2026-2027/0505',
-            'BJCL/2026-2027/0504', 'BJCL/2026-2027/0503', 'BJCL/2026-2027/0502', 'BJCL/2026-2027/0501',
-            'BJCL/2026-2027/0500', 'BJCL/2026-2027/0499', 'BJCL/2026-2027/0498', 'BJCL/2026-2027/0497',
-            'BJCL/2026-2027/0496', 'BJCL/2026-2027/0495', 'BJCL/2026-2027/0494', 'BJCL/2026-2027/0493',
-            'BJCL/2026-2027/0492', 'BJCL/2026-2027/0491', 'BJCL/2026-2027/0490', 'BJCL/2026-2027/0489',
-            'BJCL/2026-2027/0486', 'BJCL/2026-2027/0485', 'BJCL/2026-2027/0484', 'BJCL/2026-2027/0483',
-            'BJCL/2026-2027/0482', 'BJCL/2026-2027/0481', 'BJCL/2026-2027/0480', 'BJCL/2026-2027/0478',
-            'BJCL/2026-2027/0477', 'BJCL/2026-2027/0476', 'BJCL/2026-2027/0475'
-          ); 
+        BEGIN  
           -- Universal App Audit Logs table
           CREATE TABLE IF NOT EXISTS app_audit_logs (
             id TEXT PRIMARY KEY,
@@ -894,6 +949,75 @@ export async function runDatabaseMigrations() {
           ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS approved_by TEXT;
           ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
           ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS approval_level TEXT;
+
+          -- Full columns for sauda_check_point
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS po_no TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS sauda_no TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS contract_po_no TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS po_type TEXT DEFAULT 'Normal';
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS purchase_order TEXT DEFAULT 'FINAL PO';
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'temp';
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS ptf_no TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS pending TEXT DEFAULT 'Yes';
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS po_date DATE;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS broker TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS broker_code TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS supplier TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS supplier_code TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS challan_supplier TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS challan_supplier_code TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS area TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS area_code TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS agency TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS grade TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS quality TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS marka TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS trans_paid_by TEXT DEFAULT 'PARTY';
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS weight_unit_kgs NUMERIC DEFAULT 147.5;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS against_cancellation TEXT DEFAULT 'No';
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS purchase_unit_code TEXT DEFAULT '1';
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS purchase_unit_name TEXT DEFAULT 'BALES';
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS total_lorries NUMERIC DEFAULT 1;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS units_per_lorry NUMERIC DEFAULT 0;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS total_units NUMERIC DEFAULT 0;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS weight_per_lorry NUMERIC DEFAULT 0;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS total_contract_mt NUMERIC DEFAULT 0;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS marka_type TEXT DEFAULT 'Normal';
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS marka_penalty NUMERIC DEFAULT 0;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS qty_penalty NUMERIC DEFAULT 5;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS delivery_from DATE;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS delivery_to DATE;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS grace_days INTEGER DEFAULT 0;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS delivery_penalty NUMERIC DEFAULT 0;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS contract_date DATE;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS rate_detail TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS delivery_schedule TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS terms_condition TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS remarks TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS po_identification TEXT;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS b_rate NUMERIC DEFAULT 0;
+          ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS s_date DATE;
+
+          CREATE TABLE IF NOT EXISTS sauda_check_point_details (
+            id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            po_no TEXT,
+            srl_no INTEGER,
+            crop_year TEXT,
+            grade_code TEXT,
+            grade_name TEXT,
+            agency_code TEXT,
+            agency_name TEXT,
+            marka_code TEXT,
+            marka_name TEXT,
+            quantity NUMERIC DEFAULT 0,
+            weight_mt NUMERIC DEFAULT 0,
+            rate_qntl NUMERIC DEFAULT 0,
+            premium NUMERIC DEFAULT 0,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+          );
+          ALTER TABLE IF EXISTS sauda_check_point_details DISABLE ROW LEVEL SECURITY;
+          CREATE INDEX IF NOT EXISTS idx_scp_details_po ON sauda_check_point_details(po_no);
+          CREATE INDEX IF NOT EXISTS idx_sauda_check_point_po ON sauda_check_point(po_no);
 
           -- Performance Indexes to prevent Disk I/O depletion
           CREATE INDEX IF NOT EXISTS idx_sauda_master_no ON sauda_master(sauda_no);

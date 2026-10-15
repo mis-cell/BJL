@@ -926,7 +926,46 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         dbModule.fetchAll('temporary_material_received', 'created_at', false).catch(() => []),
         dbModule.fetchAll('sauda_check_point').catch(() => [])
       ]);
-      setSaudaList(saudasData || []);
+
+      // Automatically identify Saudas that have already moved to Sauda Check Point
+      const checkPointRefs = new Set<string>();
+      (scpData || []).forEach((cp: any) => {
+        [cp.po_no, cp.contract_po_no, cp.sauda_no].filter(Boolean).forEach(ref => {
+          const s = String(ref).trim().toUpperCase();
+          checkPointRefs.add(s);
+          const digits = s.replace(/[^0-9]/g, '').replace(/^20262027/, '').replace(/^0+/, '');
+          if (digits) checkPointRefs.add(digits);
+        });
+      });
+
+      // Purge any Sauda from sauda_master and sauda_quality_details that already moved to Sauda Check Point
+      const movedSaudas = (saudasData || []).filter((s: any) => {
+        const sNo = String(s.sauda_no || '').trim().toUpperCase();
+        const sDigits = sNo.replace(/[^0-9]/g, '').replace(/^20262027/, '').replace(/^0+/, '');
+        return checkPointRefs.has(sNo) || (sDigits && checkPointRefs.has(sDigits));
+      });
+
+      if (movedSaudas.length > 0 && supabase) {
+        const idsToDelete = movedSaudas.map((s: any) => s.sauda_id || s.id).filter(Boolean);
+        const nosToDelete = movedSaudas.map((s: any) => s.sauda_no).filter(Boolean);
+        if (idsToDelete.length > 0) {
+          supabase.from('sauda_quality_details').delete().in('sauda_id', idsToDelete).then(() => {});
+          supabase.from('sauda_master').delete().in('sauda_id', idsToDelete).then(() => {});
+        }
+        if (nosToDelete.length > 0) {
+          supabase.from('sauda_quality_details').delete().in('sauda_no', nosToDelete).then(() => {});
+          supabase.from('sauda_master').delete().in('sauda_no', nosToDelete).then(() => {});
+        }
+      }
+
+      // Only retain active Saudas that have NOT moved to Sauda Check Point
+      const remainingSaudas = (saudasData || []).filter((s: any) => {
+        const sNo = String(s.sauda_no || '').trim().toUpperCase();
+        const sDigits = sNo.replace(/[^0-9]/g, '').replace(/^20262027/, '').replace(/^0+/, '');
+        return !(checkPointRefs.has(sNo) || (sDigits && checkPointRefs.has(sDigits)));
+      });
+
+      setSaudaList(remainingSaudas);
       setPoList(posData || []);
       setArrivalsList(arrivalsData || []);
       setScpList(scpData || []);
@@ -1336,6 +1375,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   }
 
   const filteredSaudas = saudaList.filter(s => {
+    // If this Sauda has already moved to Sauda Check Point or Final P.O, hide it from Sauda Desk
+    if (isSaudaInCheckPointOrPo(s)) return false;
+
     // Filtering by Status Tab
     if (statusTab === 'pending') {
       // Main Dashboard strictly shows records awaiting approval (pending, not checked and not rejected)
@@ -1368,17 +1410,19 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     return true;
   }).sort((a, b) => new Date(b.date || (b as any).b_date || (b as any).created_at || 0).getTime() - new Date(a.date || (a as any).b_date || (a as any).created_at || 0).getTime());
 
-  const pendingSaudas = saudaList.filter(s => isPendingUncheckedSauda(s));
-  const checkedSaudas = saudaList.filter(s => isCheckedSauda(s));
-  const rejectedSaudas = saudaList.filter(s => isRejectedSauda(s));
+  // Active Saudas strictly in Sauda Desk (not yet moved to Sauda Check Point)
+  const activeSaudas = saudaList.filter(s => !isSaudaInCheckPointOrPo(s));
+  const pendingSaudas = activeSaudas.filter(s => isPendingUncheckedSauda(s));
+  const checkedSaudas = activeSaudas.filter(s => isCheckedSauda(s));
+  const rejectedSaudas = activeSaudas.filter(s => isRejectedSauda(s));
   const completedSaudas = saudaList.filter(s => isSaudaInCheckPointOrPo(s));
 
   const pendingSaudasCount = pendingSaudas.length;
   const checkedSaudasCount = checkedSaudas.length;
   const rejectedSaudasCount = rejectedSaudas.length;
-  const totalSaudas = saudaList.length;
+  const totalSaudas = activeSaudas.length;
   const pendingWeightTons = pendingSaudas.reduce((acc, s) => acc + (Number(s.total_wt_in_ton) || 0), 0);
-  const totalWeightTons = saudaList.reduce((acc, s) => acc + (Number(s.total_wt_in_ton) || 0), 0);
+  const totalWeightTons = activeSaudas.reduce((acc, s) => acc + (Number(s.total_wt_in_ton) || 0), 0);
   const displayedWeightTons = filteredSaudas.reduce((acc, s) => acc + (Number(s.total_wt_in_ton) || 0), 0);
   const bookTotalValue = filteredSaudas.reduce((acc, s) => acc + (Number(s.b_rate || 0) * Number(s.total_wt_in_ton || 0)), 0);
 

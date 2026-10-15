@@ -1144,7 +1144,12 @@ export function usePurchaseOrderFormLogic({
         delivery_to: formData.delivery_to || null,
         grace_days: parseInt(formData.grace_days) || 0,
         delivery_penalty: parseFloat(formData.delivery_penalty) || 0,
-        contract_po_no: formData.contract_po_no,
+        contract_po_no: formData.contract_po_no || formData.no || finalPoNo,
+        sauda_no: formData.no || formData.contract_po_no || finalPoNo,
+        agency: formData.items?.[0]?.agency_name || formData.items?.[0]?.agency_code || '',
+        grade: formData.items?.[0]?.grade_name || formData.items?.[0]?.grade_code || '',
+        quality: formData.items?.[0]?.grade_name || formData.items?.[0]?.grade_code || '',
+        marka: formData.items?.[0]?.marka_name || formData.items?.[0]?.marka_code || '',
         contract_date: formData.contract_date || null,
         rate_detail: formData.rate_detail,
         delivery_schedule: formData.delivery_schedule,
@@ -1181,10 +1186,11 @@ export function usePurchaseOrderFormLogic({
         markaList
       });
 
-      // If saved successfully in Sauda Check Point (isTempPo), delete the source Sauda from sauda_master
-      if (isTempPo && (formData.no || formData.contract_po_no)) {
-        const saudaNoRef = (formData.no || formData.contract_po_no || '').trim().toUpperCase();
+      // If saved successfully in Sauda Check Point (isTempPo), delete the source Sauda from sauda_master and sauda_quality_details
+      if (isTempPo && (formData.no || formData.contract_po_no || finalPoNo)) {
+        const saudaNoRef = (formData.no || formData.contract_po_no || finalPoNo || '').trim().toUpperCase();
         const saudaNoRefDigits = getCleanSaudaDigits(saudaNoRef);
+
         const matchedSauda = (saudaList || []).find((s: any) => {
           const sNo = String(s.sauda_no || '').trim().toUpperCase();
           const sFmt = String(formatPoNumber(s) || '').trim().toUpperCase();
@@ -1194,17 +1200,39 @@ export function usePurchaseOrderFormLogic({
             (saudaNoRefDigits && sDigits && saudaNoRefDigits === sDigits);
         });
 
-        if (matchedSauda && matchedSauda.sauda_id) {
-          try {
-            if (supabase) {
-              await supabase.from('sauda_quality_details').delete().eq('sauda_id', matchedSauda.sauda_id);
-              await supabase.from('sauda_master').delete().eq('sauda_id', matchedSauda.sauda_id);
+        const targetSaudaId = matchedSauda?.sauda_id || (matchedSauda as any)?.id;
+        const targetSaudaNo = matchedSauda?.sauda_no || saudaNoRef;
+        const cleanDigits = saudaNoRefDigits || getCleanSaudaDigits(targetSaudaNo);
+
+        try {
+          if (supabase) {
+            if (targetSaudaId) {
+              await supabase.from('sauda_quality_details').delete().eq('sauda_id', targetSaudaId);
+              await supabase.from('sauda_master').delete().eq('sauda_id', targetSaudaId);
             }
-            await dbModule.delete('sauda_quality_details', 'sauda_id', matchedSauda.sauda_id).catch(() => {});
-            await dbModule.delete('sauda_master', 'sauda_id', matchedSauda.sauda_id).catch(() => {});
-          } catch (delErr) {
-            console.warn("Failed to delete source sauda from sauda_master:", delErr);
+            if (targetSaudaNo) {
+              await supabase.from('sauda_quality_details').delete().eq('sauda_no', targetSaudaNo);
+              await supabase.from('sauda_master').delete().eq('sauda_no', targetSaudaNo);
+            }
+            if (saudaNoRef && saudaNoRef !== targetSaudaNo) {
+              await supabase.from('sauda_quality_details').delete().eq('sauda_no', saudaNoRef);
+              await supabase.from('sauda_master').delete().eq('sauda_no', saudaNoRef);
+            }
+            if (cleanDigits) {
+              await supabase.from('sauda_quality_details').delete().ilike('sauda_no', `%${cleanDigits}%`);
+              await supabase.from('sauda_master').delete().ilike('sauda_no', `%${cleanDigits}%`);
+            }
           }
+          if (targetSaudaId) {
+            await dbModule.delete('sauda_quality_details', 'sauda_id', targetSaudaId).catch(() => {});
+            await dbModule.delete('sauda_master', 'sauda_id', targetSaudaId).catch(() => {});
+          }
+          if (targetSaudaNo) {
+            await dbModule.delete('sauda_quality_details', 'sauda_no', targetSaudaNo).catch(() => {});
+            await dbModule.delete('sauda_master', 'sauda_no', targetSaudaNo).catch(() => {});
+          }
+        } catch (delErr) {
+          console.warn("Failed to delete source sauda from sauda_master:", delErr);
         }
       }
       
