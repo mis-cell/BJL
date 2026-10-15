@@ -2190,7 +2190,12 @@ export function groupTransactionsByDimension(
   dimension: 'broker' | 'agency' | 'area' | 'grade' | 'supplier' | 'month' | 'saudaNo' | 'poNo'
 ) {
   if (dimension === 'agency') {
-    txns = txns.filter(t => !isInvalidAgency(t.agency));
+    txns = txns.map(t => {
+      if (isInvalidAgency(t.agency)) {
+        return { ...t, agency: 'Direct Purchase / Head Office' };
+      }
+      return t;
+    });
   }
 
   const map = new Map<string, {

@@ -1181,72 +1181,30 @@ export function usePurchaseOrderFormLogic({
         markaList
       });
 
-      // Sync Sauda Check Point updates back to sauda_master & sauda_quality_details
-      if (supabase && (MASTER_TABLE === 'sauda_check_point' || isTempPo || !formData.is_ptf)) {
-        try {
-          const rawSaudaNo = String(formData.no || formData.contract_po_no || finalPoNo).trim();
-          const cleanDigits = rawSaudaNo.replace(/[^0-9]/g, '');
-          const cleanNum = cleanDigits ? parseInt(cleanDigits, 10) : null;
+      // If saved successfully in Sauda Check Point (isTempPo), delete the source Sauda from sauda_master
+      if (isTempPo && (formData.no || formData.contract_po_no)) {
+        const saudaNoRef = (formData.no || formData.contract_po_no || '').trim().toUpperCase();
+        const saudaNoRefDigits = getCleanSaudaDigits(saudaNoRef);
+        const matchedSauda = (saudaList || []).find((s: any) => {
+          const sNo = String(s.sauda_no || '').trim().toUpperCase();
+          const sFmt = String(formatPoNumber(s) || '').trim().toUpperCase();
+          const sSess = String(s.session || '').trim().toUpperCase();
+          const sDigits = getCleanSaudaDigits(sNo);
+          return sNo === saudaNoRef || sFmt === saudaNoRef || sSess === saudaNoRef ||
+            (saudaNoRefDigits && sDigits && saudaNoRefDigits === sDigits);
+        });
 
-          const { data: matchedSaudas } = await supabase
-            .from('sauda_master')
-            .select('sauda_id, sauda_no, session')
-            .or(`sauda_no.eq.${rawSaudaNo},sauda_no.eq.${cleanDigits},sauda_no.eq.${cleanNum},session.eq.${rawSaudaNo}`);
-
-          if (matchedSaudas && matchedSaudas.length > 0) {
-            const targetSauda = matchedSaudas[0];
-
-            const primaryAgency = formData.items.find(it => it.agency_name && it.agency_name.trim() && !['-', 'DRUMS', 'LOOSE', 'BALES', 'DRUM'].includes(it.agency_name.trim().toUpperCase()))?.agency_name
-              || formData.items.find(it => it.agency_code && it.agency_code.trim() && !['-', 'DRUMS', 'LOOSE', 'BALES', 'DRUM'].includes(it.agency_code.trim().toUpperCase()))?.agency_code
-              || formData.area
-              || '';
-
-            const saudaUpdatePayload: any = {
-              broker: (formData.broker || '').toUpperCase(),
-              supplier: (formData.supplier || '').toUpperCase(),
-              challan_supplier: (formData.challan_supplier || '').toUpperCase(),
-              area: (formData.area || '').toUpperCase(),
-              agency: primaryAgency,
-              unit_type: formData.purchase_unit_name || 'BALES',
-              no_of_lorries: parseFloat(formData.total_no_of_lorries) || 1,
-              units_per_lorry: parseFloat(formData.units_per_lorry) || 0,
-              total_unit: parseFloat(formData.total_units) || 0,
-              wt_per_lorry: parseFloat(formData.weight_per_lorry) || 0,
-              total_wt_in_ton: parseFloat(formData.total_contract_mt) || 0,
-              b_rate: parseFloat(formData.b_rate) || 0,
-              shipment_days: parseInt(formData.grace_days) || 0,
-              shipment_penalty: parseFloat(formData.delivery_penalty) || 0,
-              shipment_date: formData.delivery_to || null,
-              remarks: formData.remarks || null,
-              is_checked: true,
-              status: 'APPROVED',
-              approval_status: 'APPROVED'
-            };
-
-            await supabase.from('sauda_master').update(saudaUpdatePayload).eq('sauda_id', targetSauda.sauda_id);
-            await dbModule.update('sauda_master', 'sauda_id', targetSauda.sauda_id, saudaUpdatePayload).catch(() => {});
-
-            // Sync sauda_quality_details
-            await supabase.from('sauda_quality_details').delete().eq('sauda_id', targetSauda.sauda_id);
-
-            const qualRowsToInsert = formData.items.map((it) => ({
-              sauda_id: targetSauda.sauda_id,
-              quality: it.grade_name || it.grade_code || '',
-              qty: Math.round(Number(it.qty || 0)),
-              agency: it.agency_name || it.agency_code || primaryAgency,
-              marka: it.marka_name || it.marka_code || '',
-              rs: Number(it.rate || 0),
-              rate: Number(it.rate || 0),
-              weight: Number(it.weight || 0),
-              premium: Number(it.premium || 0)
-            }));
-
-            if (qualRowsToInsert.length > 0) {
-              await supabase.from('sauda_quality_details').insert(qualRowsToInsert);
+        if (matchedSauda && matchedSauda.sauda_id) {
+          try {
+            if (supabase) {
+              await supabase.from('sauda_quality_details').delete().eq('sauda_id', matchedSauda.sauda_id);
+              await supabase.from('sauda_master').delete().eq('sauda_id', matchedSauda.sauda_id);
             }
+            await dbModule.delete('sauda_quality_details', 'sauda_id', matchedSauda.sauda_id).catch(() => {});
+            await dbModule.delete('sauda_master', 'sauda_id', matchedSauda.sauda_id).catch(() => {});
+          } catch (delErr) {
+            console.warn("Failed to delete source sauda from sauda_master:", delErr);
           }
-        } catch (sErr) {
-          console.warn("Sauda Check Point to sauda_master sync warning:", sErr);
         }
       }
       
