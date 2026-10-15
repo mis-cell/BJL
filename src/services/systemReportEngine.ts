@@ -1517,7 +1517,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       const agency = resolvePoAgency(po);
 
       const rawArea = String(po.area || '').trim();
-      const area = areaMap.get(rawArea.toUpperCase()) || rawArea || '-';
+      const area = areaMap.get(rawArea.toUpperCase()) || (rawArea && rawArea !== '-' ? rawArea : 'Unassigned Area');
 
       const details = findPoDetails(poNo, saudaNo);
 
@@ -2193,6 +2193,15 @@ export function groupTransactionsByDimension(
     txns = txns.map(t => {
       if (isInvalidAgency(t.agency)) {
         return { ...t, agency: 'Direct Purchase / Head Office' };
+      }
+      return t;
+    });
+  }
+
+  if (dimension === 'area') {
+    txns = txns.map(t => {
+      if (!t.area || t.area === '-' || t.area === 'UNASSIGNED') {
+        return { ...t, area: 'Unassigned Area' };
       }
       return t;
     });

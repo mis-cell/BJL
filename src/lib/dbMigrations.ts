@@ -4,15 +4,49 @@ export async function runDatabaseMigrations() {
   if (!supabase) return;
   try {
     if (typeof window !== 'undefined') {
-      const isPatched = localStorage.getItem('bjl_app_db_patched_v6') || sessionStorage.getItem('bjl_app_db_patched_v6');
+      const isPatched = localStorage.getItem('bjl_app_db_patched_v7') || sessionStorage.getItem('bjl_app_db_patched_v7');
       if (isPatched) return;
-      localStorage.setItem('bjl_app_db_patched_v6', '1');
-      sessionStorage.setItem('bjl_app_db_patched_v6', '1');
+      localStorage.setItem('bjl_app_db_patched_v7', '1');
+      sessionStorage.setItem('bjl_app_db_patched_v7', '1');
     }
     await supabase.rpc("exec_sql", { 
       query: `
         DO $$ 
         BEGIN 
+          -- Delete specified Sauda numbers from sauda_quality_details and sauda_master
+          DELETE FROM sauda_quality_details WHERE sauda_no IN (
+            'BJCL/2026-2027/0650', 'BJCL/2026-2027/0585', 'BJCL/2026-2027/0580', 'BJCL/2026-2027/0579',
+            'BJCL/2026-2027/0557', 'BJCL/2026-2027/0549', 'BJCL/2026-2027/0528', 'BJCL/2026-2027/0539',
+            'BJCL/2026-2027/0525', 'BJCL/2026-2027/0524', 'BJCL/2026-2027/0523', 'BJCL/2026-2027/0522',
+            'BJCL/2026-2027/0521', 'BJCL/2026-2027/0520', 'BJCL/2026-2027/0518', 'BJCL/2026-2027/0517',
+            'BJCL/2026-2027/0516', 'BJCL/2026-2027/0515', 'BJCL/2026-2027/0514', 'BJCL/2026-2027/0513',
+            'BJCL/2026-2027/0512', 'BJCL/2026-2027/0511', 'BJCL/2026-2027/0510', 'BJCL/2026-2027/0509',
+            'BJCL/2026-2027/0508', 'BJCL/2026-2027/0507', 'BJCL/2026-2027/0506', 'BJCL/2026-2027/0505',
+            'BJCL/2026-2027/0504', 'BJCL/2026-2027/0503', 'BJCL/2026-2027/0502', 'BJCL/2026-2027/0501',
+            'BJCL/2026-2027/0500', 'BJCL/2026-2027/0499', 'BJCL/2026-2027/0498', 'BJCL/2026-2027/0497',
+            'BJCL/2026-2027/0496', 'BJCL/2026-2027/0495', 'BJCL/2026-2027/0494', 'BJCL/2026-2027/0493',
+            'BJCL/2026-2027/0492', 'BJCL/2026-2027/0491', 'BJCL/2026-2027/0490', 'BJCL/2026-2027/0489',
+            'BJCL/2026-2027/0486', 'BJCL/2026-2027/0485', 'BJCL/2026-2027/0484', 'BJCL/2026-2027/0483',
+            'BJCL/2026-2027/0482', 'BJCL/2026-2027/0481', 'BJCL/2026-2027/0480', 'BJCL/2026-2027/0478',
+            'BJCL/2026-2027/0477', 'BJCL/2026-2027/0476', 'BJCL/2026-2027/0475'
+          );
+
+          DELETE FROM sauda_master WHERE sauda_no IN (
+            'BJCL/2026-2027/0650', 'BJCL/2026-2027/0585', 'BJCL/2026-2027/0580', 'BJCL/2026-2027/0579',
+            'BJCL/2026-2027/0557', 'BJCL/2026-2027/0549', 'BJCL/2026-2027/0528', 'BJCL/2026-2027/0539',
+            'BJCL/2026-2027/0525', 'BJCL/2026-2027/0524', 'BJCL/2026-2027/0523', 'BJCL/2026-2027/0522',
+            'BJCL/2026-2027/0521', 'BJCL/2026-2027/0520', 'BJCL/2026-2027/0518', 'BJCL/2026-2027/0517',
+            'BJCL/2026-2027/0516', 'BJCL/2026-2027/0515', 'BJCL/2026-2027/0514', 'BJCL/2026-2027/0513',
+            'BJCL/2026-2027/0512', 'BJCL/2026-2027/0511', 'BJCL/2026-2027/0510', 'BJCL/2026-2027/0509',
+            'BJCL/2026-2027/0508', 'BJCL/2026-2027/0507', 'BJCL/2026-2027/0506', 'BJCL/2026-2027/0505',
+            'BJCL/2026-2027/0504', 'BJCL/2026-2027/0503', 'BJCL/2026-2027/0502', 'BJCL/2026-2027/0501',
+            'BJCL/2026-2027/0500', 'BJCL/2026-2027/0499', 'BJCL/2026-2027/0498', 'BJCL/2026-2027/0497',
+            'BJCL/2026-2027/0496', 'BJCL/2026-2027/0495', 'BJCL/2026-2027/0494', 'BJCL/2026-2027/0493',
+            'BJCL/2026-2027/0492', 'BJCL/2026-2027/0491', 'BJCL/2026-2027/0490', 'BJCL/2026-2027/0489',
+            'BJCL/2026-2027/0486', 'BJCL/2026-2027/0485', 'BJCL/2026-2027/0484', 'BJCL/2026-2027/0483',
+            'BJCL/2026-2027/0482', 'BJCL/2026-2027/0481', 'BJCL/2026-2027/0480', 'BJCL/2026-2027/0478',
+            'BJCL/2026-2027/0477', 'BJCL/2026-2027/0476', 'BJCL/2026-2027/0475'
+          ); 
           -- Universal App Audit Logs table
           CREATE TABLE IF NOT EXISTS app_audit_logs (
             id TEXT PRIMARY KEY,

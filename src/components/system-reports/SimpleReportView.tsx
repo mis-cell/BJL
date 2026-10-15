@@ -1194,7 +1194,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
                         {deductionRows.length === 0 ? (
                           <tr>
                             <td colSpan={9} className="p-8 text-center text-slate-400 font-sans font-medium">
-                              No brokers found with active Moisture, Dust, Gradedown, or Short/Excess deduction data.
+                              No {activeTab === 'AGENCY' ? 'agencies' : activeTab === 'SUPPLIER' ? 'suppliers' : activeTab === 'AREA' ? 'areas' : activeTab === 'GRADE' ? 'grades' : 'brokers'} found with active Moisture, Dust, Gradedown, or Short/Excess deduction data.
                             </td>
                           </tr>
                         ) : (
