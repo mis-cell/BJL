@@ -1882,8 +1882,47 @@ export async function loadAndProcessSystemReportData(): Promise<{
         });
       }
     });
+    const uniqueAllPoRecords = Array.from(
+      allPoRecords.reduce((map, record) => {
+        const poNo = String(record.poNo || '').trim().toUpperCase();
+        const saudaNo = String(record.saudaNo || '').trim().toUpperCase();
+
+        // Prefer PO number; otherwise use Sauda number; finally use ID.
+        const key = poNo && poNo !== 'DESK' &&
+                    poNo !== 'CHECKPOINT' &&
+                    poNo !== 'FINAL_PO'
+          ? `PO_${poNo}`
+          : saudaNo && !['DESK', 'CHECKPOINT', 'FINAL_PO'].includes(saudaNo)
+            ? `SAUDA_${saudaNo}`
+            : `ID_${String(record.id || '').trim().toUpperCase()}`;
+
+        // Keep only the first record for each key.
+        if (!map.has(key)) {
+          map.set(key, record);
+        }
+
+        return map;
+      }, new Map<string, (typeof allPoRecords)[number]>()).values()
+    );
 
     const allPoSummary: AllPoSummary = {
+      records: uniqueAllPoRecords,
+      totalCount: uniqueAllPoRecords.length,
+      totalQuantityMT: uniqueAllPoRecords.reduce(
+        (sum, r) => sum + (Number(r.quantityMT) || 0), 0
+      ),
+      totalGrossValue: uniqueAllPoRecords.reduce(
+        (sum, r) => sum + (Number(r.grossValue) || 0), 0
+      ),
+      saudaDeskCount,
+      saudaDeskMT,
+      checkPointCount,
+      checkPointMT,
+      finalPoCount,
+      finalPoMT
+    };
+
+    /* const allPoSummary: AllPoSummary = {
       records: allPoRecords,
       totalCount: allPoRecords.length,
       totalQuantityMT: allPoRecords.reduce((sum, r) => sum + r.quantityMT, 0),
@@ -1894,7 +1933,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       checkPointMT,
       finalPoCount,
       finalPoMT
-    };
+    }; */
 
     return {
       allTransactions: transactionLines,
