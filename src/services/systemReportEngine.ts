@@ -1971,19 +1971,6 @@ export async function loadAndProcessSystemReportData(): Promise<{
       finalPoMT
     };
 
-    /* const allPoSummary: AllPoSummary = {
-      records: allPoRecords,
-      totalCount: allPoRecords.length,
-      totalQuantityMT: allPoRecords.reduce((sum, r) => sum + r.quantityMT, 0),
-      totalGrossValue: allPoRecords.reduce((sum, r) => sum + r.grossValue, 0),
-      saudaDeskCount,
-      saudaDeskMT,
-      checkPointCount,
-      checkPointMT,
-      finalPoCount,
-      finalPoMT
-    }; */
-
     return {
       allTransactions: transactionLines,
       allPoSummary,
