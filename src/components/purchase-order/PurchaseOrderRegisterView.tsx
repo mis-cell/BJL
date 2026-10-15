@@ -422,7 +422,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
 
       {/* PO Grid Table */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-2xs overflow-x-auto overflow-y-auto max-h-[calc(100vh-290px)] min-h-[320px] w-full max-w-full">
-         <table className="w-full border-collapse text-xs text-black">
+         <table className="w-full min-w-[1350px] border-collapse text-xs text-black">
             <thead className="bg-slate-100/90 sticky top-0 z-10 font-bold border-b border-slate-200">
                <tr className="h-8 text-slate-700 text-[10px]">
                   <th 
@@ -457,12 +457,22 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                   </th>
                   <th 
                     onClick={() => handleSort('broker')}
-                    className="px-2.5 py-1.5 text-left border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                    className="px-2.5 py-1.5 text-left border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[120px]"
                     title="Sort by Broker"
                   >
                     <div className="flex items-center gap-1">
                       <span>BROKER</span>
                       {renderSortIndicator('broker')}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSort('supplier')}
+                    className="px-2.5 py-1.5 text-left border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[140px]"
+                    title="Sort by Party / Supplier"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>PARTY / SUPPLIER</span>
+                      {renderSortIndicator('supplier')}
                     </div>
                   </th>
                   <th 
@@ -600,6 +610,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                         </span>
                      </td>
                      <td className={cn("px-2 py-1 uppercase truncate max-w-[130px] whitespace-nowrap border-r border-slate-200/60", isSelected ? "text-slate-100" : "text-slate-700")}>{item.broker}</td>
+                     <td className={cn("px-2.5 py-1 uppercase truncate max-w-[150px] whitespace-nowrap border-r border-slate-200/60 font-semibold", isSelected ? "text-slate-100" : "text-slate-800")} title={item.supplier}>{item.supplier || '-'}</td>
                      <td className={cn("px-2 py-1 text-center font-bold uppercase whitespace-nowrap border-r border-slate-200/60 text-[9.5px]", isSelected ? "text-slate-200" : "text-slate-700")}>{item.purchase_unit_name || 'BALES'}</td>
                      <td className={cn("px-2 py-1 text-right font-mono font-bold whitespace-nowrap border-r border-slate-200/60", isSelected ? "text-white" : "text-slate-900")}>{item.total_units || 0}</td>
                      <td className="px-2 py-1 text-left font-mono border-r border-slate-200/60 min-w-[150px]">
@@ -1052,7 +1063,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                )})}
                {filteredPos.length === 0 && (
                   <tr>
-                     <td colSpan={isTempPo ? 14 : 12} className="py-12 text-center text-slate-400 uppercase font-black italic">
+                     <td colSpan={isTempPo ? 15 : 13} className="py-12 text-center text-slate-400 uppercase font-black italic">
                        No Saved Purchase Orders found matching criteria.
                      </td>
                   </tr>

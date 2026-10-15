@@ -215,6 +215,18 @@ export function isInvalidAgency(agencyStr?: string | null): boolean {
   return false;
 }
 
+export const INVALID_AREA_SET = new Set([
+  '-', '—', '--', 'UNASSIGNED', 'UNASSIGNED AREA', 'N/A', 'NONE', 'NO AREA', 'NULL', 'UNDEFINED', ''
+]);
+
+export function isInvalidArea(areaStr?: string | null): boolean {
+  if (!areaStr) return true;
+  const clean = String(areaStr).trim().toUpperCase();
+  if (!clean || clean === '-' || clean === '—' || clean === '--') return true;
+  if (INVALID_AREA_SET.has(clean)) return true;
+  return false;
+}
+
 // Helper to normalize any date string format to standard YYYY-MM-DD
 export function normalizeToISODate(dateStr?: string | null): string {
   if (!dateStr) return new Date().toISOString().split('T')[0];
@@ -1706,7 +1718,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
           supplier,
           broker,
           agency: '-',
-          area: '-',
+          area: '',
           grade: pm.grades?.map(g => g.grade).filter(Boolean).join(', ') || '-',
           quantityMT: qtyMT,
           purchaseRate: 0,
@@ -1811,7 +1823,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
     };
     const resolveAreaName = (raw?: string) => {
       const c = String(raw || '').trim();
-      if (!c) return '-';
+      if (!c || isInvalidArea(c)) return '';
       return areaMap.get(c.toUpperCase()) || c;
     };
 

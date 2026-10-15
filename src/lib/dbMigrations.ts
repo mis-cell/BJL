@@ -4,10 +4,10 @@ export async function runDatabaseMigrations() {
   if (!supabase) return;
   try {
     if (typeof window !== 'undefined') {
-      const isPatched = localStorage.getItem('bjl_app_db_patched_v9') || sessionStorage.getItem('bjl_app_db_patched_v9');
+      const isPatched = localStorage.getItem('bjl_app_db_patched_v10') || sessionStorage.getItem('bjl_app_db_patched_v10');
       if (isPatched) return;
-      localStorage.setItem('bjl_app_db_patched_v9', '1');
-      sessionStorage.setItem('bjl_app_db_patched_v9', '1');
+      localStorage.setItem('bjl_app_db_patched_v10', '1');
+      sessionStorage.setItem('bjl_app_db_patched_v10', '1');
     }
 
     // Direct deletion of specified Saudas via Supabase REST API and cleanup of Saudas already in Sauda Check Point

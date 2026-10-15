@@ -25,7 +25,7 @@ import {
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
-import { SystemReportDataset, ReportTransactionLine, normalizeToISODate, getTodayISODate, isInvalidAgency } from '../../services/systemReportEngine';
+import { SystemReportDataset, ReportTransactionLine, normalizeToISODate, getTodayISODate, isInvalidAgency, isInvalidArea } from '../../services/systemReportEngine';
 import { SimpleDealSlipModal } from './SimpleDealSlipModal';
 import { formatIndianCurrency } from '../../lib/utils';
 
@@ -340,7 +340,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
           supplier: r.supplier || 'Unassigned',
           broker: r.broker || 'Direct',
           agency: r.agency || '-',
-          area: r.area || '-',
+          area: (r.area && !isInvalidArea(r.area)) ? r.area : '',
           grade: r.grade || '-',
           quantityMT: Number(r.quantityMT || 0),
           purchaseRate: Number(r.rate || 0),
@@ -570,7 +570,10 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     const list = aggregateByDimension(t => t.agency);
     return list.filter(item => !isInvalidAgency(item.key));
   }, [allDimensionRecords]);
-  const areaData = useMemo(() => aggregateByDimension(t => t.area), [allDimensionRecords]);
+  const areaData = useMemo(() => {
+    const list = aggregateByDimension(t => t.area);
+    return list.filter(item => !isInvalidArea(item.key));
+  }, [allDimensionRecords]);
   const gradeData = useMemo(() => aggregateByDimension(t => t.grade), [allDimensionRecords]);
 
   const supplierData = useMemo(() => {
