@@ -6,6 +6,7 @@ import { sanitizeCsvData } from '../../lib/utils';
 import { calculateWeightTolerance } from '../../lib/weightTolerance';
 import { comparePoInspection, compareSaudaTempArrival, PoMatchResult } from '../../lib/poMatch';
 import { useLiveAutoRefresh } from '../../hooks/useLiveAutoRefresh';
+import { isInvalidAgency } from '../../services/systemReportEngine';
 
 interface UsePurchaseOrderDataOptions {
   isTempPo: boolean;
@@ -631,7 +632,11 @@ export function usePurchaseOrderData({
       })));
       setGradeList(grades || []);
       setMarkaList(markas || []);
-      setAgencyList(agencies || []);
+      const validAgencies = (agencies || []).filter((a: any) => {
+        const name = String(a.agency_name || a.name || '').trim();
+        return name && !isInvalidAgency(name);
+      });
+      setAgencyList(validAgencies);
 
       const sBases = sattaBasesRes && 'data' in sattaBasesRes ? (sattaBasesRes as any).data || [] : [];
       const sCalculated = sattaCalculatedRes && 'data' in sattaCalculatedRes ? (sattaCalculatedRes as any).data || [] : [];

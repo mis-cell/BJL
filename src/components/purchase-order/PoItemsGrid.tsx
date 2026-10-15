@@ -153,27 +153,40 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
       </div>
 
       <div className="border border-[#174C2C] bg-white shadow-sm overflow-x-auto min-h-[160px] text-black">
-        <table className="w-full border-collapse text-[10px]">
-          <thead className="bg-[#174C2C] text-amber-300 border-b border-[#0f331d]">
-            <tr className="divide-x divide-[#235E39] uppercase font-black text-amber-300">
-              <th className="px-1 py-1.5 w-10">Srl. No.</th>
-              <th className="px-1 py-1.5 w-16">Crop Year</th>
-              <th className="px-1 py-1.5 w-32" colSpan={2}>Grade</th>
-              <th className="px-1 py-1.5 w-32" colSpan={2}>Agency</th>
-              <th className="px-1 py-1.5 w-32" colSpan={2}>Marka</th>
-              <th className="px-1 py-1 w-16 text-right">Rate/ Qntl</th>
-              <th className="px-1 py-1 w-20 text-right">Premium</th>
+        <table className="w-full min-w-[960px] border-collapse text-xs">
+          <thead className="bg-[#174C2C] text-amber-300 border-b border-[#0f331d] select-none">
+            {/* Top Row: Spanning Group Headers */}
+            <tr className="divide-x divide-[#235E39] uppercase font-black text-amber-300 text-[10px] tracking-wider">
+              <th rowSpan={2} className="px-2 py-2 w-14 text-center align-middle bg-[#144226]">
+                Srl. No.
+              </th>
+              <th rowSpan={2} className="px-2 py-2 w-28 text-center align-middle bg-[#144226]">
+                Crop Year
+              </th>
+              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#174C2C]">
+                Grade
+              </th>
+              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#174C2C]">
+                Agency
+              </th>
+              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#174C2C]">
+                Marka
+              </th>
+              <th rowSpan={2} className="px-3 py-2 w-28 text-right align-middle bg-[#144226]">
+                Rate / Qntl
+              </th>
+              <th rowSpan={2} className="px-3 py-2 w-24 text-right align-middle bg-[#144226]">
+                Premium
+              </th>
             </tr>
-            <tr className="bg-[#103A20] text-amber-300 divide-x divide-[#235E39] border-t border-[#235E39] text-[9.5px] font-black uppercase tracking-wider">
-              <th colSpan={2} className="py-1 px-1"></th>
-              <th className="w-10 text-amber-300 text-center font-black py-1 px-1">Code</th>
-              <th className="w-max text-amber-300 text-left font-black py-1 px-1 pl-2">Name</th>
-              <th className="w-10 text-amber-300 text-center font-black py-1 px-1">Code</th>
-              <th className="w-max text-amber-300 text-left font-black py-1 px-1 pl-2">Name</th>
-              <th className="w-10 text-amber-300 text-center font-black py-1 px-1">Code</th>
-              <th className="w-max text-amber-300 text-left font-black py-1 px-1 pl-2">Name</th>
-              <th colSpan={1} className="py-1 px-1"></th>
-              <th colSpan={1} className="py-1 px-1"></th>
+            {/* Sub-Header Row: Code & Name for Grade, Agency, Marka */}
+            <tr className="bg-[#103A20] text-amber-200 divide-x divide-[#235E39] border-t border-[#235E39] text-[9.5px] font-black uppercase tracking-wider">
+              <th className="w-16 text-center py-1 px-1">Code</th>
+              <th className="w-36 text-left py-1 px-2.5">Name</th>
+              <th className="w-24 text-center py-1 px-1">Code</th>
+              <th className="w-44 text-left py-1 px-2.5">Name</th>
+              <th className="w-16 text-center py-1 px-1">Code</th>
+              <th className="w-36 text-left py-1 px-2.5">Name</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-300">
@@ -185,10 +198,10 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
                   (row.srl === selectedItemSrl || (!selectedItemSrl && index === 0)) ? 'bg-blue-100/95 font-bold' : 'hover:bg-blue-50/50'
                 }`}
               >
-                <td className="px-1 py-1 text-center bg-slate-50 font-bold text-slate-700">{row.srl || index + 1}</td>
-                <td className="px-0 py-0 text-center font-bold">
+                <td className="px-2 py-1 text-center bg-slate-50 font-bold text-slate-700 w-14 font-mono">{row.srl || index + 1}</td>
+                <td className="px-1 py-0.5 text-center font-bold w-28">
                   <select 
-                    className="w-full text-center bg-transparent border-none p-1 outline-none font-bold text-slate-900 cursor-pointer" 
+                    className="w-full text-center bg-transparent border-none p-1 outline-none font-bold text-slate-900 cursor-pointer text-xs" 
                     value={row.crop || getCropYear()} 
                     onChange={(e) => {
                       const val = e.target.value;
@@ -204,10 +217,10 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
                     )}
                   </select>
                 </td>
-                <td className={`px-0 py-0 text-center font-normal ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
+                <td className={`px-1 py-0.5 text-center font-normal w-16 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
                   <input 
                     type="text" 
-                    className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
+                    className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-700 font-bold text-xs" 
                     value={row.grade_code || ''} 
                     onChange={(e) => {
                       const codeVal = e.target.value.toUpperCase();
@@ -225,7 +238,7 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
                     placeholder="-"
                   />
                 </td>
-                <td className={`px-0 py-0 font-normal ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
+                <td className={`px-2 py-0.5 font-normal w-36 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
                   <TableComboBox 
                     value={row.grade_name || ''}
                     options={gradeList}
@@ -246,10 +259,10 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
                     }}
                   />
                 </td>
-                <td className={`px-0 py-0 text-center font-normal ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
+                <td className={`px-1 py-0.5 text-center font-normal w-24 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
                   <input 
                     type="text" 
-                    className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
+                    className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-700 font-bold text-xs truncate" 
                     value={row.agency_code || ''} 
                     onChange={(e) => {
                       const codeVal = e.target.value.toUpperCase();
@@ -265,9 +278,10 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
                       setFormData(prev => ({ ...prev, items: updated }));
                     }} 
                     placeholder="-"
+                    title={row.agency_code || ''}
                   />
                 </td>
-                <td className={`px-0 py-0 font-normal ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
+                <td className={`px-2 py-0.5 font-normal w-44 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
                   <TableComboBox 
                     value={row.agency_name || ''}
                     options={agencyList}
@@ -288,10 +302,10 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
                     }}
                   />
                 </td>
-                <td className={`px-0 py-0 text-center font-normal ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
+                <td className={`px-1 py-0.5 text-center font-normal w-16 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
                   <input 
                     type="text" 
-                    className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-600 font-bold" 
+                    className="w-full text-center bg-transparent border-none p-1 outline-none font-mono text-slate-700 font-bold text-xs" 
                     value={row.marka_code || ''} 
                     onChange={(e) => {
                       const codeVal = e.target.value.toUpperCase();
@@ -307,7 +321,7 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
                     placeholder="-"
                   />
                 </td>
-                <td className={`px-0 py-0 font-normal ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
+                <td className={`px-2 py-0.5 font-normal w-36 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
                   <TableComboBox 
                     value={row.marka_name || ''}
                     options={markaList}
@@ -326,10 +340,10 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
                     }}
                   />
                 </td>
-                <td className={`px-0 py-0 text-right font-normal ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
+                <td className={`px-2 py-0.5 text-right font-normal w-28 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
                   <input 
                     type="number" 
-                    className="w-full text-right bg-transparent border-none p-1 outline-none font-bold text-slate-900" 
+                    className="w-full text-right bg-transparent border-none p-1 outline-none font-bold text-slate-900 font-mono text-xs" 
                     value={row.rate || 0} 
                     onChange={(e) => {
                       const val = parseFloat(e.target.value) || 0;
@@ -338,10 +352,10 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
                     }} 
                   />
                 </td>
-                <td className={`px-0 py-0 text-right font-normal ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
+                <td className={`px-2 py-0.5 text-right font-normal w-24 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
                   <input 
                     type="number" 
-                    className="w-full text-right bg-transparent border-none p-1 outline-none font-bold text-slate-900" 
+                    className="w-full text-right bg-transparent border-none p-1 outline-none font-bold text-slate-900 font-mono text-xs" 
                     value={row.premium || 0} 
                     onChange={(e) => {
                       const val = parseFloat(e.target.value) || 0;
