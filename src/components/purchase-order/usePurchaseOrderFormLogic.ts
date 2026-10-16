@@ -1204,10 +1204,7 @@ export function usePurchaseOrderFormLogic({
               deleteOps.push(Promise.resolve(supabase.from('sauda_quality_details').delete().eq('sauda_no', saudaNoRef)));
               deleteOps.push(Promise.resolve(supabase.from('sauda_master').delete().eq('sauda_no', saudaNoRef)));
             }
-            if (cleanDigits) {
-              deleteOps.push(Promise.resolve(supabase.from('sauda_quality_details').delete().ilike('sauda_no', `%${cleanDigits}%`)));
-              deleteOps.push(Promise.resolve(supabase.from('sauda_master').delete().ilike('sauda_no', `%${cleanDigits}%`)));
-            }
+            // Only delete exact targetSaudaId, targetSaudaNo, or saudaNoRef. Never delete with broad wildcards!
           }
           await Promise.allSettled(deleteOps);
         } catch (delErr) {

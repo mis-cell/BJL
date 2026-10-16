@@ -378,55 +378,55 @@ export default function ExecutiveBiDashboard({
               subtitle: `Total ${dbMetrics.totalContractsCount} Combined Contracts (${dbMetrics.totalWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 2 })} MT)`,
               contracts: dbMetrics.allContracts
             })}
-            className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-xl p-3 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+            className="bg-white border-2 border-[#FBCFCB] hover:border-[#F06D6C] rounded-xl p-3 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
             title="Click to view full Sauda Check Point & Final P.O breakdown"
           >
             <div>
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-[11px] font-bold uppercase text-[#D94B5A] tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold uppercase text-[#667085] tracking-wider flex items-center gap-1">
                   <span>📦</span> Sauda Check Point
                 </span>
-                <div className="p-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
-                  <Package className="w-3 h-3 text-emerald-800" />
+                <div className="p-1 rounded-lg bg-[#FDE7E6] text-[#D94B5A] border border-[#FBCFCB] group-hover:bg-[#FBCFCB] transition-colors">
+                  <Package className="w-3.5 h-3.5 text-[#D94B5A]" />
                 </div>
               </div>
 
               {/* Main Total Metrics */}
               <div className="my-1">
-                <div className="text-xl font-mono font-extrabold text-[#D94B5A] tracking-tight leading-tight">
+                <div className="text-xl font-mono font-extrabold text-[#29252B] tracking-tight leading-tight">
                   {dbMetrics.totalContractsCount}{' '}
-                  <span className="text-xs font-sans font-semibold text-[#D94B5A]">Contracts</span>
+                  <span className="text-xs font-sans font-semibold text-[#667085]">Contracts</span>
                 </div>
-                <div className="text-xs font-mono font-bold text-emerald-800 mt-0.5">
+                <div className="text-xs font-mono font-bold text-[#475467] mt-0.5">
                   {dbMetrics.totalWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MT
                 </div>
               </div>
 
-              {/* Direct Integrated Breakdown (No Tabs) */}
-              <div className="pt-2 border-t border-[#FDE7E6] space-y-1 text-[10px]">
-                <div className="flex items-center justify-between text-[#D94B5A]">
+              {/* Direct Integrated Breakdown */}
+              <div className="pt-2 border-t border-[#FBCFCB] space-y-1 text-[10px]">
+                <div className="flex items-center justify-between text-[#475467]">
                   <span className="font-bold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#E85A5A]"></span>
                     Sauda:
                   </span>
-                  <span className="font-extrabold font-mono text-[#D94B5A]">
-                    {dbMetrics.saudaContractsCount} <span className="text-[9px] font-normal text-slate-500">({dbMetrics.saudaWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 2 })} MT)</span>
+                  <span className="font-extrabold font-mono text-[#29252B]">
+                    {dbMetrics.saudaContractsCount} <span className="text-[9px] font-normal text-[#667085]">({dbMetrics.saudaWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 2 })} MT)</span>
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-[#D94B5A]">
+                <div className="flex items-center justify-between text-[#475467]">
                   <span className="font-bold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#D94B5A]"></span>
                     P.T.F / Final:
                   </span>
-                  <span className="font-extrabold font-mono text-blue-900">
-                    {dbMetrics.ptfContractsCount} <span className="text-[9px] font-normal text-slate-500">({dbMetrics.ptfWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 2 })} MT)</span>
+                  <span className="font-extrabold font-mono text-[#29252B]">
+                    {dbMetrics.ptfContractsCount} <span className="text-[9px] font-normal text-[#667085]">({dbMetrics.ptfWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 2 })} MT)</span>
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[9.5px] font-bold text-[#D94B5A] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+            <div className="mt-2 pt-1 border-t border-dashed border-[#FBCFCB] text-[9.5px] font-bold text-[#D94B5A] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
               <span>View All Contracts</span>
               <span className="text-xs">→</span>
             </div>
@@ -441,55 +441,55 @@ export default function ExecutiveBiDashboard({
               subtitle: "Contracts not yet fully arrived in Temporary Arrival register",
               contracts: dbMetrics.allContracts.filter(c => c.arrivalStatus === 'PENDING' || c.arrivalStatus === 'PARTIAL')
             })}
-            className="bg-white border-2 border-amber-600/30 hover:border-amber-600 rounded-xl p-3 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+            className="bg-white border-2 border-[#FBCFCB] hover:border-[#F06D6C] rounded-xl p-3 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
             title="Click to view pending arrival contracts"
           >
             <div>
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-[11px] font-bold uppercase text-[#D94B5A] tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold uppercase text-[#667085] tracking-wider flex items-center gap-1">
                   <span>⏳</span> Pending Sauda
                 </span>
-                <div className="p-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 group-hover:bg-amber-200 transition-colors">
-                  <Clock className="w-3 h-3 text-amber-800" />
+                <div className="p-1 rounded-lg bg-[#FDE7E6] text-[#925C13] border border-[#FBCFCB] group-hover:bg-[#FBCFCB] transition-colors">
+                  <Clock className="w-3.5 h-3.5 text-[#925C13]" />
                 </div>
               </div>
 
               {/* Main Total Metrics */}
               <div className="my-1">
-                <div className="text-xl font-mono font-extrabold text-amber-900 tracking-tight leading-tight">
+                <div className="text-xl font-mono font-extrabold text-[#29252B] tracking-tight leading-tight">
                   {dbMetrics.totalPendingContractsCount}{' '}
-                  <span className="text-xs font-sans font-semibold text-[#D94B5A]">Pending</span>
+                  <span className="text-xs font-sans font-semibold text-[#667085]">Pending</span>
                 </div>
-                <div className="text-xs font-mono font-bold text-amber-800 mt-0.5">
+                <div className="text-xs font-mono font-bold text-[#925C13] mt-0.5">
                   {dbMetrics.totalPendingWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MT
                 </div>
               </div>
 
-              {/* Direct Integrated Breakdown (No Tabs) */}
-              <div className="pt-2 border-t border-[#FDE7E6] space-y-1 text-[10px]">
-                <div className="flex items-center justify-between text-[#D94B5A]">
+              {/* Direct Integrated Breakdown */}
+              <div className="pt-2 border-t border-[#FBCFCB] space-y-1 text-[10px]">
+                <div className="flex items-center justify-between text-[#475467]">
                   <span className="font-bold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#E85A5A]"></span>
                     Sauda:
                   </span>
-                  <span className="font-extrabold font-mono text-[#D94B5A]">
-                    {dbMetrics.pendingSaudaCount} <span className="text-[9px] font-normal text-slate-500">({dbMetrics.pendingSaudaWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 2 })} MT)</span>
+                  <span className="font-extrabold font-mono text-[#29252B]">
+                    {dbMetrics.pendingSaudaCount} <span className="text-[9px] font-normal text-[#667085]">({dbMetrics.pendingSaudaWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 2 })} MT)</span>
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-[#D94B5A]">
+                <div className="flex items-center justify-between text-[#475467]">
                   <span className="font-bold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#D94B5A]"></span>
                     P.T.F / Final:
                   </span>
-                  <span className="font-extrabold font-mono text-blue-900">
-                    {dbMetrics.pendingPtfCount} <span className="text-[9px] font-normal text-slate-500">({dbMetrics.pendingPtfWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 2 })} MT)</span>
+                  <span className="font-extrabold font-mono text-[#29252B]">
+                    {dbMetrics.pendingPtfCount} <span className="text-[9px] font-normal text-[#667085]">({dbMetrics.pendingPtfWeightMt.toLocaleString('en-IN', { minimumFractionDigits: 2 })} MT)</span>
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[9.5px] font-bold text-amber-800 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+            <div className="mt-2 pt-1 border-t border-dashed border-[#FBCFCB] text-[9.5px] font-bold text-[#D94B5A] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
               <span>View Pending Dues</span>
               <span className="text-xs">→</span>
             </div>
@@ -504,48 +504,48 @@ export default function ExecutiveBiDashboard({
               subtitle: "All approved contract payable values",
               contracts: dbMetrics.allContracts
             })}
-            className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-xl p-3 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+            className="bg-white border-2 border-[#FBCFCB] hover:border-[#F06D6C] rounded-xl p-3 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
             title="Click to view total payable value breakdown"
           >
             <div>
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-[11px] font-bold uppercase text-[#D94B5A] tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold uppercase text-[#667085] tracking-wider flex items-center gap-1">
                   <span>💳</span> Total Payable Value
                 </span>
-                <div className="p-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
-                  <Coins className="w-3 h-3 text-emerald-800" />
+                <div className="p-1 rounded-lg bg-[#FDE7E6] text-[#D94B5A] border border-[#FBCFCB] group-hover:bg-[#FBCFCB] transition-colors">
+                  <Coins className="w-3.5 h-3.5 text-[#D94B5A]" />
                 </div>
               </div>
 
               <div className="my-1">
                 <div 
-                  className="text-lg sm:text-xl font-mono font-extrabold text-[#D94B5A] tracking-tight leading-tight truncate"
+                  className="text-lg sm:text-xl font-mono font-extrabold text-[#29252B] tracking-tight leading-tight truncate"
                   title={`₹${formatIndianCurrency(dbMetrics.totalPayableValue)}`}
                 >
                   {formatIndianCompactCurrency(dbMetrics.totalPayableValue)}
                 </div>
-                <div className="text-[10px] font-sans font-semibold text-[#D94B5A] mt-0.5">
+                <div className="text-[10px] font-sans font-semibold text-[#667085] mt-0.5">
                   Authoritative Payable Value
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-[#FDE7E6] space-y-1 text-[10px]">
-                <div className="flex items-center justify-between text-[#D94B5A]">
+              <div className="pt-2 border-t border-[#FBCFCB] space-y-1 text-[10px]">
+                <div className="flex items-center justify-between text-[#475467]">
                   <span className="font-bold">Total Vouchers:</span>
-                  <span className="font-extrabold font-mono text-[#D94B5A]">
+                  <span className="font-extrabold font-mono text-[#29252B]">
                     {paymentRecords.length} Vouchers
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-[#D94B5A]">
+                <div className="flex items-center justify-between text-[#475467]">
                   <span className="font-bold">Total Contracts:</span>
-                  <span className="font-extrabold font-mono text-[#D94B5A]">
+                  <span className="font-extrabold font-mono text-[#29252B]">
                     {dbMetrics.totalContractsCount}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[9.5px] font-bold text-[#D94B5A] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+            <div className="mt-2 pt-1 border-t border-dashed border-[#FBCFCB] text-[9.5px] font-bold text-[#D94B5A] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
               <span>View Payable Details</span>
               <span className="text-xs">→</span>
             </div>
@@ -560,48 +560,48 @@ export default function ExecutiveBiDashboard({
               subtitle: "Cleared and adjusted payments from Payment Operations",
               contracts: dbMetrics.allContracts.filter(c => c.paidAmount > 0)
             })}
-            className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-xl p-3 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+            className="bg-white border-2 border-[#FBCFCB] hover:border-[#F06D6C] rounded-xl p-3 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
             title="Click to view cleared and advance payments"
           >
             <div>
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-[11px] font-bold uppercase text-[#D94B5A] tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold uppercase text-[#667085] tracking-wider flex items-center gap-1">
                   <span>💸</span> Paid Amount
                 </span>
-                <div className="p-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
-                  <Wallet className="w-3 h-3 text-emerald-800" />
+                <div className="p-1 rounded-lg bg-[#FDE7E6] text-[#216E45] border border-[#FBCFCB] group-hover:bg-[#FBCFCB] transition-colors">
+                  <Wallet className="w-3.5 h-3.5 text-[#216E45]" />
                 </div>
               </div>
 
               <div className="my-1">
                 <div 
-                  className="text-lg sm:text-xl font-mono font-extrabold text-emerald-800 tracking-tight leading-tight truncate"
+                  className="text-lg sm:text-xl font-mono font-extrabold text-[#216E45] tracking-tight leading-tight truncate"
                   title={`₹${formatIndianCurrency(dbMetrics.totalPaidAmount)}`}
                 >
                   {formatIndianCompactCurrency(dbMetrics.totalPaidAmount)}
                 </div>
-                <div className="text-[10px] font-sans font-semibold text-[#D94B5A] mt-0.5">
+                <div className="text-[10px] font-sans font-semibold text-[#667085] mt-0.5">
                   Cleared / Advance Paid
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-[#FDE7E6] space-y-1 text-[10px]">
-                <div className="flex items-center justify-between text-[#D94B5A]">
+              <div className="pt-2 border-t border-[#FBCFCB] space-y-1 text-[10px]">
+                <div className="flex items-center justify-between text-[#475467]">
                   <span className="font-bold">Paid Contracts:</span>
-                  <span className="font-extrabold font-mono text-[#D94B5A]">
+                  <span className="font-extrabold font-mono text-[#29252B]">
                     {dbMetrics.allContracts.filter(c => c.paidAmount > 0).length}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-[#D94B5A]">
+                <div className="flex items-center justify-between text-[#475467]">
                   <span className="font-bold">Fully Settled:</span>
-                  <span className="font-extrabold font-mono text-emerald-800">
+                  <span className="font-extrabold font-mono text-[#216E45]">
                     {dbMetrics.allContracts.filter(c => c.paymentStatus === 'PAID').length}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[9.5px] font-bold text-[#D94B5A] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+            <div className="mt-2 pt-1 border-t border-dashed border-[#FBCFCB] text-[9.5px] font-bold text-[#D94B5A] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
               <span>View Paid Vouchers</span>
               <span className="text-xs">→</span>
             </div>
@@ -616,48 +616,48 @@ export default function ExecutiveBiDashboard({
               subtitle: "Total Contract Value minus Paid Amount",
               contracts: dbMetrics.allContracts.filter(c => c.remainingAmount > 0)
             })}
-            className="bg-white border-2 border-rose-600/30 hover:border-rose-600 rounded-xl p-3 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+            className="bg-white border-2 border-[#FBCFCB] hover:border-[#F06D6C] rounded-xl p-3 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
             title="Click to view remaining dues and balances"
           >
             <div>
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-[11px] font-bold uppercase text-[#D94B5A] tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold uppercase text-[#667085] tracking-wider flex items-center gap-1">
                   <span>⚖️</span> Remaining Amount
                 </span>
-                <div className="p-1 rounded-lg bg-rose-100 text-rose-900 border border-rose-300 group-hover:bg-rose-200 transition-colors">
-                  <Scale className="w-3 h-3 text-rose-800" />
+                <div className="p-1 rounded-lg bg-[#FDE7E6] text-[#B42318] border border-[#FBCFCB] group-hover:bg-[#FBCFCB] transition-colors">
+                  <Scale className="w-3.5 h-3.5 text-[#B42318]" />
                 </div>
               </div>
 
               <div className="my-1">
                 <div 
-                  className="text-lg sm:text-xl font-mono font-extrabold text-rose-800 tracking-tight leading-tight truncate"
+                  className="text-lg sm:text-xl font-mono font-extrabold text-[#B42318] tracking-tight leading-tight truncate"
                   title={`₹${formatIndianCurrency(dbMetrics.totalRemainingAmount)}`}
                 >
                   {formatIndianCompactCurrency(dbMetrics.totalRemainingAmount)}
                 </div>
-                <div className="text-[10px] font-sans font-semibold text-[#D94B5A] mt-0.5">
+                <div className="text-[10px] font-sans font-semibold text-[#667085] mt-0.5">
                   Unpaid Outstanding Dues
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-[#FDE7E6] space-y-1 text-[10px]">
-                <div className="flex items-center justify-between text-[#D94B5A]">
+              <div className="pt-2 border-t border-[#FBCFCB] space-y-1 text-[10px]">
+                <div className="flex items-center justify-between text-[#475467]">
                   <span className="font-bold">Pending Contracts:</span>
-                  <span className="font-extrabold font-mono text-rose-700">
+                  <span className="font-extrabold font-mono text-[#B42318]">
                     {dbMetrics.allContracts.filter(c => c.remainingAmount > 0).length}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-[#D94B5A]">
+                <div className="flex items-center justify-between text-[#475467]">
                   <span className="font-bold">Due Status:</span>
-                  <span className="font-extrabold font-mono text-rose-800">
+                  <span className="font-extrabold font-mono text-[#B42318]">
                     Active Dues
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[9.5px] font-bold text-rose-700 flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+            <div className="mt-2 pt-1 border-t border-dashed border-[#FBCFCB] text-[9.5px] font-bold text-[#D94B5A] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
               <span>View Outstanding List</span>
               <span className="text-xs">→</span>
             </div>
@@ -678,46 +678,46 @@ export default function ExecutiveBiDashboard({
                 });
               }
             }}
-            className="bg-white border-2 border-emerald-800/30 hover:border-emerald-700 rounded-xl p-3 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
+            className="bg-white border-2 border-[#FBCFCB] hover:border-[#F06D6C] rounded-xl p-3 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between cursor-pointer group active:scale-[0.99]"
             title="Click to open Stock Inventory"
           >
             <div>
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-[11px] font-bold uppercase text-[#D94B5A] tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold uppercase text-[#667085] tracking-wider flex items-center gap-1">
                   <span>🏢</span> Godown Stock
                 </span>
-                <div className="p-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
-                  <Warehouse className="w-3 h-3 text-emerald-800" />
+                <div className="p-1 rounded-lg bg-[#FDE7E6] text-[#D94B5A] border border-[#FBCFCB] group-hover:bg-[#FBCFCB] transition-colors">
+                  <Warehouse className="w-3.5 h-3.5 text-[#D94B5A]" />
                 </div>
               </div>
 
               <div className="my-1">
-                <div className="text-lg sm:text-xl font-mono font-extrabold text-[#D94B5A] tracking-tight leading-tight">
+                <div className="text-lg sm:text-xl font-mono font-extrabold text-[#29252B] tracking-tight leading-tight">
                   {dbMetrics.totalStockMt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
-                  <span className="text-xs font-sans font-semibold text-[#D94B5A]">MT</span>
+                  <span className="text-xs font-sans font-semibold text-[#667085]">MT</span>
                 </div>
-                <div className="text-xs font-mono font-bold text-[#D94B5A] mt-0.5">
+                <div className="text-xs font-mono font-bold text-[#475467] mt-0.5">
                   {dbMetrics.godownStockBales.toLocaleString('en-IN')} Bales
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-[#FDE7E6] space-y-1 text-[10px]">
-                <div className="flex items-center justify-between text-[#D94B5A]">
+              <div className="pt-2 border-t border-[#FBCFCB] space-y-1 text-[10px]">
+                <div className="flex items-center justify-between text-[#475467]">
                   <span className="font-bold">Active Godowns:</span>
-                  <span className="font-extrabold font-mono text-[#D94B5A]">
+                  <span className="font-extrabold font-mono text-[#29252B]">
                     {godowns.length > 0 ? godowns.length : 20}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-[#D94B5A]">
+                <div className="flex items-center justify-between text-[#475467]">
                   <span className="font-bold">Stock Capacity:</span>
-                  <span className="font-extrabold font-mono text-emerald-800">
+                  <span className="font-extrabold font-mono text-[#216E45]">
                     Normal
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="mt-2 pt-1 border-t border-dashed border-[#E5DEC9] text-[9.5px] font-bold text-[#D94B5A] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
+            <div className="mt-2 pt-1 border-t border-dashed border-[#FBCFCB] text-[9.5px] font-bold text-[#D94B5A] flex items-center justify-between group-hover:translate-x-0.5 transition-transform">
               <span>Open Stock Inventory</span>
               <span className="text-xs">→</span>
             </div>

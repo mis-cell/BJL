@@ -133,6 +133,7 @@ export function useDashboardData(isActive: boolean = true) {
         traders, 
         pos, 
         settlements, 
+        mrSettlementMastersRes,
         godownsRes, 
         openingStocksRes, 
         finalArrivals, 
@@ -153,6 +154,7 @@ export function useDashboardData(isActive: boolean = true) {
         dbModule.fetchAll('user_master').catch(() => []),
         dbModule.fetchAll('purchase_master', 'created_at', false).catch(() => []),
         dbModule.fetchAll('m_r_settlement').catch(() => []),
+        dbModule.fetchAll('mr_settlement_master', 'created_at', false).catch(() => []),
         (async () => {
           try {
             if (supabase) {
@@ -536,139 +538,19 @@ export function useDashboardData(isActive: boolean = true) {
       setRawScpDetails(scpDetRes || []);
       setPayments(pmList || []);
 
-      let amadRegisterData: any[] = [];
-      let materialInspectionData: any[] = [];
+      const amadRegisterData = arrivals || [];
+      const materialInspectionData = finalInspectionMasters.length > 0 ? finalInspectionMasters : (inspRes || []);
       const settledMrNos = new Set<string>();
 
-      if (supabase) {
-        try {
-          const { data: sMaster, error: sMasterErr } = await supabase.from('sauda_master').select('*');
-          if (!sMasterErr && sMaster) {
-            setRawSaudas(sMaster);
-          }
-        } catch (e) {
-          console.warn("Direct query to sauda_master failed, utilizing fallback:", e);
-        }
-        try {
-          const { data: amReg, error: amRegErr } = await supabase.from('amad_register').select('*');
-          if (!amRegErr && amReg) {
-            amadRegisterData = amReg;
-            setRawArrivals(amReg);
-            setRecentAmad(amReg.slice(0, 5));
-          } else {
-            amadRegisterData = arrivals;
-          }
-        } catch (e) {
-          console.warn("Direct query to amad_register failed, utilizing fallback:", e);
-          amadRegisterData = arrivals;
-        }
-
-        try {
-          const { data: matInsp, error: matInspErr } = await supabase.from('material_inspection').select('*');
-          if (!matInspErr && matInsp) {
-            materialInspectionData = matInsp;
-          } else {
-            materialInspectionData = [];
-          }
-        } catch (e) {
-          console.warn("Direct query to material_inspection failed:", e);
-          materialInspectionData = [];
-        }
-
-        try {
-          const { data: settledMasters } = await supabase.from('mr_settlement_master').select('*').order('created_at', { ascending: false });
-          if (settledMasters && settledMasters.length > 0) {
-            settledMasters.forEach((s: any) => {
-              if (s.mr_no) settledMrNos.add(String(s.mr_no).trim().toUpperCase());
-            });
-            setRawSettlements(settledMasters);
-          } else {
-            setRawSettlements(settlements || []);
-          }
-        } catch (e) {
-          console.warn("Error resolving settled MRs:", e);
-          setRawSettlements(settlements || []);
-        }
-
-        try {
-          const { data: stNodeData } = await supabase.from('opening_stock').select('grade, quantity, weight, godown');
-          
-          const getOpeningStocksFallback = async () => {
-            const fb = await dbModule.fetchAll('opening_stock').catch(() => []);
-            if (fb && fb.length > 0) return fb;
-            const local = localStorage.getItem('po_auto_opening_stock');
-            if (local && local !== 'undefined' && local !== 'null') {
-              try {
-                return JSON.parse(local === "undefined" ? "null" : local).map((item: any) => ({
-                  grade: item.grade,
-                  quantity: item.quantity,
-                  weight: item.weight,
-                  godown: item.godown
-                }));
-              } catch (e) {}
-            }
-            return [];
-          };
-
-          if (stNodeData) {
-            setStockNodeStocks(stNodeData);
-          } else {
-            const fallbackStocks = await getOpeningStocksFallback();
-            setStockNodeStocks(fallbackStocks);
-          }
-        } catch (e) {
-          console.warn("Error loading grade analytics from Supabase, utilizing fallback:", e);
-          const getOpeningStocksFallback = () => {
-            const local = localStorage.getItem('po_auto_opening_stock');
-            if (local && local !== 'undefined' && local !== 'null') {
-              try {
-                return JSON.parse(local === "undefined" ? "null" : local).map((item: any) => ({
-                  grade: item.grade,
-                  quantity: item.quantity,
-                  weight: item.weight,
-                  godown: item.godown
-                }));
-              } catch (e) {}
-            }
-            return [];
-          };
-          const [fbMasters, fbDetails, fbStocks] = await Promise.all([
-            dbModule.fetchAll('mill_inspection_master').catch(() => []),
-            dbModule.fetchAll('mill_inspection_detail').catch(() => []),
-            dbModule.fetchAll('opening_stock').catch(() => []).then(res => res.length ? res : getOpeningStocksFallback())
-          ]);
-          setInspectionMasters(fbMasters);
-          setInspectionDetails(fbDetails);
-          setStockNodeStocks(fbStocks);
-        }
-      } else {
-        amadRegisterData = arrivals;
-        materialInspectionData = await dbModule.fetchAll('mill_inspection_master').catch(() => []);
-
-        const getOpeningStocksFallback = () => {
-          const local = localStorage.getItem('po_auto_opening_stock');
-          if (local && local !== 'undefined' && local !== 'null') {
-            try {
-              return JSON.parse(local === "undefined" ? "null" : local).map((item: any) => ({
-                grade: item.grade,
-                quantity: item.quantity,
-                weight: item.weight,
-                godown: item.godown
-              }));
-            } catch (e) {}
-          }
-          return [];
-        };
-
-        const [offMasters, offDetails, offStocks] = await Promise.all([
-          dbModule.fetchAll('mill_inspection_master').catch(() => []),
-          dbModule.fetchAll('mill_inspection_detail').catch(() => []),
-          dbModule.fetchAll('opening_stock').catch(() => []).then(res => res.length ? res : getOpeningStocksFallback())
-        ]);
-        setInspectionMasters(offMasters);
-        setInspectionDetails(offDetails);
-        setStockNodeStocks(offStocks);
-      }
+      const settledMasters = (mrSettlementMastersRes && mrSettlementMastersRes.length > 0)
+        ? mrSettlementMastersRes
+        : (settlements || []);
+      
+      settledMasters.forEach((s: any) => {
+        if (s.mr_no) settledMrNos.add(String(s.mr_no).trim().toUpperCase());
+      });
+      setRawSettlements(settledMasters);
+      setStockNodeStocks(finalOpList);
 
       const pendingInspections = materialInspectionData.filter((insp: any) => {
         const mr = insp.mr_no ? String(insp.mr_no).trim().toUpperCase() : '';

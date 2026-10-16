@@ -410,9 +410,9 @@ export default function LegacyLayout({
   };
 
   return (
-    <div className="bg-[#FDE7E6]/30 h-full w-full min-w-0 font-sans selection:bg-[#FBCFCB] selection:text-white flex flex-col">
+    <div className="bg-[#FFF9F8] h-full w-full min-w-0 font-sans selection:bg-[#FBCFCB] selection:text-[#D94B5A] flex flex-col">
       {/* Window Wrapper */}
-      <div className="flex-1 flex flex-col min-h-0 min-w-0 border border-[#FBCFCB] bg-[#FDE7E6]/10 shadow-xl overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 border border-[#FBCFCB] bg-[#FFF9F8] shadow-xl overflow-hidden">
         
         {/* Top Control Bar */}
         <div className="relative bg-gradient-to-r from-[#D94B5A] via-[#E85A5A] to-[#D94B5A] border-b border-[#F06D6C] px-2 sm:px-3.5 py-1.5 flex items-center justify-between text-white shrink-0 shadow-md z-30 w-full min-w-0 gap-2">
@@ -745,7 +745,7 @@ export default function LegacyLayout({
         </header>
 
         {/* Form Body */}
-        <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0 min-w-0 p-2 sm:p-4 bg-[#FDE7E6]/40 w-full max-w-full main-content">
+        <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0 min-w-0 p-2 sm:p-4 bg-[#FFF9F8] w-full max-w-full main-content">
           {children}
           <NotificationCenter
             isOpen={isNotifOpen}
