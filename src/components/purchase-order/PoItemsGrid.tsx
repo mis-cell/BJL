@@ -113,7 +113,7 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
 }) => {
   return (
     <div className="border border-slate-400 bg-white rounded-md overflow-hidden shadow-xs">
-      <div className="flex items-center gap-2 p-1.5 bg-[#D94B5A] border-b border-[#0f331d] justify-between text-white">
+      <div className="flex items-center gap-2 p-1.5 bg-[#F7AFA8] border-b border-[#0f331d] justify-between text-white">
         <div className="text-[10px] font-bold text-amber-300 italic pl-1 flex items-center gap-1">
           <span>⚡ Grid Row Status:</span>
           {selectedItemSrl ? (
@@ -152,9 +152,9 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
         </div>
       </div>
 
-      <div className="border border-[#D94B5A] bg-white shadow-sm overflow-x-auto min-h-[160px] text-black">
+      <div className="border border-[#F7AFA8] bg-white shadow-sm overflow-x-auto min-h-[160px] text-black">
         <table className="w-full min-w-[960px] border-collapse text-xs">
-          <thead className="bg-[#D94B5A] text-amber-300 border-b border-[#0f331d] select-none">
+          <thead className="bg-[#F7AFA8] text-amber-300 border-b border-[#0f331d] select-none">
             {/* Top Row: Spanning Group Headers */}
             <tr className="divide-x divide-[#235E39] uppercase font-black text-amber-300 text-[10px] tracking-wider">
               <th rowSpan={2} className="px-2 py-2 w-14 text-center align-middle bg-[#144226]">
@@ -163,13 +163,13 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
               <th rowSpan={2} className="px-2 py-2 w-28 text-center align-middle bg-[#144226]">
                 Crop Year
               </th>
-              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#D94B5A]">
+              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#F7AFA8]">
                 Grade
               </th>
-              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#D94B5A]">
+              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#F7AFA8]">
                 Agency
               </th>
-              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#D94B5A]">
+              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#F7AFA8]">
                 Marka
               </th>
               <th rowSpan={2} className="px-3 py-2 w-28 text-right align-middle bg-[#144226]">

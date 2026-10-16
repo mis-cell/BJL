@@ -135,7 +135,7 @@ export function StockSparkline() {
       <span className="text-[8px] font-black text-emerald-800 mr-1">30D:</span>
       <div className="w-16 h-4 min-w-[64px] min-h-[16px]">
         <AreaChart width={64} height={16} data={data} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
-          <Area type="monotone" dataKey="bales" stroke="#D94B5A" fill="#D94B5A" fillOpacity={0.25} strokeWidth={1.5} />
+          <Area type="monotone" dataKey="bales" stroke="#F7AFA8" fill="#F7AFA8" fillOpacity={0.25} strokeWidth={1.5} />
         </AreaChart>
       </div>
     </div>
@@ -174,7 +174,7 @@ export function StockItemRow({
         title="Click to expand/collapse grade breakdown (Grade → Area → Godown)"
       >
         <td className="px-6 text-indigo-950 uppercase tracking-tight font-black flex items-center gap-2">
-          <span className="w-5 h-5 rounded bg-[#D94B5A] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+          <span className="w-5 h-5 rounded bg-[#F7AFA8] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
             {isExpanded ? '-' : '+'}
           </span>
           <span className="truncate">🏷️ Grade: {name}</span>

@@ -1297,7 +1297,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     
     <LegacyLayout title="Temporary M.R" subtitle="ARRIVAL WORKSTATION" onClose={onCancel}>
       <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-5">
-        <div className="relative px-6 py-4 bg-[#D94B5A] border border-[#B83847] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden w-full text-white">
+        <div className="relative px-6 py-4 bg-[#F7AFA8] border border-[#FBCFCB] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden w-full text-white">
           {/* Background Mill Illustration Artwork on the Right with light opacity */}
           <div 
             className="absolute right-0 top-0 bottom-0 w-1/3 opacity-15 pointer-events-none bg-no-repeat bg-right bg-contain filter brightness-200"
@@ -1314,14 +1314,14 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           <div className="relative z-10 flex items-center gap-3">
             <button
               type="button"
-              className="px-3.5 py-1.5 bg-[#80202C] hover:bg-[#9E2B38] text-[#FDE7E6] border border-[#F06D6C] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+              className="px-3.5 py-1.5 bg-[#80202C] hover:bg-[#F7AFA8] text-[#FDE7E6] border border-[#FBCFCB] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
               title="Back to Sauda Desk (Esc)"
               onClick={onCancel}
             >
               <ArrowLeft className="h-4 w-4 text-[#FDE7E6]" />
               <span>Back</span>
             </button>
-            <div className="bg-[#80202C] border border-[#F06D6C] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
+            <div className="bg-[#80202C] border border-[#FBCFCB] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
               <span className="text-[#FBCFCB] font-medium">Session:</span>
               <span className="font-bold text-[#FDE7E6] font-mono text-xs">{ 'BJCL/2026-2027/'}</span>
             </div>
@@ -1329,9 +1329,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         </div>
 
         {/* ================= Receipt Voucher Info ================= */}
-        <div className="w-full rounded-xl border border-[#D94B5A] bg-white shadow-xs overflow-visible relative z-30 mt-3">
+        <div className="w-full rounded-xl border border-[#F7AFA8] bg-white shadow-xs overflow-visible relative z-30 mt-3">
           {/* Header */}
-          <div className="px-4 py-1.5 bg-[#D94B5A] border-b border-[#B83847] rounded-t-[11px]">
+          <div className="px-4 py-1.5 bg-[#F7AFA8] border-b border-[#FBCFCB] rounded-t-[11px]">
             <h2 className="text-xs font-bold text-white tracking-wide uppercase">
               Receipt Voucher Info
             </h2>
@@ -1745,7 +1745,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     name="lorry_date"
                     value={formData.lorry_date}
                     onChange={handleChange}
-                    className="flex-1 border border-gray-400 rounded bg-white px-2 h-7 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#D94B5A]"
+                    className="flex-1 border border-gray-400 rounded bg-white px-2 h-7 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#F7AFA8]"
                   />
                 </div>
 
@@ -1756,10 +1756,10 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         </div>
 
         {/* ===========================Transport & Document Info=========================== */}
-        <div className="w-full rounded-xl border border-[#D94B5A] bg-white shadow-xs overflow-visible relative z-10 mt-3">
+        <div className="w-full rounded-xl border border-[#F7AFA8] bg-white shadow-xs overflow-visible relative z-10 mt-3">
 
           {/* Header */}
-          <div className="bg-[#D94B5A] px-4 py-1.5 rounded-t-[11px]">
+          <div className="bg-[#F7AFA8] px-4 py-1.5 rounded-t-[11px]">
             <h3 className="text-white text-xs font-bold tracking-wide uppercase">
               Transport & Document Information
             </h3>
@@ -1786,7 +1786,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     value={formData.consignment_note_no}
                     onChange={handleChange}
                     readOnly={formData.jci === 'No'}
-                    className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#D94B5A]"  }`}
+                    className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#F7AFA8]"  }`}
                   />
                 </div>
 
@@ -1806,7 +1806,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       value={formData.di_no}
                       onChange={handleChange}
                       readOnly={formData.jci === 'No'}
-                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#D94B5A]"  }`}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#F7AFA8]"  }`}
                       //className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                     />
 
@@ -1818,7 +1818,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       onChange={handleChange}
                       //className="h-7 rounded border border-gray-300 px-2 text-xs"
                       readOnly={formData.jci === 'No'}
-                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#D94B5A]"  }`}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#F7AFA8]"  }`}
                     />
 
                   </div>
@@ -1840,7 +1840,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       value={formData.invoice_no}
                       onChange={handleChange}
                       readOnly={formData.jci === 'No'}
-                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#D94B5A]"  }`}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#F7AFA8]"  }`}
                       //className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                     />
 
@@ -1851,7 +1851,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       value={formData.invoice_date}
                       onChange={handleChange}
                       readOnly={formData.jci === 'No'}
-                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#D94B5A]"  }`}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#F7AFA8]"  }`}
                       //className="h-7 rounded border border-gray-300 px-2 text-xs"
                     />
 
@@ -2037,7 +2037,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       placeholder="Way Bill No."
                       //className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                       readOnly={formData.jci === 'No'}
-                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#D94B5A]"  }`}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#F7AFA8]"  }`}
                     />
 
                     <input
@@ -2048,7 +2048,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       onChange={handleChange}
                       //className="h-7 rounded border border-gray-300 px-2 text-xs"
                       readOnly={formData.jci === 'No'}
-                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#D94B5A]"  }`}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#F7AFA8]"  }`}
                     />
 
                   </div>
@@ -2069,7 +2069,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     placeholder="0.00"
                     value={formData.apmc_fees !== undefined && formData.apmc_fees !== null ? formData.apmc_fees : ""}
                     onChange={handleChange}
-                    className="w-full h-7 rounded border border-gray-300 px-2 text-right text-xs font-bold focus:border-[#D94B5A]"
+                    className="w-full h-7 rounded border border-gray-300 px-2 text-right text-xs font-bold focus:border-[#F7AFA8]"
                   />
                 </div>
 
@@ -2117,7 +2117,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         />
 
         {/* Bottom Action Bar */}
-        <div className="w-full rounded-xl border border-[#D94B5A] bg-[#D94B5A] shadow-md overflow-hidden mt-5">
+        <div className="w-full rounded-xl border border-[#F7AFA8] bg-[#F7AFA8] shadow-md overflow-hidden mt-5">
           <div className="flex justify-end items-center gap-3">
             <button
               onClick={clearForm}

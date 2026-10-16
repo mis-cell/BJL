@@ -9,7 +9,7 @@ interface ShipmentClaimsCardProps {
 
 export const ShipmentClaimsCard: React.FC<ShipmentClaimsCardProps> = ({ formData, onChange }) => {
   return (
-    <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#D94B5A]/40 hover:shadow-lg transition-all">
+    <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#F7AFA8]/40 hover:shadow-lg transition-all">
       <SectionHeader icon={Calendar} title="Shipment & Claims" />
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -21,7 +21,7 @@ export const ShipmentClaimsCard: React.FC<ShipmentClaimsCardProps> = ({ formData
             value={formData.shipment_date || ''}
             onChange={onChange}
             required
-            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#D94B5A] focus:ring-2 focus:ring-[#D94B5A]/20 transition-all shadow-2xs cursor-pointer"
+            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs cursor-pointer"
           />
         </div>
 
@@ -49,7 +49,7 @@ export const ShipmentClaimsCard: React.FC<ShipmentClaimsCardProps> = ({ formData
             name="shipment_penalty"
             value={formData.shipment_penalty ?? 5}
             onChange={onChange}
-            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#D94B5A] focus:ring-2 focus:ring-[#D94B5A]/20 transition-all shadow-2xs"
+            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs"
           />
         </div>
 
@@ -61,7 +61,7 @@ export const ShipmentClaimsCard: React.FC<ShipmentClaimsCardProps> = ({ formData
             name="marks_claim"
             value={formData.marks_claim ?? 0}
             onChange={onChange}
-            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#D94B5A] focus:ring-2 focus:ring-[#D94B5A]/20 transition-all shadow-2xs"
+            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs"
           />
         </div>
 
@@ -73,7 +73,7 @@ export const ShipmentClaimsCard: React.FC<ShipmentClaimsCardProps> = ({ formData
             name="quantity_claim"
             value={formData.quantity_claim ?? 0}
             onChange={onChange}
-            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#D94B5A] focus:ring-2 focus:ring-[#D94B5A]/20 transition-all shadow-2xs"
+            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs"
           />
         </div>
       </div>

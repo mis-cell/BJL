@@ -23,14 +23,14 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
   isUser010 = false
 }) => {
   return (
-    <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#D94B5A]/40 hover:shadow-lg transition-all">
+    <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#F7AFA8]/40 hover:shadow-lg transition-all">
       <SectionHeader icon={ClipboardList} title="Basic Details" />
 
       {isUser010 ? (
         <div className="space-y-3">
           {/* Subtle session reference for User 010 */}
           <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 border border-slate-200/80 rounded-xl px-4 py-2 font-mono">
-            <span className="font-semibold text-slate-600">Contract Session: <strong className="text-[#D94B5A]">{formData.session || '2026-2027'}</strong></span>
+            <span className="font-semibold text-slate-600">Contract Session: <strong className="text-[#F7AFA8]">{formData.session || '2026-2027'}</strong></span>
             <span>Order No: <strong className="text-slate-800 font-bold">{formData.sauda_no || 'Auto'}</strong></span>
           </div>
 
@@ -46,7 +46,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
                 name="po_type"
                 value={formData.po_type || 'Normal'}
                 onChange={onChange}
-                className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#D94B5A] focus:ring-2 focus:ring-[#D94B5A]/20 transition-all shadow-2xs cursor-pointer"
+                className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs cursor-pointer"
               >
                 <option value="Normal">Normal</option>
                 <option value="PTF">PTF</option>
@@ -66,7 +66,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
                 name="date"
                 value={formData.date || ''}
                 onChange={onChange}
-                className="w-full bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#D94B5A] focus:ring-2 focus:ring-[#D94B5A]/20 transition-all shadow-2xs cursor-pointer"
+                className="w-full bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs cursor-pointer"
               />
             </div>
 

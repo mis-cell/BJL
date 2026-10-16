@@ -534,7 +534,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
     >
       {/* FILTER TOPBAR BAR */}
       
-      <div className="bg-gradient-to-r from-[#80202C] via-[#D94B5A] to-[#E85A5A] p-4 rounded-xl border border-[#B83847] shadow-md flex flex-wrap items-center justify-between gap-4 mb-4">
+      <div className="bg-gradient-to-r from-[#80202C] via-[#F7AFA8] to-[#F7AFA8] p-4 rounded-xl border border-[#FBCFCB] shadow-md flex flex-wrap items-center justify-between gap-4 mb-4">
 
         <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
 
@@ -644,7 +644,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             {/* Export CSV */}
             <button
               onClick={handleExportCsv}
-              className="px-3 py-1.5 text-xs font-bold text-[#D94B5A] bg-[#D4AF37] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
+              className="px-3 py-1.5 text-xs font-bold text-[#F7AFA8] bg-[#D4AF37] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
             >
               <Download className="w-3.5 h-3.5" />
               Export CSV
@@ -654,7 +654,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             {/* Export PDF */}
             <button
               onClick={handleExportPdf}
-              className="px-3 py-1.5 text-xs font-bold text-[#D94B5A] bg-[#D4AF37] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
+              className="px-3 py-1.5 text-xs font-bold text-[#F7AFA8] bg-[#D4AF37] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
             >
               <Download className="w-3.5 h-3.5" />
               Export PDF
@@ -665,7 +665,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             <button
               onClick={initPage}
               disabled={loading}
-              className="px-3 py-1.5 text-xs font-bold text-[#D94B5A] bg-[#D4AF37] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
+              className="px-3 py-1.5 text-xs font-bold text-[#F7AFA8] bg-[#D4AF37] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
               title="Refresh Table"
             >
               <RefreshCcw

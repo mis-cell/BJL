@@ -62,7 +62,7 @@ export const Priority2Analysis: React.FC<Priority2AnalysisProps> = ({
               onClick={() => setSubTab(t.id)}
               className={`px-3 py-1.5 text-xs font-black uppercase rounded-lg transition cursor-pointer ${
                 subTab === t.id
-                  ? 'bg-[#9E2B38] text-white shadow-sm border border-[#F06D6C]'
+                  ? 'bg-[#F7AFA8] text-white shadow-sm border border-[#FBCFCB]'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
               }`}
             >

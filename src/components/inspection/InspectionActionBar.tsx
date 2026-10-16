@@ -17,7 +17,7 @@ export const InspectionActionBar: React.FC<InspectionActionBarProps> = ({
   loading,
 }) => {
   return (
-    <div className="bg-[#D94B5A] border-b border-[#0F351E] px-6 py-4 flex flex-wrap items-center justify-between gap-4 shadow-md">
+    <div className="bg-[#F7AFA8] border-b border-[#0F351E] px-6 py-4 flex flex-wrap items-center justify-between gap-4 shadow-md">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-emerald-800/40 border border-emerald-400/40 flex items-center justify-center text-amber-300 shadow-inner">
           <ShieldCheck className="w-5 h-5" />

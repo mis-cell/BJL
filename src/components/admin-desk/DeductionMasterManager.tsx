@@ -324,7 +324,7 @@ export const DeductionMasterManager: React.FC = () => {
 
         <div className="overflow-x-auto overflow-y-auto flex-1">
           <table className="w-full text-left text-xs border-collapse font-sans">
-            <thead className="bg-[#520F18] text-white sticky top-0 text-[10px] uppercase font-extrabold tracking-wider select-none">
+            <thead className="bg-[#F7AFA8] text-white sticky top-0 text-[10px] uppercase font-extrabold tracking-wider select-none">
               <tr>
                 <th className="p-2.5">Status</th>
                 <th className="p-2.5">Deduction Description</th>

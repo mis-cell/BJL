@@ -35,7 +35,7 @@ export const Priority3Operations: React.FC<Priority3OperationsProps> = ({
             onClick={() => setSubTab(t.id)}
             className={`px-3 py-1.5 text-xs font-black uppercase rounded-lg transition cursor-pointer ${
               subTab === t.id
-                ? 'bg-[#9E2B38] text-white shadow-sm border border-[#F06D6C]'
+                ? 'bg-[#F7AFA8] text-white shadow-sm border border-[#FBCFCB]'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
             }`}
           >
@@ -49,7 +49,7 @@ export const Priority3Operations: React.FC<Priority3OperationsProps> = ({
         <div className="space-y-4">
           
           {/* Pipeline Stage Tracker Visual Ribbon */}
-          <div className="p-4 bg-[#520F18] text-white rounded-2xl shadow-sm space-y-3">
+          <div className="p-4 bg-[#F7AFA8] text-white rounded-2xl shadow-sm space-y-3">
             <span className="text-[10px] font-black uppercase tracking-widest text-[#FBCFCB] font-mono">
               OPERATIONAL LIFECYCLE: SAUDA → AMAD → FINAL ARRIVAL → INSPECTION → PAYMENT → SETTLEMENT
             </span>

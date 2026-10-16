@@ -187,7 +187,7 @@ export default function MillWeighmentSection({
   };
 
   return (
-    <div className="space-y-6 text-[#9E2B38]">
+    <div className="space-y-6 text-[#F7AFA8]">
       
       {/* SCREEN 1: PENDING GATE LORRIES QUEUE */}
       {currentScreen === "QUEUE" && (
@@ -196,11 +196,11 @@ export default function MillWeighmentSection({
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#C5BA9E] pb-4 gap-3">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-[#9E2B38] text-[#FAF7F0] rounded-2xl shrink-0">
+              <div className="p-3 bg-[#F7AFA8] text-[#FAF7F0] rounded-2xl shrink-0">
                 <Scale className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-base font-black text-[#9E2B38] uppercase tracking-wider font-mono">
+                <h2 className="text-base font-black text-[#F7AFA8] uppercase tracking-wider font-mono">
                   Pending Gate Lorries Queue
                 </h2>
                 <p className="text-xs text-[#5A6E54] font-medium">
@@ -217,7 +217,7 @@ export default function MillWeighmentSection({
                   setCurrentScreen("FORM");
                 }
               }}
-              className="px-4 py-2.5 bg-[#9E2B38] hover:bg-[#2D4D28] text-[#FAF7F0] font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
+              className="px-4 py-2.5 bg-[#F7AFA8] hover:bg-[#2D4D28] text-[#FAF7F0] font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
             >
               <Plus className="w-4 h-4" />
               <span>+ Direct Entry</span>
@@ -232,7 +232,7 @@ export default function MillWeighmentSection({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by Vehicle Number, Gate Pass, or Party Name..."
-              className="w-full bg-[#FAF7F0] border border-[#C5BA9E] text-xs text-[#9E2B38] font-mono pl-10 pr-4 py-2.5 rounded-xl outline-none focus:border-[#9E2B38]"
+              className="w-full bg-[#FAF7F0] border border-[#C5BA9E] text-xs text-[#F7AFA8] font-mono pl-10 pr-4 py-2.5 rounded-xl outline-none focus:border-[#F7AFA8]"
             />
           </div>
 
@@ -240,8 +240,8 @@ export default function MillWeighmentSection({
           <div className="space-y-3">
             {filteredQueue.length === 0 ? (
               <div className="bg-[#FAF7F0] border-2 border-dashed border-[#C5BA9E] rounded-2xl p-8 text-center space-y-2 text-[#5A6E54]">
-                <Scale className="w-8 h-8 text-[#9E2B38] mx-auto" />
-                <h4 className="text-xs font-black uppercase text-[#9E2B38] font-mono">
+                <Scale className="w-8 h-8 text-[#F7AFA8] mx-auto" />
+                <h4 className="text-xs font-black uppercase text-[#F7AFA8] font-mono">
                   No Jute Lorries Currently Pending Weighment
                 </h4>
                 <p className="text-xs">All incoming Jute dispatch records are up to date.</p>
@@ -250,12 +250,12 @@ export default function MillWeighmentSection({
               filteredQueue.map((l) => (
                 <div
                   key={l.id}
-                  className="bg-[#FAF7F0] border border-[#C5BA9E] hover:border-[#9E2B38] rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all shadow-xs"
+                  className="bg-[#FAF7F0] border border-[#C5BA9E] hover:border-[#F7AFA8] rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all shadow-xs"
                 >
                   <div className="space-y-2 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-base font-black text-[#9E2B38] font-mono">{l.lorryNo}</span>
-                      <span className="px-2.5 py-0.5 bg-[#9E2B38]/10 text-[#9E2B38] text-xs font-mono font-bold rounded">
+                      <span className="text-base font-black text-[#F7AFA8] font-mono">{l.lorryNo}</span>
+                      <span className="px-2.5 py-0.5 bg-[#F7AFA8]/10 text-[#F7AFA8] text-xs font-mono font-bold rounded">
                         {l.gatePassNo}
                       </span>
                       <span className="px-2.5 py-0.5 bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-bold uppercase rounded-full">
@@ -264,11 +264,11 @@ export default function MillWeighmentSection({
                     </div>
 
                     <p className="text-xs text-[#5A6E54]">
-                      Party: <strong className="text-[#9E2B38]">{safeStr(l.broker)}</strong> | Mokam: <strong className="text-[#9E2B38]">{safeStr(l.mokam)}</strong> | Marka: <strong className="text-[#9E2B38]">{safeStr(l.marka)}</strong>
+                      Party: <strong className="text-[#F7AFA8]">{safeStr(l.broker)}</strong> | Mokam: <strong className="text-[#F7AFA8]">{safeStr(l.mokam)}</strong> | Marka: <strong className="text-[#F7AFA8]">{safeStr(l.marka)}</strong>
                     </p>
 
                     {/* Live Weighbridge Log */}
-                    <div className="bg-[#EAE2D2] p-2.5 rounded-xl text-[11px] font-mono font-bold text-[#9E2B38] flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <div className="bg-[#EAE2D2] p-2.5 rounded-xl text-[11px] font-mono font-bold text-[#F7AFA8] flex flex-wrap items-center gap-x-4 gap-y-1">
                       <span>Mill Gross: <strong>{l.millGrossWeight ? `${l.millGrossWeight.toLocaleString()} kg` : "---"}</strong></span>
                       <span>Elec Gross: <strong>{l.electricGrossWeight ? `${l.electricGrossWeight.toLocaleString()} kg` : "---"}</strong></span>
                       <span>Elec Tare: <strong>{l.electricTareWeight ? `${l.electricTareWeight.toLocaleString()} kg` : "---"}</strong></span>
@@ -279,7 +279,7 @@ export default function MillWeighmentSection({
                   {/* Call-to-action button */}
                   <button
                     onClick={() => handleSelectLorryForForm(l)}
-                    className="px-4 py-2.5 bg-[#9E2B38] hover:bg-[#2D4D28] text-[#FAF7F0] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
+                    className="px-4 py-2.5 bg-[#F7AFA8] hover:bg-[#2D4D28] text-[#FAF7F0] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
                   >
                     <Scale className="w-4 h-4" />
                     <span>{getStageButtonLabel(l)}</span>
@@ -299,13 +299,13 @@ export default function MillWeighmentSection({
           <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
             <button
               onClick={() => setCurrentScreen("QUEUE")}
-              className="px-3 py-1.5 bg-[#FAF7F0] hover:bg-[#EAE2D2] border border-[#C5BA9E] text-[#9E2B38] text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors"
+              className="px-3 py-1.5 bg-[#FAF7F0] hover:bg-[#EAE2D2] border border-[#C5BA9E] text-[#F7AFA8] text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Pending Queue</span>
             </button>
 
-            <h2 className="text-sm font-black uppercase font-mono text-[#9E2B38]">
+            <h2 className="text-sm font-black uppercase font-mono text-[#F7AFA8]">
               Party Challan & Mill Weighment Entry
             </h2>
           </div>
@@ -314,8 +314,8 @@ export default function MillWeighmentSection({
             
             {/* SECTION A: PARTY CHALLAN DETAILS */}
             <div className="bg-[#FAF7F0] border border-[#C5BA9E] p-4 rounded-2xl space-y-4 shadow-xs">
-              <h3 className="text-xs font-black uppercase font-mono text-[#9E2B38] border-b border-[#C5BA9E] pb-2 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#9E2B38]" />
+              <h3 className="text-xs font-black uppercase font-mono text-[#F7AFA8] border-b border-[#C5BA9E] pb-2 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#F7AFA8]" />
                 Section A: Party Challan Details
               </h3>
 
@@ -330,7 +330,7 @@ export default function MillWeighmentSection({
                       const l = lorries.find((x) => x.id === e.target.value);
                       if (l) handleSelectLorryForForm(l);
                     }}
-                    className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2.5 text-xs text-[#9E2B38] font-mono font-bold outline-none focus:border-[#9E2B38]"
+                    className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2.5 text-xs text-[#F7AFA8] font-mono font-bold outline-none focus:border-[#F7AFA8]"
                   >
                     <option value="">-- Select Active Jute Lorry --</option>
                     {pendingJuteLorries.map((l) => (
@@ -350,7 +350,7 @@ export default function MillWeighmentSection({
                     value={itemDescription}
                     onChange={(e) => setItemDescription(e.target.value)}
                     placeholder="e.g. Raw Jute Bales"
-                    className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#9E2B38] outline-none"
+                    className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#F7AFA8] outline-none"
                   />
                 </div>
               </div>
@@ -366,7 +366,7 @@ export default function MillWeighmentSection({
                     onChange={(e) => setPartyName(e.target.value)}
                     list="mill-party-options"
                     placeholder="Type or select Party..."
-                    className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#9E2B38] outline-none"
+                    className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#F7AFA8] outline-none"
                   />
                   <datalist id="mill-party-options">
                     {masters.brokers.map((b) => (
@@ -384,7 +384,7 @@ export default function MillWeighmentSection({
                     value={challanNo}
                     onChange={(e) => setChallanNo(e.target.value)}
                     placeholder="e.g. CH-9982"
-                    className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#9E2B38] font-mono outline-none"
+                    className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#F7AFA8] font-mono outline-none"
                   />
                 </div>
 
@@ -397,7 +397,7 @@ export default function MillWeighmentSection({
                     value={challanGrossWt}
                     onChange={(e) => setChallanGrossWt(e.target.value ? Number(e.target.value) : "")}
                     placeholder="e.g. 9800"
-                    className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#9E2B38] font-mono outline-none"
+                    className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#F7AFA8] font-mono outline-none"
                   />
                 </div>
 
@@ -411,7 +411,7 @@ export default function MillWeighmentSection({
                     onChange={(e) => setMokam(e.target.value)}
                     list="mill-mokam-options"
                     placeholder="Type or select Mokam..."
-                    className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#9E2B38] outline-none"
+                    className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2 text-xs text-[#F7AFA8] outline-none"
                   />
                   <datalist id="mill-mokam-options">
                     {masters.mokams.map((m, idx) => {
@@ -426,13 +426,13 @@ export default function MillWeighmentSection({
             {/* SECTION B: DYNAMIC GRADE DETAILS */}
             <div className="bg-[#FAF7F0] border border-[#C5BA9E] p-4 rounded-2xl space-y-4 shadow-xs">
               <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-2">
-                <h3 className="text-xs font-black uppercase font-mono text-[#9E2B38]">
+                <h3 className="text-xs font-black uppercase font-mono text-[#F7AFA8]">
                   Section B: Dynamic Quality Grade Details
                 </h3>
                 <button
                   type="button"
                   onClick={handleAddGrade}
-                  className="px-3 py-1 bg-[#9E2B38] text-[#FAF7F0] text-xs font-bold rounded-lg cursor-pointer hover:bg-[#2D4D28] flex items-center gap-1"
+                  className="px-3 py-1 bg-[#F7AFA8] text-[#FAF7F0] text-xs font-bold rounded-lg cursor-pointer hover:bg-[#2D4D28] flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Grade</span>
@@ -455,7 +455,7 @@ export default function MillWeighmentSection({
                           }}
                           list="mill-quality-options"
                           placeholder="Select Grade..."
-                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-lg p-1.5 text-xs text-[#9E2B38]"
+                          className="w-full bg-[#FAF7F0] border border-[#C5BA9E] rounded-lg p-1.5 text-xs text-[#F7AFA8]"
                         />
                         <datalist id="mill-quality-options">
                           {masters.qualities.map((q) => (
@@ -472,7 +472,7 @@ export default function MillWeighmentSection({
                           setGrades((prev) => prev.map((x) => (x.id === g.id ? { ...x, quantity: val } : x)));
                         }}
                         placeholder="Qty"
-                        className="bg-[#FAF7F0] border border-[#C5BA9E] rounded-lg p-1.5 text-xs text-[#9E2B38] font-mono"
+                        className="bg-[#FAF7F0] border border-[#C5BA9E] rounded-lg p-1.5 text-xs text-[#F7AFA8] font-mono"
                       />
 
                       <select
@@ -481,7 +481,7 @@ export default function MillWeighmentSection({
                           const val = e.target.value as any;
                           setGrades((prev) => prev.map((x) => (x.id === g.id ? { ...x, unit: val } : x)));
                         }}
-                        className="bg-[#FAF7F0] border border-[#C5BA9E] rounded-lg p-1.5 text-xs text-[#9E2B38] font-bold"
+                        className="bg-[#FAF7F0] border border-[#C5BA9E] rounded-lg p-1.5 text-xs text-[#F7AFA8] font-bold"
                       >
                         <option value="BALES">BALES</option>
                         <option value="BAGS">BAGS</option>
@@ -506,8 +506,8 @@ export default function MillWeighmentSection({
 
             {/* SECTION C: MILL WEIGHMENT (GROSS & TARE) */}
             <div className="bg-[#FAF7F0] border border-[#C5BA9E] p-4 rounded-2xl space-y-4 shadow-xs">
-              <h3 className="text-xs font-black uppercase font-mono text-[#9E2B38] border-b border-[#C5BA9E] pb-2 flex items-center gap-2">
-                <Scale className="w-4 h-4 text-[#9E2B38]" />
+              <h3 className="text-xs font-black uppercase font-mono text-[#F7AFA8] border-b border-[#C5BA9E] pb-2 flex items-center gap-2">
+                <Scale className="w-4 h-4 text-[#F7AFA8]" />
                 Section C: Mill Scale Weighbridge Form (Gross & Tare)
               </h3>
 
@@ -539,7 +539,7 @@ export default function MillWeighmentSection({
                         "w-full border rounded-xl pl-10 pr-3 py-2 text-sm font-mono font-bold outline-none",
                         activeLorry?.millGrossWeight
                           ? "bg-slate-200 text-slate-700 border-slate-300 cursor-not-allowed"
-                          : "bg-[#F4EFE6] text-[#9E2B38] border-[#C5BA9E] focus:border-[#9E2B38]"
+                          : "bg-[#F4EFE6] text-[#F7AFA8] border-[#C5BA9E] focus:border-[#F7AFA8]"
                       )}
                     />
                   </div>
@@ -567,7 +567,7 @@ export default function MillWeighmentSection({
                         "w-full border rounded-xl pl-10 pr-3 py-2 text-sm font-mono font-bold outline-none",
                         !activeLorry?.millGrossWeight || activeLorry?.millTareWeight
                           ? "bg-slate-200 text-slate-700 border-slate-300 cursor-not-allowed"
-                          : "bg-[#F4EFE6] text-[#9E2B38] border-[#C5BA9E] focus:border-[#9E2B38]"
+                          : "bg-[#F4EFE6] text-[#F7AFA8] border-[#C5BA9E] focus:border-[#F7AFA8]"
                       )}
                     />
                   </div>
@@ -593,7 +593,7 @@ export default function MillWeighmentSection({
             {/* Submission Button */}
             <button
               type="submit"
-              className="w-full py-3 bg-[#9E2B38] hover:bg-[#2D4D28] text-[#FAF7F0] font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-3 bg-[#F7AFA8] hover:bg-[#2D4D28] text-[#FAF7F0] font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               <span>

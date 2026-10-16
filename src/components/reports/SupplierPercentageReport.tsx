@@ -183,7 +183,7 @@ export const SupplierPercentageReport: React.FC<SupplierPercentageReportProps> =
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: '#334155', fontWeight: 600 }} width={90} />
                 <Tooltip 
                   formatter={(val: any) => [`${Number(val).toFixed(1)}%`, 'Delivery Compliance']}
-                  contentStyle={{ backgroundColor: '#520F18', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
+                  contentStyle={{ backgroundColor: '#F7AFA8', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
                 />
                 <Bar dataKey="compliancePct" name="Compliance %" fill="#0d9488" radius={[0, 4, 4, 0]} />
               </BarChart>

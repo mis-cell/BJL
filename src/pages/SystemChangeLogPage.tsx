@@ -220,7 +220,7 @@ export const SystemChangeLogPage: React.FC<SystemChangeLogPageProps> = ({
   return (
     <div className="w-full h-full bg-[#FAF7F0] flex flex-col font-sans overflow-hidden text-slate-800">
       {/* Header Banner */}
-      <div className="bg-[#9E2B38] text-white px-5 py-3 flex items-center justify-between shadow-md shrink-0 border-b border-[#2C4A28]">
+      <div className="bg-[#F7AFA8] text-white px-5 py-3 flex items-center justify-between shadow-md shrink-0 border-b border-[#2C4A28]">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-[#2C4A28] rounded-lg border border-emerald-600/30 shadow-inner">
             <History className="h-5 w-5 text-amber-400" />
@@ -387,7 +387,7 @@ export const SystemChangeLogPage: React.FC<SystemChangeLogPageProps> = ({
           <button
             onClick={loadLogs}
             disabled={isLoading}
-            className="px-3 py-1.5 bg-[#9E2B38] hover:bg-[#2A4B26] text-white text-xs font-bold rounded-lg cursor-pointer transition flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
+            className="px-3 py-1.5 bg-[#F7AFA8] hover:bg-[#2A4B26] text-white text-xs font-bold rounded-lg cursor-pointer transition flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
           >
             <RefreshCcw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -399,7 +399,7 @@ export const SystemChangeLogPage: React.FC<SystemChangeLogPageProps> = ({
       <div className="flex-1 p-5 overflow-auto min-h-0">
         {isLoading ? (
           <div className="h-64 flex flex-col items-center justify-center text-slate-500 gap-3">
-            <RefreshCcw className="h-8 w-8 animate-spin text-[#9E2B38]" />
+            <RefreshCcw className="h-8 w-8 animate-spin text-[#F7AFA8]" />
             <span className="text-xs font-bold font-mono uppercase tracking-wider">Loading System Change Audit Logs...</span>
           </div>
         ) : filteredLogs.length === 0 ? (
@@ -413,7 +413,7 @@ export const SystemChangeLogPage: React.FC<SystemChangeLogPageProps> = ({
           <div className="bg-white rounded-xl border border-[#E2D9C8] shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#9E2B38] text-white font-black uppercase text-[10px] tracking-wider border-b border-[#2C4A28]">
+                <thead className="bg-[#F7AFA8] text-white font-black uppercase text-[10px] tracking-wider border-b border-[#2C4A28]">
                   <tr>
                     <th className="p-3 w-40">Timestamp</th>
                     <th className="p-3 w-36">Module / Section</th>
@@ -488,7 +488,7 @@ export const SystemChangeLogPage: React.FC<SystemChangeLogPageProps> = ({
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-black uppercase bg-[#9E2B38] text-amber-100 px-2.5 py-0.5 rounded">
+                      <span className="text-xs font-black uppercase bg-[#F7AFA8] text-amber-100 px-2.5 py-0.5 rounded">
                         {log.module}
                       </span>
                       <span className="text-xs font-bold font-mono text-slate-900">

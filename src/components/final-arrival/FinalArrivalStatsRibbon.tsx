@@ -45,10 +45,10 @@ export function FinalArrivalStatsRibbon({
       {/* KPI CARDS GRID */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* KPI 1: Total M.R. */}
-        <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#D94B5A]/40 transition-all group">
+        <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Total Final M.R.</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#D94B5A] flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#F7AFA8] flex items-center justify-center group-hover:scale-110 transition-transform">
               <Truck className="w-4 h-4" />
             </div>
           </div>
@@ -59,7 +59,7 @@ export function FinalArrivalStatsRibbon({
         </div>
 
         {/* KPI 2: Total Bales */}
-        <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#D94B5A]/40 transition-all group">
+        <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Total Packets</span>
             <div className="w-8 h-8 rounded-lg bg-amber-50 text-[#8C6D33] flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -71,10 +71,10 @@ export function FinalArrivalStatsRibbon({
         </div>
 
         {/* KPI 3: Total Weight */}
-        <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#D94B5A]/40 transition-all group">
+        <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Total Weight</span>
-            <div className="w-8 h-8 rounded-lg bg-[#F9F5EC] text-[#D94B5A] flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="w-8 h-8 rounded-lg bg-[#F9F5EC] text-[#F7AFA8] flex items-center justify-center group-hover:scale-110 transition-transform">
               <Scale className="w-4 h-4" />
             </div>
           </div>
@@ -83,7 +83,7 @@ export function FinalArrivalStatsRibbon({
         </div>
 
         {/* KPI 4: Sync Daemon */}
-        <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#D94B5A]/40 transition-all group">
+        <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Sync Daemon</span>
             <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center group-hover:scale-110 transition-transform">

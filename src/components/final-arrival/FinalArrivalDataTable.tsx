@@ -55,7 +55,7 @@ export function FinalArrivalDataTable({
       <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs overflow-x-auto overflow-y-auto min-h-[350px] w-full max-w-full">
         {loading ? (
           <div className="flex flex-col items-center justify-center p-12 py-24">
-            <RefreshCw className="h-8 w-8 text-[#D94B5A] animate-spin mb-3" />
+            <RefreshCw className="h-8 w-8 text-[#F7AFA8] animate-spin mb-3" />
             <span className="text-xs font-bold uppercase tracking-widest text-slate-700">Reindexing Final Arrival registries...</span>
           </div>
         ) : filteredRecords.length === 0 ? (
@@ -68,8 +68,8 @@ export function FinalArrivalDataTable({
           </div>
         ) : (
           <table className="w-full border-collapse text-xs font-sans min-w-[1100px]">
-            <thead className="bg-[#D94B5A] text-white font-serif sticky top-0 z-10">
-              <tr className="border-b border-[#B83847] h-10 text-white">
+            <thead className="bg-[#F7AFA8] text-white font-serif sticky top-0 z-10">
+              <tr className="border-b border-[#FBCFCB] h-10 text-white">
                 <th className="px-3 border-r border-[#C23948] font-bold text-center w-24 whitespace-nowrap">Voucher Date</th>
                 <th className="px-3 border-r border-[#C23948] font-bold text-center w-24 whitespace-nowrap">Arrival #</th>
                 <th className="px-3 border-r border-[#C23948] font-bold text-center w-28 whitespace-nowrap">PO #</th>

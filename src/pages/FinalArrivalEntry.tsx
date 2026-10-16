@@ -55,7 +55,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         className="bg-[#F9F5EC] text-slate-800 font-sans flex flex-col p-2 md:p-3 space-y-4 max-w-[1700px] w-full mx-auto select-text selection:bg-[#103A20] selection:text-white"
       >
         {/* 1. HERO BANNER HEADER - DEEP GREEN THEME */}
-        <div className="bg-gradient-to-r from-[#D94B5A] to-[#103A20] rounded-xl border border-[#0d301b] p-3.5 text-white shadow-sm flex items-center justify-between gap-3">
+        <div className="bg-gradient-to-r from-[#F7AFA8] to-[#103A20] rounded-xl border border-[#0d301b] p-3.5 text-white shadow-sm flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-[#103A20] text-amber-300 flex items-center justify-center border border-[#235E39] shrink-0 shadow-xs">
               <ClipboardCheck className="w-5 h-5 text-amber-300" />

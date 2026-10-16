@@ -157,14 +157,14 @@ export const MonthWiseCardsRibbon = <T,>({
   const theme = isEmerald
     ? {
         bannerBg: 'bg-gradient-to-b from-emerald-50/70 to-slate-50 border-2 border-emerald-200/80',
-        iconBg: 'bg-[#D94B5A] text-emerald-200',
+        iconBg: 'bg-[#F7AFA8] text-emerald-200',
         titleColor: 'text-[#103A20]',
         labelColor: 'text-[#103A20]',
-        selectBorder: 'border-2 border-[#D94B5A] text-[#103A20] focus:ring-emerald-600',
-        allBtnActive: 'bg-[#D94B5A] text-white border-[#103A20] shadow-xs',
+        selectBorder: 'border-2 border-[#F7AFA8] text-[#103A20] focus:ring-emerald-600',
+        allBtnActive: 'bg-[#F7AFA8] text-white border-[#103A20] shadow-xs',
         allBtnInactive: 'bg-white text-emerald-900 border-emerald-300 hover:bg-emerald-100',
         collapseBtn: 'border-emerald-300 hover:bg-emerald-100 text-emerald-900',
-        cardActive: 'bg-gradient-to-br from-[#103A20] to-[#D94B5A] text-white border-2 border-emerald-400 shadow-md ring-2 ring-emerald-400/40',
+        cardActive: 'bg-gradient-to-br from-[#103A20] to-[#F7AFA8] text-white border-2 border-emerald-400 shadow-md ring-2 ring-emerald-400/40',
         cardInactive: 'bg-white border-2 border-emerald-200/90 hover:border-emerald-600 hover:shadow-md text-slate-800',
         dotInactive: 'bg-emerald-600',
         dotActive: 'bg-emerald-300',

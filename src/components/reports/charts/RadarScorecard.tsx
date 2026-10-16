@@ -45,7 +45,7 @@ export const RadarScorecard: React.FC<RadarScorecardProps> = ({
             <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 8, fill: '#94a3b8' }} />
             <Tooltip
               formatter={(val: any, name: any) => [`${Number(val).toFixed(1)} / 100`, name]}
-              contentStyle={{ backgroundColor: '#520F18', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
+              contentStyle={{ backgroundColor: '#F7AFA8', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
             />
             <Legend verticalAlign="bottom" height={24} formatter={(v) => <span className="text-[10px] text-slate-600 font-bold">{v}</span>} />
             <Radar name={`${entityName} Score`} dataKey="score" stroke="#059669" fill="#10b981" fillOpacity={0.45} />

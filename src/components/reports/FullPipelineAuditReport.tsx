@@ -298,7 +298,7 @@ export const FullPipelineAuditReport: React.FC<FullPipelineAuditReportProps> = (
                 <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: '#64748b' }} tickFormatter={v => `${v}%`} />
                 <Tooltip 
                   formatter={(val: any) => [`${val}%`, '']}
-                  contentStyle={{ backgroundColor: '#520F18', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
+                  contentStyle={{ backgroundColor: '#F7AFA8', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
                 />
                 <Legend verticalAlign="bottom" height={24} formatter={val => <span className="text-[10px] text-slate-600 font-bold">{val}</span>} />
                 <Line type="monotone" dataKey="saudaToGatePct" name="Sauda → Gate Arrival %" stroke="#0284c7" strokeWidth={2} dot={{ r: 3 }} />

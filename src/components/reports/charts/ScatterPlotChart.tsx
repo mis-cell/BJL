@@ -73,7 +73,7 @@ export const ScatterPlotChart: React.FC<ScatterPlotChartProps> = ({
                 const p = item.payload;
                 return [`${p.name}: ${xLabel}=${p.x}${xUnit}, ${yLabel}=${p.y}${yUnit}`, 'Data Point'];
               }}
-              contentStyle={{ backgroundColor: '#520F18', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
+              contentStyle={{ backgroundColor: '#F7AFA8', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
             />
             {xThreshold !== undefined && (
               <ReferenceLine x={xThreshold} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: `Benchmark`, fill: '#f59e0b', fontSize: 9 }} />

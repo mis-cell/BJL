@@ -6,90 +6,90 @@
   --font-display: "Plus Jakarta Sans", "Inter", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --color-legacy-bg: #FDE7E6;
-  --color-legacy-border: #F06D6C;
-  --color-legacy-blue: #D94B5A;
-  --color-legacy-navy: #9E2B38;
-  --color-legacy-teal: #E85A5A;
+  --color-legacy-border: #FBCFCB;
+  --color-legacy-blue: #F7AFA8;
+  --color-legacy-navy: #F7AFA8;
+  --color-legacy-teal: #F7AFA8;
 
   /* App Theme Palette (7 Rose/Coral/Crimson Shades) */
   --color-rose-shade-1: #FDE7E6;
   --color-rose-shade-2: #FBCFCB;
   --color-rose-shade-3: #F7AFA8;
   --color-rose-shade-4: #F48F8B;
-  --color-rose-shade-5: #F06D6C;
-  --color-rose-shade-6: #E85A5A;
-  --color-rose-shade-7: #D94B5A;
+  --color-rose-shade-5: #FBCFCB;
+  --color-rose-shade-6: #F7AFA8;
+  --color-rose-shade-7: #F7AFA8;
 
-  /* Global App Theme Mapping: Convert Emerald & Green Utilities to Rose/Coral Palette */
+  /* Global App Theme Mapping: Convert Emerald, Green, Teal, Indigo, Blue, Rose & Red to 3 Plate Palette */
   --color-emerald-50: #FDE7E6;
-  --color-emerald-100: #FBCFCB;
-  --color-emerald-200: #F7AFA8;
-  --color-emerald-300: #F48F8B;
-  --color-emerald-400: #F06D6C;
-  --color-emerald-500: #E85A5A;
-  --color-emerald-600: #D94B5A;
-  --color-emerald-700: #C23948;
-  --color-emerald-800: #9E2B38;
-  --color-emerald-900: #7A1C27;
-  --color-emerald-950: #520F18;
+  --color-emerald-100: #FDE7E6;
+  --color-emerald-200: #FBCFCB;
+  --color-emerald-300: #FBCFCB;
+  --color-emerald-400: #F7AFA8;
+  --color-emerald-500: #F7AFA8;
+  --color-emerald-600: #F7AFA8;
+  --color-emerald-700: #F7AFA8;
+  --color-emerald-800: #F7AFA8;
+  --color-emerald-900: #F7AFA8;
+  --color-emerald-950: #F7AFA8;
 
   --color-green-50: #FDE7E6;
-  --color-green-100: #FBCFCB;
-  --color-green-200: #F7AFA8;
-  --color-green-300: #F48F8B;
-  --color-green-400: #F06D6C;
-  --color-green-500: #E85A5A;
-  --color-green-600: #D94B5A;
-  --color-green-700: #C23948;
-  --color-green-800: #9E2B38;
-  --color-green-900: #7A1C27;
-  --color-green-950: #520F18;
+  --color-green-100: #FDE7E6;
+  --color-green-200: #FBCFCB;
+  --color-green-300: #FBCFCB;
+  --color-green-400: #F7AFA8;
+  --color-green-500: #F7AFA8;
+  --color-green-600: #F7AFA8;
+  --color-green-700: #F7AFA8;
+  --color-green-800: #F7AFA8;
+  --color-green-900: #F7AFA8;
+  --color-green-950: #F7AFA8;
 
   --color-teal-50: #FDE7E6;
-  --color-teal-100: #FBCFCB;
-  --color-teal-200: #F7AFA8;
-  --color-teal-300: #F48F8B;
-  --color-teal-400: #F06D6C;
-  --color-teal-500: #E85A5A;
-  --color-teal-600: #D94B5A;
-  --color-teal-700: #C23948;
-  --color-teal-800: #9E2B38;
-  --color-teal-900: #7A1C27;
-  --color-teal-950: #520F18;
+  --color-teal-100: #FDE7E6;
+  --color-teal-200: #FBCFCB;
+  --color-teal-300: #FBCFCB;
+  --color-teal-400: #F7AFA8;
+  --color-teal-500: #F7AFA8;
+  --color-teal-600: #F7AFA8;
+  --color-teal-700: #F7AFA8;
+  --color-teal-800: #F7AFA8;
+  --color-teal-900: #F7AFA8;
+  --color-teal-950: #F7AFA8;
 
   --color-indigo-50: #FDE7E6;
-  --color-indigo-100: #FBCFCB;
-  --color-indigo-200: #F7AFA8;
-  --color-indigo-300: #F48F8B;
-  --color-indigo-400: #F06D6C;
-  --color-indigo-500: #E85A5A;
-  --color-indigo-600: #D94B5A;
-  --color-indigo-700: #C23948;
-  --color-indigo-800: #9E2B38;
-  --color-indigo-900: #7A1C27;
-  --color-indigo-950: #520F18;
+  --color-indigo-100: #FDE7E6;
+  --color-indigo-200: #FBCFCB;
+  --color-indigo-300: #FBCFCB;
+  --color-indigo-400: #F7AFA8;
+  --color-indigo-500: #F7AFA8;
+  --color-indigo-600: #F7AFA8;
+  --color-indigo-700: #F7AFA8;
+  --color-indigo-800: #F7AFA8;
+  --color-indigo-900: #F7AFA8;
+  --color-indigo-950: #F7AFA8;
 
   --color-blue-50: #FDE7E6;
-  --color-blue-100: #FBCFCB;
-  --color-blue-200: #F7AFA8;
-  --color-blue-300: #F48F8B;
-  --color-blue-400: #F06D6C;
-  --color-blue-500: #E85A5A;
-  --color-blue-600: #D94B5A;
-  --color-blue-700: #C23948;
-  --color-blue-800: #9E2B38;
-  --color-blue-900: #7A1C27;
-  --color-blue-950: #520F18;
+  --color-blue-100: #FDE7E6;
+  --color-blue-200: #FBCFCB;
+  --color-blue-300: #FBCFCB;
+  --color-blue-400: #F7AFA8;
+  --color-blue-500: #F7AFA8;
+  --color-blue-600: #F7AFA8;
+  --color-blue-700: #F7AFA8;
+  --color-blue-800: #F7AFA8;
+  --color-blue-900: #F7AFA8;
+  --color-blue-950: #F7AFA8;
 
   /* Map dark slate headers and active tabs to Rose/Crimson theme */
-  --color-slate-900: #7A1C27;
-  --color-slate-950: #520F18;
+  --color-slate-900: #F7AFA8;
+  --color-slate-950: #F7AFA8;
 
   /* Map yellow and amber accent buttons to Rose/Coral theme */
   --color-yellow-300: #FBCFCB;
-  --color-yellow-400: #D94B5A;
+  --color-yellow-400: #F7AFA8;
   --color-amber-300: #FBCFCB;
-  --color-amber-400: #D94B5A;
+  --color-amber-400: #F7AFA8;
 }
 
 @layer base {
@@ -101,9 +101,9 @@
     --app-shade-2: #FBCFCB;
     --app-shade-3: #F7AFA8;
     --app-shade-4: #F48F8B;
-    --app-shade-5: #F06D6C;
-    --app-shade-6: #E85A5A;
-    --app-shade-7: #D94B5A;
+    --app-shade-5: #FBCFCB;
+    --app-shade-6: #F7AFA8;
+    --app-shade-7: #F7AFA8;
   }
 
   html,
@@ -123,7 +123,7 @@
   }
 
   body {
-    @apply font-sans bg-[#FDE7E6]/30 text-slate-900 antialiased selection:bg-[#F06D6C] selection:text-white;
+    @apply font-sans bg-[#FDE7E6]/30 text-slate-900 antialiased selection:bg-[#FBCFCB] selection:text-white;
     font-variant-numeric: tabular-nums lining-nums;
   }
 

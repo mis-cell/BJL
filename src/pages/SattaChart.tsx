@@ -1376,7 +1376,7 @@ export default function SattaChart({
     <div className="space-y-6 max-w-full font-sans pb-12 bg-[#FAF8F5] min-h-screen text-[#1A2619]">
       
       {/* TOP NAVIGATION & BREADCRUMB HEADER */}
-      <div className="bg-[#D94B5A] text-white p-3 md:p-2 rounded-2xl shadow-xl border-2 border-[#B83847] relative overflow-hidden">
+      <div className="bg-[#F7AFA8] text-white p-3 md:p-2 rounded-2xl shadow-xl border-2 border-[#FBCFCB] relative overflow-hidden">
         {/* Navigation Tabs */}
         <div className="flex pt-1 gap-3 overflow-x-auto">
           <button
@@ -1385,7 +1385,7 @@ export default function SattaChart({
               "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0 shadow-sm",
               activeTab === 'base_rate'
                 ? "bg-[#80202C] text-white border-2 border-[#FDE7E6] shadow-lg scale-105"
-                : "bg-[#A82B3A] text-white hover:bg-[#C23A4A] font-bold border border-[#F06D6C]"
+                : "bg-[#A82B3A] text-white hover:bg-[#C23A4A] font-bold border border-[#FBCFCB]"
             )}
           >
             <DollarSign className={cn("h-4 w-4", activeTab === 'base_rate' ? "text-[#FDE7E6]" : "text-[#FBCFCB]")} />
@@ -1398,7 +1398,7 @@ export default function SattaChart({
               "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0 shadow-sm",
               activeTab === 'matrix'
                 ? "bg-[#80202C] text-white border-2 border-[#FDE7E6] shadow-lg scale-105"
-                : "bg-[#A82B3A] text-white hover:bg-[#C23A4A] font-bold border border-[#F06D6C]"
+                : "bg-[#A82B3A] text-white hover:bg-[#C23A4A] font-bold border border-[#FBCFCB]"
             )}
           >
             <FileSpreadsheet className={cn("h-4 w-4", activeTab === 'matrix' ? "text-[#FDE7E6]" : "text-[#FBCFCB]")} />
@@ -1411,14 +1411,14 @@ export default function SattaChart({
               "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0 shadow-sm",
               activeTab === 'diff_history'
                 ? "bg-[#80202C] text-white border-2 border-[#FDE7E6] shadow-lg scale-105"
-                : "bg-[#A82B3A] text-white hover:bg-[#C23A4A] font-bold border border-[#F06D6C]"
+                : "bg-[#A82B3A] text-white hover:bg-[#C23A4A] font-bold border border-[#FBCFCB]"
             )}
           >
             <History className={cn("h-4 w-4", activeTab === 'diff_history' ? "text-[#FDE7E6]" : "text-[#FBCFCB]")} />
             <span className="text-white font-black">Differential History</span>
           </button>
 
-          <div className="bg-[#80202C] border border-[#F06D6C] px-3.5 py-1.5 rounded-xl text-right shrink-0">
+          <div className="bg-[#80202C] border border-[#FBCFCB] px-3.5 py-1.5 rounded-xl text-right shrink-0">
             <div className="text-[10px] text-[#FBCFCB] font-black uppercase tracking-wider">Last Updated</div>
             <div className="text-xs font-mono font-bold text-white flex items-center gap-1 justify-end">
               <Clock className="h-3 w-3 text-[#FDE7E6]" />
@@ -1454,11 +1454,11 @@ export default function SattaChart({
           {/* SIMPLIFIED CONTROLS */}
           <div className="bg-white p-4 md:p-5 rounded-2xl border border-[#E8E2D5] shadow-sm flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-[#9E2B38] text-[#D4AF37] rounded-2xl shadow-inner">
+              <div className="p-3 bg-[#F7AFA8] text-[#D4AF37] rounded-2xl shadow-inner">
                 <DollarSign className="h-6 w-6" />
               </div>
               <div>
-                <h2 className="text-base md:text-lg font-black text-[#9E2B38] tracking-tight font-serif">
+                <h2 className="text-base md:text-lg font-black text-[#F7AFA8] tracking-tight font-serif">
                   Satta Chart Base Rate
                 </h2>
               </div>
@@ -1470,7 +1470,7 @@ export default function SattaChart({
                 <select
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className="bg-transparent text-sm font-black text-[#9E2B38] outline-none cursor-pointer pr-2"
+                  className="bg-transparent text-sm font-black text-[#F7AFA8] outline-none cursor-pointer pr-2"
                 >
                   <option value={2026}>2026</option>
                   <option value={2025}>2025</option>
@@ -1485,7 +1485,7 @@ export default function SattaChart({
                   fetchRateHistory();
                 }}
                 disabled={isLoading}
-                className="bg-[#9E2B38] hover:bg-[#2A4726] text-white font-extrabold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
+                className="bg-[#F7AFA8] hover:bg-[#2A4726] text-white font-extrabold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50 active:scale-95"
               >
                 <RefreshCcw className={`h-4 w-4 text-[#D4AF37] ${isLoading ? 'animate-spin' : ''}`} />
                 <span>View Full Year</span>
@@ -1494,7 +1494,7 @@ export default function SattaChart({
               <button
                 type="button"
                 onClick={() => setShowPrintPreview(true)}
-                className="bg-[#D4AF37] hover:bg-[#C5A059] text-[#9E2B38] font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer active:scale-95"
+                className="bg-[#D4AF37] hover:bg-[#C5A059] text-[#F7AFA8] font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer active:scale-95"
               >
                 <Printer className="h-4 w-4" />
                 <span>Print Preview</span>
@@ -1503,7 +1503,7 @@ export default function SattaChart({
               <button
                 type="button"
                 onClick={() => setShowUniversalAuditModal(true)}
-                className="bg-[#103A20] hover:bg-[#D94B5A] text-[#D4AF37] border border-[#D4AF37]/50 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer active:scale-95"
+                className="bg-[#103A20] hover:bg-[#F7AFA8] text-[#D4AF37] border border-[#D4AF37]/50 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer active:scale-95"
               >
                 <History className="h-4 w-4" />
                 <span>System Change Log</span>
@@ -1535,7 +1535,7 @@ export default function SattaChart({
 
           {/* FULL-YEAR DAILY BASE RATE MATRIX TABLE */}
           <div className="bg-white rounded-2xl border border-[#E8E2D5] shadow-sm overflow-hidden">
-            <div className="bg-[#9E2B38] text-white px-5 py-3.5 flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#D4AF37]">
+            <div className="bg-[#F7AFA8] text-white px-5 py-3.5 flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#D4AF37]">
               <div className="flex items-center gap-2">
                 <FileSpreadsheet className="h-5 w-5 text-[#D4AF37]" />
                 <span className="text-sm font-black uppercase tracking-wider">
@@ -1552,12 +1552,12 @@ export default function SattaChart({
             <div className="overflow-x-auto">
               <table className="w-full text-center border-collapse">
                 <thead>
-                  <tr className="bg-[#FAF8F5] border-b border-slate-300 text-xs font-black text-[#9E2B38] uppercase tracking-wider">
+                  <tr className="bg-[#FAF8F5] border-b border-slate-300 text-xs font-black text-[#F7AFA8] uppercase tracking-wider">
                     <th className="py-2.5 px-3 border-r border-slate-300 sticky left-0 bg-[#FAF8F5] z-10 w-16 text-slate-800">
                       Date
                     </th>
                     {MONTH_COLS.map((m) => (
-                      <th key={m.name} className="py-2.5 px-3 border-r border-slate-200 min-w-[76px] text-[#9E2B38]">
+                      <th key={m.name} className="py-2.5 px-3 border-r border-slate-200 min-w-[76px] text-[#F7AFA8]">
                         {m.name}
                       </th>
                     ))}
@@ -1590,7 +1590,7 @@ export default function SattaChart({
                                 <div className="flex flex-col items-center justify-center gap-0.5">
                                   <span 
                                     title={tooltipText || `Base Rate: ₹${rateVal.toLocaleString('en-IN')} (Updated by ${latestUser || 'Admin'})`}
-                                    className="font-bold text-[#9E2B38] bg-emerald-50 text-emerald-950 px-1.5 py-0.5 rounded border border-emerald-200 inline-block min-w-[56px] text-center"
+                                    className="font-bold text-[#F7AFA8] bg-emerald-50 text-emerald-950 px-1.5 py-0.5 rounded border border-emerald-200 inline-block min-w-[56px] text-center"
                                   >
                                     {rateVal.toLocaleString('en-IN')}
                                   </span>
@@ -1626,7 +1626,7 @@ export default function SattaChart({
 
           {/* MONTHLY SUMMARY TABLE (AVG / MAX / MIN) */}
           <div className="bg-white rounded-2xl border border-[#E8E2D5] shadow-sm overflow-hidden mt-4">
-            <div className="bg-[#9E2B38] text-white px-5 py-3 flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#D4AF37]">
+            <div className="bg-[#F7AFA8] text-white px-5 py-3 flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#D4AF37]">
               <div className="flex items-center gap-2">
                 <Calculator className="h-5 w-5 text-[#D4AF37]" />
                 <span className="text-sm font-black uppercase tracking-wider">
@@ -1641,12 +1641,12 @@ export default function SattaChart({
             <div className="overflow-x-auto">
               <table className="w-full text-center border-collapse">
                 <thead>
-                  <tr className="bg-[#FAF8F5] border-b border-slate-300 text-xs font-black text-[#9E2B38] uppercase tracking-wider">
+                  <tr className="bg-[#FAF8F5] border-b border-slate-300 text-xs font-black text-[#F7AFA8] uppercase tracking-wider">
                     <th className="py-2.5 px-3 border-r border-slate-300 sticky left-0 bg-[#FAF8F5] z-10 w-16 text-slate-800 text-center">
                       
                     </th>
                     {MONTH_COLS.map((m) => (
-                      <th key={m.name} className="py-2.5 px-3 border-r border-slate-200 min-w-[76px] text-[#9E2B38]">
+                      <th key={m.name} className="py-2.5 px-3 border-r border-slate-200 min-w-[76px] text-[#F7AFA8]">
                         {m.name}
                       </th>
                     ))}
@@ -1661,7 +1661,7 @@ export default function SattaChart({
                     {monthlySummaryStats.map((stat) => (
                       <td key={`avg-${stat.month}`} className="py-2.5 px-2 border-r border-slate-100 font-bold text-slate-800">
                         {stat.avg ? (
-                          <span className="font-bold text-[#9E2B38] bg-emerald-50 text-emerald-950 px-2 py-0.5 rounded border border-emerald-200 inline-block min-w-[58px]">
+                          <span className="font-bold text-[#F7AFA8] bg-emerald-50 text-emerald-950 px-2 py-0.5 rounded border border-emerald-200 inline-block min-w-[58px]">
                             {stat.avg}
                           </span>
                         ) : (
@@ -1720,18 +1720,18 @@ export default function SattaChart({
             
             {/* BASE RATE CARD */}
             <div className="bg-white rounded-2xl p-4 border border-[#E8E2D5] shadow-sm relative overflow-hidden">
-              <div className="bg-[#9E2B38] text-white -mx-4 -mt-4 p-3 mb-4 rounded-t-2xl flex items-center justify-between border-b-2 border-[#D4AF37]">
+              <div className="bg-[#F7AFA8] text-white -mx-4 -mt-4 p-3 mb-4 rounded-t-2xl flex items-center justify-between border-b-2 border-[#D4AF37]">
                 <div className="flex items-center gap-2">
                   <Sliders className="h-4 w-4 text-[#D4AF37]" />
                   <h3 className="text-xs font-black uppercase tracking-wider">Configure Base Rate</h3>
                 </div>
                 <div className="flex items-center gap-1.5">
                   {latestRateRecord?.updated_by && (
-                    <span className="text-[9px] bg-[#D94B5A] text-amber-300 border border-[#2D7344] px-2 py-0.5 rounded-full font-bold">
+                    <span className="text-[9px] bg-[#F7AFA8] text-amber-300 border border-[#2D7344] px-2 py-0.5 rounded-full font-bold">
                       By: {latestRateRecord.updated_by}
                     </span>
                   )}
-                  <span className="text-[9px] bg-[#D4AF37] text-[#9E2B38] px-2 py-0.5 rounded-full font-bold">Active Schedule</span>
+                  <span className="text-[9px] bg-[#D4AF37] text-[#F7AFA8] px-2 py-0.5 rounded-full font-bold">Active Schedule</span>
                 </div>
               </div>
 
@@ -1743,7 +1743,7 @@ export default function SattaChart({
                     </label>
                     {latestRateRecord?.updated_by && (
                       <span className="text-[9.5px] font-bold text-emerald-800">
-                        Updated By: <strong className="text-[#9E2B38] underline">{latestRateRecord.updated_by}</strong>
+                        Updated By: <strong className="text-[#F7AFA8] underline">{latestRateRecord.updated_by}</strong>
                       </span>
                     )}
                   </div>
@@ -1753,7 +1753,7 @@ export default function SattaChart({
  id="current_base_rate_1323" name="current_base_rate" aria-label="Current Base Rate (₹)"                      type="number"
                       value={baseRate}
                       onChange={(e) => setBaseRate(Number(e.target.value) || 0)}
-                      className="w-full bg-[#FAF8F5] border-2 border-[#9E2B38] font-mono font-black text-base text-[#9E2B38] pl-7 pr-3 py-2 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-[#D4AF37]"
+                      className="w-full bg-[#FAF8F5] border-2 border-[#F7AFA8] font-mono font-black text-base text-[#F7AFA8] pl-7 pr-3 py-2 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-[#D4AF37]"
                       required
                     />
                   </div>
@@ -1800,7 +1800,7 @@ export default function SattaChart({
                   type="button"
                   onClick={handleUpdateBaseRate}
                   disabled={isLoading}
-                  className="w-full bg-[#9E2B38] hover:bg-[#2A4726] text-white font-black py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="w-full bg-[#F7AFA8] hover:bg-[#2A4726] text-white font-black py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <Save className="h-4 w-4 text-[#D4AF37]" />
                   <span>{isLoading ? "Saving Rates..." : "Apply & Publish Base Rate"}</span>
@@ -1812,8 +1812,8 @@ export default function SattaChart({
             <div className="bg-white rounded-2xl p-4 border border-[#E8E2D5] shadow-sm">
               <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-200">
                 <div className="flex items-center gap-2">
-                  <Upload className="h-4 w-4 text-[#9E2B38]" />
-                  <h3 className="text-xs font-black uppercase text-[#9E2B38]">Import CSV Chart Data</h3>
+                  <Upload className="h-4 w-4 text-[#F7AFA8]" />
+                  <h3 className="text-xs font-black uppercase text-[#F7AFA8]">Import CSV Chart Data</h3>
                 </div>
                 <span className="text-[9px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold uppercase">.CSV Format</span>
               </div>
@@ -1822,7 +1822,7 @@ export default function SattaChart({
                 <button
                   type="button"
                   onClick={handleDownloadSampleCsv}
-                  className="w-full bg-[#FAF8F5] hover:bg-slate-100 text-[#9E2B38] border border-slate-300 font-bold py-2 px-3 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="w-full bg-[#FAF8F5] hover:bg-slate-100 text-[#F7AFA8] border border-slate-300 font-bold py-2 px-3 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <Download className="h-3.5 w-3.5 text-[#D4AF37]" />
                   <span>Download CSV Template</span>
@@ -1836,11 +1836,11 @@ export default function SattaChart({
                     const file = e.dataTransfer.files?.[0];
                     if (file) handleCsvUpload(file);
                   }}
-                  className="border-2 border-dashed border-[#9E2B38]/30 hover:border-[#9E2B38] bg-[#FAF8F5] p-4 rounded-xl text-center cursor-pointer transition-all flex flex-col items-center justify-center relative min-h-[90px]"
+                  className="border-2 border-dashed border-[#F7AFA8]/30 hover:border-[#F7AFA8] bg-[#FAF8F5] p-4 rounded-xl text-center cursor-pointer transition-all flex flex-col items-center justify-center relative min-h-[90px]"
                   onClick={() => document.getElementById('satta-csv-file-input')?.click()}
                 >
-                  <Upload className="h-5 w-5 text-[#9E2B38] mb-1" />
-                  <span className="text-[10px] font-black text-[#9E2B38] uppercase">
+                  <Upload className="h-5 w-5 text-[#F7AFA8] mb-1" />
+                  <span className="text-[10px] font-black text-[#F7AFA8] uppercase">
                     Drag & Drop CSV or Click
                   </span>
                   <span className="text-[8px] font-bold text-slate-400 mt-0.5">
@@ -1865,7 +1865,7 @@ export default function SattaChart({
                       <span>{uploadProgress}%</span>
                     </div>
                     <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-[#9E2B38] h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                      <div className="bg-[#F7AFA8] h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                     </div>
                   </div>
                 )}
@@ -1889,7 +1889,7 @@ export default function SattaChart({
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search Area Name..."
-                    className="bg-[#FAF8F5] border border-slate-300 pl-8 pr-3 py-1.5 text-xs font-semibold rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-[#9E2B38] w-48"
+                    className="bg-[#FAF8F5] border border-slate-300 pl-8 pr-3 py-1.5 text-xs font-semibold rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-[#F7AFA8] w-48"
                   />
                   {searchTerm && (
                     <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -1902,25 +1902,25 @@ export default function SattaChart({
                 <div className="hidden sm:flex items-center gap-1 bg-[#FAF8F5] p-1 rounded-xl border border-slate-200 text-[10px] font-extrabold uppercase">
                   <button
                     onClick={() => setSelectedGradeFilter('ALL')}
-                    className={cn("px-2.5 py-1 rounded-lg transition-all cursor-pointer", selectedGradeFilter === 'ALL' ? "bg-[#9E2B38] text-white" : "text-slate-600")}
+                    className={cn("px-2.5 py-1 rounded-lg transition-all cursor-pointer", selectedGradeFilter === 'ALL' ? "bg-[#F7AFA8] text-white" : "text-slate-600")}
                   >
                     All Grades ({ALL_GRADES.length})
                   </button>
                   <button
                     onClick={() => setSelectedGradeFilter('TD')}
-                    className={cn("px-2.5 py-1 rounded-lg transition-all cursor-pointer", selectedGradeFilter === 'TD' ? "bg-[#9E2B38] text-white" : "text-slate-600")}
+                    className={cn("px-2.5 py-1 rounded-lg transition-all cursor-pointer", selectedGradeFilter === 'TD' ? "bg-[#F7AFA8] text-white" : "text-slate-600")}
                   >
                     TD Series
                   </button>
                   <button
                     onClick={() => setSelectedGradeFilter('BTR')}
-                    className={cn("px-2.5 py-1 rounded-lg transition-all cursor-pointer", selectedGradeFilter === 'BTR' ? "bg-[#9E2B38] text-white" : "text-slate-600")}
+                    className={cn("px-2.5 py-1 rounded-lg transition-all cursor-pointer", selectedGradeFilter === 'BTR' ? "bg-[#F7AFA8] text-white" : "text-slate-600")}
                   >
                     BTR Series
                   </button>
                   <button
                     onClick={() => setSelectedGradeFilter('MESTA')}
-                    className={cn("px-2.5 py-1 rounded-lg transition-all cursor-pointer", selectedGradeFilter === 'MESTA' ? "bg-[#9E2B38] text-white" : "text-slate-600")}
+                    className={cn("px-2.5 py-1 rounded-lg transition-all cursor-pointer", selectedGradeFilter === 'MESTA' ? "bg-[#F7AFA8] text-white" : "text-slate-600")}
                   >
                     Mesta
                   </button>
@@ -1939,13 +1939,13 @@ export default function SattaChart({
                     ),
                     `Satta_Calculated_Matrix_${startDate}`
                   )}
-                  className="bg-white hover:bg-slate-100 text-[#9E2B38] border border-slate-300 font-bold px-3 py-1.5 rounded-xl text-xs uppercase flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  className="bg-white hover:bg-slate-100 text-[#F7AFA8] border border-slate-300 font-bold px-3 py-1.5 rounded-xl text-xs uppercase flex items-center gap-1.5 cursor-pointer shadow-sm"
                 >
                   <Download className="h-3.5 w-3.5 text-[#D4AF37]" />
                   <span>Export Excel (CSV)</span>
                 </button>
 
-                <div className="bg-[#9E2B38] text-white font-mono font-bold text-xs px-3 py-1.5 rounded-xl border border-[#D4AF37]/40 shadow-sm">
+                <div className="bg-[#F7AFA8] text-white font-mono font-bold text-xs px-3 py-1.5 rounded-xl border border-[#D4AF37]/40 shadow-sm">
                   Base Rate: ₹{baseRate.toLocaleString()}
                 </div>
               </div>
@@ -1957,7 +1957,7 @@ export default function SattaChart({
                 <HelpCircle className="h-3.5 w-3.5 text-[#D4AF37]" /> Color Legend:
               </span>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="px-2 py-0.5 rounded bg-[#9E2B38] text-white">Very High (≥+1000)</span>
+                <span className="px-2 py-0.5 rounded bg-[#F7AFA8] text-white">Very High (≥+1000)</span>
                 <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-300">High Premium (&gt;0)</span>
                 <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-900 border border-amber-300">Equal / Base (0)</span>
                 <span className="px-2 py-0.5 rounded bg-orange-100 text-orange-900 border border-orange-300">Low Discount (&lt;0)</span>
@@ -2001,7 +2001,7 @@ export default function SattaChart({
               
               {/* Tooltip Hover Overlay */}
               {hoveredCell && (
-                <div className="absolute top-2 right-4 z-20 bg-[#9E2B38] text-white p-2.5 rounded-xl shadow-2xl border border-[#D4AF37] text-xs font-mono animate-fadeIn flex items-center gap-3">
+                <div className="absolute top-2 right-4 z-20 bg-[#F7AFA8] text-white p-2.5 rounded-xl shadow-2xl border border-[#D4AF37] text-xs font-mono animate-fadeIn flex items-center gap-3">
                   <div>
                     <span className="text-[#D4AF37] font-bold block text-[10px]">{hoveredCell.area} • {hoveredCell.grade}</span>
                     <span className="text-white font-extrabold text-sm">Calculated: ₹{hoveredCell.rate.toLocaleString()}</span>
@@ -2022,9 +2022,9 @@ export default function SattaChart({
 
               <div className="overflow-auto max-h-[620px] scrollbar-thin">
                 <table className="w-full text-left border-collapse font-sans text-xs min-w-[1300px]">
-                  <thead className="bg-[#9E2B38] text-white font-black uppercase text-[10px] tracking-wider sticky top-0 z-20 shadow-sm">
+                  <thead className="bg-[#F7AFA8] text-white font-black uppercase text-[10px] tracking-wider sticky top-0 z-20 shadow-sm">
                     <tr className="border-b-2 border-[#D4AF37]">
-                      <th className="p-3 border-r border-[#162B14] sticky left-0 bg-[#9E2B38] text-left min-w-[170px] shadow-[3px_0_6px_rgba(0,0,0,0.2)] z-30">
+                      <th className="p-3 border-r border-[#162B14] sticky left-0 bg-[#F7AFA8] text-left min-w-[170px] shadow-[3px_0_6px_rgba(0,0,0,0.2)] z-30">
                         Area Name ({filteredSeedRows.length})
                       </th>
                       {visibleGrades.map(g => (
@@ -2041,7 +2041,7 @@ export default function SattaChart({
                         <tr key={areaName} className={cn("hover:bg-[#FAF8F5] transition-colors uppercase", idx % 2 === 0 ? "bg-[#FAF8F5]/50" : "bg-white")}>
                           
                           {/* Frozen First Column: Area Name */}
-                          <td className="p-3 border-r border-slate-300 font-extrabold text-[#9E2B38] bg-white sticky left-0 z-10 shadow-[3px_0_6px_rgba(0,0,0,0.06)] flex items-center justify-between">
+                          <td className="p-3 border-r border-slate-300 font-extrabold text-[#F7AFA8] bg-white sticky left-0 z-10 shadow-[3px_0_6px_rgba(0,0,0,0.06)] flex items-center justify-between">
                             <span>{areaName}</span>
                             <ChevronRight className="h-3 w-3 text-slate-300" />
                           </td>
@@ -2074,10 +2074,10 @@ export default function SattaChart({
                                   });
                                 }}
                                 className={cn(
-                                  "p-1.5 border-r border-slate-200 text-center font-bold relative group cursor-pointer transition-all hover:ring-2 hover:ring-[#9E2B38] hover:z-10",
+                                  "p-1.5 border-r border-slate-200 text-center font-bold relative group cursor-pointer transition-all hover:ring-2 hover:ring-[#F7AFA8] hover:z-10",
                                   hasDiff
                                     ? isVeryHigh
-                                      ? "bg-[#9E2B38] text-white shadow-sm font-black"
+                                      ? "bg-[#F7AFA8] text-white shadow-sm font-black"
                                       : isHigh
                                         ? "bg-emerald-50 text-emerald-900 border-emerald-200"
                                         : isBase
@@ -2136,15 +2136,15 @@ export default function SattaChart({
           {/* HEADER & TOP ACTIONS */}
           <div className="bg-white p-4 md:p-5 rounded-2xl border border-[#E8E2D5] shadow-sm flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-[#9E2B38] text-[#D4AF37] rounded-2xl shadow-inner">
+              <div className="p-3 bg-[#F7AFA8] text-[#D4AF37] rounded-2xl shadow-inner">
                 <History className="h-6 w-6" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base md:text-lg font-black text-[#9E2B38] tracking-tight font-serif">
+                  <h2 className="text-base md:text-lg font-black text-[#F7AFA8] tracking-tight font-serif">
                     Differential History
                   </h2>
-                  <span className="text-[10px] font-sans font-extrabold bg-[#D4AF37] text-[#9E2B38] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="text-[10px] font-sans font-extrabold bg-[#D4AF37] text-[#F7AFA8] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                     Live Supabase Audit
                   </span>
                 </div>
@@ -2157,7 +2157,7 @@ export default function SattaChart({
                 onClick={() => setActiveTab('matrix')}
                 className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
               >
-                <FileSpreadsheet className="h-3.5 w-3.5 text-[#9E2B38]" />
+                <FileSpreadsheet className="h-3.5 w-3.5 text-[#F7AFA8]" />
                 <span>Open Live Matrix</span>
               </button>
 
@@ -2189,7 +2189,7 @@ export default function SattaChart({
                   handleCsvExport(exportRows, `Differential_History_${new Date().toISOString().split('T')[0]}.csv`);
                 }}
                 disabled={filteredDiffHistoryLogs.length === 0}
-                className="px-3.5 py-2 bg-[#9E2B38] hover:bg-[#2A4726] text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+                className="px-3.5 py-2 bg-[#F7AFA8] hover:bg-[#2A4726] text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
               >
                 <Download className="h-3.5 w-3.5 text-[#D4AF37]" />
                 <span>Export CSV</span>
@@ -2200,12 +2200,12 @@ export default function SattaChart({
           {/* FILTERS TOOLBAR */}
           <div className="bg-white p-4 rounded-2xl border border-[#E8E2D5] shadow-sm space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#9E2B38] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#F7AFA8] uppercase tracking-wider">
                 <Filter className="h-3.5 w-3.5 text-[#D4AF37]" />
                 <span>Audit Filters</span>
               </div>
               <div className="text-xs text-slate-500 font-medium">
-                Showing <strong className="text-[#9E2B38] font-black">{filteredDiffHistoryLogs.length}</strong> of {diffHistoryLogs.length} audit entries
+                Showing <strong className="text-[#F7AFA8] font-black">{filteredDiffHistoryLogs.length}</strong> of {diffHistoryLogs.length} audit entries
               </div>
             </div>
 
@@ -2330,7 +2330,7 @@ export default function SattaChart({
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#9E2B38] text-white text-xs font-black uppercase tracking-wider border-b-2 border-[#D4AF37]">
+                  <tr className="bg-[#F7AFA8] text-white text-xs font-black uppercase tracking-wider border-b-2 border-[#D4AF37]">
                     <th className="py-3 px-4">Date</th>
                     <th className="py-3 px-4">Area Name</th>
                     <th className="py-3 px-4">Grade</th>
@@ -2373,7 +2373,7 @@ export default function SattaChart({
                           <td className="py-3 px-4 font-mono font-bold text-slate-800 whitespace-nowrap">
                             {formatDateDMY(log.changed_date)}
                           </td>
-                          <td className="py-3 px-4 font-extrabold text-[#9E2B38] whitespace-nowrap">
+                          <td className="py-3 px-4 font-extrabold text-[#F7AFA8] whitespace-nowrap">
                             {log.area}
                           </td>
                           <td className="py-3 px-4 whitespace-nowrap">
@@ -2445,16 +2445,16 @@ export default function SattaChart({
       {/* PROPOSED RATE CHANGE CONFIRMATION MODAL */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
-          <div className="bg-white border-4 border-[#9E2B38] rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 font-sans">
+          <div className="bg-white border-4 border-[#F7AFA8] rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 font-sans">
             <div className="flex items-center gap-3 border-b pb-3 border-slate-200">
-              <AlertCircle className="h-6 w-6 text-[#9E2B38]" />
-              <h3 className="text-sm font-black uppercase text-[#9E2B38] tracking-wider">Confirm Published Rate Schedule</h3>
+              <AlertCircle className="h-6 w-6 text-[#F7AFA8]" />
+              <h3 className="text-sm font-black uppercase text-[#F7AFA8] tracking-wider">Confirm Published Rate Schedule</h3>
             </div>
 
             <div className="bg-[#FAF8F5] p-3.5 rounded-xl border border-slate-300 font-mono text-xs space-y-2 uppercase">
               <div className="flex justify-between">
                 <span className="text-slate-500 font-bold">Proposed Base Rate:</span>
-                <span className="font-black text-[#9E2B38]">₹{baseRate.toLocaleString()}</span>
+                <span className="font-black text-[#F7AFA8]">₹{baseRate.toLocaleString()}</span>
               </div>
               {latestRateRecord && (
                 <div className="flex justify-between">
@@ -2464,7 +2464,7 @@ export default function SattaChart({
               )}
               <div className="flex justify-between">
                 <span className="text-slate-500 font-bold">Effective Date:</span>
-                <span className="font-black text-[#9E2B38]">{formatDateDMY(startDate)}</span>
+                <span className="font-black text-[#F7AFA8]">{formatDateDMY(startDate)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500 font-bold">Audit Note:</span>
@@ -2494,7 +2494,7 @@ export default function SattaChart({
               <button
                 type="button"
                 onClick={executeRateUpdate}
-                className="px-4 py-2 bg-[#9E2B38] text-white rounded-xl shadow hover:bg-[#2A4726] flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 bg-[#F7AFA8] text-white rounded-xl shadow hover:bg-[#2A4726] flex items-center gap-1.5 cursor-pointer"
               >
                 <Save className="h-4 w-4 text-[#D4AF37]" />
                 <span>Publish Schedule</span>
@@ -2509,7 +2509,7 @@ export default function SattaChart({
         <div className="fixed inset-0 z-[200] bg-black/75 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl w-full max-w-5xl shadow-2xl border-2 border-[#D4AF37] my-auto overflow-hidden animate-in fade-in zoom-in-95">
             {/* Modal Header */}
-            <div className="bg-[#9E2B38] text-white px-6 py-4 flex items-center justify-between border-b-2 border-[#D4AF37] print:hidden">
+            <div className="bg-[#F7AFA8] text-white px-6 py-4 flex items-center justify-between border-b-2 border-[#D4AF37] print:hidden">
               <div className="flex items-center gap-2.5">
                 <Printer className="h-5 w-5 text-[#D4AF37]" />
                 <h3 className="text-sm font-black uppercase tracking-wider text-white">
@@ -2520,7 +2520,7 @@ export default function SattaChart({
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="bg-[#D4AF37] hover:bg-[#C5A059] text-[#9E2B38] font-black px-4 py-1.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all shadow cursor-pointer active:scale-95"
+                  className="bg-[#D4AF37] hover:bg-[#C5A059] text-[#F7AFA8] font-black px-4 py-1.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all shadow cursor-pointer active:scale-95"
                 >
                   <Printer className="h-4 w-4" />
                   <span>Print (A4)</span>
@@ -2655,7 +2655,7 @@ export default function SattaChart({
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="bg-[#9E2B38] hover:bg-[#2A4726] text-white font-black px-5 py-2 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 shadow cursor-pointer active:scale-95"
+                className="bg-[#F7AFA8] hover:bg-[#2A4726] text-white font-black px-5 py-2 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 shadow cursor-pointer active:scale-95"
               >
                 <Printer className="h-4 w-4 text-[#D4AF37]" />
                 <span>Print Report</span>
@@ -2709,7 +2709,7 @@ export default function SattaChart({
                     window.dispatchEvent(new CustomEvent('app-navigate', { detail: { page: 'sauda_entry' } }));
                   }
                 }}
-                className="flex-1 bg-[#D94B5A] hover:bg-[#1f633a] text-amber-300 font-black py-3 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95"
+                className="flex-1 bg-[#F7AFA8] hover:bg-[#1f633a] text-amber-300 font-black py-3 px-4 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95"
               >
                 <span>Proceed to NEW SAUDA CONTRACT ENTRY</span>
                 <ArrowRight className="w-4 h-4 text-amber-300" />

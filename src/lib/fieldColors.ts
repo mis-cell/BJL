@@ -93,7 +93,7 @@ export function getFieldClasses({
 
   // Priority 3: Normal Manual -> White (#FFFFFF)
   const sizeClasses = compact ? 'rounded-lg px-2.5 py-1 text-xs' : 'rounded-xl px-3.5 py-2 text-xs';
-  return `${baseClasses} ${sizeClasses} bg-white border border-[#FBCFCB] text-slate-800 focus:border-[#F06D6C] focus:ring-2 focus:ring-[#F06D6C]/20 placeholder:text-slate-400 ${
+  return `${baseClasses} ${sizeClasses} bg-white border border-[#FBCFCB] text-slate-800 focus:border-[#FBCFCB] focus:ring-2 focus:ring-[#FBCFCB]/20 placeholder:text-slate-400 ${
     disabled ? 'bg-slate-50 cursor-not-allowed opacity-80' : ''
   } ${className}`;
 }

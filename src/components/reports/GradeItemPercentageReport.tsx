@@ -240,7 +240,7 @@ export const GradeItemPercentageReport: React.FC<GradeItemPercentageReportProps>
                   <YAxis domain={[0, 14]} tick={{ fontSize: 9, fill: '#64748b' }} tickFormatter={v => `${v}%`} />
                   <Tooltip 
                     formatter={(val: any, name: string) => [`${val}%`, name === 'actualMoisture' ? 'Actual Moisture' : 'Standard 8.5%']}
-                    contentStyle={{ backgroundColor: '#520F18', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
+                    contentStyle={{ backgroundColor: '#F7AFA8', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
                   />
                   <ReferenceLine y={8.5} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={2} label={{ value: '8.5% BIS Limit', fill: '#ef4444', fontSize: 10, position: 'insideTopRight' }} />
                   <Bar dataKey="actualMoisture" name="Actual Moisture %" radius={[4, 4, 0, 0]}>

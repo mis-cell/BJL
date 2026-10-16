@@ -300,7 +300,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-[18px] p-4 sm:p-5 shadow-md border border-[#D8D3C5] hover:border-[#D94B5A]/40 hover:shadow-lg transition-all w-full max-w-full min-w-0">
+    <div className="bg-white rounded-[18px] p-4 sm:p-5 shadow-md border border-[#D8D3C5] hover:border-[#F7AFA8]/40 hover:shadow-lg transition-all w-full max-w-full min-w-0">
       <SectionHeader
         icon={Settings}
         title="Quality Details"
@@ -309,7 +309,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
             <button
               type="button"
               onClick={onAddRow}
-              className="bg-[#D94B5A] hover:bg-[#113A21] text-white font-bold text-xs px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer"
+              className="bg-[#F7AFA8] hover:bg-[#113A21] text-white font-bold text-xs px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer"
               title="Add another Quality configuration row"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -332,7 +332,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
       <div className="rounded-xl border border-[#E0DBCF] shadow-2xs bg-white mb-5 w-full overflow-visible relative z-10">
         <table className="w-full text-left border-collapse table-fixed">
           <thead className="sticky top-0 z-20 shadow-2xs">
-            <tr className="bg-[#EDF4EF] text-[#D94B5A] font-bold text-xs uppercase border-b border-[#D8E4DC]">
+            <tr className="bg-[#EDF4EF] text-[#F7AFA8] font-bold text-xs uppercase border-b border-[#D8E4DC]">
               <th className="px-3 py-2.5 w-[31%] bg-[#EDF4EF] rounded-tl-xl">
                 Agency <span className="text-[10px] text-emerald-700 font-semibold normal-case">(Multiple Select)</span>
               </th>
@@ -433,7 +433,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                           placeholder={isUser010 ? "Rs." : "Rs. *"}
                           className={`w-full rounded-lg px-2.5 py-2 text-xs font-bold text-right outline-none transition-all font-mono ${
                             isUser010
-                              ? "bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20"
+                              ? "bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#F7AFA8] focus:ring-1 focus:ring-[#F7AFA8]/20"
                               : "bg-[#FFECEC] border-2 border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 text-slate-900 font-black"
                           }`}
                         />
@@ -463,11 +463,11 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
         <div className=" hidden bg-[#F8FAF8] rounded-xl border border-[#D5E5D9] p-3.5 sm:p-4 shadow-2xs">
           <div className="flex items-center justify-between gap-2 mb-2.5 pb-2 border-b border-[#E1EFE4]">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-[#D94B5A] text-amber-300 flex items-center justify-center font-bold text-xs shadow-2xs">
+              <div className="w-6 h-6 rounded-md bg-[#F7AFA8] text-amber-300 flex items-center justify-center font-bold text-xs shadow-2xs">
                 <Layers className="w-3.5 h-3.5" />
               </div>
               <div>
-                <h4 className="text-xs font-black text-[#D94B5A] tracking-wide uppercase">
+                <h4 className="text-xs font-black text-[#F7AFA8] tracking-wide uppercase">
                   Active Combinations Matrix ({allCombinations.length})
                 </h4>
                 <p className="text-[10px] text-slate-500 font-medium">
@@ -484,7 +484,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
             {allCombinations.map((comb, idx) => (
               <div 
                 key={idx}
-                className="bg-white border border-[#DCE8DF] rounded-lg p-2.5 flex items-center justify-between text-xs shadow-2xs hover:border-[#D94B5A]/50 transition-all"
+                className="bg-white border border-[#DCE8DF] rounded-lg p-2.5 flex items-center justify-between text-xs shadow-2xs hover:border-[#F7AFA8]/50 transition-all"
               >
                 <div className="flex flex-col min-w-0 pr-2">
                   <div className="flex items-center gap-1.5 flex-wrap">

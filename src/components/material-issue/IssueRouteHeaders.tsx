@@ -117,7 +117,7 @@ export const GodownStorageHeader: React.FC<GodownStorageHeaderProps> = ({
 }) => {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center gap-3 border-b border-[#103A20] bg-[#D94B5A] px-4 py-3">
+      <div className="flex items-center gap-3 border-b border-[#103A20] bg-[#F7AFA8] px-4 py-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15">
           <Layers className="h-4 w-4 text-white" />
         </div>
@@ -152,7 +152,7 @@ export const GodownStorageHeader: React.FC<GodownStorageHeaderProps> = ({
                   issue_no: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-[#D94B5A] outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-[#F7AFA8] outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
 
@@ -176,7 +176,7 @@ export const GodownStorageHeader: React.FC<GodownStorageHeaderProps> = ({
                   date: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-800 outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-800 outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
 
@@ -199,7 +199,7 @@ export const GodownStorageHeader: React.FC<GodownStorageHeaderProps> = ({
                   godown: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-800 outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100 cursor-pointer"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-800 outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100 cursor-pointer"
             >
               <option value="">— Select Godown —</option>
               {godownRecords?.map((gdn: any) => (
@@ -230,7 +230,7 @@ export const GodownStorageHeader: React.FC<GodownStorageHeaderProps> = ({
                   stack_no: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
 
@@ -254,7 +254,7 @@ export const GodownStorageHeader: React.FC<GodownStorageHeaderProps> = ({
                   issued_by: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
 
@@ -278,7 +278,7 @@ export const GodownStorageHeader: React.FC<GodownStorageHeaderProps> = ({
                   received_by: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
 
@@ -325,7 +325,7 @@ export const GodownStorageHeader: React.FC<GodownStorageHeaderProps> = ({
                   remarks: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
         </div>
@@ -349,11 +349,11 @@ export const MillSellHeader: React.FC<MillSellHeaderProps> = ({
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center gap-3 border-b border-emerald-200 bg-emerald-50 px-4 py-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#D94B5A]">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F7AFA8]">
           <Settings className="h-4 w-4 text-white" />
         </div>
         <div>
-          <h3 className="text-sm font-bold text-[#D94B5A]">
+          <h3 className="text-sm font-bold text-[#F7AFA8]">
             Sell Details — Godown to Factory Direct
           </h3>
           <p className="text-[9px] font-semibold uppercase tracking-wider text-emerald-700">
@@ -383,7 +383,7 @@ export const MillSellHeader: React.FC<MillSellHeaderProps> = ({
                   issue_no: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-[#D94B5A] outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-[#F7AFA8] outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
 
@@ -407,7 +407,7 @@ export const MillSellHeader: React.FC<MillSellHeaderProps> = ({
                   date: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-800 outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-800 outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
 
@@ -431,7 +431,7 @@ export const MillSellHeader: React.FC<MillSellHeaderProps> = ({
                   requisition_no: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
 
@@ -454,7 +454,7 @@ export const MillSellHeader: React.FC<MillSellHeaderProps> = ({
                   jci: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-800 outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100 cursor-pointer"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-800 outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100 cursor-pointer"
             >
               <option value="No">No</option>
               <option value="Yes">Yes</option>
@@ -481,7 +481,7 @@ export const MillSellHeader: React.FC<MillSellHeaderProps> = ({
                   batch_order: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
 
@@ -505,7 +505,7 @@ export const MillSellHeader: React.FC<MillSellHeaderProps> = ({
                   department: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-emerald-200 bg-emerald-50/40 px-3 text-xs font-bold text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 rounded-lg border border-emerald-200 bg-emerald-50/40 px-3 text-xs font-bold text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
 
@@ -529,7 +529,7 @@ export const MillSellHeader: React.FC<MillSellHeaderProps> = ({
                   destination_godown: e.target.value
                 }))
               }
-              className="h-9 w-full rounded-lg border border-emerald-200 bg-emerald-50/40 px-3 text-xs font-semibold text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 w-full rounded-lg border border-emerald-200 bg-emerald-50/40 px-3 text-xs font-semibold text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
 
@@ -553,7 +553,7 @@ export const MillSellHeader: React.FC<MillSellHeaderProps> = ({
                   issued_by: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
 
@@ -594,7 +594,7 @@ export const MillSellHeader: React.FC<MillSellHeaderProps> = ({
                     className={cn(
                       "flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-[9px] font-black uppercase transition-all cursor-pointer",
                       isSelected
-                        ? "border-[#D94B5A] bg-[#D94B5A] text-white shadow-sm"
+                        ? "border-[#F7AFA8] bg-[#F7AFA8] text-white shadow-sm"
                         : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:bg-emerald-50"
                     )}
                   >
@@ -651,7 +651,7 @@ export const MillSellHeader: React.FC<MillSellHeaderProps> = ({
                   remarks: e.target.value
                 }))
               }
-              className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#D94B5A] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
         </div>
@@ -677,7 +677,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* Header */}
-      <div className="relative overflow-hidden bg-[#D94B5A] px-5 py-4">
+      <div className="relative overflow-hidden bg-[#F7AFA8] px-5 py-4">
         <div className="absolute right-0 top-0 h-full w-40 opacity-10">
           <div className="h-full w-full bg-[repeating-linear-gradient(45deg,white_0_12px,transparent_12px_24px)]" />
         </div>
@@ -702,10 +702,10 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
       <div className="bg-slate-50/60 p-5">
         <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
           {/* Issue No */}
-          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#D94B5A] focus-within:ring-2 focus-within:ring-green-100">
+          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="issue_no_996"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Issue No.
             </label>
@@ -720,15 +720,15 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
                   issue_no: e.target.value
                 }))
               }
-              className="h-8 flex-1 border-0 bg-transparent px-1 text-xs font-bold text-[#D94B5A] outline-none"
+              className="h-8 flex-1 border-0 bg-transparent px-1 text-xs font-bold text-[#F7AFA8] outline-none"
             />
           </div>
 
           {/* Issue Date */}
-          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#D94B5A] focus-within:ring-2 focus-within:ring-green-100">
+          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="issue_date_1004"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Issue Date
             </label>
@@ -749,10 +749,10 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           </div>
 
           {/* Requisition No */}
-          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#D94B5A] focus-within:ring-2 focus-within:ring-green-100">
+          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="requisition_no_1014"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Requisition No.
             </label>
@@ -773,10 +773,10 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           </div>
 
           {/* Requisition Date */}
-          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#D94B5A] focus-within:ring-2 focus-within:ring-green-100">
+          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="requisition_date_1023"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Requisition Date
             </label>
@@ -797,10 +797,10 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           </div>
 
           {/* Godown */}
-          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#D94B5A] focus-within:ring-2 focus-within:ring-green-100">
+          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="godown_no_source_1033"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Godown No. (Source)
             </label>
@@ -828,7 +828,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
 
           {/* Issued For */}
           <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <label className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]">
+            <label className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]">
               Issued For
             </label>
             <div className="flex-1">
@@ -848,7 +848,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
 
           {/* Batching Order */}
           <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <label className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]">
+            <label className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]">
               Batching Order
             </label>
             <div className="flex-1">
@@ -867,10 +867,10 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           </div>
 
           {/* Lorry Number */}
-          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#D94B5A] focus-within:ring-2 focus-within:ring-green-100">
+          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="lorry_number_1067"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Lorry Number
             </label>
@@ -891,10 +891,10 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           </div>
 
           {/* Issued By */}
-          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#D94B5A] focus-within:ring-2 focus-within:ring-green-100">
+          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="issued_by_1077"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Issued By
             </label>
@@ -915,10 +915,10 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           </div>
 
           {/* Received By */}
-          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#D94B5A] focus-within:ring-2 focus-within:ring-green-100">
+          <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="received_by_1086"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Received By
             </label>
@@ -940,7 +940,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
 
           {/* Company */}
           <div className="md:col-span-2 group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <label className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]">
+            <label className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]">
               Company Details / Sender
             </label>
             <div className="flex-1">
@@ -964,10 +964,10 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           </div>
 
           {/* Remarks */}
-          <div className="md:col-span-2 flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#D94B5A] focus-within:ring-2 focus-within:ring-green-100">
+          <div className="md:col-span-2 flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="remarks_1108"
-              className="mt-2 w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="mt-2 w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Remarks
             </label>

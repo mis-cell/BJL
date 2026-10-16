@@ -649,7 +649,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     <div className="space-y-4 font-sans text-slate-800">
 
       {/* ================= MULTI-DIMENSIONAL ANALYSIS NAVIGATION TABS ================= */}
-      <div className="bg-[#520F18] p-2 rounded-2xl border border-[#7A1C27] flex items-center gap-1.5 flex-wrap text-xs shadow-inner">
+      <div className="bg-[#F7AFA8] p-2 rounded-2xl border border-[#F7AFA8] flex items-center gap-1.5 flex-wrap text-xs shadow-inner">
         {[
           { id: 'BROKER' as const, label: 'Broker Wise', icon: Users, count: brokerData.filter(b => b.dealCount > 0).length },
           { id: 'AGENCY' as const, label: 'Agency Wise', icon: Building2, count: agencyData.filter(a => a.dealCount > 0).length },
@@ -670,15 +670,15 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
               onClick={() => setActiveTab(tab.id)}
               className={`px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
                 isActive
-                  ? 'bg-[#D94B5A] text-white font-black shadow-md border border-[#F06D6C]'
-                  : 'text-[#FBCFCB] hover:bg-[#7A1C27] hover:text-white'
+                  ? 'bg-[#F7AFA8] text-white font-black shadow-md border border-[#FBCFCB]'
+                  : 'text-[#FBCFCB] hover:bg-[#F7AFA8] hover:text-white'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
               <span>{tab.label}</span>
               {tab.count !== undefined && (
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
-                  isActive ? 'bg-white text-[#9E2B38]' : 'bg-[#7A1C27] text-[#FBCFCB]'
+                  isActive ? 'bg-white text-[#F7AFA8]' : 'bg-[#F7AFA8] text-[#FBCFCB]'
                 }`}>
                   {tab.count}
                 </span>
@@ -708,7 +708,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
         type="button"
         key={item.id}
         onClick={() => setSubAnalysisMode(item.id)}
-        className={` group relative flex flex-1 min-w-[220px] items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-[#D94B5A]/50 ${ isActive ? 'border-[#F06D6C] bg-[#9E2B38] text-white shadow-md' : 'border-[#FBCFCB] bg-white text-slate-800 hover:border-[#F7AFA8] hover:bg-[#FDE7E6]/40 hover:shadow-sm' } `}
+        className={` group relative flex flex-1 min-w-[220px] items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-[#F7AFA8]/50 ${ isActive ? 'border-[#FBCFCB] bg-[#F7AFA8] text-white shadow-md' : 'border-[#FBCFCB] bg-white text-slate-800 hover:border-[#F7AFA8] hover:bg-[#FDE7E6]/40 hover:shadow-sm' } `}
       >
         <span
           className={`
@@ -738,7 +738,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
         </span>
 
         {isActive && (
-          <span className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-[#D94B5A]" />
+          <span className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-[#F7AFA8]" />
         )}
       </button>
     );
@@ -1823,7 +1823,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             <button
               type="button"
               onClick={handleExportCSV}
-              className="px-3 py-1.5 bg-[#D94B5A] hover:bg-[#E85A5A] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow transition cursor-pointer"
+              className="px-3 py-1.5 bg-[#F7AFA8] hover:bg-[#F7AFA8] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow transition cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export CSV</span>
@@ -1833,32 +1833,32 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
         <div className="overflow-x-auto border border-[#FBCFCB] rounded-2xl">
           <table className="w-full text-xs text-left border-collapse">
             <thead>
-              <tr className="bg-[#9E2B38] text-white font-black uppercase text-[10px] tracking-wider border-b border-[#7A1C27] select-none">
-                <th className="p-3 cursor-pointer hover:bg-[#7A1C27] transition" onClick={() => handleSort('date')}>
+              <tr className="bg-[#F7AFA8] text-white font-black uppercase text-[10px] tracking-wider border-b border-[#F7AFA8] select-none">
+                <th className="p-3 cursor-pointer hover:bg-[#F7AFA8] transition" onClick={() => handleSort('date')}>
                   <div className="flex items-center gap-1.5">
                     <span>Date</span>
                     <ArrowUpDown className="w-3 h-3 text-[#FBCFCB]" />
                   </div>
                 </th>
-                <th className="p-3 cursor-pointer hover:bg-[#7A1C27] transition" onClick={() => handleSort('saudaNo')}>
+                <th className="p-3 cursor-pointer hover:bg-[#F7AFA8] transition" onClick={() => handleSort('saudaNo')}>
                   <div className="flex items-center gap-1.5">
                     <span>Sauda / PO No.</span>
                     <ArrowUpDown className="w-3 h-3 text-[#FBCFCB]" />
                   </div>
                 </th>
-                <th className="p-3 cursor-pointer hover:bg-[#7A1C27] transition" onClick={() => handleSort('supplier')}>
+                <th className="p-3 cursor-pointer hover:bg-[#F7AFA8] transition" onClick={() => handleSort('supplier')}>
                   <div className="flex items-center gap-1.5">
                     <span>Party / Supplier</span>
                     <ArrowUpDown className="w-3 h-3 text-[#FBCFCB]" />
                   </div>
                 </th>
-                <th className="p-3 cursor-pointer hover:bg-[#7A1C27] transition" onClick={() => handleSort('broker')}>
+                <th className="p-3 cursor-pointer hover:bg-[#F7AFA8] transition" onClick={() => handleSort('broker')}>
                   <div className="flex items-center gap-1.5">
                     <span>Broker</span>
                     <ArrowUpDown className="w-3 h-3 text-[#FBCFCB]" />
                   </div>
                 </th>
-                <th className="p-3 text-right cursor-pointer hover:bg-[#7A1C27] transition" onClick={() => handleSort('quantityMT')}>
+                <th className="p-3 text-right cursor-pointer hover:bg-[#F7AFA8] transition" onClick={() => handleSort('quantityMT')}>
                   <div className="flex items-center justify-end gap-1.5">
                     <span>Weight (MT)</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />

@@ -75,7 +75,7 @@ export const ParetoChart: React.FC<ParetoChartProps> = ({
                 if (name === 'Cumulative %') return [`${val}%`, name];
                 return [`${Number(val).toFixed(2)} ${volumeUnit}`, name];
               }}
-              contentStyle={{ backgroundColor: '#520F18', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
+              contentStyle={{ backgroundColor: '#F7AFA8', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
             />
             <Legend verticalAlign="bottom" height={24} formatter={(v) => <span className="text-[10px] text-slate-600 font-bold">{v}</span>} />
             <ReferenceLine yAxisId="right" y={80} stroke="#e11d48" strokeDasharray="4 4" label={{ value: '80% Threshold', position: 'top', fill: '#e11d48', fontSize: 9, fontWeight: 'bold' }} />

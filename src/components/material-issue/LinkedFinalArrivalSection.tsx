@@ -21,7 +21,7 @@ export const LinkedFinalArrivalSection: React.FC<LinkedFinalArrivalSectionProps>
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#103A20] bg-[#D94B5A] px-4 py-3">
+      <div className="flex items-center justify-between border-b border-[#103A20] bg-[#F7AFA8] px-4 py-3">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15">
             <Archive className="h-4 w-4 text-white" />

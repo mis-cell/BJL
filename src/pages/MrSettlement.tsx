@@ -2606,7 +2606,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           </AnimatePresence>
 
           {/* HEADER BAR */}
-          <div className="bg-[#D94B5A] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#B83847] gap-4">
+          <div className="bg-[#F7AFA8] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#FBCFCB] gap-4">
             <div className="flex items-center gap-3">
               <div className="flex flex-col">
                 <h1 className="text-base font-bold text-white tracking-wide">
@@ -2617,7 +2617,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="px-3.5 py-1.5 bg-[#80202C] hover:bg-[#9E2B38] text-[#FDE7E6] border border-[#F06D6C] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+                className="px-3.5 py-1.5 bg-[#80202C] hover:bg-[#F7AFA8] text-[#FDE7E6] border border-[#FBCFCB] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
                 title="Back to Sauda Desk (Esc)"
                 onClick={() => setViewMode("dashboard")}
               >
