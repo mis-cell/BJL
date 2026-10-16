@@ -692,11 +692,7 @@ export function useDashboardData(isActive: boolean = true) {
     }
   }, []);
 
-  React.useEffect(() => {
-    if (isActive) {
-      loadStats();
-    }
-  }, [loadStats, isActive]);
+
 
   useLiveAutoRefresh(() => {
     if (isActive) loadStats();

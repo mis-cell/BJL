@@ -162,13 +162,7 @@ export default function SattaChart({
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
-  // Initialize and Seed Table if needed
-  useEffect(() => {
-    loadChartConfig();
-    fetchRateHistory();
-    fetchDiffHistory();
-  }, []);
-
+  // Initialize and Auto-refresh Satta Chart
   useLiveAutoRefresh(() => {
     loadChartConfig();
     fetchRateHistory();

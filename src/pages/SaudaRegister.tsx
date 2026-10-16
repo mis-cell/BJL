@@ -979,43 +979,11 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
   useLiveAutoRefresh(() => {
     if (isActive) fetchSaudas();
-  }, [isActive], { tables: ['sauda_master', 'sms_sauda', 'purchase_master', 'temporary_material_received', 'sauda_check_point', 'sauda_check_point_details'] });
+  }, [isActive], { tables: ['sauda_master', 'sauda_quality_details', 'sms_sauda', 'purchase_master', 'temporary_material_received', 'sauda_check_point', 'sauda_check_point_details'] });
 
   useEffect(() => {
     initUserMap();
-    if (isActive) {
-      fetchSaudas();
-    }
-
-    const handleDataUpdate = () => {
-      fetchSaudas();
-    };
-
-    window.addEventListener('app-data-updated', handleDataUpdate);
-    window.addEventListener('storage', handleDataUpdate);
-
-    let channel: any = null;
-    if (supabase) {
-      channel = supabase
-        .channel('sauda-register-realtime-sub')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_check_point' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'final_po' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_master' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_quality_details' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_master' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sms_sauda' }, handleDataUpdate)
-        .subscribe();
-    }
-
-    return () => {
-      window.removeEventListener('app-data-updated', handleDataUpdate);
-      window.removeEventListener('storage', handleDataUpdate);
-      if (channel && supabase) {
-        supabase.removeChannel(channel);
-      }
-    };
-  }, [isActive]);
+  }, []);
 
   const handleDelete = async (id: string) => {
     const target = saudaList.find(s => s.sauda_id === id || (s as any).id === id);

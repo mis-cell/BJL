@@ -2,7 +2,7 @@ import { getPaddedDetails, calculateProportionalNetto } from "../utils/temporary
 import { TemporaryArrivalGrid } from "../components/temporary-arrival/TemporaryArrivalGrid";
 import { TemporaryArrivalWeightCard } from "../components/temporary-arrival/TemporaryArrivalWeightCard";
 import React, { useState, useEffect, useRef } from 'react';
-import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
+import { useLiveAutoRefresh, notifyDataChanged } from '../hooks/useLiveAutoRefresh';
 import { 
   Save, 
   X, 
@@ -467,31 +467,6 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       }
     }
     loadMastersAndIncrement();
-
-    const handleLocalUpdate = () => {
-      fetchPurchaseOrders();
-    };
-    window.addEventListener('app-data-updated', handleLocalUpdate);
-
-    let poSub: any = null;
-    if (supabase) {
-      poSub = supabase
-        .channel('amad_entry_po_realtime')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_master' }, () => {
-          fetchPurchaseOrders();
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_check_point' }, () => {
-          fetchPurchaseOrders();
-        })
-        .subscribe();
-    }
-
-    return () => {
-      window.removeEventListener('app-data-updated', handleLocalUpdate);
-      if (poSub) {
-        supabase.removeChannel(poSub);
-      }
-    };
   }, [initialData]);
 
   // Draft features disabled to ensure form is always a fresh blank form on click, per user request
@@ -1221,58 +1196,44 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       const currentPoNo = formData.po_no ? formData.po_no.trim().toUpperCase() : '';
       if (currentPoNo) {
         try {
-          const allPos = await dbModule.fetchAll('purchase_master', 'created_at', false).catch(() => []);
-          const matchedPo = allPos.find((po: any) => String(po.po_no).trim().toUpperCase() === currentPoNo);
+          let matchedPo: any = null;
+          if (supabase) {
+            const { data } = await supabase.from('purchase_master').select('*').eq('po_no', currentPoNo).maybeSingle();
+            matchedPo = data;
+          }
 
           if (matchedPo) {
-            const allAmads = await dbModule.fetchAll('temporary_material_received').catch(() => []);
             let totalReceivedMt = 0;
-            allAmads.forEach((am: any) => {
-              // Ensure we don't count the current saved record twice if it is already indexed in allAmads
-              if (payload && (formData.arrival_no === am.amad_no || formData.arrival_no === am.amad_id || formData.arrival_no === am.temporary_arrival_no)) return;
-              if (initialData && initialData.amad_id === am.amad_id) return;
-              if (am.po_no && String(am.po_no).trim().toUpperCase() === currentPoNo) {
+            if (supabase) {
+              const { data: relatedAmads } = await supabase
+                .from('temporary_material_received')
+                .select('amad_no, temporary_arrival_no, weight_qtl')
+                .eq('po_no', currentPoNo);
+              
+              (relatedAmads || []).forEach((am: any) => {
+                if (payload && (formData.arrival_no === am.amad_no || formData.arrival_no === am.temporary_arrival_no)) return;
                 totalReceivedMt += (Number(am.weight_qtl) || 0) / 10;
-              }
-            });
+              });
+            }
 
             totalReceivedMt += totalWeightSum;
 
             const contractWeight = Number(matchedPo.total_contract_mt) || 0;
             const isComplete = contractWeight > 0 && totalReceivedMt >= (contractWeight - 0.01);
-            console.log(`[PO STATUS TRIGGER] Checking fulfillment for PO ${currentPoNo || 'unknown'}: Cumulative Received ${totalReceivedMt.toFixed(3)} MT / Contract Weight ${contractWeight.toFixed(3)} MT. Complete: ${isComplete}`);
             const newStatus = isComplete ? 'completed' : 'in progress';
 
-            const prevPendingStatus = matchedPo.pending;
-            const prevTextStatus = matchedPo.status || 'pending';
-            
-            console.log(`[PO STATUS TRANSITION AUDIT] PO No: ${currentPoNo} during M.R. Entry. Contract: ${contractWeight} MT. Added weight: ${totalWeightSum} MT. Total received weight: ${totalReceivedMt} MT. Complete: ${isComplete}. Transition: pending ${prevPendingStatus} -> ${!isComplete}, status '${prevTextStatus}' -> '${newStatus}'`);
-
-            // Save status transition trace into user_activity_logs for auditing
-            dbModule.insert('user_activity_logs', {
-              username: getCurrentUserContext().username || 'ADMIN',
-              action_type: 'PO_STATUS_TRANSITION',
-              action_details: `PO ${currentPoNo} updated during material receipt save. Weight added: ${totalWeightSum} MT. Total cumulative receipts: ${totalReceivedMt.toFixed(3)} MT / ${contractWeight.toFixed(3)} MT. Transitioned from '${prevTextStatus}' (pending: ${prevPendingStatus}) to '${newStatus}' (pending: ${!isComplete}).`,
-              ip_address: 'Client Sync Service'
-            }).catch((err) => {
-              console.warn("Could not insert PO status transition track in user_activity_logs, skipping:", err);
-            });
-
-            await dbModule.update('purchase_master', 'po_id', matchedPo.po_id, {
-              pending: !isComplete,
-              status: newStatus
-            }).catch((err) => console.warn("Failed to update purchase_master status:", err));
-
-            const allSaudas = await dbModule.fetchAll('sauda_master').catch(() => []);
-            const matchedSauda = allSaudas.find((s: any) => {
-              const saudaPoNo = `PO-${s.sauda_no}/${s.financial_year ? s.financial_year.split('-')[1].substring(2) : '26'}`.toUpperCase();
-              return saudaPoNo === currentPoNo || String(s.sauda_no) === currentPoNo.replace(/[^0-9]/g, '');
-            });
-
-            if (matchedSauda) {
-              await dbModule.update('sauda_master', 'sauda_id', matchedSauda.sauda_id, {
+            if (matchedPo.po_id) {
+              await dbModule.update('purchase_master', 'po_id', matchedPo.po_id, {
+                pending: !isComplete,
                 status: newStatus
-              }).catch((err) => console.warn("Failed to update sauda_master status:", err));
+              }).catch((err) => console.warn("Failed to update purchase_master status:", err));
+            }
+
+            if (supabase) {
+              const cleanDigits = currentPoNo.replace(/[^0-9]/g, '');
+              if (cleanDigits) {
+                Promise.resolve(supabase.from('sauda_master').update({ status: newStatus }).ilike('sauda_no', `%${cleanDigits}%`)).catch(() => {});
+              }
             }
           }
         } catch (err) {
@@ -1282,8 +1243,8 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
       localStorage.removeItem('amad_draft_form');
       localStorage.removeItem('amad_draft_details');
-      window.dispatchEvent(new CustomEvent('app-data-updated'));
-      window.dispatchEvent(new CustomEvent('storage'));
+      notifyDataChanged('temporary_material_received');
+      notifyDataChanged('purchase_master');
       onSave?.(payload);
     } catch (e: any) {
       console.error(e);
