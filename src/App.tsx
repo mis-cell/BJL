@@ -1525,51 +1525,47 @@ export default function App() {
 
       {/* Global Satta Warning Modal */}
       {showGlobalSattaWarning && (
-        <div className="fixed inset-0 z-[200] bg-black/65 backdrop-blur-sm flex items-center justify-center p-4  animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="bg-amber-50 px-6 py-6 border-b border-amber-100 flex flex-col items-center text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10">
-                <ShieldAlert className="w-24 h-24 text-amber-500 -rotate-12" />
+            <div className="bg-amber-50 px-4 py-3 border-b border-amber-100 flex items-center gap-2.5">
+              <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center shrink-0 shadow-inner">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
               </div>
-              
-              <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mb-4 relative z-10 shadow-inner">
-                <AlertTriangle className="w-7 h-7 text-amber-600" />
-              </div>
-              <div className="relative z-10">
-                <h3 className="text-xl font-black text-amber-900 tracking-tight">
+              <div>
+                <h3 className="text-sm font-black text-amber-900 tracking-tight leading-tight">
                   Satta Rate Chart Required
                 </h3>
-                <p className="text-[11px] font-bold text-amber-800 uppercase tracking-tight mt-1 font-mono">
+                <p className="text-[9px] font-bold text-amber-700 uppercase tracking-tight font-mono">
                   ACTION REQUIRED
                 </p>
               </div>
             </div>
 
             {/* Body */}
-            <div className="p-6 text-center space-y-4">
-              <p className="text-xs text-slate-600 font-bold leading-relaxed uppercase">
-                Please Update Satta Chart And Then you are Eligible For using the portal modules
+            <div className="p-4 text-center space-y-1.5">
+              <p className="text-xs text-slate-700 font-bold leading-snug uppercase">
+                Please Update Satta Chart to enable portal modules
               </p>
-              <p className="text-[10px] text-slate-400 font-medium font-sans">
-                The Satta Rate Chart matrix must be logged for today before any modules can be accessed.
+              <p className="text-[10px] text-slate-500 font-medium">
+                The Satta Rate Chart matrix must be logged for today before accessing modules.
               </p>
             </div>
 
             {/* Footer Actions */}
-            <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex gap-3">
+            <div className="bg-slate-50 px-4 py-2.5 border-t border-slate-100 flex gap-2">
               <button
                 onClick={() => {
                   setShowGlobalSattaWarning(false);
                   globalNavigate('satta_chart');
                 }}
-                className="flex-1 bg-[#174C2C] hover:bg-[#205c36] active:bg-[#133b23] text-amber-300 font-bold py-2.5 px-4 rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                className="flex-1 bg-[#174C2C] hover:bg-[#205c36] active:bg-[#133b23] text-amber-300 font-bold py-1.5 px-3 rounded-lg text-xs transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <span>Upload Satta Chart ↗</span>
+                <span>Upload Chart ↗</span>
               </button>
               <button
                 onClick={() => setShowGlobalSattaWarning(false)}
-                className="flex-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 font-bold py-2.5 px-4 rounded-xl text-xs transition-colors shadow-sm cursor-pointer"
+                className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 font-bold py-1.5 px-3 rounded-lg text-xs transition-colors shadow-xs cursor-pointer"
               >
                 Cancel
               </button>

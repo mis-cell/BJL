@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trash2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { ArrivalDetailRow } from '../../types';
 
@@ -10,6 +11,7 @@ export interface TemporaryArrivalGridProps {
   markas: any[];
   onAddRow: () => void;
   onDeleteRow: () => void;
+  onDeleteRowAt?: (index: number) => void;
   onDetailChange: (index: number, field: keyof ArrivalDetailRow, value: any) => void;
 }
 
@@ -21,6 +23,7 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
   markas,
   onAddRow,
   onDeleteRow,
+  onDeleteRowAt,
   onDetailChange
 }) => {
   return (
@@ -62,6 +65,7 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
               <th className="p-1 border border-gray-400 w-24" rowSpan={2}>Netto (M.T)</th>
               <th className="p-1 border border-gray-400 w-32" colSpan={2}>Quantity</th>
               <th className="p-1 border border-gray-400 w-36" rowSpan={2}>Remarks</th>
+              <th className="p-1 border border-gray-400 w-12 text-center" rowSpan={2}>Action</th>
             </tr>
             <tr className="bg-slate-200 text-black font-extrabold text-[8px] text-center border-b border-gray-400">
               <th className="p-0.5 border border-gray-400 w-16">Code</th>
@@ -254,6 +258,18 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
                     onChange={(e) => onDetailChange(idx, 'remarks', e.target.value)}
                     className="w-full bg-transparent border-0 p-0 text-left outline-none px-1"
                   />
+                </td>
+
+                {/* Individual Row Delete Button */}
+                <td className="p-0.5 border border-gray-300 text-center w-12 bg-slate-50/50">
+                  <button
+                    type="button"
+                    onClick={() => onDeleteRowAt ? onDeleteRowAt(idx) : onDeleteRow()}
+                    className="p-1 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded transition-all cursor-pointer border border-rose-200 shadow-2xs active:scale-95 inline-flex items-center justify-center"
+                    title={`Delete Row ${detail.srl_no}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </td>
               </tr>
             ))}

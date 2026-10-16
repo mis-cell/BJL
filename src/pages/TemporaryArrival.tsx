@@ -73,6 +73,30 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     });
   };
 
+  const handleDeleteRowAt = (index: number) => {
+    setDetails(prev => {
+      if (prev.length <= 1) {
+        return [{
+          srl_no: 1,
+          receipt_grade_code: '',
+          receipt_grade_name: '',
+          crop_year: '2026-27',
+          challan_grade_name: '',
+          agency_code: '',
+          agency_name: '',
+          challan_marka_code: '',
+          challan_marka_name: '',
+          netto_pnto: 0,
+          quantity_chln: 0,
+          quantity_rcpt: 0,
+          remarks: ''
+        }];
+      }
+      const copy = prev.filter((_, idx) => idx !== index);
+      return copy.map((row, idx) => ({ ...row, srl_no: idx + 1 }));
+    });
+  };
+
   useEffect(() => {
     async function loadUnits() {
       try {
@@ -2083,6 +2107,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           markas={markas}
           onAddRow={handleAddRow}
           onDeleteRow={handleDeleteRow}
+          onDeleteRowAt={handleDeleteRowAt}
           onDetailChange={handleDetailChange}
         />
 
