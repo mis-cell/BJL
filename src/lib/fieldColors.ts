@@ -2,17 +2,17 @@
  * Central Reusable Field Color System
  *
  * Visual Standard:
- * - Auto-populated / system-filled: Light Blue (#EAF4FF)
+ * - Auto-populated / system-filled: Light Blue (#FDE7E6)
  * - Normal manual input: White (#FFFFFF)
- * - Mandatory / required: Light Red (#FFECEC)
+ * - Mandatory / required: Light Red (#FDE7E6)
  *
  * Priority Rule:
  * Mandatory (Light Red) takes precedence if a field is both mandatory and auto-populated.
  */
 
 export const FIELD_COLORS = {
-  AUTO: '#EAF4FF',
-  MANDATORY: '#FFECEC',
+  AUTO: '#FDE7E6',
+  MANDATORY: '#FDE7E6',
   MANUAL: '#FFFFFF',
 } as const;
 
@@ -72,21 +72,21 @@ export function getFieldClasses({
   const baseClasses = 'outline-none transition-all shadow-2xs font-semibold';
   
   if (isInvalid) {
-    return `${baseClasses} bg-[#FFECEC] border-2 border-rose-500 text-slate-900 ring-2 ring-rose-200 placeholder:text-rose-400 ${className}`;
+    return `${baseClasses} bg-[#FDE7E6] border-2 border-rose-500 text-slate-900 ring-2 ring-rose-200 placeholder:text-rose-400 ${className}`;
   }
 
-  // Priority 1: Mandatory / Required -> Light Red (#FFECEC)
+  // Priority 1: Mandatory / Required -> Light Red (#FDE7E6)
   if (isRequired) {
     const sizeClasses = compact ? 'rounded-lg px-2.5 py-1 text-xs' : 'rounded-xl px-3.5 py-2 text-xs';
-    return `${baseClasses} ${sizeClasses} bg-[#FFECEC] border-2 border-rose-300 text-slate-900 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 placeholder:text-rose-400/70 ${
+    return `${baseClasses} ${sizeClasses} bg-[#FDE7E6] border-2 border-rose-300 text-slate-900 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 placeholder:text-rose-400/70 ${
       disabled ? 'cursor-not-allowed opacity-90' : ''
     } ${className}`;
   }
 
-  // Priority 2: Auto-populated -> Light Blue (#EAF4FF)
+  // Priority 2: Auto-populated -> Light Blue (#FDE7E6)
   if (isAutoPopulated) {
     const sizeClasses = compact ? 'rounded-lg px-2.5 py-1 text-xs font-bold' : 'rounded-xl px-3.5 py-2 text-xs font-bold';
-    return `${baseClasses} ${sizeClasses} bg-[#EAF4FF] border border-sky-300 text-sky-950 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 placeholder:text-sky-400 ${
+    return `${baseClasses} ${sizeClasses} bg-[#FDE7E6] border border-sky-300 text-sky-950 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 placeholder:text-sky-400 ${
       disabled ? 'cursor-default' : ''
     } ${className}`;
   }
@@ -98,6 +98,6 @@ export function getFieldClasses({
   } ${className}`;
 }
 
-export const CLASS_FIELD_AUTO = 'bg-[#EAF4FF] border border-sky-300 text-sky-950 font-bold';
-export const CLASS_FIELD_MANDATORY = 'bg-[#FFECEC] border-2 border-rose-300 text-slate-900 font-semibold';
-export const CLASS_FIELD_MANUAL = 'bg-white border border-[#D5D0C5] text-slate-800 font-semibold';
+export const CLASS_FIELD_AUTO = 'bg-[#FDE7E6] border border-sky-300 text-sky-950 font-bold';
+export const CLASS_FIELD_MANDATORY = 'bg-[#FDE7E6] border-2 border-rose-300 text-slate-900 font-semibold';
+export const CLASS_FIELD_MANUAL = 'bg-white border border-[#FBCFCB] text-slate-800 font-semibold';

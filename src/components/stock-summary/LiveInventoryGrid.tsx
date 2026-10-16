@@ -84,7 +84,7 @@ export const LiveInventoryGrid: React.FC<LiveInventoryGridProps> = ({
   return (
     <div className="space-y-2">
       {/* Multi-Filter Dropdowns and Search */}
-      <div className="bg-[#d4d0c8] p-2 border border-gray-400 flex flex-wrap gap-2 items-center text-xs font-bold">
+      <div className="bg-[#FBCFCB] p-2 border border-gray-400 flex flex-wrap gap-2 items-center text-xs font-bold">
         <div className="flex items-center gap-1 bg-white border border-gray-400 px-2 py-1 flex-1 min-w-[200px]">
           <Search className="h-3.5 w-3.5 text-gray-500" />
           <input 
@@ -174,7 +174,7 @@ export const LiveInventoryGrid: React.FC<LiveInventoryGridProps> = ({
       {/* Main Stock Grid */}
       <div className="border border-gray-400 bg-white shadow-[inset_1px_1px_3px_rgba(0,0,0,0.1)] overflow-x-auto">
         <table className="w-full border-collapse text-[10px]">
-          <thead className="bg-[#c0c0c0] font-black italic text-slate-800">
+          <thead className="bg-[#FBCFCB] font-black italic text-slate-800">
             <tr className="border-b border-gray-400 h-8 uppercase text-left">
               <th className="px-6 border-r border-[#808080]/30 min-w-[200px]">Commodity Quality & Grade</th>
               <th className="px-4 text-center border-r border-[#808080]/30 bg-green-50/30">Opening Stock (Bales)</th>
@@ -244,7 +244,7 @@ export const LiveInventoryGrid: React.FC<LiveInventoryGridProps> = ({
             </span>
           </div>
         </div>
-        <div className="bg-[#c0c0c0] px-4 py-1 border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] flex items-center gap-2">
+        <div className="bg-[#FBCFCB] px-4 py-1 border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] flex items-center gap-2">
           <Clock className="h-3 w-3 text-gray-600" />
           <span className="text-[9px] font-bold uppercase italic text-gray-600 tracking-widest">
             Last valuation: Just Now

@@ -49,7 +49,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       const isChunkError = /dynamically imported module|failed to fetch.*module|loading chunk/i.test(errMsg);
 
       return (
-        <div className="min-h-screen bg-[#dfdfdf] flex items-center justify-center p-4">
+        <div className="min-h-screen bg-[#FBCFCB] flex items-center justify-center p-4">
           <div className="bg-white border-2 border-slate-400 shadow-[4px_4px_0_0_rgba(0,0,0,0.1)] max-w-lg w-full">
             <div className={cn(
               "text-white px-3 py-2 flex items-center gap-2 border-b-2",
@@ -90,7 +90,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                       sessionStorage.removeItem('bjl_last_chunk_reload');
                       window.location.reload();
                     }}
-                    className="flex items-center gap-2 bg-[#F7AFA8] hover:bg-[#2A4426] text-white px-4 py-2 font-bold text-xs uppercase transition-colors shadow-xs"
+                    className="flex items-center gap-2 bg-[#F7AFA8] hover:bg-[#D94B5A] text-white px-4 py-2 font-bold text-xs uppercase transition-colors shadow-xs"
                   >
                     <RefreshCw className="h-4 w-4 animate-spin" />
                     Reload & Load Latest Version

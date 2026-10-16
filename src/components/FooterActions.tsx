@@ -19,13 +19,13 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
   lockedMessage
 }) => {
   return (
-    <div className="bg-[#F7AFA8] border-t border-[#0F351E] px-6 py-3.5 flex items-center justify-between text-white -mx-5 -mb-5 mt-5 rounded-b-[17px]">
+    <div className="bg-[#F7AFA8] border-t border-[#F06D6C] px-6 py-3.5 flex items-center justify-between text-white -mx-5 -mb-5 mt-5 rounded-b-[17px]">
       <div className="flex items-center gap-3">
         {/* Print Button */}
         <button
           type="button"
           onClick={onPrint}
-          className="bg-[#215E38] hover:bg-[#2A7546] active:bg-[#1C5130] text-white border border-[#3A8A57] font-bold text-xs px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
+          className="bg-[#E85A5A] hover:bg-[#2A7546] active:bg-[#D94B5A] text-white border border-[#3A8A57] font-bold text-xs px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
         >
           <Printer className="h-4 w-4 text-emerald-200" />
           <span>Print</span>
@@ -35,7 +35,7 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
         <button
           type="button"
           onClick={onBack}
-          className="bg-[#215E38] hover:bg-[#2A7546] active:bg-[#1C5130] text-amber-200 border border-[#3A8A57] font-bold text-xs px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
+          className="bg-[#E85A5A] hover:bg-[#2A7546] active:bg-[#D94B5A] text-amber-200 border border-[#3A8A57] font-bold text-xs px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
         >
           <ArrowLeft className="h-4 w-4 text-amber-300" />
           <span>Back (Esc)</span>
@@ -43,7 +43,7 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
       </div>
 
       {/* Center Branding */}
-      <div className="hidden md:flex items-center gap-2 px-4 py-1 bg-[#103A20] rounded-lg border border-[#235E39]">
+      <div className="hidden md:flex items-center gap-2 px-4 py-1 bg-[#D94B5A] rounded-lg border border-[#F06D6C]">
         <span className="text-[11px] font-extrabold text-amber-300 tracking-wider font-serif">BALLY JUTE COMPANY LIMITED</span>
         <span className="text-[9px] font-mono text-emerald-200 uppercase tracking-widest">• ESTD. 1979</span>
       </div>

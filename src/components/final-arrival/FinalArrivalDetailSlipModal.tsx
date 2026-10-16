@@ -22,7 +22,7 @@ export function FinalArrivalDetailSlipModal({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             transition={{ duration: 0.12 }}
-            className="w-full max-w-3xl bg-[#dfdfdf] border-t-white border-l-white border-b-slate-900 border-r-slate-900 border-2 shadow-[4px_4px_16px_rgba(0,0,0,0.35)] font-sans text-xs"
+            className="w-full max-w-3xl bg-[#FBCFCB] border-t-white border-l-white border-b-slate-900 border-r-slate-900 border-2 shadow-[4px_4px_16px_rgba(0,0,0,0.35)] font-sans text-xs"
           >
             {/* Header */}
             <div className="bg-indigo-950 text-white px-3 py-1.5 flex justify-between items-center h-10 border-b border-black/30">
@@ -34,7 +34,7 @@ export function FinalArrivalDetailSlipModal({
               </div>
               <button 
                 onClick={onClose}
-                className="bg-[#c0c0c0] hover:bg-red-700 hover:text-white text-black px-2 py-0.5 border-t-white border-l-white border-b-slate-800 border-r-slate-800 border-2 text-xs font-black cursor-pointer"
+                className="bg-[#FBCFCB] hover:bg-red-700 hover:text-white text-black px-2 py-0.5 border-t-white border-l-white border-b-slate-800 border-r-slate-800 border-2 text-xs font-black cursor-pointer"
               >
                 ✖
               </button>
@@ -192,7 +192,7 @@ export function FinalArrivalDetailSlipModal({
             </div>
 
             {/* Footer bar */}
-            <div className="bg-[#c0c0c0] p-2 flex justify-end gap-2 border-t border-gray-400">
+            <div className="bg-[#FBCFCB] p-2 flex justify-end gap-2 border-t border-gray-400">
               <LegacyButton
                 onClick={onClose}
                 variant="default"

@@ -1314,14 +1314,14 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           <div className="relative z-10 flex items-center gap-3">
             <button
               type="button"
-              className="px-3.5 py-1.5 bg-[#80202C] hover:bg-[#F7AFA8] text-[#FDE7E6] border border-[#FBCFCB] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+              className="px-3.5 py-1.5 bg-[#D94B5A] hover:bg-[#F7AFA8] text-[#FDE7E6] border border-[#FBCFCB] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
               title="Back to Sauda Desk (Esc)"
               onClick={onCancel}
             >
               <ArrowLeft className="h-4 w-4 text-[#FDE7E6]" />
               <span>Back</span>
             </button>
-            <div className="bg-[#80202C] border border-[#FBCFCB] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
+            <div className="bg-[#D94B5A] border border-[#FBCFCB] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
               <span className="text-[#FBCFCB] font-medium">Session:</span>
               <span className="font-bold text-[#FDE7E6] font-mono text-xs">{ 'BJCL/2026-2027/'}</span>
             </div>
@@ -1354,7 +1354,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     name="arrival_no"
                     value={formData.arrival_no}
                     onChange={handleChange}
-                    className="flex-1 border border-sky-300 rounded bg-[#EAF4FF] text-sky-950 px-2 h-7 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    className="flex-1 border border-sky-300 rounded bg-[#FDE7E6] text-sky-950 px-2 h-7 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-sky-500"
                   />
                 </div>
 
@@ -1383,7 +1383,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                         onBlur={() => setTimeout(() => setShowPoDropdown(false), 200)}
                         autoComplete="off"
                         placeholder="-- TYPE OR SELECT P.O. * --"
-                        className="w-full border-2 border-rose-300 rounded bg-[#FFECEC] text-slate-900 px-2.5 h-7 font-bold uppercase font-mono text-[11px] pr-7 focus:border-rose-500 focus:outline-none"
+                        className="w-full border-2 border-rose-300 rounded bg-[#FDE7E6] text-slate-900 px-2.5 h-7 font-bold uppercase font-mono text-[11px] pr-7 focus:border-rose-500 focus:outline-none"
                       />
 
                       <div
@@ -1540,7 +1540,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       required
                       value={formData.date}
                       onChange={handleChange}
-                      className="flex-1 border-2 border-rose-300 rounded bg-[#FFECEC] text-slate-900 px-2 h-7 text-xs font-bold focus:border-rose-500 focus:outline-none"
+                      className="flex-1 border-2 border-rose-300 rounded bg-[#FDE7E6] text-slate-900 px-2 h-7 text-xs font-bold focus:border-rose-500 focus:outline-none"
                     />
 
                     <div className="flex items-center gap-1.5">
@@ -1576,7 +1576,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       list="challan_supplier_list"
                       placeholder="-- TYPE OR SELECT CHALLAN SUPPLIER --"
                       className={`w-full border rounded px-2.5 h-7 uppercase font-bold font-mono text-[11px] ${
-                        formData.challan_supplier ? 'bg-[#EAF4FF] border-sky-300 text-sky-950' : 'bg-white border-gray-400'
+                        formData.challan_supplier ? 'bg-[#FDE7E6] border-sky-300 text-sky-950' : 'bg-white border-gray-400'
                       }`}
                     />
 
@@ -1606,7 +1606,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       list="supplier_list"
                       placeholder="-- TYPE OR SELECT ACTUAL SUPPLIER --"
                       className={`w-full border rounded px-2.5 h-7 uppercase font-bold font-mono text-[11px] ${
-                        formData.supplier ? 'bg-[#EAF4FF] border-sky-300 text-sky-950' : 'bg-white border-gray-400'
+                        formData.supplier ? 'bg-[#FDE7E6] border-sky-300 text-sky-950' : 'bg-white border-gray-400'
                       }`}
                     />
 
@@ -1641,7 +1641,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       list="broker_list"
                       placeholder="-- TYPE OR SELECT BROKER --"
                       className={`w-full border rounded px-2.5 h-7 uppercase font-bold font-mono text-[11px] ${
-                        formData.broker ? 'bg-[#EAF4FF] border-sky-300 text-sky-950' : 'bg-white border-gray-400'
+                        formData.broker ? 'bg-[#FDE7E6] border-sky-300 text-sky-950' : 'bg-white border-gray-400'
                       }`}
                     />
 

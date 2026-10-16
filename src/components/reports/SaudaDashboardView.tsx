@@ -497,9 +497,9 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
     return (
       <div className="flex flex-col space-y-4 font-sans text-slate-800">
         {/* User 10 Executive Header */}
-        <div className="bg-[#F7AFA8] text-white p-4 rounded-2xl shadow-md border border-[#FBCFCB] flex flex-wrap items-center justify-between gap-3">
+        <div className="bg-[#D94B5A] text-white p-4 rounded-2xl shadow-md border border-[#FBCFCB] flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#FDE7E6] text-[#F7AFA8] font-black flex items-center justify-center shadow-inner text-sm border border-[#FBCFCB]">
+            <div className="w-10 h-10 rounded-xl bg-[#FDE7E6] text-[#D94B5A] font-black flex items-center justify-center shadow-inner text-sm border border-[#FBCFCB]">
               U10
             </div>
             <div>
@@ -519,7 +519,7 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
 
           <button
             onClick={refreshSaudas}
-            className="px-3 py-1.5 bg-[#80202C] hover:bg-[#F7AFA8] border border-[#FBCFCB]/40 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+            className="px-3 py-1.5 bg-[#D94B5A] hover:bg-[#F7AFA8] border border-[#FBCFCB]/40 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
           >
             <RefreshCw className="w-3.5 h-3.5 text-[#FDE7E6]" />
             <span>Refresh</span>
@@ -585,7 +585,7 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
                 onClick={() => toggleSort('date')}
                 className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95 ${
                   sortField === 'date'
-                    ? 'bg-[#F7AFA8] text-white shadow-2xs'
+                    ? 'bg-[#D94B5A] text-white shadow-2xs'
                     : 'text-slate-700 hover:bg-slate-200'
                 }`}
                 title={`Sort by Date (${sortField === 'date' && sortOrder === 'asc' ? 'Oldest first' : 'Newest first'})`}
@@ -603,7 +603,7 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
                 onClick={() => toggleSort('order_no')}
                 className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95 ${
                   sortField === 'order_no'
-                    ? 'bg-[#F7AFA8] text-white shadow-2xs'
+                    ? 'bg-[#D94B5A] text-white shadow-2xs'
                     : 'text-slate-700 hover:bg-slate-200'
                 }`}
                 title={`Sort by Order No. (${sortField === 'order_no' && sortOrder === 'asc' ? 'Ascending #0001 → #9999' : 'Descending #9999 → #0001'})`}
@@ -675,7 +675,7 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
         <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
           <div className="overflow-x-auto min-h-[350px]">
             <table className="w-full border-collapse text-xs min-w-[700px]">
-              <thead className="bg-[#F7AFA8] text-white sticky top-0 z-10">
+              <thead className="bg-[#D94B5A] text-white sticky top-0 z-10">
                 <tr className="h-10 text-[11px] font-black uppercase tracking-wider">
                   <th
                     onClick={() => toggleSort('date')}
@@ -1038,10 +1038,10 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
                       border: "1px solid #d1fae5"
                     }}
                   />
-                  <Bar dataKey="weight" fill="#047857" radius={[5, 5, 0, 0]}>
+                  <Bar dataKey="weight" fill="#D94B5A" radius={[5, 5, 0, 0]}>
                     {saudaChartData.map((_entry, index) => {
                       const colors = [
-                        '#047857',
+                        '#D94B5A',
                         '#0f766e',
                         '#15803d',
                         '#059669',

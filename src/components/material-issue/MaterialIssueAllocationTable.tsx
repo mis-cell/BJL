@@ -28,7 +28,7 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
       {/* =========================================================
           HEADER
       ========================================================= */}
-      <div className="bg-[#F7AFA8] border-b-4 border-[#103A20] px-4 py-3">
+      <div className="bg-[#F7AFA8] border-b-4 border-[#D94B5A] px-4 py-3">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Title */}
           <div className="flex items-center gap-3">
@@ -57,7 +57,7 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
             <button
               type="button"
               onClick={addRow}
-              className="inline-flex items-center gap-1.5 bg-white text-[#F7AFA8] hover:bg-green-50 border border-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide shadow-sm transition-all cursor-pointer active:scale-95"
+              className="inline-flex items-center gap-1.5 bg-white text-[#D94B5A] hover:bg-green-50 border border-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide shadow-sm transition-all cursor-pointer active:scale-95"
             >
               <Plus className="h-3.5 w-3.5 stroke-[3]" />
               Add Row
@@ -66,7 +66,7 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
             <button
               type="button"
               onClick={deleteLastRow}
-              className="inline-flex items-center gap-1.5 bg-[#103A20] hover:bg-[#0b2d18] text-white border border-white/20 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide shadow-sm transition-all cursor-pointer active:scale-95"
+              className="inline-flex items-center gap-1.5 bg-[#D94B5A] hover:bg-[#0b2d18] text-white border border-white/20 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide shadow-sm transition-all cursor-pointer active:scale-95"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Delete
@@ -85,7 +85,7 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
           ===================================================== */}
           {issueRoute === 'godown' && (
             <thead>
-              <tr className="bg-[#F7AFA8] text-white text-[10px] uppercase tracking-wide">
+              <tr className="bg-[#D94B5A] text-white text-[10px] uppercase tracking-wide">
                 <th className="py-3 px-2 border-r border-white/10 w-12">Srl</th>
                 <th className="py-3 px-2 border-r border-white/10 w-28">Grade</th>
                 <th className="py-3 px-2 border-r border-white/10 w-28">Marka</th>
@@ -107,7 +107,7 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
           ===================================================== */}
           {issueRoute === 'mill' && (
             <thead>
-              <tr className="bg-[#F7AFA8] text-white text-[10px] uppercase tracking-wide">
+              <tr className="bg-[#D94B5A] text-white text-[10px] uppercase tracking-wide">
                 <th className="py-3 px-2 border-r border-white/10 w-12">Srl</th>
                 <th className="py-3 px-2 border-r border-white/10 w-28">Grade</th>
                 <th className="py-3 px-2 border-r border-white/10 w-28">Marka</th>
@@ -118,8 +118,8 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
                 <th className="py-3 px-2 border-r border-white/10 w-24">Quantity</th>
                 <th className="py-3 px-2 border-r border-white/10 w-24">Unit</th>
                 <th className="py-3 px-2 border-r border-white/10 w-28">Weight (M.T)</th>
-                <th className="py-3 px-2 border-r border-green-800 bg-[#103A20] w-28">Price / Rate</th>
-                <th className="py-3 px-2 border-r border-green-800 bg-[#103A20] w-28">Total Amount</th>
+                <th className="py-3 px-2 border-r border-green-800 bg-[#D94B5A] w-28">Price / Rate</th>
+                <th className="py-3 px-2 border-r border-green-800 bg-[#D94B5A] w-28">Total Amount</th>
                 <th className="py-3 px-2 text-left">Buyer Destination</th>
                 <th className="py-3 px-2 w-12 colhide">&nbsp;</th>
               </tr>
@@ -131,7 +131,7 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
           ===================================================== */}
           {issueRoute === 'factory' && (
             <thead>
-              <tr className="bg-[#F7AFA8] text-white text-[10px] uppercase tracking-wide">
+              <tr className="bg-[#D94B5A] text-white text-[10px] uppercase tracking-wide">
                 <th className="py-3 px-2 border-r border-white/10 w-12">Srl</th>
                 <th className="py-3 px-2 border-r border-white/10 w-28">I.TG No.</th>
                 <th className="py-3 px-2 border-r border-white/10 w-28">Grade / Quality</th>
@@ -159,7 +159,7 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
               >
                 {/* Serial */}
                 <td className="py-2 px-2">
-                  <div className="mx-auto flex h-6 w-6 items-center justify-center rounded-full bg-green-50 text-[#F7AFA8] text-[10px] font-black">
+                  <div className="mx-auto flex h-6 w-6 items-center justify-center rounded-full bg-green-50 text-[#D94B5A] text-[10px] font-black">
                     {idx + 1}
                   </div>
                 </td>
@@ -291,7 +291,7 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
                         aria-label="row code"
                         value={row.code}
                         onChange={(e) => updateRow(idx, 'code', e.target.value)}
-                        className="w-full text-center px-2 py-1.5 rounded-md border border-transparent bg-transparent hover:border-slate-200 focus:bg-white focus:border-[#F7AFA8] outline-none text-xs font-bold text-[#F7AFA8]"
+                        className="w-full text-center px-2 py-1.5 rounded-md border border-transparent bg-transparent hover:border-slate-200 focus:bg-white focus:border-[#F7AFA8] outline-none text-xs font-bold text-[#D94B5A]"
                       >
                         <option value=""></option>
                         {row.code && !BATCH_CODES[row.code] && (
@@ -316,7 +316,7 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
                     placeholder="0"
                     value={row.qty || ''}
                     onChange={(e) => updateRow(idx, 'qty', parseFloat(e.target.value) || 0)}
-                    className="w-full text-right px-2 py-1.5 rounded-md border border-transparent bg-transparent hover:border-slate-200 focus:bg-white focus:border-[#F7AFA8] outline-none text-xs font-black text-[#F7AFA8]"
+                    className="w-full text-right px-2 py-1.5 rounded-md border border-transparent bg-transparent hover:border-slate-200 focus:bg-white focus:border-[#F7AFA8] outline-none text-xs font-black text-[#D94B5A]"
                   />
                 </td>
 
@@ -365,11 +365,11 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
                         placeholder="0.00"
                         value={row.rate || ''}
                         onChange={(e) => updateRow(idx, 'rate', parseFloat(e.target.value) || 0)}
-                        className="w-full text-right px-2 py-1.5 rounded-md border border-green-200 bg-white focus:border-[#F7AFA8] outline-none text-xs font-bold text-[#F7AFA8] font-mono"
+                        className="w-full text-right px-2 py-1.5 rounded-md border border-green-200 bg-white focus:border-[#F7AFA8] outline-none text-xs font-bold text-[#D94B5A] font-mono"
                       />
                     </td>
 
-                    <td className="px-2 text-right font-mono font-bold text-[#F7AFA8] bg-green-50/50 text-xs">
+                    <td className="px-2 text-right font-mono font-bold text-[#D94B5A] bg-green-50/50 text-xs">
                       {row.qty && row.rate
                         ? (row.qty * row.rate).toLocaleString('en-IN', {
                             minimumFractionDigits: 2,
@@ -419,7 +419,7 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
           ===================================================== */}
           <tfoot>
             {/* TOTAL BALES */}
-            <tr className="bg-green-50 border-t-2 border-[#F7AFA8] text-[#F7AFA8]">
+            <tr className="bg-green-50 border-t-2 border-[#F7AFA8] text-[#D94B5A]">
               <td
                 className="py-3 px-3 text-right font-black uppercase text-[10px]"
                 colSpan={issueRoute === 'factory' ? 4 : 7}
@@ -444,7 +444,7 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
                   <td className="text-right px-2 font-mono font-bold text-slate-400">
                     &mdash;
                   </td>
-                  <td className="text-right px-2 font-mono font-bold text-[#F7AFA8]">
+                  <td className="text-right px-2 font-mono font-bold text-[#D94B5A]">
                     {items
                       .filter(it => (it.unit || 'BALES').toUpperCase() === 'BALES')
                       .reduce((sum, it) => sum + ((parseFloat(String(it.qty)) || 0) * (parseFloat(String(it.rate)) || 0)), 0)
@@ -461,7 +461,7 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
             </tr>
 
             {/* GRAND TOTAL */}
-            <tr className="bg-[#F7AFA8] text-white">
+            <tr className="bg-[#D94B5A] text-white">
               <td
                 className="py-3 px-3 text-right font-black uppercase text-[11px]"
                 colSpan={issueRoute === 'factory' ? 4 : 7}
@@ -509,7 +509,7 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-md bg-green-50 flex items-center justify-center">
-              <Plus className="h-3.5 w-3.5 text-[#F7AFA8]" />
+              <Plus className="h-3.5 w-3.5 text-[#D94B5A]" />
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-700 uppercase tracking-wide">
@@ -525,7 +525,7 @@ export const MaterialIssueAllocationTable: React.FC<MaterialIssueAllocationTable
             <button
               type="button"
               onClick={addRow}
-              className="inline-flex items-center gap-1.5 bg-[#F7AFA8] hover:bg-[#103A20] text-white font-black px-4 py-2 rounded-lg text-[10px] uppercase tracking-wide shadow-sm transition-all cursor-pointer active:scale-95"
+              className="inline-flex items-center gap-1.5 bg-[#F7AFA8] hover:bg-[#D94B5A] text-white font-black px-4 py-2 rounded-lg text-[10px] uppercase tracking-wide shadow-sm transition-all cursor-pointer active:scale-95"
             >
               <Plus className="h-3.5 w-3.5 stroke-[3]" />
               Add Row

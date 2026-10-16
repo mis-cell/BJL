@@ -65,7 +65,7 @@ export const AreaWiseStockTree: React.FC<AreaWiseStockTreeProps> = ({
         {/* New Record */}
         <button
           onClick={onNewRecord}
-          className="h-8 px-3.5 bg-[#F7AFA8] hover:bg-[#103A20] text-white rounded-md text-[10px] font-extrabold uppercase tracking-wide flex items-center gap-1.5 shadow-sm transition-all active:scale-95 whitespace-nowrap cursor-pointer"
+          className="h-8 px-3.5 bg-[#F7AFA8] hover:bg-[#D94B5A] text-white rounded-md text-[10px] font-extrabold uppercase tracking-wide flex items-center gap-1.5 shadow-sm transition-all active:scale-95 whitespace-nowrap cursor-pointer"
         >
           <Plus className="h-3.5 w-3.5 stroke-[3]" />
           New Opening Record
@@ -134,7 +134,7 @@ export const AreaWiseStockTree: React.FC<AreaWiseStockTreeProps> = ({
       <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden p-4 space-y-3">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between pb-3 border-b border-slate-200 gap-3">
           <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded bg-[#F7AFA8] text-white flex items-center justify-center font-black text-xs">
+            <span className="w-6 h-6 rounded bg-[#D94B5A] text-white flex items-center justify-center font-black text-xs">
               {treeHierarchyMode === 'area_grade' ? '📍' : '🏷️'}
             </span>
             <div>
@@ -157,7 +157,7 @@ export const AreaWiseStockTree: React.FC<AreaWiseStockTreeProps> = ({
                 onClick={() => setTreeHierarchyMode('area_grade')}
                 className={cn(
                   "px-2.5 py-1 rounded text-[9px] font-black uppercase transition-all cursor-pointer",
-                  treeHierarchyMode === 'area_grade' ? "bg-[#F7AFA8] text-white shadow-xs" : "text-slate-600 hover:bg-slate-200"
+                  treeHierarchyMode === 'area_grade' ? "bg-[#D94B5A] text-white shadow-xs" : "text-slate-600 hover:bg-slate-200"
                 )}
               >
                 📍 Area → Grade
@@ -167,7 +167,7 @@ export const AreaWiseStockTree: React.FC<AreaWiseStockTreeProps> = ({
                 onClick={() => setTreeHierarchyMode('grade_area')}
                 className={cn(
                   "px-2.5 py-1 rounded text-[9px] font-black uppercase transition-all cursor-pointer",
-                  treeHierarchyMode === 'grade_area' ? "bg-[#F7AFA8] text-white shadow-xs" : "text-slate-600 hover:bg-slate-200"
+                  treeHierarchyMode === 'grade_area' ? "bg-[#D94B5A] text-white shadow-xs" : "text-slate-600 hover:bg-slate-200"
                 )}
               >
                 🏷️ Grade → Area
@@ -250,7 +250,7 @@ export const AreaWiseStockTree: React.FC<AreaWiseStockTreeProps> = ({
                       className="flex items-center justify-between px-3.5 py-3 bg-slate-50 hover:bg-slate-100 cursor-pointer select-none transition-colors border-b border-slate-200"
                     >
                       <div className="flex items-center gap-2.5">
-                        <span className="w-5 h-5 rounded bg-[#F7AFA8] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                        <span className="w-5 h-5 rounded bg-[#D94B5A] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
                           {isAreaExpanded ? '-' : '+'}
                         </span>
                         <span className="text-xs font-black uppercase text-indigo-950 tracking-wide">
@@ -395,7 +395,7 @@ export const AreaWiseStockTree: React.FC<AreaWiseStockTreeProps> = ({
                       className="flex items-center justify-between px-3.5 py-3 bg-slate-50 hover:bg-slate-100 cursor-pointer select-none transition-colors border-b border-slate-200"
                     >
                       <div className="flex items-center gap-2.5">
-                        <span className="w-5 h-5 rounded bg-[#F7AFA8] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                        <span className="w-5 h-5 rounded bg-[#D94B5A] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
                           {isGradeExpanded ? '-' : '+'}
                         </span>
                         <span className="text-xs font-black uppercase text-indigo-950 tracking-wide">

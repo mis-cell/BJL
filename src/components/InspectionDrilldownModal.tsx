@@ -305,10 +305,10 @@ export default function InspectionDrilldownModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 overflow-y-auto font-sans">
-      <div className="bg-[#FAF7F0] border-2 border-[#F7AFA8] rounded-2xl shadow-2xl w-full max-w-7xl max-h-[94vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-[#FDE7E6] border-2 border-[#F7AFA8] rounded-2xl shadow-2xl w-full max-w-7xl max-h-[94vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Modal Top Header */}
-        <div className="bg-[#F7AFA8] text-white p-3.5 sm:p-4 flex items-center justify-between border-b border-[#D6CAA8] shrink-0">
+        <div className="bg-[#D94B5A] text-white p-3.5 sm:p-4 flex items-center justify-between border-b border-[#FBCFCB] shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-white/10 text-emerald-300">
               <Layers className="w-5 h-5" />
@@ -385,7 +385,7 @@ export default function InspectionDrilldownModal({
             className={cn(
               "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
               activeTab === 'pipeline'
-                ? "bg-[#FAF7F0] text-[#F7AFA8] border-[#FAF7F0] shadow-sm font-extrabold"
+                ? "bg-[#FDE7E6] text-[#D94B5A] border-[#FDE7E6] shadow-sm font-extrabold"
                 : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
             )}
           >
@@ -404,7 +404,7 @@ export default function InspectionDrilldownModal({
             className={cn(
               "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
               activeTab === 'pending_fmr'
-                ? "bg-[#FAF7F0] text-[#F7AFA8] border-[#FAF7F0] shadow-sm font-extrabold"
+                ? "bg-[#FDE7E6] text-[#D94B5A] border-[#FDE7E6] shadow-sm font-extrabold"
                 : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
             )}
           >
@@ -424,7 +424,7 @@ export default function InspectionDrilldownModal({
             className={cn(
               "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
               activeTab === 'pending_insp'
-                ? "bg-[#FAF7F0] text-[#F7AFA8] border-[#FAF7F0] shadow-sm font-extrabold"
+                ? "bg-[#FDE7E6] text-[#D94B5A] border-[#FDE7E6] shadow-sm font-extrabold"
                 : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
             )}
           >
@@ -444,7 +444,7 @@ export default function InspectionDrilldownModal({
             className={cn(
               "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
               activeTab === 'pending_paym'
-                ? "bg-[#FAF7F0] text-[#F7AFA8] border-[#FAF7F0] shadow-sm font-extrabold"
+                ? "bg-[#FDE7E6] text-[#D94B5A] border-[#FDE7E6] shadow-sm font-extrabold"
                 : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
             )}
           >
@@ -464,7 +464,7 @@ export default function InspectionDrilldownModal({
             className={cn(
               "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
               activeTab === 'pending_sett'
-                ? "bg-[#FAF7F0] text-[#F7AFA8] border-[#FAF7F0] shadow-sm font-extrabold"
+                ? "bg-[#FDE7E6] text-[#D94B5A] border-[#FDE7E6] shadow-sm font-extrabold"
                 : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
             )}
           >
@@ -486,7 +486,7 @@ export default function InspectionDrilldownModal({
             className={cn(
               "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
               activeTab === 'inspections'
-                ? "bg-[#FAF7F0] text-[#F7AFA8] border-[#FAF7F0] shadow-sm font-extrabold"
+                ? "bg-[#FDE7E6] text-[#D94B5A] border-[#FDE7E6] shadow-sm font-extrabold"
                 : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
             )}
           >
@@ -504,7 +504,7 @@ export default function InspectionDrilldownModal({
             className={cn(
               "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
               activeTab === 'payments'
-                ? "bg-[#FAF7F0] text-[#F7AFA8] border-[#FAF7F0] shadow-sm font-extrabold"
+                ? "bg-[#FDE7E6] text-[#D94B5A] border-[#FDE7E6] shadow-sm font-extrabold"
                 : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
             )}
           >
@@ -522,7 +522,7 @@ export default function InspectionDrilldownModal({
             className={cn(
               "px-3 py-2 rounded-t-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border-t border-x whitespace-nowrap shrink-0",
               activeTab === 'settlements'
-                ? "bg-[#FAF7F0] text-[#F7AFA8] border-[#FAF7F0] shadow-sm font-extrabold"
+                ? "bg-[#FDE7E6] text-[#D94B5A] border-[#FDE7E6] shadow-sm font-extrabold"
                 : "bg-white/10 text-white/80 hover:bg-white/20 border-transparent"
             )}
           >
@@ -538,7 +538,7 @@ export default function InspectionDrilldownModal({
 
         {/* PENDING STAGE BANNER & STATS */}
         {isPendingTab && (
-          <div className="bg-white border-b border-[#D6CAA8] px-4 py-2.5 grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0 text-xs font-sans shadow-2xs">
+          <div className="bg-white border-b border-[#FBCFCB] px-4 py-2.5 grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0 text-xs font-sans shadow-2xs">
             <div className="bg-amber-50/60 border border-amber-200/80 p-2.5 rounded-xl">
               <span className="text-[9.5px] text-amber-900 font-bold block uppercase tracking-wider">Pending P.O. Numbers</span>
               <div className="flex items-baseline gap-1.5 mt-0.5">
@@ -547,15 +547,15 @@ export default function InspectionDrilldownModal({
               </div>
             </div>
 
-            <div className="bg-[#FAF7F0] border border-[#EAE2D2] p-2.5 rounded-xl">
+            <div className="bg-[#FDE7E6] border border-[#FBCFCB] p-2.5 rounded-xl">
               <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Pending Gate / MR Lots</span>
               <div className="flex items-baseline gap-1.5 mt-0.5">
-                <span className="font-mono font-black text-[#F7AFA8] text-base">{pendingStats.totalRecords}</span>
+                <span className="font-mono font-black text-[#D94B5A] text-base">{pendingStats.totalRecords}</span>
                 <span className="text-[10px] font-semibold text-slate-600">MR Records</span>
               </div>
             </div>
 
-            <div className="bg-[#FAF7F0] border border-[#EAE2D2] p-2.5 rounded-xl">
+            <div className="bg-[#FDE7E6] border border-[#FBCFCB] p-2.5 rounded-xl">
               <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Pending Volume</span>
               <div className="flex items-baseline gap-1.5 mt-0.5">
                 <span className="font-mono font-black text-emerald-900 text-base">{pendingStats.totalBales.toLocaleString()}</span>
@@ -563,7 +563,7 @@ export default function InspectionDrilldownModal({
               </div>
             </div>
 
-            <div className="bg-[#FAF7F0] border border-[#EAE2D2] p-2.5 rounded-xl">
+            <div className="bg-[#FDE7E6] border border-[#FBCFCB] p-2.5 rounded-xl">
               <span className="text-[9.5px] text-slate-500 font-bold block uppercase tracking-wider">Estimated Value</span>
               <div className="flex items-baseline gap-1.5 mt-0.5">
                 <span className="font-mono font-black text-indigo-950 text-base">
@@ -575,7 +575,7 @@ export default function InspectionDrilldownModal({
         )}
 
         {/* Toolbar: Search and Filters */}
-        <div className="bg-[#FAF7F0] p-3 border-b border-[#EAE2D2] flex flex-wrap items-center justify-between gap-2.5 shrink-0 text-xs">
+        <div className="bg-[#FDE7E6] p-3 border-b border-[#FBCFCB] flex flex-wrap items-center justify-between gap-2.5 shrink-0 text-xs">
           <div className="flex items-center gap-2 flex-1 min-w-[240px] max-w-md">
             <div className="relative w-full">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -584,7 +584,7 @@ export default function InspectionDrilldownModal({
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 placeholder={isPendingTab ? "Search by P.O. No, MR No, Supplier, Broker, Lorry..." : "Search records..."}
-                className="w-full pl-9 pr-3 py-1.5 bg-white border border-[#D6CAA8] rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#F7AFA8] shadow-2xs font-medium"
+                className="w-full pl-9 pr-3 py-1.5 bg-white border border-[#FBCFCB] rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#F7AFA8] shadow-2xs font-medium"
               />
             </div>
             {searchTerm && (
@@ -603,7 +603,7 @@ export default function InspectionDrilldownModal({
               <select
                 value={stageFilter}
                 onChange={(e) => { setStageFilter(e.target.value); setCurrentPage(1); }}
-                className="px-2.5 py-1.5 bg-white border border-[#D6CAA8] rounded-xl text-xs font-bold text-slate-800 shadow-2xs cursor-pointer focus:outline-none"
+                className="px-2.5 py-1.5 bg-white border border-[#FBCFCB] rounded-xl text-xs font-bold text-slate-800 shadow-2xs cursor-pointer focus:outline-none"
               >
                 <option value="ALL">All 4 Pending Stages</option>
                 <option value="MR_TO_FMR">1. MR ➔ Final MR (Below FMR)</option>
@@ -633,7 +633,7 @@ export default function InspectionDrilldownModal({
           {isPendingTab ? (
             paginatedPending.length > 0 ? (
               <table className="w-full text-left text-xs border-collapse font-sans">
-                <thead className="bg-[#F7AFA8] text-white sticky top-0 text-[10.5px] font-black uppercase tracking-wider z-10">
+                <thead className="bg-[#D94B5A] text-white sticky top-0 text-[10.5px] font-black uppercase tracking-wider z-10">
                   <tr>
                     <th className="p-2.5 border-r border-emerald-900/60">P.O. Number</th>
                     <th className="p-2.5 border-r border-emerald-900/60">Stage & Pipeline Gap</th>
@@ -740,7 +740,7 @@ export default function InspectionDrilldownModal({
             /* 2. COMPLETED INSPECTIONS TABLE */
             paginatedInspections.length > 0 ? (
               <table className="w-full text-left text-xs border-collapse font-sans">
-                <thead className="bg-[#F7AFA8] text-white sticky top-0 text-[10.5px] font-black uppercase tracking-wider z-10">
+                <thead className="bg-[#D94B5A] text-white sticky top-0 text-[10.5px] font-black uppercase tracking-wider z-10">
                   <tr>
                     <th className="p-2.5 border-r border-emerald-900/60">MR No</th>
                     <th className="p-2.5 border-r border-emerald-900/60">Date</th>
@@ -801,7 +801,7 @@ export default function InspectionDrilldownModal({
             /* 3. PAYMENTS TABLE */
             paginatedPayments.length > 0 ? (
               <table className="w-full text-left text-xs border-collapse font-sans">
-                <thead className="bg-[#F7AFA8] text-white sticky top-0 text-[10.5px] font-black uppercase tracking-wider z-10">
+                <thead className="bg-[#D94B5A] text-white sticky top-0 text-[10.5px] font-black uppercase tracking-wider z-10">
                   <tr>
                     <th className="p-2.5 border-r border-emerald-900/60">Voucher No</th>
                     <th className="p-2.5 border-r border-emerald-900/60">Date</th>
@@ -841,7 +841,7 @@ export default function InspectionDrilldownModal({
             /* 4. SETTLEMENTS TABLE */
             paginatedSettlements.length > 0 ? (
               <table className="w-full text-left text-xs border-collapse font-sans">
-                <thead className="bg-[#F7AFA8] text-white sticky top-0 text-[10.5px] font-black uppercase tracking-wider z-10">
+                <thead className="bg-[#D94B5A] text-white sticky top-0 text-[10.5px] font-black uppercase tracking-wider z-10">
                   <tr>
                     <th className="p-2.5 border-r border-emerald-900/60">MR No</th>
                     <th className="p-2.5 border-r border-emerald-900/60">Audit / Sett Date</th>
@@ -883,7 +883,7 @@ export default function InspectionDrilldownModal({
         </div>
 
         {/* Pagination & Footer */}
-        <div className="bg-[#FAF7F0] p-3 border-t border-[#D6CAA8] flex flex-wrap items-center justify-between gap-2 shrink-0 text-xs">
+        <div className="bg-[#FDE7E6] p-3 border-t border-[#FBCFCB] flex flex-wrap items-center justify-between gap-2 shrink-0 text-xs">
           <div className="text-slate-600 font-semibold text-xs">
             Showing <span className="font-bold text-slate-900">{Math.min(activeCount, (safePage - 1) * pageSize + 1)}</span> to <span className="font-bold text-slate-900">{Math.min(activeCount, safePage * pageSize)}</span> of <span className="font-bold text-slate-900">{activeCount}</span> records
           </div>
@@ -893,7 +893,7 @@ export default function InspectionDrilldownModal({
             <select
               value={pageSize}
               onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-              className="bg-white border border-[#D6CAA8] rounded-lg px-2 py-1 text-xs font-bold text-slate-800"
+              className="bg-white border border-[#FBCFCB] rounded-lg px-2 py-1 text-xs font-bold text-slate-800"
             >
               <option value={15}>15</option>
               <option value={30}>30</option>
@@ -904,17 +904,17 @@ export default function InspectionDrilldownModal({
             <button
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={safePage <= 1}
-              className="px-2.5 py-1 bg-white border border-[#D6CAA8] rounded-lg font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 cursor-pointer shadow-2xs"
+              className="px-2.5 py-1 bg-white border border-[#FBCFCB] rounded-lg font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 cursor-pointer shadow-2xs"
             >
               Previous
             </button>
-            <span className="font-mono font-bold text-xs text-[#F7AFA8]">
+            <span className="font-mono font-bold text-xs text-[#D94B5A]">
               {safePage} / {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={safePage >= totalPages}
-              className="px-2.5 py-1 bg-white border border-[#D6CAA8] rounded-lg font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 cursor-pointer shadow-2xs"
+              className="px-2.5 py-1 bg-white border border-[#FBCFCB] rounded-lg font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 cursor-pointer shadow-2xs"
             >
               Next
             </button>

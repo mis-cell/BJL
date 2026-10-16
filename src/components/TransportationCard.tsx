@@ -38,7 +38,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             value={formData.no_of_lorries ?? 1}
             onChange={onChange}
             required
-            className="bg-[#FFECEC] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs font-mono"
+            className="bg-[#FDE7E6] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs font-mono"
           />
         </div>
         {/* Unit Type - SEARCHABLE DROPDOWN */}
@@ -121,7 +121,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             required={['BALES', 'BALE', 'DRUM', 'DRUMS'].includes(
               String(formData.unit_type || '').toUpperCase().trim()
             )}
-            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs font-mono"
+            className="bg-white border border-[#FBCFCB] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs font-mono"
           />
         </div>
 
@@ -143,7 +143,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             placeholder="0"
             value={formData.total_unit !== undefined && formData.total_unit !== null ? formData.total_unit : ''}
             onChange={onChange}
-            className="bg-[#EAF4FF] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 text-right outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono"
+            className="bg-[#FDE7E6] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 text-right outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono"
           />
         </div>
 
@@ -164,7 +164,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             required={['LOOSE', 'LOOSES'].includes(
               String(formData.unit_type || '').toUpperCase().trim()
             )}
-            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs font-mono"
+            className="bg-white border border-[#FBCFCB] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs font-mono"
           />
         </div>
 
@@ -183,7 +183,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             placeholder="e.g. 10"
             value={formData.total_wt_in_ton ?? 0}
             onChange={onChange}
-            className="bg-[#EAF4FF] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 text-right outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono"
+            className="bg-[#FDE7E6] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 text-right outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono"
           />
         </div>
       </div>

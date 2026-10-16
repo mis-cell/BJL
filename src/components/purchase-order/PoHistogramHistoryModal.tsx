@@ -1003,11 +1003,11 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
   return createPortal(
     <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
       <div 
-        className="bg-[#FAF7F0] border-2 border-[#D6CAA8] w-full max-w-[1600px] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-slate-800 animate-in zoom-in-95 duration-150"
+        className="bg-[#FDE7E6] border-2 border-[#FBCFCB] w-full max-w-[1600px] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-slate-800 animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 1. MODAL HEADER BANNER */}
-        <div className="bg-gradient-to-r from-[#F7AFA8] via-[#2A4426] to-[#F7AFA8] px-3 py-2 text-white flex flex-wrap items-center justify-between gap-2 border-b border-[#D6CAA8] shrink-0">
+        <div className="bg-gradient-to-r from-[#F7AFA8] via-[#D94B5A] to-[#F7AFA8] px-3 py-2 text-white flex flex-wrap items-center justify-between gap-2 border-b border-[#FBCFCB] shrink-0">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-white/10 text-emerald-300 border border-white/10 shadow-xs">
               <BarChart3 className="w-5 h-5" />
@@ -1098,10 +1098,10 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         </div>
 
         {/* 2. TOP P.O. SUMMARY CARD & VISUAL ISSUE CHECKLIST */}
-        <div className="bg-white border-b border-[#D6CAA8] px-3 py-2 shadow-2xs shrink-0 space-y-2">
+        <div className="bg-white border-b border-[#FBCFCB] px-3 py-2 shadow-2xs shrink-0 space-y-2">
 
           {/* Main Key-Value Metadata Grid */}
-          <div className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg px-2.5 py-1.5 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-x-2 gap-y-1.5 text-xs">
+          <div className="bg-[#FDE7E6] border border-[#FBCFCB] rounded-lg px-2.5 py-1.5 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-x-2 gap-y-1.5 text-xs">
             <div>
               <span className="text-[9px] font-bold uppercase text-slate-400 block">P.O. No.:</span>
               <strong className="text-slate-900 font-mono text-[11px]">{po.po_no}</strong>
@@ -1268,9 +1268,9 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
             <div className="space-y-6">
               
               {/* STAGE 1: SAUDA CHECK POINT */}
-              <div className="bg-white border-2 border-[#D6CAA8] rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="bg-white border-2 border-[#FBCFCB] rounded-2xl p-4 shadow-xs space-y-3">
                 <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="text-sm font-serif font-black text-[#F7AFA8] flex items-center gap-2">
+                  <h3 className="text-sm font-serif font-black text-[#D94B5A] flex items-center gap-2">
                     <FileText className="w-4 h-4 text-emerald-700" />
                     <span>Stage 1: Sauda Check Point Contract Master</span>
                   </h3>
@@ -1300,9 +1300,9 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
               </div>
 
               {/* STAGE 2: TEMPORARY ARRIVAL (Per Linked MR) */}
-              <div className="bg-white border-2 border-[#D6CAA8] rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="bg-white border-2 border-[#FBCFCB] rounded-2xl p-4 shadow-xs space-y-3">
                 <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="text-sm font-serif font-black text-[#F7AFA8] flex items-center gap-2">
+                  <h3 className="text-sm font-serif font-black text-[#D94B5A] flex items-center gap-2">
                     <Truck className="w-4 h-4 text-emerald-700" />
                     <span>Stage 2: Temporary Arrival Records ({dbArrivals.length} Arrivals Linked)</span>
                   </h3>
@@ -1318,9 +1318,9 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                 ) : (
                   <div className="space-y-4">
                     {dbArrivals.map((arr, idx) => (
-                      <div key={arr.id || idx} className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl p-3.5 space-y-3">
-                        <div className="flex items-center justify-between border-b border-[#D6CAA8] pb-1.5">
-                          <span className="text-xs font-mono font-black text-[#F7AFA8] flex items-center gap-1.5">
+                      <div key={arr.id || idx} className="bg-[#FDE7E6] border border-[#FBCFCB] rounded-xl p-3.5 space-y-3">
+                        <div className="flex items-center justify-between border-b border-[#FBCFCB] pb-1.5">
+                          <span className="text-xs font-mono font-black text-[#D94B5A] flex items-center gap-1.5">
                             <Tag className="w-3.5 h-3.5 text-emerald-700" />
                             <span>M.R. No: {arr.temporary_arrival_no || arr.mr_no || arr.amad_no || `Arrival #${idx + 1}`}</span>
                           </span>
@@ -1368,9 +1368,9 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
               </div>
 
               {/* STAGE 3: MILL INSPECTION */}
-              <div className="bg-white border-2 border-[#D6CAA8] rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="bg-white border-2 border-[#FBCFCB] rounded-2xl p-4 shadow-xs space-y-3">
                 <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="text-sm font-serif font-black text-[#F7AFA8] flex items-center gap-2">
+                  <h3 className="text-sm font-serif font-black text-[#D94B5A] flex items-center gap-2">
                     <Droplets className="w-4 h-4 text-emerald-700" />
                     <span>Stage 3: Mill Inspection & Quality Audit ({dbInspections.length} Inspections Linked)</span>
                   </h3>
@@ -1383,9 +1383,9 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                 ) : (
                   <div className="space-y-4">
                     {dbInspections.map((insp, idx) => (
-                      <div key={insp.id || idx} className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl p-3.5 space-y-3">
-                        <div className="flex items-center justify-between border-b border-[#D6CAA8] pb-1.5">
-                          <span className="text-xs font-mono font-black text-[#F7AFA8]">
+                      <div key={insp.id || idx} className="bg-[#FDE7E6] border border-[#FBCFCB] rounded-xl p-3.5 space-y-3">
+                        <div className="flex items-center justify-between border-b border-[#FBCFCB] pb-1.5">
+                          <span className="text-xs font-mono font-black text-[#D94B5A]">
                             M.R. No: {insp.mr_no || insp.arrival_no || `Inspection #${idx + 1}`}
                           </span>
                           <span className="text-[11px] font-medium text-slate-600">
@@ -1414,9 +1414,9 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
               </div>
 
               {/* STAGE 4: SATTA PRICE MISMATCH */}
-              <div className="bg-white border-2 border-[#D6CAA8] rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="bg-white border-2 border-[#FBCFCB] rounded-2xl p-4 shadow-xs space-y-3">
                 <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="text-sm font-serif font-black text-[#F7AFA8] flex items-center gap-2">
+                  <h3 className="text-sm font-serif font-black text-[#D94B5A] flex items-center gap-2">
                     <Coins className="w-4 h-4 text-emerald-700" />
                     <span>Stage 4: Satta Price Mismatch Verification</span>
                   </h3>
@@ -1432,9 +1432,9 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
               </div>
 
               {/* STAGE 5: MATERIAL MISMATCH */}
-              <div className="bg-white border-2 border-[#D6CAA8] rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="bg-white border-2 border-[#FBCFCB] rounded-2xl p-4 shadow-xs space-y-3">
                 <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="text-sm font-serif font-black text-[#F7AFA8] flex items-center gap-2">
+                  <h3 className="text-sm font-serif font-black text-[#D94B5A] flex items-center gap-2">
                     <ShieldAlert className="w-4 h-4 text-emerald-700" />
                     <span>Stage 5: Material Mismatch Board (Base Mode)</span>
                   </h3>
@@ -1450,9 +1450,9 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
               </div>
 
               {/* STAGE 6: PAYMENT OPERATIONS */}
-              <div className="bg-white border-2 border-[#D6CAA8] rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="bg-white border-2 border-[#FBCFCB] rounded-2xl p-4 shadow-xs space-y-3">
                 <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="text-sm font-serif font-black text-[#F7AFA8] flex items-center gap-2">
+                  <h3 className="text-sm font-serif font-black text-[#D94B5A] flex items-center gap-2">
                     <Coins className="w-4 h-4 text-emerald-700" />
                     <span>Stage 6: Payment Operations ({dbPayments.length} Vouchers)</span>
                   </h3>
@@ -1465,7 +1465,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                 ) : (
                   <div className="space-y-3">
                     {dbPayments.map((pay, idx) => (
-                      <div key={pay.id || idx} className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl p-3 text-[11px] grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      <div key={pay.id || idx} className="bg-[#FDE7E6] border border-[#FBCFCB] rounded-xl p-3 text-[11px] grid grid-cols-2 sm:grid-cols-5 gap-2">
                         <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Voucher No:</span> <strong className="text-slate-800 font-mono">{pay.voucher_no || `VOUCHER-${idx + 1}`}</strong></div>
                         <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Payment Date:</span> <strong className="text-slate-800">{pay.payment_date || pay.date || '—'}</strong></div>
                         <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Party / Supplier:</span> <strong className="text-slate-800">{pay.party_name || pay.supplier_name || po.supplier || '—'}</strong></div>
@@ -1478,9 +1478,9 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
               </div>
 
               {/* STAGE 7: SETTLEMENT */}
-              <div className="bg-white border-2 border-[#D6CAA8] rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="bg-white border-2 border-[#FBCFCB] rounded-2xl p-4 shadow-xs space-y-3">
                 <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="text-sm font-serif font-black text-[#F7AFA8] flex items-center gap-2">
+                  <h3 className="text-sm font-serif font-black text-[#D94B5A] flex items-center gap-2">
                     <Scale className="w-4 h-4 text-emerald-700" />
                     <span>Stage 7: Settlement Master & Final Deduction Ledger ({dbSettlements.length} MR Settled)</span>
                   </h3>
@@ -1493,7 +1493,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                 ) : (
                   <div className="space-y-3">
                     {dbSettlements.map((sett, idx) => (
-                      <div key={sett.id || idx} className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl p-3 text-[11px] grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      <div key={sett.id || idx} className="bg-[#FDE7E6] border border-[#FBCFCB] rounded-xl p-3 text-[11px] grid grid-cols-2 sm:grid-cols-5 gap-2">
                         <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Settlement MR No:</span> <strong className="text-slate-800 font-mono">{sett.mr_no || `SETTLEMENT-${idx + 1}`}</strong></div>
                         <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Settled Weight (MT):</span> <strong className="text-slate-800 font-mono">{parseFloat(sett.settled_weight_mt || 0).toFixed(3)} MT</strong></div>
                         <div><span className="text-slate-400 block text-[9.5px] uppercase font-bold">Quality Deductions:</span> <strong className="text-rose-700 font-mono">₹{parseFloat(sett.total_deduction_amount || 0).toLocaleString()}</strong></div>
@@ -1509,8 +1509,8 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
           ) : activeTab === 'histogram' ? (
             /* TAB: LIFECYCLE HISTOGRAM & TIMELINE */
             <div className="space-y-4">
-              <div className="bg-white border border-[#D6CAA8] rounded-xl p-4 shadow-xs">
-                <h3 className="text-sm font-serif font-black text-[#F7AFA8] mb-2 flex items-center gap-2">
+              <div className="bg-white border border-[#FBCFCB] rounded-xl p-4 shadow-xs">
+                <h3 className="text-sm font-serif font-black text-[#D94B5A] mb-2 flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-emerald-700" />
                   <span>Turnaround Days & Progress Timeline (Histogram)</span>
                 </h3>
@@ -1524,16 +1524,16 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                     { title: '4. Payment', date: dbPayments[0]?.payment_date || dbPayments[0]?.created_at?.slice(0, 10) || 'Pending', icon: Coins, status: dbPayments.length > 0 ? 'complete' : 'pending', val: `₹${dbPayments.reduce((s, p) => s + (parseFloat(p.amount_paid || p.payable_net_amount || 0) || 0), 0).toLocaleString()}` },
                     { title: '5. Settlement', date: dbSettlements[0]?.created_at?.slice(0, 10) || 'Pending', icon: Scale, status: dbSettlements.length > 0 ? 'complete' : 'pending', val: dbSettlements.length > 0 ? 'Audited' : 'Pending' }
                   ].map((step, idx) => (
-                    <div key={step.title} className="bg-[#FAF7F0] border border-[#D6CAA8] rounded-xl p-3 flex flex-col justify-between text-center relative">
+                    <div key={step.title} className="bg-[#FDE7E6] border border-[#FBCFCB] rounded-xl p-3 flex flex-col justify-between text-center relative">
                       <div className="flex justify-center mb-1">
                         <div className={cn(
                           "w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shadow-xs",
-                          step.status === 'complete' ? "bg-[#F7AFA8] text-white" : "bg-slate-200 text-slate-500"
+                          step.status === 'complete' ? "bg-[#D94B5A] text-white" : "bg-slate-200 text-slate-500"
                         )}>
                           <step.icon className="w-4 h-4" />
                         </div>
                       </div>
-                      <span className="text-xs font-bold text-[#F7AFA8]">{step.title}</span>
+                      <span className="text-xs font-bold text-[#D94B5A]">{step.title}</span>
                       <span className="text-[10px] font-mono text-emerald-800 font-extrabold my-1">{step.val}</span>
                       <span className="text-[9.5px] font-sans text-slate-500">{step.date}</span>
                     </div>
@@ -1544,9 +1544,9 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
           ) : activeTab === 'mismatch_audit' ? (
             /* TAB: RECORDED MISMATCH CASES BOARD */
             <div className="space-y-4">
-              <div className="bg-white border border-[#D6CAA8] rounded-xl p-4 shadow-xs space-y-3">
+              <div className="bg-white border border-[#FBCFCB] rounded-xl p-4 shadow-xs space-y-3">
                 <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="text-sm font-serif font-black text-[#F7AFA8] flex items-center gap-2">
+                  <h3 className="text-sm font-serif font-black text-[#D94B5A] flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-rose-600" />
                     <span>Database Mismatch Cases & Approval Audit Log</span>
                   </h3>
@@ -1562,7 +1562,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left border-collapse">
-                      <thead className="bg-[#FAF7F0] border-b text-[10px] font-bold text-slate-600 uppercase">
+                      <thead className="bg-[#FDE7E6] border-b text-[10px] font-bold text-slate-600 uppercase">
                         <tr>
                           <th className="p-2 border-r">Field</th>
                           <th className="p-2 border-r">Expected Value</th>
@@ -1576,7 +1576,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                       <tbody className="divide-y divide-slate-100">
                         {[...dbMismatches, ...dbSattaMismatches].map((m, idx) => (
                           <tr key={m.id || idx} className="hover:bg-amber-50/50 font-sans">
-                            <td className="p-2 font-bold text-[#F7AFA8] border-r">{m.field_name || m.mismatch_type || 'General'}</td>
+                            <td className="p-2 font-bold text-[#D94B5A] border-r">{m.field_name || m.mismatch_type || 'General'}</td>
                             <td className="p-2 font-mono text-slate-700 border-r">{m.expected_value || '—'}</td>
                             <td className="p-2 font-mono text-rose-700 font-bold border-r">{m.actual_value || '—'}</td>
                             <td className="p-2 font-mono text-slate-600 border-r">{m.variance || '—'}</td>
@@ -1604,8 +1604,8 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
               
               {/* Multi-MR Filter Pills */}
               {linkedMrs.length > 1 && (
-                <div className="bg-white border border-[#D6CAA8] rounded-xl p-2.5 flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-[#F7AFA8] flex items-center gap-1">
+                <div className="bg-white border border-[#FBCFCB] rounded-xl p-2.5 flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-[#D94B5A] flex items-center gap-1">
                     <Layers className="w-3.5 h-3.5 text-emerald-700" />
                     <span>Compare By M.R.:</span>
                   </span>
@@ -1614,7 +1614,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                     className={cn(
                       "px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
                       selectedMrTab === 'all'
-                        ? "bg-[#F7AFA8] text-white shadow-xs"
+                        ? "bg-[#D94B5A] text-white shadow-xs"
                         : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                     )}
                   >
@@ -1627,7 +1627,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                       className={cn(
                         "px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1",
                         selectedMrTab === mr
-                          ? "bg-[#F7AFA8] text-white shadow-xs"
+                          ? "bg-[#D94B5A] text-white shadow-xs"
                           : "bg-white border border-slate-300 text-slate-700 hover:bg-slate-100"
                       )}
                     >
@@ -1650,7 +1650,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                       "bg-white border-2 rounded-2xl shadow-xs transition-all overflow-hidden",
                       section.mismatchCount > 0
                         ? "border-rose-300 ring-2 ring-rose-500/10"
-                        : "border-[#D6CAA8]"
+                        : "border-[#FBCFCB]"
                     )}
                   >
                     {/* Section Header */}
@@ -1660,7 +1660,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                         "p-3.5 flex items-center justify-between cursor-pointer select-none transition-colors",
                         section.mismatchCount > 0
                           ? "bg-rose-50/70 hover:bg-rose-50"
-                          : "bg-[#FAF7F0] hover:bg-[#F5EFE0]"
+                          : "bg-[#FDE7E6] hover:bg-[#F5EFE0]"
                       )}
                     >
                       <div className="flex items-center gap-2.5">
@@ -1672,7 +1672,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                         </div>
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-sm font-serif font-black text-[#F7AFA8]">
+                            <h3 className="text-sm font-serif font-black text-[#D94B5A]">
                               {section.title}
                             </h3>
                             {section.mismatchCount > 0 ? (
@@ -1710,7 +1710,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs text-left border-collapse">
                             <thead>
-                              <tr className="bg-[#FAF7F0] border-b border-slate-200 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                              <tr className="bg-[#FDE7E6] border-b border-slate-200 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                                 <th className="py-2 px-3 text-left border-r border-slate-200">Field Parameter</th>
                                 <th className="py-2 px-3 text-left border-r border-slate-200">Sauda / Reference Value</th>
                                 <th className="py-2 px-3 text-left border-r border-slate-200">Actual Recorded Value</th>
@@ -1730,7 +1730,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
                                   )}
                                 >
                                   {/* Field Name */}
-                                  <td className="py-2.5 px-3 font-bold text-[#F7AFA8] border-r border-slate-200/60">
+                                  <td className="py-2.5 px-3 font-bold text-[#D94B5A] border-r border-slate-200/60">
                                     <div className="flex items-center gap-1.5">
                                       {field.isCritical && (
                                         <span className="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0" title="Critical Business Field" />
@@ -1805,7 +1805,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
         </div>
 
         {/* 4. MODAL FOOTER ACTION BAR */}
-        <div className="bg-white border-t border-[#D6CAA8] px-2.5 py-1.5 flex items-center justify-between gap-2 shrink-0">
+        <div className="bg-white border-t border-[#FBCFCB] px-2.5 py-1.5 flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center text-[10px] text-slate-500">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
           </div>

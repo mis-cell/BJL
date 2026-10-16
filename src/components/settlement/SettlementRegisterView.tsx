@@ -344,7 +344,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
         </div>
 
         {/* Dashboard Controls */}
-        <div className="flex bg-[#F7AFA8] p-3 border border-[#103A20] rounded-lg gap-3 items-center flex-wrap shadow-md">
+        <div className="flex bg-[#F7AFA8] p-3 border border-[#D94B5A] rounded-lg gap-3 items-center flex-wrap shadow-md">
           {/* SEARCH */}
           <div className="flex bg-white border border-white/30 rounded-md flex-1 min-w-[280px] overflow-hidden shadow-sm">
             <input
@@ -359,12 +359,12 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
                 setCurrentPage(1);
               }}
             />
-            <button className="bg-[#103A20] px-3 border-l border-[#F7AFA8] hover:bg-[#0b2b18] transition-colors cursor-pointer" type="button">
+            <button className="bg-[#D94B5A] px-3 border-l border-[#F7AFA8] hover:bg-[#0b2b18] transition-colors cursor-pointer" type="button">
               <Search className="h-4 w-4 text-white" />
             </button>
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <div className="flex items-center gap-1.5 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-2.5 py-1.5">
+            <div className="flex items-center gap-1.5 bg-[#FDE7E6] border border-[#FBCFCB] rounded-lg px-2.5 py-1.5">
               
               <span className="text-[10px] font-bold text-slate-500 uppercase">
                 From:
@@ -434,7 +434,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
             <button
               onClick={onRefresh}
               type="button"
-              className="bg-[#103A20] hover:bg-[#0b2b18] text-white border border-white/30 rounded-md px-3.5 py-2 text-[10px] uppercase font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+              className="bg-[#D94B5A] hover:bg-[#0b2b18] text-white border border-white/30 rounded-md px-3.5 py-2 text-[10px] uppercase font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait"
               disabled={loading}
             >
               <RefreshCcw

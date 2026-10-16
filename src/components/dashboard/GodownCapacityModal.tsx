@@ -30,24 +30,24 @@ export default function GodownCapacityModal({
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#d4d0c8] border-2 border-white shadow-[4px_4px_16px_rgba(0,0,0,0.45),inset_1.5px_1.5px_0px_white] w-full max-w-4xl flex flex-col rounded shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 h-[85vh]">
+      <div className="bg-[#FBCFCB] border-2 border-white shadow-[4px_4px_16px_rgba(0,0,0,0.45),inset_1.5px_1.5px_0px_white] w-full max-w-4xl flex flex-col rounded shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 h-[85vh]">
         
         {/* Title Bar Windows 95 style */}
-        <div className="bg-[#000080] text-white px-2.5 py-1.5 flex justify-between items-center ">
+        <div className="bg-[#D94B5A] text-white px-2.5 py-1.5 flex justify-between items-center ">
           <div className="flex items-center gap-1.5 font-bold text-xs font-sans tracking-wide">
             <Container className="h-4 w-4 text-slate-200" />
             <span>GODOWN CAPACITY UTILIZATION SUMMARY REGISTER</span>
           </div>
           <button 
             onClick={handleClose}
-            className="bg-[#d4d0c8] text-black px-1.5 py-0.5 border border-white hover:bg-red-650 hover:text-white transition-colors active:shadow-[inset_1px_1px_0_1px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer font-extrabold text-[10px]"
+            className="bg-[#FBCFCB] text-black px-1.5 py-0.5 border border-white hover:bg-red-650 hover:text-white transition-colors active:shadow-[inset_1px_1px_0_1px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer font-extrabold text-[10px]"
           >
             ✕
           </button>
         </div>
 
         {/* Upper Control Bar */}
-        <div className="bg-[#c0c0c0] p-3 border-b border-gray-400 border border-black/25 flex justify-between items-center p-2 gap-2 flex-wrap">
+        <div className="bg-[#FBCFCB] p-3 border-b border-gray-400 border border-black/25 flex justify-between items-center p-2 gap-2 flex-wrap">
           <div className="flex gap-4 flex-wrap">
             <div className="bg-white px-3 py-1 border border-gray-400 rounded shadow-sm shadow-inner min-w-[110px]">
               <span className="text-[8px] font-bold text-gray-500 uppercase block leading-none mb-0.5">Total Owned Nodes</span>
@@ -167,7 +167,7 @@ export default function GodownCapacityModal({
 
                     <div className="border border-slate-350 rounded bg-white overflow-x-auto shadow-sm">
                       <table className="w-full text-left text-[9px] border-collapse min-w-[450px]">
-                        <thead className="bg-[#c0c0c0] border-b border-slate-400 uppercase text-slate-800 font-black italic font-mono size-fit">
+                        <thead className="bg-[#FBCFCB] border-b border-slate-400 uppercase text-slate-800 font-black italic font-mono size-fit">
                           <tr className="h-7 border-b border-[#808080]/30 text-[9px]">
                             <th className="px-3 border-r border-[#808080]/35 uppercase">Grade Component</th>
                             <th className="px-3 text-right border-r border-[#808080]/35 uppercase">Bales Qty</th>
@@ -222,7 +222,7 @@ export default function GodownCapacityModal({
         </div>
 
         {/* Popup Footer */}
-        <div className="bg-[#c0c0c0] p-2 border-t border-slate-400 flex justify-end gap-1.5 ">
+        <div className="bg-[#FBCFCB] p-2 border-t border-slate-400 flex justify-end gap-1.5 ">
           <button 
             onClick={handleClose}
             className="bg-indigo-900 hover:bg-indigo-950 text-white font-extrabold uppercase tracking-wider text-[10px] px-6 h-7 border border-white shadow-[1px_1px_0_0_black] cursor-pointer"

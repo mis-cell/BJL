@@ -534,7 +534,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
     >
       {/* FILTER TOPBAR BAR */}
       
-      <div className="bg-gradient-to-r from-[#80202C] via-[#F7AFA8] to-[#F7AFA8] p-4 rounded-xl border border-[#FBCFCB] shadow-md flex flex-wrap items-center justify-between gap-4 mb-4">
+      <div className="bg-gradient-to-r from-[#D94B5A] via-[#F7AFA8] to-[#F7AFA8] p-4 rounded-xl border border-[#FBCFCB] shadow-md flex flex-wrap items-center justify-between gap-4 mb-4">
 
         <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
 
@@ -543,7 +543,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             {/* Year Dropdown */}
             <div className="flex flex-col min-w-[110px]">
 
-              <label className="text-[12px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
+              <label className="text-[12px] font-bold text-[#FDE7E6] uppercase tracking-wider mb-1">
                 Year
               </label>
 
@@ -553,7 +553,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
     setSelectedYear(Number(e.target.value));
     setSelectedMonth(null);
   }}
-  className="border border-[#b9ceb1] rounded-lg px-2 py-1.5 bg-[#dce8d6] text-xs font-semibold text-[#244b2c] outline-none focus:ring-2 focus:ring-[#174c2c]/40 focus:border-[#174c2c] transition-all"
+  className="border border-[#b9ceb1] rounded-lg px-2 py-1.5 bg-[#dce8d6] text-xs font-semibold text-[#244b2c] outline-none focus:ring-2 focus:ring-[#D94B5A]/40 focus:border-[#D94B5A] transition-all"
 >
                 {Array.from({ length: 10 }, (_, index) => 2026 + index).map((year) => (
                   <option key={year} value={year}>
@@ -568,7 +568,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             {/* Date Range */}
             <div className="flex flex-col min-w-[160px]">
 
-              <label className="text-[12px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
+              <label className="text-[12px] font-bold text-[#FDE7E6] uppercase tracking-wider mb-1">
                 Date Range
               </label>
 
@@ -590,14 +590,14 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
           {/* Party Group */}
           <div className="flex flex-col min-w-[180px]">
 
-            <label className="text-[12px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
+            <label className="text-[12px] font-bold text-[#FDE7E6] uppercase tracking-wider mb-1">
               Party Group
             </label>
 
             <select
               value={partyFilter}
               onChange={e => setPartyFilter(e.target.value)}
-              className="border border-[#b9ceb1] bg-[#dce8d6] rounded-lg px-2 py-1.5 text-xs font-bold text-[#244b2c] outline-none focus:ring-2 focus:ring-[#174c2c]/40 focus:border-[#174c2c] transition-all"
+              className="border border-[#b9ceb1] bg-[#dce8d6] rounded-lg px-2 py-1.5 text-xs font-bold text-[#244b2c] outline-none focus:ring-2 focus:ring-[#D94B5A]/40 focus:border-[#D94B5A] transition-all"
             >
               <option value="All">All Parties</option>
 
@@ -615,14 +615,14 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
           {/* Payment Mode */}
           <div className="flex flex-col min-w-[180px]">
 
-            <label className="text-[12px] font-bold text-[#D4AF37] uppercase tracking-wider mb-1">
+            <label className="text-[12px] font-bold text-[#FDE7E6] uppercase tracking-wider mb-1">
               Payment Mode
             </label>
 
             <select
               value={modeFilter}
               onChange={e => setModeFilter(e.target.value)}
-              className="border border-[#b9ceb1] bg-[#dce8d6] rounded-lg px-2 py-1.5 text-xs font-bold text-[#244b2c] outline-none focus:ring-2 focus:ring-[#174c2c]/40 focus:border-[#174c2c] transition-all"
+              className="border border-[#b9ceb1] bg-[#dce8d6] rounded-lg px-2 py-1.5 text-xs font-bold text-[#244b2c] outline-none focus:ring-2 focus:ring-[#D94B5A]/40 focus:border-[#D94B5A] transition-all"
             >
               <option value="All">All (Trade / Invoice Mart / RXIL)</option>
               <option value="1">From Bank</option>
@@ -644,7 +644,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             {/* Export CSV */}
             <button
               onClick={handleExportCsv}
-              className="px-3 py-1.5 text-xs font-bold text-[#F7AFA8] bg-[#D4AF37] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
+              className="px-3 py-1.5 text-xs font-bold text-[#D94B5A] bg-[#FDE7E6] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
             >
               <Download className="w-3.5 h-3.5" />
               Export CSV
@@ -654,7 +654,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             {/* Export PDF */}
             <button
               onClick={handleExportPdf}
-              className="px-3 py-1.5 text-xs font-bold text-[#F7AFA8] bg-[#D4AF37] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
+              className="px-3 py-1.5 text-xs font-bold text-[#D94B5A] bg-[#FDE7E6] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
             >
               <Download className="w-3.5 h-3.5" />
               Export PDF
@@ -665,13 +665,13 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
             <button
               onClick={initPage}
               disabled={loading}
-              className="px-3 py-1.5 text-xs font-bold text-[#F7AFA8] bg-[#D4AF37] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
+              className="px-3 py-1.5 text-xs font-bold text-[#D94B5A] bg-[#FDE7E6] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
               title="Refresh Table"
             >
               <RefreshCcw
                 className={cn(
                   "w-4 h-4",
-                  loading && "animate-spin text-[#174c2c]"
+                  loading && "animate-spin text-[#D94B5A]"
                 )}
               />
             </button>
@@ -694,9 +694,9 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
 
                 {/* Total Advance Paid - Green */}
-                <div className="group relative overflow-hidden bg-gradient-to-br from-[#e8f5e9] to-[#c8e6c9] px-3 py-3 rounded-xl border border-[#a5c9a8] shadow-[0_3px_12px_rgba(23,76,44,0.06)] flex items-center justify-between min-w-0 hover:border-[#174c2c]/40 hover:shadow-[0_8px_20px_rgba(23,76,44,0.12)] transition-all duration-300">
+                <div className="group relative overflow-hidden bg-gradient-to-br from-[#e8f5e9] to-[#c8e6c9] px-3 py-3 rounded-xl border border-[#a5c9a8] shadow-[0_3px_12px_rgba(23,76,44,0.06)] flex items-center justify-between min-w-0 hover:border-[#D94B5A]/40 hover:shadow-[0_8px_20px_rgba(23,76,44,0.12)] transition-all duration-300">
 
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#174c2c] to-[#4d8a5c]" />
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#D94B5A] to-[#4d8a5c]" />
 
                   <div className="min-w-0 pl-1">
                     <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#4f7054] block truncate">
@@ -708,7 +708,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                     </h3>
                   </div>
 
-                  <div className="p-2 bg-[#b7d8ba] rounded-lg text-[#174c2c] shrink-0 group-hover:bg-[#174c2c] group-hover:text-white transition-all duration-300 shadow-sm">
+                  <div className="p-2 bg-[#b7d8ba] rounded-lg text-[#D94B5A] shrink-0 group-hover:bg-[#D94B5A] group-hover:text-white transition-all duration-300 shadow-sm">
                     <FileText className="w-4 h-4" />
                   </div>
 
@@ -812,7 +812,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                       }
                       className={`group relative overflow-hidden px-2 py-3 rounded-xl border text-center min-w-0 cursor-pointer transition-all duration-300 ${
                         selectedMonth === index
-                          ? "border-[#174c2c] bg-gradient-to-br from-[#174c2c] via-[#205b35] to-[#347346] shadow-[0_6px_16px_rgba(23,76,44,0.25)] scale-[1.02]"
+                          ? "border-[#D94B5A] bg-gradient-to-br from-[#D94B5A] via-[#205b35] to-[#347346] shadow-[0_6px_16px_rgba(23,76,44,0.25)] scale-[1.02]"
                           : "border-[#b8cdb0] bg-gradient-to-br from-[#dce8d5] to-[#cbdcc4] hover:from-[#d1e3cb] hover:to-[#bdd2b5] hover:border-[#8eaf8b] hover:shadow-[0_5px_14px_rgba(23,76,44,0.14)]"
                       }`}
                     >
@@ -822,7 +822,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
                         className={`absolute top-0 left-0 right-0 h-0.5 ${
                           selectedMonth === index
                             ? "bg-[#e4c65c]"
-                            : "bg-[#aec5a6] group-hover:bg-[#174c2c]"
+                            : "bg-[#aec5a6] group-hover:bg-[#D94B5A]"
                         }`}
                       />
 

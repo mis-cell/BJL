@@ -95,7 +95,7 @@ export function MaterialIssuePrintSlip({ master, details }: MaterialIssuePrintSl
                 <>
                   <div className="flex">
                     <span className="w-28 shrink-0 font-bold">Invoice / Sell No:</span>
-                    <span className="flex-1 font-black text-[#0b6e54] uppercase">{master.issue_no}</span>
+                    <span className="flex-1 font-black text-[#D94B5A] uppercase">{master.issue_no}</span>
                   </div>
                   <div className="flex pl-4 border-l border-gray-300">
                     <span className="w-24 shrink-0 font-bold">Sale Date:</span>
@@ -127,7 +127,7 @@ export function MaterialIssuePrintSlip({ master, details }: MaterialIssuePrintSl
 
                   <div className="flex col-span-2 mt-1 border-t border-dashed border-gray-300 pt-1">
                     <span className="w-28 shrink-0 font-bold text-slate-500 uppercase text-[9.5px]">Buyer Factory:</span>
-                    <span className="flex-1 uppercase font-black text-[#0b6e54]">{master.department || 'N/A'}</span>
+                    <span className="flex-1 uppercase font-black text-[#D94B5A]">{master.department || 'N/A'}</span>
                   </div>
 
                   <div className="flex col-span-2 mt-0.5">
@@ -256,7 +256,7 @@ export function MaterialIssuePrintSlip({ master, details }: MaterialIssuePrintSl
                       </tr>
                     ))}
                     {/* Totals Summary Row */}
-                    <tr className="bg-emerald-50 border-t border-black font-extrabold text-[#0b6e54]">
+                    <tr className="bg-emerald-50 border-t border-black font-extrabold text-[#D94B5A]">
                       <td colSpan={4} className="px-2 text-right uppercase py-1">TOTAL OUTWARD SUMMARY :</td>
                       <td className="px-1 text-right font-black border-r border-gray-300">{totalBales !== undefined ? totalBales.toFixed(2) : '-'}</td>
                       <td className="px-1 text-right font-black border-r border-gray-300">{(totalWeight / 1000).toFixed(3)}</td>

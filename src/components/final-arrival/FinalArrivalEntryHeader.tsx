@@ -33,7 +33,7 @@ export function FinalArrivalEntryHeader({
   unitList
 }: FinalArrivalEntryHeaderProps) {
   return (
-    <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs p-4 space-y-3.5 text-xs text-slate-800">
+    <div className="bg-white rounded-xl border border-[#FBCFCB] shadow-xs p-4 space-y-3.5 text-xs text-slate-800">
       {/* ROW 1 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 items-end">
         {/* Temporary M.R No */}
@@ -58,7 +58,7 @@ export function FinalArrivalEntryHeader({
             <button
               type="button"
               onClick={() => loadDetailsFromAmad(formData.temporary_arrival_no)}
-              className="bg-[#F7AFA8] hover:bg-[#F7AFA8] text-white px-2.5 h-8 rounded text-xs font-bold transition-colors cursor-pointer shrink-0 border border-[#FBCFCB]"
+              className="bg-[#F7AFA8] hover:bg-[#D94B5A] text-white px-2.5 h-8 rounded text-xs font-bold transition-colors cursor-pointer shrink-0 border border-[#FBCFCB]"
             >
               Pick
             </button>
@@ -99,7 +99,7 @@ export function FinalArrivalEntryHeader({
             type="date"
             value={formData.date || ''}
             onChange={(e) => handleInputChange('date', e.target.value)}
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#D94B5A]"
           />
         </div>
 
@@ -176,7 +176,7 @@ export function FinalArrivalEntryHeader({
             type="date"
             value={formData.po_date || ''}
             onChange={(e) => handleInputChange('po_date', e.target.value)}
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#D94B5A]"
           />
         </div>
 
@@ -186,7 +186,7 @@ export function FinalArrivalEntryHeader({
           <select
             value={formData.jci || 'No'}
             onChange={(e) => handleInputChange('jci', e.target.value)}
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-semibold focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-semibold focus:border-[#D94B5A]"
           >
             <option value="No">No</option>
             <option value="Yes">Yes</option>
@@ -205,7 +205,7 @@ export function FinalArrivalEntryHeader({
             value={formData.challan_supplier || ''}
             onChange={(e) => handleInputChange('challan_supplier', e.target.value.toUpperCase())}
             placeholder="Search / Enter Challan Supplier"
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs uppercase focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs uppercase focus:border-[#D94B5A]"
           />
           <datalist id="challan-supplier-list">
             {suppliers.map((s, idx) => (
@@ -223,7 +223,7 @@ export function FinalArrivalEntryHeader({
             value={formData.supplier || ''}
             onChange={(e) => handleInputChange('supplier', e.target.value.toUpperCase())}
             placeholder="Search / Enter Supplier"
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs uppercase focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs uppercase focus:border-[#D94B5A]"
           />
           <datalist id="supplier-list">
             {suppliers.map((s, idx) => (
@@ -241,7 +241,7 @@ export function FinalArrivalEntryHeader({
             value={formData.broker || ''}
             onChange={(e) => handleInputChange('broker', e.target.value.toUpperCase())}
             placeholder="Search / Enter Broker"
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs uppercase focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs uppercase focus:border-[#D94B5A]"
           />
           <datalist id="broker-list">
             {brokers.map((b, idx) => (
@@ -258,7 +258,7 @@ export function FinalArrivalEntryHeader({
             value={formData.transporter_name || ''}
             onChange={(e) => handleInputChange('transporter_name', e.target.value)}
             placeholder="Enter Transporter"
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs focus:border-[#D94B5A]"
           />
         </div>
       </div>
@@ -272,7 +272,7 @@ export function FinalArrivalEntryHeader({
             type="text"
             value={formData.challan_rr_no || formData.challan_railway_receipt_no || ''}
             onChange={(e) => handleInputChange('challan_rr_no', e.target.value)}
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono uppercase focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono uppercase focus:border-[#D94B5A]"
           />
         </div>
 
@@ -283,7 +283,7 @@ export function FinalArrivalEntryHeader({
             type="date"
             value={formData.challan_rr_date || ''}
             onChange={(e) => handleInputChange('challan_rr_date', e.target.value)}
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#D94B5A]"
           />
         </div>
 
@@ -295,7 +295,7 @@ export function FinalArrivalEntryHeader({
             value={formData.lorry_number || ''}
             onChange={(e) => handleInputChange('lorry_number', e.target.value.toUpperCase())}
             placeholder="WB-XX-XXXX"
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono font-bold uppercase focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono font-bold uppercase focus:border-[#D94B5A]"
           />
         </div>
 
@@ -306,7 +306,7 @@ export function FinalArrivalEntryHeader({
             type="text"
             value={formData.pan_no || formData.part_no || ''}
             onChange={(e) => handleInputChange('pan_no', e.target.value)}
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono uppercase focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono uppercase focus:border-[#D94B5A]"
           />
         </div>
 
@@ -317,7 +317,7 @@ export function FinalArrivalEntryHeader({
             type="text"
             value={formData.consignment_note || formData.consignment_note_no || ''}
             onChange={(e) => handleInputChange('consignment_note', e.target.value)}
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono uppercase focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono uppercase focus:border-[#D94B5A]"
           />
         </div>
 
@@ -328,7 +328,7 @@ export function FinalArrivalEntryHeader({
             type="date"
             value={formData.consignment_note_date || ''}
             onChange={(e) => handleInputChange('consignment_note_date', e.target.value)}
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#D94B5A]"
           />
         </div>
       </div>
@@ -342,7 +342,7 @@ export function FinalArrivalEntryHeader({
             type="text"
             value={formData.di_no || ''}
             onChange={(e) => handleInputChange('di_no', e.target.value)}
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono uppercase focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono uppercase focus:border-[#D94B5A]"
           />
         </div>
 
@@ -353,7 +353,7 @@ export function FinalArrivalEntryHeader({
             type="date"
             value={formData.di_date || ''}
             onChange={(e) => handleInputChange('di_date', e.target.value)}
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#D94B5A]"
           />
         </div>
 
@@ -364,7 +364,7 @@ export function FinalArrivalEntryHeader({
             type="text"
             value={formData.invoice_no || ''}
             onChange={(e) => handleInputChange('invoice_no', e.target.value)}
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono uppercase focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono uppercase focus:border-[#D94B5A]"
           />
         </div>
 
@@ -375,7 +375,7 @@ export function FinalArrivalEntryHeader({
             type="date"
             value={formData.invoice_date || ''}
             onChange={(e) => handleInputChange('invoice_date', e.target.value)}
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#D94B5A]"
           />
         </div>
 
@@ -385,7 +385,7 @@ export function FinalArrivalEntryHeader({
           <select
             value={formData.ptf || 'No'}
             onChange={(e) => handleInputChange('ptf', e.target.value)}
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-semibold focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-semibold focus:border-[#D94B5A]"
           >
             <option value="No">No</option>
             <option value="Yes">Yes</option>
@@ -401,7 +401,7 @@ export function FinalArrivalEntryHeader({
             value={formData.arrival_area_name || formData.area || ''}
             onChange={(e) => handleAreaChange(e.target.value)}
             placeholder="Search / Enter Area"
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs uppercase focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs uppercase focus:border-[#D94B5A]"
           />
           <datalist id="area-list">
             {areas.map((a, idx) => (
@@ -416,7 +416,7 @@ export function FinalArrivalEntryHeader({
           <select
             value={formData.unit_name || 'BALES'}
             onChange={(e) => handleInputChange('unit_name', e.target.value)}
-            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-bold uppercase focus:border-[#103A20]"
+            className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-bold uppercase focus:border-[#D94B5A]"
           >
             {unitList.map((u, idx) => (
               <option key={idx} value={u}>{u}</option>

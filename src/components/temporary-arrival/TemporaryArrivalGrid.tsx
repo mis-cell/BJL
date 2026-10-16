@@ -29,7 +29,7 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
   return (
     <div className="w-full rounded-xl border border-[#F7AFA8] bg-white shadow-md overflow-hidden mt-5">
       {/* Header */}
-      <div className="bg-[#F7AFA8] text-white px-4 py-2 flex items-center justify-between border-b border-[#FBCFCB]">
+      <div className="bg-[#D94B5A] text-white px-4 py-2 flex items-center justify-between border-b border-[#FBCFCB]">
         <h3 className="text-sm font-bold tracking-wide uppercase">
           Arrival Item Details Grid
         </h3>
@@ -37,7 +37,7 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
           <button
             type="button"
             onClick={onAddRow}
-            className="bg-[#FBCFCB] hover:bg-[#F7AFA8] text-white font-bold px-2.5 py-0.5 text-[10px] rounded flex items-center gap-1 cursor-pointer active:scale-95 shadow-xs border border-[#FDE7E6]/40"
+            className="bg-[#FBCFCB] hover:bg-[#D94B5A] text-white font-bold px-2.5 py-0.5 text-[10px] rounded flex items-center gap-1 cursor-pointer active:scale-95 shadow-xs border border-[#FDE7E6]/40"
           >
             + Add Row
           </button>

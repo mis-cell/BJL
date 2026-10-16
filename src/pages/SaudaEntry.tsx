@@ -1126,15 +1126,15 @@ export default function SaudaEntry({
     <LegacyLayout title="Sauda Desk" subtitle={initialData ? "Modify Contract" : "Add Sauda Contract"} onClose={onCancel}>
       <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 w-full max-w-7xl 2xl:max-w-[1550px] mx-auto pb-10 px-2 sm:px-4 min-w-0">
         {/* HEADER BAR - MATCHING MILL INSPECTION AESTHETIC */}
-        <div className="bg-[#F7AFA8] text-white px-5 sm:px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#FBCFCB] gap-4">
+        <div className="bg-[#D94B5A] text-white px-5 sm:px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#FBCFCB] gap-4">
           {/* Left Badge & Title */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#80202C]/40 border border-[#FBCFCB]/40 flex items-center justify-center text-[#FDE7E6] shadow-inner">
+            <div className="w-10 h-10 rounded-xl bg-[#D94B5A]/40 border border-[#FBCFCB]/40 flex items-center justify-center text-[#FDE7E6] shadow-inner">
               <FileText className="w-5 h-5" />
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="bg-[#80202C] text-[#FDE7E6] text-[11px] font-extrabold px-2.5 py-0.5 rounded border border-[#FBCFCB] tracking-wider w-fit">
+                <span className="bg-[#D94B5A] text-[#FDE7E6] text-[11px] font-extrabold px-2.5 py-0.5 rounded border border-[#FBCFCB] tracking-wider w-fit">
                   {formData.session || 'BJCL 2026 - 2027'}
                 </span>
                 {initialData && (formData.created_by || initialData.created_by) && (
