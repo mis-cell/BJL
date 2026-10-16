@@ -410,27 +410,27 @@ export default function LegacyLayout({
   };
 
   return (
-    <div className="bg-[#F4EFE6] h-full w-full min-w-0 font-sans selection:bg-[#1E331B] selection:text-white flex flex-col">
+    <div className="bg-[#FDE7E6]/30 h-full w-full min-w-0 font-sans selection:bg-[#F06D6C] selection:text-white flex flex-col">
       {/* Window Wrapper */}
-      <div className="flex-1 flex flex-col min-h-0 min-w-0 border border-[#C5BA9E] bg-[#FAF7F0] shadow-xl overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 border border-[#FBCFCB] bg-[#FDE7E6]/10 shadow-xl overflow-hidden">
         
         {/* Top Control Bar */}
-        <div className="relative bg-[#103A20] border-b border-[#0F351E] px-2 sm:px-3.5 py-1.5 flex items-center justify-between text-white shrink-0 shadow-md z-30 w-full min-w-0 gap-2">
+        <div className="relative bg-[#D94B5A] border-b border-[#B83847] px-2 sm:px-3.5 py-1.5 flex items-center justify-between text-white shrink-0 shadow-md z-30 w-full min-w-0 gap-2">
           {/* Left Brand Logo Area */}
           <div 
             onClick={handleBrandLogoClick} 
             className="flex items-center gap-2 sm:gap-3 cursor-pointer group select-none min-w-0 flex-1"
           >
             {/* BJ Monogram Badge */}
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#174C2C] text-[#D4AF37] font-serif font-black text-xs sm:text-sm flex items-center justify-center shadow-md border-2 border-[#D4AF37] group-hover:scale-105 transition-all shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#E85A5A] text-white font-serif font-black text-xs sm:text-sm flex items-center justify-center shadow-md border-2 border-[#FBCFCB] group-hover:scale-105 transition-all shrink-0">
               BJ
             </div>
 
             <div className="min-w-0 flex-1">
-              <h1 className="font-serif text-sm sm:text-2xl font-black text-white tracking-tight leading-none group-hover:text-amber-300 transition-colors truncate">
+              <h1 className="font-serif text-sm sm:text-2xl font-black text-white tracking-tight leading-none group-hover:text-[#FDE7E6] transition-colors truncate">
                 Bally Jute Company Limited
               </h1>
-              <p className="text-[8px] sm:text-[9.5px] font-mono text-emerald-200 tracking-[0.15em] sm:tracking-[0.25em] uppercase font-bold mt-0.5 truncate">
+              <p className="text-[8px] sm:text-[9.5px] font-mono text-[#FDE7E6] tracking-[0.15em] sm:tracking-[0.25em] uppercase font-bold mt-0.5 truncate">
                 ESTD. 1979 • RAW JUTE MANAGEMENT ERP
               </p>
             </div>
@@ -441,30 +441,30 @@ export default function LegacyLayout({
                type="button"
                onClick={() => setIsAuditLogOpen(true)}
                title="Universal System Audit & Change Log"
-               className="h-5 px-2 bg-[#174C2C] hover:bg-[#235E39] text-[#D4AF37] border border-[#D4AF37]/50 rounded flex items-center gap-1 text-[10px] font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+               className="h-5 px-2 bg-[#E85A5A] hover:bg-[#F06D6C] text-white border border-[#FBCFCB]/60 rounded flex items-center gap-1 text-[10px] font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
              >
-               <History className="h-3 w-3 text-[#D4AF37]" />
+               <History className="h-3 w-3 text-white" />
                <span className="hidden sm:inline">Change Logs</span>
              </button>
              <button 
                onClick={handleMaximizeClick}
                title="Maximize / Restore"
-               className="h-5 w-5 bg-[#174C2C] hover:bg-[#235E39] text-white border border-[#2D7344] rounded flex items-center justify-center text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+               className="h-5 w-5 bg-[#E85A5A] hover:bg-[#F06D6C] text-white border border-[#FBCFCB]/60 rounded flex items-center justify-center text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
              >
                <Square className="h-2.5 w-2.5" />
              </button>
              <button 
                onClick={handleCloseClick}
                title="Close"
-               className="h-5 w-5 bg-rose-600 hover:bg-rose-500 text-white border border-rose-400 rounded flex items-center justify-center text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+               className="h-5 w-5 bg-rose-700 hover:bg-rose-600 text-white border border-rose-400 rounded flex items-center justify-center text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
              >
                <X className="h-3 w-3" />
              </button>
           </div>
         </div>
 
-        {/* Main Header & Navigation Bar (Same Green Colour As Footer) */}
-        <header className="bg-[#174C2C] border-b-2 border-[#103A20] px-2 sm:px-4 py-1.5 flex flex-wrap items-center justify-between shrink-0 shadow-lg relative z-50 gap-2 w-full min-w-0">
+        {/* Main Header & Navigation Bar */}
+        <header className="bg-[#D94B5A] border-b-2 border-[#B83847] px-2 sm:px-4 py-1.5 flex flex-wrap items-center justify-between shrink-0 shadow-lg relative z-50 gap-2 w-full min-w-0">
           
           {/* Top Navigation Menu Bar with Sub-Menu Dropdowns */}
           <nav className="flex items-center gap-1 flex-wrap py-0.5 min-w-0 flex-1 relative z-50 max-w-full">
@@ -483,17 +483,17 @@ export default function LegacyLayout({
                     className={cn(
                       "flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all relative cursor-pointer group max-w-full min-w-0",
                       isActive
-                        ? "text-white bg-[#0F351E] font-black shadow-md border border-[#235E39]"
-                        : "text-white font-bold hover:text-white hover:bg-[#215E38]"
+                        ? "text-white bg-[#9E2B38] font-black shadow-md border border-[#F06D6C]"
+                        : "text-white font-bold hover:text-white hover:bg-[#E85A5A]"
                     )}
                   >
                     <IconComp className={cn(
                       "w-3.5 h-3.5 transition-transform group-hover:scale-110 shrink-0",
-                      isActive ? "text-[#D4AF37] stroke-[2.5]" : "text-emerald-200"
+                      isActive ? "text-[#FDE7E6] stroke-[2.5]" : "text-[#FBCFCB]"
                     )} />
                     <span className="text-[11.5px] sm:text-[13px] tracking-tight truncate max-w-[120px] sm:max-w-none text-white font-black">{menu.label}</span>
                     {isActive && (
-                      <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#D4AF37] rounded-full" />
+                      <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#FDE7E6] rounded-full" />
                     )}
                   </button>
                 );
@@ -515,21 +515,21 @@ export default function LegacyLayout({
                     className={cn(
                       "flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer group select-none max-w-full min-w-0",
                       isDropdownOpen
-                        ? "text-white bg-[#0F351E] font-black shadow-md border border-[#235E39]"
-                        : "text-white font-bold hover:text-white hover:bg-[#215E38]"
+                        ? "text-white bg-[#9E2B38] font-black shadow-md border border-[#F06D6C]"
+                        : "text-white font-bold hover:text-white hover:bg-[#E85A5A]"
                     )}
                   >
-                    <IconComp className="w-3.5 h-3.5 text-emerald-200 group-hover:text-amber-300 transition-colors shrink-0" />
+                    <IconComp className="w-3.5 h-3.5 text-[#FBCFCB] group-hover:text-[#FDE7E6] transition-colors shrink-0" />
                     <span className="text-[11.5px] sm:text-[13px] tracking-tight truncate max-w-[120px] sm:max-w-none text-white font-black">{menu.label}</span>
-                    <ChevronDown className={cn("w-3.5 h-3.5 transition-transform text-white font-bold shrink-0", isDropdownOpen && "rotate-180 text-amber-300")} />
+                    <ChevronDown className={cn("w-3.5 h-3.5 transition-transform text-white font-bold shrink-0", isDropdownOpen && "rotate-180 text-[#FDE7E6]")} />
                   </button>
 
                   {/* Sub-menu Dropdown Menu */}
                   {isDropdownOpen && (
                     <div className="absolute top-full left-0 pt-1 z-[999] min-w-[220px] max-w-[calc(100vw-16px)]">
-                      <div className="bg-[#103A20] border-2 border-[#235E39] rounded-xl shadow-2xl py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
-                        <div className="px-3.5 py-1.5 border-b border-[#1E4D2C] mb-1 bg-[#0A2615]">
-                          <span className="text-[10.5px] font-mono font-black uppercase tracking-wider text-amber-300">
+                      <div className="bg-[#80202C] border-2 border-[#F06D6C] rounded-xl shadow-2xl py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                        <div className="px-3.5 py-1.5 border-b border-[#B83847] mb-1 bg-[#661821]">
+                          <span className="text-[10.5px] font-mono font-black uppercase tracking-wider text-[#FDE7E6]">
                             {menu.label} Menu
                           </span>
                         </div>
@@ -544,9 +544,9 @@ export default function LegacyLayout({
                                 setActiveMenuDropdown(null);
                                 handleNavNavigation(sub.pageId);
                               }}
-                              className="w-full text-left px-3.5 py-2 hover:bg-[#1E4D2C] hover:text-white flex items-center gap-2.5 text-xs font-bold text-white transition-colors cursor-pointer group/item"
+                              className="w-full text-left px-3.5 py-2 hover:bg-[#A82B3A] hover:text-white flex items-center gap-2.5 text-xs font-bold text-white transition-colors cursor-pointer group/item"
                             >
-                              <div className="w-6 h-6 rounded-md bg-[#174C2C] border border-[#2D7344] group-hover/item:bg-[#D4AF37] group-hover/item:text-[#103A20] text-emerald-200 flex items-center justify-center transition-colors shrink-0">
+                              <div className="w-6 h-6 rounded-md bg-[#D94B5A] border border-[#F7AFA8] group-hover/item:bg-[#F06D6C] group-hover/item:text-white text-[#FBCFCB] flex items-center justify-center transition-colors shrink-0">
                                 <SubIcon className="w-3.5 h-3.5 text-white" />
                               </div>
                               <span className="truncate font-black text-[12px] uppercase tracking-tight text-white">{sub.label}</span>
@@ -568,7 +568,7 @@ export default function LegacyLayout({
               className={cn(
                 "flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-black shadow-xs transition-all",
                 isOnline 
-                  ? "bg-[#103A20] border-[#2D7344] text-white font-bold" 
+                  ? "bg-[#80202C] border-[#F48F8B] text-white font-bold" 
                   : "bg-rose-950 border-rose-700 text-rose-300 font-bold"
               )}
               title={isOnline ? "Supabase Realtime Live Data Sync Active" : "Reconnecting to Supabase Live Sync..."}

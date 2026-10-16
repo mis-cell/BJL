@@ -1579,9 +1579,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
             {!isUser10 && (
               <button
                 onClick={onNew}
-                className="bg-[#174C2C] hover:bg-[#103A20] text-white px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                className="bg-[#D94B5A] hover:bg-[#E85A5A] text-white px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 border border-[#FBCFCB]"
               >
-                <Plus className="h-4 w-4 text-amber-300" />
+                <Plus className="h-4 w-4 text-[#FDE7E6]" />
                 <span>New Sauda</span>
               </button>
             )}
@@ -1595,7 +1595,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                   setPrintingBook(true);
                 }
               }}
-              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#D94B5A] border border-slate-300 hover:border-[#D94B5A] px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <Printer className="h-4 w-4" />
               <span>Print Book</span>
@@ -1606,10 +1606,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 setAuditRecordId(undefined);
                 setAuditModalOpen(true);
               }}
-              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#174C2C] border border-slate-300 hover:border-[#174C2C] px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#D94B5A] border border-slate-300 hover:border-[#D94B5A] px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
               title="View Universal Audit Trail for Sauda Contracts"
             >
-              <History className="h-4 w-4 text-[#174C2C]" />
+              <History className="h-4 w-4 text-[#D94B5A]" />
               <span>Audit Trail</span>
             </button>
 
@@ -1621,7 +1621,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
                   statusTab === 'pending'
-                    ? "bg-[#174C2C] text-white shadow-2xs"
+                    ? "bg-[#D94B5A] text-white shadow-2xs"
                     : "text-slate-700 hover:bg-slate-200"
                 )}
                 title="Main Dashboard (Pending Saudas)"
@@ -1721,7 +1721,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                       className={cn(
                         "h-10 cursor-pointer transition-colors text-xs font-medium", 
                         isSelected 
-                          ? "bg-[#174C2C] text-white" 
+                          ? "bg-[#D94B5A] text-white" 
                           : (idx % 2 === 0 ? "bg-white hover:bg-amber-50/50" : "bg-slate-50/40 hover:bg-amber-50/50")
                       )}
                     >

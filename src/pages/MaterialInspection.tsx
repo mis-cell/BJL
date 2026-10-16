@@ -300,9 +300,9 @@ export default function MaterialInspection({
         {/* MAIN VISUAL CARD CONTAINER */}
         <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 w-full pb-10">
           {/* HEADER BAR */}
-          <div className="bg-[#174C2C] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#0F351E] gap-4">
+          <div className="bg-[#D94B5A] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#B83847] gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-800/40 border border-emerald-400/40 flex items-center justify-center text-amber-300 shadow-inner">
+              <div className="w-10 h-10 rounded-xl bg-[#80202C]/40 border border-[#F06D6C]/40 flex items-center justify-center text-[#FDE7E6] shadow-inner">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div className="flex flex-col">

@@ -5,17 +5,34 @@
   --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-display: "Plus Jakarta Sans", "Inter", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --color-legacy-bg: #e8eff9;
-  --color-legacy-border: #1a56db;
-  --color-legacy-blue: #1e40af;
-  --color-legacy-navy: #0d47a1;
-  --color-legacy-teal: #0284c7;
+  --color-legacy-bg: #FDE7E6;
+  --color-legacy-border: #F06D6C;
+  --color-legacy-blue: #D94B5A;
+  --color-legacy-navy: #9E2B38;
+  --color-legacy-teal: #E85A5A;
+
+  /* App Theme Palette (7 Rose/Coral/Crimson Shades) */
+  --color-rose-shade-1: #FDE7E6;
+  --color-rose-shade-2: #FBCFCB;
+  --color-rose-shade-3: #F7AFA8;
+  --color-rose-shade-4: #F48F8B;
+  --color-rose-shade-5: #F06D6C;
+  --color-rose-shade-6: #E85A5A;
+  --color-rose-shade-7: #D94B5A;
 }
 
 @layer base {
   :root {
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum" 1, "lnum" 1;
     font-variant-numeric: tabular-nums lining-nums;
+
+    --app-shade-1: #FDE7E6;
+    --app-shade-2: #FBCFCB;
+    --app-shade-3: #F7AFA8;
+    --app-shade-4: #F48F8B;
+    --app-shade-5: #F06D6C;
+    --app-shade-6: #E85A5A;
+    --app-shade-7: #D94B5A;
   }
 
   html,
@@ -35,7 +52,7 @@
   }
 
   body {
-    @apply font-sans bg-slate-100 text-slate-900 antialiased selection:bg-indigo-600 selection:text-white;
+    @apply font-sans bg-[#FDE7E6]/30 text-slate-900 antialiased selection:bg-[#F06D6C] selection:text-white;
     font-variant-numeric: tabular-nums lining-nums;
   }
 

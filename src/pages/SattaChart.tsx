@@ -1376,11 +1376,7 @@ export default function SattaChart({
     <div className="space-y-6 max-w-full font-sans pb-12 bg-[#FAF8F5] min-h-screen text-[#1A2619]">
       
       {/* TOP NAVIGATION & BREADCRUMB HEADER */}
-      <div className="bg-[#174C2C] text-white p-3 md:p-2 rounded-2xl shadow-xl border-2 border-[#103A20] relative overflow-hidden">
-        {/* Subtle decorative background glow */}
-       {/*  <div className="absolute -right-16 -top-16 w-64 h-44 rounded-full bg-[#D4AF37]/10 blur-3xl pointer-events-none" /> */}
-          {/* <div className="absolute right-32 bottom-0 w-48 h-32 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" /> */}
-        
+      <div className="bg-[#D94B5A] text-white p-3 md:p-2 rounded-2xl shadow-xl border-2 border-[#B83847] relative overflow-hidden">
         {/* Navigation Tabs */}
         <div className="flex pt-1 gap-3 overflow-x-auto">
           <button
@@ -1388,11 +1384,11 @@ export default function SattaChart({
             className={cn(
               "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0 shadow-sm",
               activeTab === 'base_rate'
-                ? "bg-[#0F351E] text-white border-2 border-[#D4AF37] shadow-lg scale-105"
-                : "bg-[#103A20] text-white hover:bg-[#215E38] font-bold border border-[#235E39]"
+                ? "bg-[#80202C] text-white border-2 border-[#FDE7E6] shadow-lg scale-105"
+                : "bg-[#A82B3A] text-white hover:bg-[#C23A4A] font-bold border border-[#F06D6C]"
             )}
           >
-            <DollarSign className={cn("h-4 w-4", activeTab === 'base_rate' ? "text-[#D4AF37]" : "text-emerald-300")} />
+            <DollarSign className={cn("h-4 w-4", activeTab === 'base_rate' ? "text-[#FDE7E6]" : "text-[#FBCFCB]")} />
             <span className="text-white font-black">Satta Chart Base Rate</span>
           </button>
 
@@ -1401,11 +1397,11 @@ export default function SattaChart({
             className={cn(
               "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0 shadow-sm",
               activeTab === 'matrix'
-                ? "bg-[#0F351E] text-white border-2 border-[#D4AF37] shadow-lg scale-105"
-                : "bg-[#103A20] text-white hover:bg-[#215E38] font-bold border border-[#235E39]"
+                ? "bg-[#80202C] text-white border-2 border-[#FDE7E6] shadow-lg scale-105"
+                : "bg-[#A82B3A] text-white hover:bg-[#C23A4A] font-bold border border-[#F06D6C]"
             )}
           >
-            <FileSpreadsheet className={cn("h-4 w-4", activeTab === 'matrix' ? "text-[#D4AF37]" : "text-emerald-300")} />
+            <FileSpreadsheet className={cn("h-4 w-4", activeTab === 'matrix' ? "text-[#FDE7E6]" : "text-[#FBCFCB]")} />
             <span className="text-white font-black">Live Pivot Matrix</span>
           </button>
 
@@ -1414,18 +1410,18 @@ export default function SattaChart({
             className={cn(
               "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shrink-0 shadow-sm",
               activeTab === 'diff_history'
-                ? "bg-[#0F351E] text-white border-2 border-[#D4AF37] shadow-lg scale-105"
-                : "bg-[#103A20] text-white hover:bg-[#215E38] font-bold border border-[#235E39]"
+                ? "bg-[#80202C] text-white border-2 border-[#FDE7E6] shadow-lg scale-105"
+                : "bg-[#A82B3A] text-white hover:bg-[#C23A4A] font-bold border border-[#F06D6C]"
             )}
           >
-            <History className={cn("h-4 w-4", activeTab === 'diff_history' ? "text-[#D4AF37]" : "text-emerald-300")} />
+            <History className={cn("h-4 w-4", activeTab === 'diff_history' ? "text-[#FDE7E6]" : "text-[#FBCFCB]")} />
             <span className="text-white font-black">Differential History</span>
           </button>
 
-          <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-xl text-right shrink-0">
-            <div className="text-[10px] text-emerald-300 font-black uppercase tracking-wider">Last Updated</div>
+          <div className="bg-[#80202C] border border-[#F06D6C] px-3.5 py-1.5 rounded-xl text-right shrink-0">
+            <div className="text-[10px] text-[#FBCFCB] font-black uppercase tracking-wider">Last Updated</div>
             <div className="text-xs font-mono font-bold text-white flex items-center gap-1 justify-end">
-              <Clock className="h-3 w-3 text-[#D4AF37]" />
+              <Clock className="h-3 w-3 text-[#FDE7E6]" />
               <span className="text-white font-black">Today {lastSyncedAt}</span>
             </div>
           </div>

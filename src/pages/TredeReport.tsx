@@ -534,7 +534,7 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
     >
       {/* FILTER TOPBAR BAR */}
       
-      <div className="bg-gradient-to-r from-[#103A20] via-[#174C2C] to-[#205F38] p-4 rounded-xl border border-[#0d321c] shadow-[0_6px_18px_rgba(16,58,32,0.20)] flex flex-wrap items-center justify-between gap-4 mb-4">
+      <div className="bg-gradient-to-r from-[#80202C] via-[#D94B5A] to-[#E85A5A] p-4 rounded-xl border border-[#B83847] shadow-md flex flex-wrap items-center justify-between gap-4 mb-4">
 
         <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
 

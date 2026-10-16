@@ -1230,22 +1230,22 @@ export default function App() {
           </div>
         </div>
 
-        {/* Single Unified Dark Green Footer */}
-        <div className="bg-[#174C2C] border-t-2 border-[#103A20] px-3 py-1.5 flex justify-between items-center text-white shrink-0 shadow-2xl z-40 gap-3 w-full min-w-0">
+        {/* Single Unified Rose Footer */}
+        <div className="bg-[#D94B5A] border-t-2 border-[#B83847] px-3 py-1.5 flex justify-between items-center text-white shrink-0 shadow-2xl z-40 gap-3 w-full min-w-0">
           {/* Left Section: Online status & JCI Arrow-Wise Workflow Guide */}
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-1 min-w-0">
             {/* System Online Status Badge */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#103A20] rounded-md border border-[#235E39] text-[#E2EDDE] shrink-0">
-              <div className={cn("w-2 h-2 rounded-full animate-pulse", isOnline ? "bg-emerald-400 shadow-xs" : "bg-rose-500")} />
-              <span className={cn("uppercase tracking-wider font-mono font-bold text-[10px]", isOnline ? "text-emerald-300" : "text-rose-400")}>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#80202C] rounded-md border border-[#F06D6C] text-[#FDE7E6] shrink-0">
+              <div className={cn("w-2 h-2 rounded-full animate-pulse", isOnline ? "bg-emerald-300 shadow-xs" : "bg-yellow-300")} />
+              <span className={cn("uppercase tracking-wider font-mono font-bold text-[10px]", isOnline ? "text-emerald-200" : "text-amber-200")}>
                 {isOnline ? 'SYSTEM ONLINE' : 'OFFLINE'}
               </span>
             </div>
 
-            <div className="h-5 w-px bg-[#235E39] shrink-0" />
+            <div className="h-5 w-px bg-[#F06D6C]/50 shrink-0" />
 
             {/* JCI Software Process Workflow Arrow Guide */}
-            <div className="flex items-center gap-1.5 shrink-0 bg-[#0E351D] px-2 py-0.5 rounded-lg border border-[#235E39]/80 shadow-inner">
+            <div className="flex items-center gap-1.5 shrink-0 bg-[#80202C] px-2 py-0.5 rounded-lg border border-[#F06D6C]/80 shadow-inner">
               {/* Sequential Arrow-Wise Steps */}
               <div className="flex items-center gap-1 shrink-0">
                 {(() => {
@@ -1274,20 +1274,20 @@ export default function App() {
                           className={cn(
                             "group/step flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-all duration-150 cursor-pointer shrink-0 border select-none",
                             isCurrent
-                              ? "bg-[#256B3E] border-amber-300 text-amber-300 font-black shadow-md ring-2 ring-amber-400/50 scale-[1.02]"
+                              ? "bg-[#F06D6C] border-[#FDE7E6] text-white font-black shadow-md ring-2 ring-[#FBCFCB]/60 scale-[1.02]"
                               : isPast
-                              ? "bg-[#124225] border-[#2E7A4A] text-emerald-300 hover:bg-[#1A5732] hover:text-white font-bold"
-                              : "bg-[#0E331B] border-[#1C5130] text-emerald-200/90 hover:bg-[#164927] hover:text-white font-medium"
+                              ? "bg-[#A82B3A] border-[#F48F8B] text-[#FDE7E6] hover:bg-[#C23A4A] hover:text-white font-bold"
+                              : "bg-[#80202C] border-[#E85A5A] text-[#FBCFCB] hover:bg-[#A82B3A] hover:text-white font-medium"
                           )}
                         >
                           <span
                             className={cn(
                               "w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-mono font-black shrink-0",
                               isCurrent
-                                ? "bg-amber-400 text-[#0E351D]"
+                                ? "bg-white text-[#D94B5A]"
                                 : isPast
-                                ? "bg-emerald-600 text-white"
-                                : "bg-[#184F2B] text-emerald-300 border border-[#2E7A4A]"
+                                ? "bg-[#F06D6C] text-white"
+                                : "bg-[#D94B5A] text-[#FDE7E6] border border-[#F48F8B]"
                             )}
                           >
                             {step.stepNumber}
@@ -1295,7 +1295,7 @@ export default function App() {
                           <IconComp
                             className={cn(
                               "w-3 h-3 shrink-0",
-                              isCurrent ? "text-amber-300" : isPast ? "text-emerald-400" : "text-emerald-400/70"
+                              isCurrent ? "text-white" : isPast ? "text-[#FDE7E6]" : "text-[#FBCFCB]"
                             )}
                           />
                           <span className="text-[11px] whitespace-nowrap tracking-tight font-bold">
@@ -1305,8 +1305,8 @@ export default function App() {
 
                         {/* Arrow separator */}
                         {idx < permittedWorkflowSteps.length - 1 && (
-                          <div className="flex items-center text-amber-400 px-0.5 shrink-0">
-                            <span className="text-[12px] font-black text-amber-400/90">➔</span>
+                          <div className="flex items-center text-[#FDE7E6] px-0.5 shrink-0">
+                            <span className="text-[12px] font-black text-[#FDE7E6]">➔</span>
                           </div>
                         )}
                       </React.Fragment>
@@ -1329,10 +1329,10 @@ export default function App() {
                 setCurrentUserContext({ username: 'Operator', userRole: 'L1', userLevel: 'L1', allowedModules: [] });
                 setCurrentPage("dashboard");
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-[#103A20] hover:bg-rose-950/80 rounded-md border border-[#235E39] hover:border-rose-700 text-rose-300 hover:text-rose-100 transition-colors text-[10px] font-extrabold uppercase tracking-wider shrink-0 cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-[#80202C] hover:bg-[#661821] rounded-md border border-[#F06D6C] text-[#FDE7E6] hover:text-white transition-colors text-[10px] font-extrabold uppercase tracking-wider shrink-0 cursor-pointer"
               title="Logout System"
             >
-              <Power className="h-3.5 w-3.5 text-rose-400" />
+              <Power className="h-3.5 w-3.5 text-[#FBCFCB]" />
               <span className="hidden xs:inline">LOGOUT</span>
             </button>
           </div>

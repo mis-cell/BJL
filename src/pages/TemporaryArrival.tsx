@@ -1297,7 +1297,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     
     <LegacyLayout title="Temporary M.R" subtitle="ARRIVAL WORKSTATION" onClose={onCancel}>
       <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-5">
-        <div className="relative px-6 py-4 bg-[#174C2C] border border-[#0F351E] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden w-full text-white">
+        <div className="relative px-6 py-4 bg-[#D94B5A] border border-[#B83847] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden w-full text-white">
           {/* Background Mill Illustration Artwork on the Right with light opacity */}
           <div 
             className="absolute right-0 top-0 bottom-0 w-1/3 opacity-15 pointer-events-none bg-no-repeat bg-right bg-contain filter brightness-200"
@@ -1305,7 +1305,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           />
 
           <div className="relative z-10 flex flex-col gap-1">
-            <h2 className="font-serif font-black text-2xl text-amber-300 tracking-tight leading-none">
+            <h2 className="font-serif font-black text-2xl text-[#FDE7E6] tracking-tight leading-none">
               New Arrival
             </h2>
           </div>
@@ -1314,24 +1314,24 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           <div className="relative z-10 flex items-center gap-3">
             <button
               type="button"
-              className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+              className="px-3.5 py-1.5 bg-[#80202C] hover:bg-[#9E2B38] text-[#FDE7E6] border border-[#F06D6C] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
               title="Back to Sauda Desk (Esc)"
               onClick={onCancel}
             >
-              <ArrowLeft className="h-4 w-4 text-amber-300" />
+              <ArrowLeft className="h-4 w-4 text-[#FDE7E6]" />
               <span>Back</span>
             </button>
-            <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
-              <span className="text-emerald-200/80 font-medium">Session:</span>
-              <span className="font-bold text-amber-300 font-mono text-xs">{ 'BJCL/2026-2027/'}</span>
+            <div className="bg-[#80202C] border border-[#F06D6C] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
+              <span className="text-[#FBCFCB] font-medium">Session:</span>
+              <span className="font-bold text-[#FDE7E6] font-mono text-xs">{ 'BJCL/2026-2027/'}</span>
             </div>
           </div>
         </div>
 
         {/* ================= Receipt Voucher Info ================= */}
-        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-xs overflow-visible relative z-30 mt-3">
+        <div className="w-full rounded-xl border border-[#D94B5A] bg-white shadow-xs overflow-visible relative z-30 mt-3">
           {/* Header */}
-          <div className="px-4 py-1.5 bg-[#174C2C] border-b border-[#0F351E] rounded-t-[11px]">
+          <div className="px-4 py-1.5 bg-[#D94B5A] border-b border-[#B83847] rounded-t-[11px]">
             <h2 className="text-xs font-bold text-white tracking-wide uppercase">
               Receipt Voucher Info
             </h2>
@@ -1756,10 +1756,10 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         </div>
 
         {/* ===========================Transport & Document Info=========================== */}
-        <div className="w-full rounded-xl border border-[#174C2C] bg-white shadow-xs overflow-visible relative z-10 mt-3">
+        <div className="w-full rounded-xl border border-[#D94B5A] bg-white shadow-xs overflow-visible relative z-10 mt-3">
 
           {/* Header */}
-          <div className="bg-[#174C2C] px-4 py-1.5 rounded-t-[11px]">
+          <div className="bg-[#D94B5A] px-4 py-1.5 rounded-t-[11px]">
             <h3 className="text-white text-xs font-bold tracking-wide uppercase">
               Transport & Document Information
             </h3>
@@ -2117,7 +2117,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         />
 
         {/* Bottom Action Bar */}
-        <div className="w-full rounded-xl border border-[#174C2C] bg-[#174C2C] shadow-md overflow-hidden mt-5">
+        <div className="w-full rounded-xl border border-[#D94B5A] bg-[#D94B5A] shadow-md overflow-hidden mt-5">
           <div className="flex justify-end items-center gap-3">
             <button
               onClick={clearForm}
