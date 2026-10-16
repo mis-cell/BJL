@@ -29,62 +29,62 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
   };
 
   return (
-    <div className="bg-white border border-emerald-900/20 rounded-2xl shadow-sm p-4 space-y-3 font-sans">
+    <div className="bg-white border border-[#CBD5E1] rounded-xl shadow-2xs p-4 space-y-3 font-sans">
       
       {/* Primary Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
         {/* Search */}
         <div className="relative">
-          <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">
+          <label className="text-[10px] font-bold uppercase text-[#404040] mb-1 block">
             Search Keyword / ID
           </label>
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+            <Search className="w-3.5 h-3.5 text-[#64748B] absolute left-2.5 top-2.5" />
             <input
               type="text"
               placeholder="Search Sauda, PO, Supplier, Broker..."
               value={filters.searchQuery || ''}
               onChange={e => handleChange('searchQuery', e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none font-medium"
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-[#CBD5E1] rounded-lg focus:bg-white focus:border-[#D94B5A] focus:outline-none font-medium text-[#111111]"
             />
           </div>
         </div>
 
         {/* Date From */}
         <div>
-          <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">
+          <label className="text-[10px] font-bold uppercase text-[#404040] mb-1 block">
             From Date
           </label>
           <input
             type="date"
             value={filters.dateFrom || ''}
             onChange={e => handleChange('dateFrom', e.target.value)}
-            className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none font-medium"
+            className="w-full px-3 py-1.5 text-xs bg-white border border-[#CBD5E1] rounded-lg focus:bg-white focus:border-[#D94B5A] focus:outline-none font-medium text-[#111111]"
           />
         </div>
 
         {/* Date To */}
         <div>
-          <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">
+          <label className="text-[10px] font-bold uppercase text-[#404040] mb-1 block">
             To Date
           </label>
           <input
             type="date"
             value={filters.dateTo || ''}
             onChange={e => handleChange('dateTo', e.target.value)}
-            className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none font-medium"
+            className="w-full px-3 py-1.5 text-xs bg-white border border-[#CBD5E1] rounded-lg focus:bg-white focus:border-[#D94B5A] focus:outline-none font-medium text-[#111111]"
           />
         </div>
 
         {/* Financial Year */}
         <div>
-          <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">
+          <label className="text-[10px] font-bold uppercase text-[#404040] mb-1 block">
             Financial Year
           </label>
           <select
             value={filters.financialYear || 'ALL'}
             onChange={e => handleChange('financialYear', e.target.value)}
-            className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none font-medium"
+            className="w-full px-3 py-1.5 text-xs bg-white border border-[#CBD5E1] rounded-lg focus:bg-white focus:border-[#D94B5A] focus:outline-none font-medium text-[#111111]"
           >
             <option value="ALL">All Financial Years</option>
             {masterLists.financialYears.map(fy => (
@@ -95,13 +95,13 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
 
         {/* Month */}
         <div>
-          <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">
+          <label className="text-[10px] font-bold uppercase text-[#404040] mb-1 block">
             Month
           </label>
           <select
             value={filters.month || 'ALL'}
             onChange={e => handleChange('month', e.target.value)}
-            className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none font-medium"
+            className="w-full px-3 py-1.5 text-xs bg-white border border-[#CBD5E1] rounded-lg focus:bg-white focus:border-[#D94B5A] focus:outline-none font-medium text-[#111111]"
           >
             <option value="ALL">All Months</option>
             {masterLists.months.map(m => (
@@ -113,14 +113,14 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
 
       {/* Advanced Filter Expansion (Business & Status Dimensions) */}
       {showAdvanced && (
-        <div className="pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 animate-in fade-in duration-150">
+        <div className="pt-3 border-t border-[#E5E7EB] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 animate-in fade-in duration-150">
           {/* Broker */}
           <div>
-            <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Broker</label>
+            <label className="text-[10px] font-bold uppercase text-[#404040] mb-1 block">Broker</label>
             <select
               value={filters.broker || 'ALL'}
               onChange={e => handleChange('broker', e.target.value)}
-              className="w-full px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white"
+              className="w-full px-2 py-1 text-xs bg-white border border-[#CBD5E1] rounded-lg focus:bg-white text-[#111111]"
             >
               <option value="ALL">All Brokers</option>
               {masterLists.brokers.map(b => (
@@ -131,11 +131,11 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
 
           {/* Supplier */}
           <div>
-            <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Supplier</label>
+            <label className="text-[10px] font-bold uppercase text-[#404040] mb-1 block">Supplier</label>
             <select
               value={filters.supplier || 'ALL'}
               onChange={e => handleChange('supplier', e.target.value)}
-              className="w-full px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white"
+              className="w-full px-2 py-1 text-xs bg-white border border-[#CBD5E1] rounded-lg focus:bg-white text-[#111111]"
             >
               <option value="ALL">All Suppliers</option>
               {masterLists.suppliers.map(s => (
@@ -146,11 +146,11 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
 
           {/* Agency */}
           <div>
-            <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Agency</label>
+            <label className="text-[10px] font-bold uppercase text-[#404040] mb-1 block">Agency</label>
             <select
               value={filters.agency || 'ALL'}
               onChange={e => handleChange('agency', e.target.value)}
-              className="w-full px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white"
+              className="w-full px-2 py-1 text-xs bg-white border border-[#CBD5E1] rounded-lg focus:bg-white text-[#111111]"
             >
               <option value="ALL">All Agencies</option>
               {masterLists.agencies.map(a => (
@@ -161,11 +161,11 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
 
           {/* Area */}
           <div>
-            <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Area</label>
+            <label className="text-[10px] font-bold uppercase text-[#404040] mb-1 block">Area</label>
             <select
               value={filters.area || 'ALL'}
               onChange={e => handleChange('area', e.target.value)}
-              className="w-full px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white"
+              className="w-full px-2 py-1 text-xs bg-white border border-[#CBD5E1] rounded-lg focus:bg-white text-[#111111]"
             >
               <option value="ALL">All Areas</option>
               {masterLists.areas.map(ar => (
@@ -176,11 +176,11 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
 
           {/* Grade */}
           <div>
-            <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Grade</label>
+            <label className="text-[10px] font-bold uppercase text-[#404040] mb-1 block">Grade</label>
             <select
               value={filters.grade || 'ALL'}
               onChange={e => handleChange('grade', e.target.value)}
-              className="w-full px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white"
+              className="w-full px-2 py-1 text-xs bg-white border border-[#CBD5E1] rounded-lg focus:bg-white text-[#111111]"
             >
               <option value="ALL">All Grades</option>
               {masterLists.grades.map(g => (
@@ -191,11 +191,11 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
 
           {/* Sauda Status */}
           <div>
-            <label className="text-[10px] font-black uppercase text-slate-500 mb-1 block">Operational Status</label>
+            <label className="text-[10px] font-bold uppercase text-[#404040] mb-1 block">Operational Status</label>
             <select
               value={filters.saudaStatus || 'ALL'}
               onChange={e => handleChange('saudaStatus', e.target.value)}
-              className="w-full px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white"
+              className="w-full px-2 py-1 text-xs bg-white border border-[#CBD5E1] rounded-lg focus:bg-white text-[#111111]"
             >
               <option value="ALL">All Statuses</option>
               <option value="COMPLETED">Completed</option>
@@ -208,14 +208,14 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
       )}
 
       {/* Action Row */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#E5E7EB] text-xs">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-1.5 bg-[#FDE7E6] hover:bg-[#FBCFCB] text-[#111111] font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer border border-[#FBCFCB]"
           >
-            <Sliders className="w-3.5 h-3.5" />
+            <Sliders className="w-3.5 h-3.5 text-[#D94B5A]" />
             <span>{showAdvanced ? 'Hide Advanced Filters' : 'More Business Filters'}</span>
             {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
@@ -223,15 +223,15 @@ export const ReportFilterBar: React.FC<ReportFilterBarProps> = ({
           <button
             type="button"
             onClick={onReset}
-            className="px-3 py-1.5 text-slate-500 hover:text-slate-800 font-bold transition flex items-center gap-1 cursor-pointer"
+            className="px-3 py-1.5 text-[#404040] hover:text-[#111111] font-bold transition flex items-center gap-1 cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-3.5 h-3.5 text-[#D94B5A]" />
             <span>Reset All</span>
           </button>
         </div>
 
-        <div className="text-slate-500 font-mono text-[11px]">
-          Filtered Results: <strong className="text-emerald-700 font-black">{filteredCount}</strong> of {totalCount} Transactions
+        <div className="text-[#404040] font-mono text-[11px]">
+          Filtered Results: <strong className="text-[#111111] font-black">{filteredCount}</strong> of {totalCount} Transactions
         </div>
       </div>
 

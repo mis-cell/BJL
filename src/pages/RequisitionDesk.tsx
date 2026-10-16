@@ -295,7 +295,7 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <div className="p-6 bg-[#dfdfdf] min-h-screen font-sans space-y-6">
+    <div className="p-6 bg-[#FBCFCB] min-h-screen font-sans space-y-6">
       
       {/* Dynamic Toast Notification */}
       {showToast && (
@@ -306,7 +306,7 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
       )}
 
       {/* Main retro window wrapper */}
-      <div className="bg-[#dfdfdf] border-t-white border-l-white border-b-slate-800 border-r-slate-800 border-2 shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]">
+      <div className="bg-[#FBCFCB] border-t-white border-l-white border-b-slate-800 border-r-slate-800 border-2 shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]">
         
         {/* Retro Header Strip */}
         <div className="bg-gradient-to-r from-indigo-950 to-indigo-800 text-white px-3 py-1.5 flex justify-between items-center h-10 ">
@@ -318,7 +318,7 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
           </div>
           <button 
             onClick={onClose}
-            className="bg-[#dfdfdf] hover:bg-slate-300 text-black px-2 border-t-white border-l-white border-b-slate-800 border-r-slate-800 border font-bold text-xs cursor-pointer active:translate-x-[0.5px] active:translate-y-[0.5px] h-6 flex items-center justify-center"
+            className="bg-[#FBCFCB] hover:bg-slate-300 text-black px-2 border-t-white border-l-white border-b-slate-800 border-r-slate-800 border font-bold text-xs cursor-pointer active:translate-x-[0.5px] active:translate-y-[0.5px] h-6 flex items-center justify-center"
           >
             ✕
           </button>
@@ -415,7 +415,7 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Data Grid table */}
-        <div className="p-4 bg-[#dfdfdf]">
+        <div className="p-4 bg-[#FBCFCB]">
           <div className="bg-white border-2 border-slate-200 overflow-hidden rounded shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-center border-collapse min-w-[1000px]">
@@ -504,7 +504,7 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
       {/* -------------------- NEW/EDIT REQUISITION DIALOG MODAL -------------------- */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[500] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl bg-[#dfdfdf] border-t-white border-l-white border-b-slate-800 border-r-slate-800 border-2 shadow-[4px_4px_16px_rgba(0,0,0,0.3)]">
+          <div className="w-full max-w-2xl bg-[#FBCFCB] border-t-white border-l-white border-b-slate-800 border-r-slate-800 border-2 shadow-[4px_4px_16px_rgba(0,0,0,0.3)]">
             
             {/* Modal Title Bar */}
             <div className="bg-gradient-to-r from-indigo-950 to-indigo-800 text-white px-3 py-1 flex justify-between items-center h-8 ">
@@ -513,7 +513,7 @@ export default function RequisitionDesk({ onClose }: { onClose: () => void }) {
               </span>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="bg-[#dfdfdf] hover:bg-slate-300 text-black px-1.5 border border-black/20 text-xs font-bold cursor-pointer"
+                className="bg-[#FBCFCB] hover:bg-slate-300 text-black px-1.5 border border-black/20 text-xs font-bold cursor-pointer"
               >
                 ✕
               </button>

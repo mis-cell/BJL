@@ -78,7 +78,7 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
               <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[130px]">Challan Gross Wt. MT.</th>
               <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[130px]">Receipt Gross Wt. MT.</th>
               <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[130px]">Gross Weight (Batch)</th>
-              <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[120px] bg-gradient-to-b from-[#065f46] to-[#047857] text-white font-extrabold shadow-inner">
+              <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[120px] bg-gradient-to-b from-[#065f46] to-[#D94B5A] text-white font-extrabold shadow-inner">
                 <div className="flex flex-col items-center justify-center gap-0.5">
                   <span>Add Weight</span>
                   <span className="text-[9px] font-semibold text-emerald-200">M.Ton</span>

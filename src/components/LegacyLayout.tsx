@@ -410,61 +410,62 @@ export default function LegacyLayout({
   };
 
   return (
-    <div className="bg-[#FDE7E6]/30 h-full w-full min-w-0 font-sans selection:bg-[#FBCFCB] selection:text-white flex flex-col">
+    <div className="bg-[#FFFCFB] h-full w-full min-w-0 font-sans text-[#262626] flex flex-col selection:bg-[#FBCFCB] selection:text-[#111111]">
       {/* Window Wrapper */}
-      <div className="flex-1 flex flex-col min-h-0 min-w-0 border border-[#FBCFCB] bg-[#FDE7E6]/10 shadow-xl overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 border border-[#E5E7EB] bg-[#FFFFFF] shadow-sm overflow-hidden">
         
         {/* Top Control Bar */}
-        <div className="relative bg-[#F7AFA8] border-b border-[#FBCFCB] px-2 sm:px-3.5 py-1.5 flex items-center justify-between text-white shrink-0 shadow-md z-30 w-full min-w-0 gap-2">
+        <div className="relative bg-[#FDE7E6] border-b border-[#FBCFCB] px-3.5 py-2 flex items-center justify-between shrink-0 z-30 w-full min-w-0 gap-2">
           {/* Left Brand Logo Area */}
           <div 
             onClick={handleBrandLogoClick} 
-            className="flex items-center gap-2 sm:gap-3 cursor-pointer group select-none min-w-0 flex-1"
+            className="flex items-center gap-3 cursor-pointer group select-none min-w-0 flex-1"
           >
             {/* BJ Monogram Badge */}
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#F7AFA8] text-white font-serif font-black text-xs sm:text-sm flex items-center justify-center shadow-md border-2 border-[#FBCFCB] group-hover:scale-105 transition-all shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#D94B5A] text-white font-serif font-black text-xs sm:text-sm flex items-center justify-center shadow-xs border border-[#F48F8B] group-hover:scale-105 transition-all shrink-0">
               BJ
             </div>
 
             <div className="min-w-0 flex-1">
-              <h1 className="font-serif text-sm sm:text-2xl font-black text-white tracking-tight leading-none group-hover:text-[#FDE7E6] transition-colors truncate">
+              <h1 className="font-sans text-base sm:text-xl font-extrabold text-[#171717] tracking-tight leading-none group-hover:text-[#D94B5A] transition-colors truncate">
                 Bally Jute Company Limited
               </h1>
-              <p className="text-[8px] sm:text-[9.5px] font-mono text-[#FDE7E6] tracking-[0.15em] sm:tracking-[0.25em] uppercase font-bold mt-0.5 truncate">
-                ESTD. 1979 • RAW JUTE MANAGEMENT ERP
+              <p className="text-[9px] sm:text-[10px] font-mono text-[#404040] tracking-wider uppercase font-semibold mt-0.5 truncate">
+                RAW JUTE PURCHASE DESK • ESTD. 1979
               </p>
             </div>
           </div>
 
-          <div className="flex gap-1 sm:gap-1.5 shrink-0 z-10 items-center">
+          {/* Top Control Bar Buttons */}
+          <div className="flex gap-1.5 shrink-0 z-10 items-center">
              <button
                type="button"
                onClick={() => setIsAuditLogOpen(true)}
                title="Universal System Audit & Change Log"
-               className="h-5 px-2 bg-[#F7AFA8] hover:bg-[#FBCFCB] text-white border border-[#FBCFCB]/60 rounded flex items-center gap-1 text-[10px] font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+               className="h-7 px-2.5 bg-white hover:bg-[#FBCFCB] text-[#171717] border border-[#CBD5E1] rounded-md flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
              >
-               <History className="h-3 w-3 text-white" />
+               <History className="h-3.5 w-3.5 text-[#D94B5A]" />
                <span className="hidden sm:inline">Change Logs</span>
              </button>
              <button 
                onClick={handleMaximizeClick}
                title="Maximize / Restore"
-               className="h-5 w-5 bg-[#F7AFA8] hover:bg-[#FBCFCB] text-white border border-[#FBCFCB]/60 rounded flex items-center justify-center text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+               className="h-7 w-7 bg-white hover:bg-[#FBCFCB] text-[#171717] border border-[#CBD5E1] rounded-md flex items-center justify-center text-xs font-bold transition-all cursor-pointer shadow-2xs"
              >
-               <Square className="h-2.5 w-2.5" />
+               <Square className="h-3 w-3 text-[#404040]" />
              </button>
              <button 
                onClick={handleCloseClick}
                title="Close"
-               className="h-5 w-5 bg-rose-700 hover:bg-rose-600 text-white border border-rose-400 rounded flex items-center justify-center text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+               className="h-7 w-7 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 rounded-md flex items-center justify-center text-xs font-bold transition-all cursor-pointer shadow-2xs"
              >
-               <X className="h-3 w-3" />
+               <X className="h-3.5 w-3.5" />
              </button>
           </div>
         </div>
 
         {/* Main Header & Navigation Bar */}
-        <header className="bg-[#F7AFA8] border-b-2 border-[#FBCFCB] px-2 sm:px-4 py-1.5 flex flex-wrap items-center justify-between shrink-0 shadow-lg relative z-50 gap-2 w-full min-w-0">
+        <header className="bg-white border-b border-[#E5E7EB] px-3.5 py-1.5 flex flex-wrap items-center justify-between shrink-0 relative z-50 gap-2 w-full min-w-0">
           
           {/* Top Navigation Menu Bar with Sub-Menu Dropdowns */}
           <nav className="flex items-center gap-1 flex-wrap py-0.5 min-w-0 flex-1 relative z-50 max-w-full">
@@ -481,20 +482,17 @@ export default function LegacyLayout({
                     type="button"
                     onClick={() => handleNavNavigation(menu.pageId!)}
                     className={cn(
-                      "flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all relative cursor-pointer group max-w-full min-w-0",
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all relative cursor-pointer group max-w-full min-w-0 border",
                       isActive
-                        ? "text-white bg-[#F7AFA8] font-black shadow-md border border-[#FBCFCB]"
-                        : "text-white font-bold hover:text-white hover:bg-[#F7AFA8]"
+                        ? "text-white bg-[#D94B5A] border-[#D94B5A] shadow-xs"
+                        : "text-[#262626] bg-white border-transparent hover:bg-[#FDE7E6] hover:border-[#FBCFCB]"
                     )}
                   >
                     <IconComp className={cn(
                       "w-3.5 h-3.5 transition-transform group-hover:scale-110 shrink-0",
-                      isActive ? "text-[#FDE7E6] stroke-[2.5]" : "text-[#FBCFCB]"
+                      isActive ? "text-white" : "text-[#D94B5A]"
                     )} />
-                    <span className="text-[11.5px] sm:text-[13px] tracking-tight truncate max-w-[120px] sm:max-w-none text-white font-black">{menu.label}</span>
-                    {isActive && (
-                      <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#FDE7E6] rounded-full" />
-                    )}
+                    <span className="text-[12px] sm:text-[13px] tracking-tight truncate font-bold">{menu.label}</span>
                   </button>
                 );
               }
@@ -513,24 +511,24 @@ export default function LegacyLayout({
                       setActiveMenuDropdown(menu.id);
                     }}
                     className={cn(
-                      "flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer group select-none max-w-full min-w-0",
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer group select-none max-w-full min-w-0 border",
                       isDropdownOpen
-                        ? "text-white bg-[#F7AFA8] font-black shadow-md border border-[#FBCFCB]"
-                        : "text-white font-bold hover:text-white hover:bg-[#F7AFA8]"
+                        ? "text-white bg-[#D94B5A] border-[#D94B5A] shadow-xs"
+                        : "text-[#262626] bg-white border-transparent hover:bg-[#FDE7E6] hover:border-[#FBCFCB]"
                     )}
                   >
-                    <IconComp className="w-3.5 h-3.5 text-[#FBCFCB] group-hover:text-[#FDE7E6] transition-colors shrink-0" />
-                    <span className="text-[11.5px] sm:text-[13px] tracking-tight truncate max-w-[120px] sm:max-w-none text-white font-black">{menu.label}</span>
-                    <ChevronDown className={cn("w-3.5 h-3.5 transition-transform text-white font-bold shrink-0", isDropdownOpen && "rotate-180 text-[#FDE7E6]")} />
+                    <IconComp className={cn("w-3.5 h-3.5 transition-colors shrink-0", isDropdownOpen ? "text-white" : "text-[#D94B5A]")} />
+                    <span className="text-[12px] sm:text-[13px] tracking-tight truncate font-bold">{menu.label}</span>
+                    <ChevronDown className={cn("w-3.5 h-3.5 transition-transform shrink-0", isDropdownOpen ? "text-white rotate-180" : "text-[#64748B]")} />
                   </button>
 
                   {/* Sub-menu Dropdown Menu */}
                   {isDropdownOpen && (
                     <div className="absolute top-full left-0 pt-1 z-[999] min-w-[220px] max-w-[calc(100vw-16px)]">
-                      <div className="bg-[#80202C] border-2 border-[#FBCFCB] rounded-xl shadow-2xl py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
-                        <div className="px-3.5 py-1.5 border-b border-[#FBCFCB] mb-1 bg-[#661821]">
-                          <span className="text-[10.5px] font-mono font-black uppercase tracking-wider text-[#FDE7E6]">
-                            {menu.label} Menu
+                      <div className="bg-white border border-[#CBD5E1] rounded-lg shadow-xl py-1 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                        <div className="px-3.5 py-1.5 border-b border-[#E5E7EB] bg-[#FDE7E6]">
+                          <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-[#171717]">
+                            {menu.label}
                           </span>
                         </div>
                         {menu.subItems.map((sub) => {
@@ -544,12 +542,12 @@ export default function LegacyLayout({
                                 setActiveMenuDropdown(null);
                                 handleNavNavigation(sub.pageId);
                               }}
-                              className="w-full text-left px-3.5 py-2 hover:bg-[#A82B3A] hover:text-white flex items-center gap-2.5 text-xs font-bold text-white transition-colors cursor-pointer group/item"
+                              className="w-full text-left px-3.5 py-2 hover:bg-[#FFF2CC] flex items-center gap-2.5 text-xs font-semibold text-[#111111] transition-colors cursor-pointer group/item"
                             >
-                              <div className="w-6 h-6 rounded-md bg-[#F7AFA8] border border-[#F7AFA8] group-hover/item:bg-[#FBCFCB] group-hover/item:text-white text-[#FBCFCB] flex items-center justify-center transition-colors shrink-0">
-                                <SubIcon className="w-3.5 h-3.5 text-white" />
+                              <div className="w-5 h-5 rounded bg-[#FDE7E6] text-[#D94B5A] flex items-center justify-center transition-colors shrink-0">
+                                <SubIcon className="w-3 h-3 text-[#D94B5A]" />
                               </div>
-                              <span className="truncate font-black text-[12px] uppercase tracking-tight text-white">{sub.label}</span>
+                              <span className="truncate font-semibold text-[12px] uppercase text-[#111111]">{sub.label}</span>
                             </button>
                           );
                         })}
@@ -561,64 +559,52 @@ export default function LegacyLayout({
             })}
           </nav>
 
-          {/* Right Notification & Profile User Menu - Anchored right */}
+          {/* Right Status & Profile Controls */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto z-50">
-            {/* Realtime Connection Status Indicator Badge */}
+            {/* Realtime Live Data Status */}
             <div 
               className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-black shadow-xs transition-all",
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold shadow-2xs transition-all",
                 isOnline 
-                  ? "bg-[#80202C] border-[#F48F8B] text-white font-bold" 
-                  : "bg-rose-950 border-rose-700 text-rose-300 font-bold"
+                  ? "bg-[#DCFCE7] border-[#86EFAC] text-[#166534]" 
+                  : "bg-rose-50 border-rose-200 text-[#991B1B]"
               )}
-              title={isOnline ? "Supabase Realtime Live Data Sync Active" : "Reconnecting to Supabase Live Sync..."}
+              title={isOnline ? "Supabase Realtime Live Data Sync Active" : "Reconnecting..."}
             >
               {isOnline ? (
                 <>
                   <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
                   </span>
-                  <span className="hidden xs:inline text-white font-bold">Live</span>
+                  <span className="hidden xs:inline font-bold">Live Sync</span>
                 </>
               ) : (
                 <>
-                  <span className="h-2 w-2 rounded-full bg-rose-500"></span>
-                  <span className="hidden xs:inline text-rose-200 font-bold">Offline</span>
+                  <span className="h-2 w-2 rounded-full bg-rose-600"></span>
+                  <span className="hidden xs:inline font-bold">Offline</span>
                 </>
               )}
             </div>
 
-            {/* Notification Tray for New Material Mismatch or Satta Dispute Cases */}
+            {/* Notification Tray */}
             {(disputeSummary.materialMismatchCount > 0 || disputeSummary.sattaDisputeCount > 0) && (
               <div className="relative">
-                {/* <button
-                  onClick={() => setIsDisputeTrayOpen(!isDisputeTrayOpen)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400 hover:bg-amber-300 border border-amber-300 text-[#103A20] text-[11px] font-black shadow-md transition-all cursor-pointer animate-pulse"
-                  title="New Material Mismatch or Satta Dispute Cases Opened"
-                >
-                  <AlertTriangle className="w-3.5 h-3.5 text-[#103A20]" />
-                  <span className="hidden md:inline font-black">Cases:</span>
-                  <span className="bg-[#103A20] text-amber-300 font-black px-1.5 py-0.2 rounded-full text-[10px]">
-                    {disputeSummary.materialMismatchCount + disputeSummary.sattaDisputeCount}
-                  </span>
-                </button> */}
-
                 {isDisputeTrayOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-slate-900 border border-amber-500/40 rounded-xl shadow-2xl py-3 z-[9999] text-xs text-white">
-                    <div className="px-4 py-2 border-b border-slate-800 flex justify-between items-center">
+                  <div className="absolute right-0 mt-2 w-80 bg-white border border-[#CBD5E1] rounded-xl shadow-2xl py-3 z-[9999] text-xs text-[#262626]">
+                    <div className="px-4 py-2 border-b border-[#E5E7EB] bg-[#FFF2CC] flex justify-between items-center">
                       <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-amber-400" />
-                        <span className="font-black text-amber-200 uppercase tracking-wider text-[11px]">Active Disputed Cases</span>
+                        <AlertTriangle className="w-4 h-4 text-[#92400E]" />
+                        <span className="font-bold text-[#92400E] uppercase tracking-wider text-[11px]">Active Disputed Cases</span>
                       </div>
-                      <span className="text-[10px] bg-red-600 px-2 py-0.5 rounded-full font-bold">
+                      <span className="text-[10px] bg-amber-200 text-[#92400E] px-2 py-0.5 rounded-full font-bold">
                         {disputeSummary.materialMismatchCount + disputeSummary.sattaDisputeCount} New
                       </span>
                     </div>
 
-                    <div className="max-h-64 overflow-y-auto divide-y divide-slate-800">
+                    <div className="max-h-64 overflow-y-auto divide-y divide-[#E5E7EB]">
                       {disputeSummary.recentCases.length === 0 ? (
-                        <div className="p-4 text-center text-slate-400 text-xs">No active dispute cases.</div>
+                        <div className="p-4 text-center text-slate-500 text-xs">No active dispute cases.</div>
                       ) : (
                         disputeSummary.recentCases.slice(0, 6).map((c: any, i: number) => {
                           const caseTypeStr = typeof c.caseType === 'object' ? JSON.stringify(c.caseType) : String(c.caseType || '');
@@ -630,17 +616,17 @@ export default function LegacyLayout({
                           const dateStr = c.date && !isNaN(new Date(c.date).getTime()) ? new Date(c.date).toLocaleDateString() : '';
 
                           return (
-                            <div key={i} className="p-3 hover:bg-slate-800/85 transition-colors flex flex-col gap-1">
+                            <div key={i} className="p-3 hover:bg-[#FFF2CC] transition-colors flex flex-col gap-1">
                               <div className="flex justify-between items-center">
-                                <span className="font-black text-amber-300 text-[11px] uppercase">{caseTypeStr}</span>
-                                <span className="text-[10px] text-slate-400 font-mono">
+                                <span className="font-bold text-[#D94B5A] text-[11px] uppercase">{caseTypeStr}</span>
+                                <span className="text-[10px] text-slate-500 font-mono">
                                   {dateStr}
                                 </span>
                               </div>
-                              <p className="text-[11px] text-slate-200 font-bold truncate">
+                              <p className="text-[11px] text-[#111111] font-bold truncate">
                                 MR / PO: {mrPoStr} {gradeStr}
                               </p>
-                              <p className="text-[10px] text-slate-400 line-clamp-1">
+                              <p className="text-[10px] text-slate-600 line-clamp-1">
                                 {descStr}
                               </p>
                               <div className="flex gap-2 mt-1">
@@ -649,7 +635,7 @@ export default function LegacyLayout({
                                     setIsDisputeTrayOpen(false);
                                     handleNavNavigation(c.caseType === 'Material Mismatch' ? 'material_mismatch' : 'mismatch');
                                   }}
-                                  className="text-[10px] bg-amber-600 hover:bg-amber-500 text-slate-950 font-extrabold px-2 py-0.5 rounded transition-colors"
+                                  className="text-[10px] bg-[#FDE7E6] hover:bg-[#FBCFCB] text-[#D94B5A] font-bold px-2 py-0.5 rounded transition-colors"
                                 >
                                   Review Case →
                                 </button>
@@ -667,36 +653,36 @@ export default function LegacyLayout({
             {/* Notification Badge Bell */}
             <button
               onClick={() => setIsNotifOpen(true)}
-              className="relative p-2 rounded-full bg-[#103A20] hover:bg-[#215E38] text-white border border-[#2D7344] transition-colors cursor-pointer shadow-xs"
+              className="relative p-2 rounded-full bg-[#FDE7E6] hover:bg-[#FBCFCB] text-[#D94B5A] border border-[#FBCFCB] transition-colors cursor-pointer shadow-2xs"
               title="Notifications"
             >
-              <Bell className="w-4 h-4 text-white" />
+              <Bell className="w-4 h-4 text-[#D94B5A]" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] font-black flex items-center justify-center border border-white">
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#D94B5A] text-white text-[9px] font-black flex items-center justify-center border border-white">
                   {unreadCount}
                 </span>
               )}
             </button>
 
-            {/* Admin User Profile Dropdown */}
+            {/* User Profile Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="flex items-center gap-1.5 sm:gap-2 bg-[#103A20] hover:bg-[#215E38] border border-[#2D7344] rounded-full px-2.5 sm:px-3 py-1 text-xs font-bold text-white transition-colors cursor-pointer shadow-xs"
+                className="flex items-center gap-1.5 sm:gap-2 bg-[#FDE7E6] hover:bg-[#FBCFCB] border border-[#FBCFCB] rounded-full px-3 py-1 text-xs font-bold text-[#111111] transition-colors cursor-pointer shadow-2xs"
               >
-                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#F7AFA8] border border-[#2D7344] text-[#D4AF37] flex items-center justify-center text-[10px] sm:text-[11px] font-bold">
+                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#D94B5A] text-white flex items-center justify-center text-[10px] sm:text-[11px] font-bold">
                   <User className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 </div>
-                <span className="hidden sm:inline font-bold text-white">{currentUser}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-white" />
+                <span className="hidden sm:inline font-bold text-[#111111]">{currentUser}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-[#404040]" />
               </button>
 
               {/* Profile Menu Dropdown Overlay */}
               {isProfileMenuOpen && (
-                <div className="absolute right-0 mt-2 w-52 bg-[#103A20] border-2 border-[#235E39] rounded-xl shadow-2xl py-2 z-50 text-xs text-white">
-                  <div className="px-4 py-2 border-b border-[#1E4D2C] bg-[#0A2615]">
-                    <p className="font-bold text-white text-sm">{currentUser}</p>
-                    <p className="text-[10px] text-emerald-300 font-bold uppercase tracking-wider">Bally Jute Operator</p>
+                <div className="absolute right-0 mt-2 w-52 bg-white border border-[#CBD5E1] rounded-xl shadow-2xl py-2 z-50 text-xs text-[#262626]">
+                  <div className="px-4 py-2 border-b border-[#E5E7EB] bg-[#FDE7E6]">
+                    <p className="font-bold text-[#111111] text-sm">{currentUser}</p>
+                    <p className="text-[10px] text-[#D94B5A] font-bold uppercase tracking-wider">Bally Jute Operator</p>
                   </div>
                   {hasModulePermission('admindesk', effectiveAllowedModules, effectiveIsAdmin) && (
                     <button
@@ -704,7 +690,7 @@ export default function LegacyLayout({
                         setIsProfileMenuOpen(false);
                         handleNavNavigation('admindesk');
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-[#1E4D2C] text-white flex items-center gap-2 font-bold cursor-pointer transition-colors"
+                      className="w-full text-left px-4 py-2 hover:bg-[#FFF2CC] text-[#111111] flex items-center gap-2 font-semibold cursor-pointer transition-colors"
                     >
                       <span>⚙️ Admin Desk</span>
                     </button>
@@ -715,7 +701,7 @@ export default function LegacyLayout({
                         setIsProfileMenuOpen(false);
                         handleNavNavigation('reports');
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-[#1E4D2C] text-white flex items-center gap-2 font-bold cursor-pointer transition-colors"
+                      className="w-full text-left px-4 py-2 hover:bg-[#FFF2CC] text-[#111111] flex items-center gap-2 font-semibold cursor-pointer transition-colors"
                     >
                       <span>📊 Report</span>
                     </button>
@@ -727,7 +713,7 @@ export default function LegacyLayout({
                       localStorage.clear();
                       window.location.replace(window.location.pathname);
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-rose-900/50 text-rose-300 flex items-center gap-2 font-bold cursor-pointer border-t border-[#1E4D2C] transition-colors"
+                    className="w-full text-left px-4 py-2 hover:bg-rose-50 text-[#991B1B] flex items-center gap-2 font-semibold cursor-pointer border-t border-[#E5E7EB] transition-colors"
                   >
                     <span>🚪 Logout</span>
                   </button>
@@ -739,7 +725,7 @@ export default function LegacyLayout({
         </header>
 
         {/* Form Body */}
-        <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0 min-w-0 p-2 sm:p-4 bg-[#F4EFE6]/70 w-full max-w-full main-content">
+        <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0 min-w-0 p-2 sm:p-4 bg-[#FFFCFB] w-full max-w-full main-content">
           {children}
           <NotificationCenter
             isOpen={isNotifOpen}
@@ -759,8 +745,8 @@ export default function LegacyLayout({
 
 export function LegacyFieldset({ legend, children, className }: { legend: string, children: React.ReactNode, className?: string }) {
   return (
-    <fieldset className={cn("border border-[#D6CAA8] rounded-xl p-4 pt-2.5 bg-[#FAF7F0] shadow-xs relative hover:border-[#F7AFA8] transition-colors", className)}>
-      <legend className="px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-[#F7AFA8] tracking-wider bg-[#EAE2D2] rounded-md border border-[#D6CAA8] shadow-2xs">{legend}</legend>
+    <fieldset className={cn("border border-[#CBD5E1] rounded-xl p-4 pt-2.5 bg-white shadow-2xs relative hover:border-[#D94B5A] transition-colors", className)}>
+      <legend className="px-2.5 py-0.5 text-[11px] font-extrabold uppercase text-[#111111] tracking-wider bg-[#FDE7E6] rounded-md border border-[#FBCFCB] shadow-2xs">{legend}</legend>
       {children}
     </fieldset>
   );
@@ -772,16 +758,16 @@ export function LegacyButton({ label, icon: Icon, onClick, active, variant = 'de
     <button 
       onClick={onClick}
       className={cn(
-        "bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg shadow-2xs hover:shadow-xs active:scale-[0.98] px-3.5 py-1.5 text-[#F7AFA8] transition-all font-semibold cursor-pointer hover:bg-[#EAE2D2] hover:border-[#F7AFA8]",
+        "bg-white border border-[#CBD5E1] rounded-lg shadow-2xs hover:shadow-xs active:scale-[0.98] px-3.5 py-1.5 text-[#111111] transition-all font-semibold cursor-pointer hover:bg-[#FFF2CC] hover:border-[#F5B942]",
         !isCustom && "flex flex-col items-center min-w-[80px]",
-        active && "bg-[#F7AFA8] border-[#F7AFA8] text-[#FAF7F0] shadow-inner font-bold",
-        variant === 'danger' && "text-rose-700 bg-rose-50/50 hover:bg-rose-100 border-rose-300",
+        active && "bg-[#D94B5A] border-[#D94B5A] text-white shadow-inner font-bold",
+        variant === 'danger' && "text-[#991B1B] bg-rose-50 hover:bg-rose-100 border-rose-300",
         className
       )}
     >
       {children ? children : (
         <>
-          {Icon && <Icon className={cn("h-4 w-4 mb-1 transition-transform group-hover:scale-110", active ? "text-[#FAF7F0]" : "text-[#5A6E54]")} />}
+          {Icon && <Icon className={cn("h-4 w-4 mb-1 transition-transform group-hover:scale-110", active ? "text-white" : "text-[#D94B5A]")} />}
           <span className="text-[10px] font-bold uppercase tracking-tight">{label}</span>
         </>
       )}

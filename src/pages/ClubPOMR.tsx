@@ -170,16 +170,6 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
     if (selectedSupplier) fetchSupplierDocuments(selectedSupplier);
   }, [selectedSupplier], { tables: ['purchase_master', 'temporary_material_received', 'final_arrival'] });
 
-  useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  useEffect(() => {
-    if (selectedSupplier) {
-      fetchSupplierDocuments(selectedSupplier);
-    }
-  }, [selectedSupplier]);
-
   const toggleSelectPo = (arrivalNo: string) => {
     setSelectedPos(prev => 
       prev.includes(arrivalNo) ? prev.filter(p => p !== arrivalNo) : [...prev, arrivalNo]

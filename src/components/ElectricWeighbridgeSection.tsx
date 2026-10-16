@@ -133,20 +133,20 @@ export default function ElectricWeighbridgeSection({
   };
 
   return (
-    <div className="space-y-6 text-[#F7AFA8]">
+    <div className="space-y-6 text-[#D94B5A]">
       
       {/* HEADER STATION BANNER */}
-      <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#C5BA9E] pb-3 gap-3">
+      <div className="bg-[#FDE7E6] border border-[#FBCFCB] p-5 rounded-2xl shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#FBCFCB] pb-3 gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-[#F7AFA8] text-[#FAF7F0] rounded-2xl shrink-0">
+            <div className="p-3 bg-[#F7AFA8] text-[#FDE7E6] rounded-2xl shrink-0">
               <Scale className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-base font-black text-[#F7AFA8] uppercase tracking-wider font-mono">
+              <h2 className="text-base font-black text-[#D94B5A] uppercase tracking-wider font-mono">
                 Electric Weighbridge Station
               </h2>
-              <p className="text-xs text-[#5A6E54] font-medium">
+              <p className="text-xs text-[#D94B5A] font-medium">
                 High-precision electric weighment check station
               </p>
             </div>
@@ -159,7 +159,7 @@ export default function ElectricWeighbridgeSection({
 
         {/* SEARCHABLE DROPDOWN SELECTOR */}
         <div className="space-y-1">
-          <label className="text-[10px] font-bold text-[#5A6E54] uppercase tracking-wider block">
+          <label className="text-[10px] font-bold text-[#D94B5A] uppercase tracking-wider block">
             Select Vehicle ({pendingElectricLorries.length} Pending)
           </label>
           <select
@@ -169,7 +169,7 @@ export default function ElectricWeighbridgeSection({
               if (l) handleSelectLorry(l);
               else setSelectedLorryId("");
             }}
-            className="w-full bg-[#FAF7F0] border border-[#C5BA9E] text-xs font-mono font-bold text-[#F7AFA8] p-3 rounded-xl outline-none focus:border-[#F7AFA8]"
+            className="w-full bg-[#FDE7E6] border border-[#FBCFCB] text-xs font-mono font-bold text-[#D94B5A] p-3 rounded-xl outline-none focus:border-[#F7AFA8]"
           >
             <option value="">-- Choose Vehicle for Electric Weighment --</option>
             {pendingElectricLorries.map((l) => (
@@ -182,13 +182,13 @@ export default function ElectricWeighbridgeSection({
 
         {/* SELECTED VEHICLE CARD */}
         {activeLorry && (
-          <div className="bg-[#FAF7F0] border-2 border-[#F7AFA8] p-4 rounded-2xl space-y-4 animate-fade-in shadow-xs">
-            <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
+          <div className="bg-[#FDE7E6] border-2 border-[#F7AFA8] p-4 rounded-2xl space-y-4 animate-fade-in shadow-xs">
+            <div className="flex items-center justify-between border-b border-[#FBCFCB] pb-3">
               <div className="flex items-center gap-2">
-                <Truck className="w-5 h-5 text-[#F7AFA8]" />
+                <Truck className="w-5 h-5 text-[#D94B5A]" />
                 <div>
-                  <h3 className="text-sm font-black text-[#F7AFA8] font-mono">{activeLorry.lorryNo}</h3>
-                  <p className="text-[11px] text-[#5A6E54]">Gate Pass: <strong className="text-[#F7AFA8] font-mono">{activeLorry.gatePassNo}</strong></p>
+                  <h3 className="text-sm font-black text-[#D94B5A] font-mono">{activeLorry.lorryNo}</h3>
+                  <p className="text-[11px] text-[#D94B5A]">Gate Pass: <strong className="text-[#D94B5A] font-mono">{activeLorry.gatePassNo}</strong></p>
                 </div>
               </div>
 
@@ -201,31 +201,31 @@ export default function ElectricWeighbridgeSection({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div className="bg-[#F4EFE6] p-2.5 rounded-xl border border-[#C5BA9E]">
-                <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Party / Broker</span>
-                <span className="font-extrabold text-[#F7AFA8]">{safeStr(activeLorry.broker)}</span>
+              <div className="bg-[#FDE7E6] p-2.5 rounded-xl border border-[#FBCFCB]">
+                <span className="text-[10px] text-[#D94B5A] font-bold block uppercase">Party / Broker</span>
+                <span className="font-extrabold text-[#D94B5A]">{safeStr(activeLorry.broker)}</span>
               </div>
-              <div className="bg-[#F4EFE6] p-2.5 rounded-xl border border-[#C5BA9E]">
-                <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Department</span>
-                <span className="font-extrabold text-[#F7AFA8]">{safeStr(activeLorry.department)}</span>
+              <div className="bg-[#FDE7E6] p-2.5 rounded-xl border border-[#FBCFCB]">
+                <span className="text-[10px] text-[#D94B5A] font-bold block uppercase">Department</span>
+                <span className="font-extrabold text-[#D94B5A]">{safeStr(activeLorry.department)}</span>
               </div>
-              <div className="bg-[#F4EFE6] p-2.5 rounded-xl border border-[#C5BA9E]">
-                <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Mokam / Marka</span>
-                <span className="font-extrabold text-[#F7AFA8]">{safeStr(activeLorry.mokam)} / {safeStr(activeLorry.marka)}</span>
+              <div className="bg-[#FDE7E6] p-2.5 rounded-xl border border-[#FBCFCB]">
+                <span className="text-[10px] text-[#D94B5A] font-bold block uppercase">Mokam / Marka</span>
+                <span className="font-extrabold text-[#D94B5A]">{safeStr(activeLorry.mokam)} / {safeStr(activeLorry.marka)}</span>
               </div>
             </div>
 
             {/* WEIGHT INPUT & VERIFICATION FORM */}
-            <form onSubmit={handleSubmitWeighment} className="space-y-4 pt-2 border-t border-[#C5BA9E]">
+            <form onSubmit={handleSubmitWeighment} className="space-y-4 pt-2 border-t border-[#FBCFCB]">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
                 {/* Electric Gross Weight Input */}
                 <div>
-                  <label htmlFor="electric_gross_weight_kg_211" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
+                  <label htmlFor="electric_gross_weight_kg_211" className="text-[10px] font-bold text-[#D94B5A] uppercase block mb-1">
                     Electric Gross Weight (kg)
                   </label>
                   <div className="relative">
-                    <Scale className="w-4 h-4 text-[#5A6E54] absolute left-3 top-3" />
+                    <Scale className="w-4 h-4 text-[#D94B5A] absolute left-3 top-3" />
                     <input
  id="electric_gross_weight_kg_211" name="electric_gross_weight_kg" aria-label="Electric Gross Weight (kg)"                      type="number"
                       disabled={!!activeLorry.electricGrossWeight && currentUserRole !== "SUPER_ADMIN"}
@@ -236,7 +236,7 @@ export default function ElectricWeighbridgeSection({
                         "w-full border rounded-xl pl-10 pr-3 py-2 text-sm font-mono font-bold outline-none",
                         activeLorry.electricGrossWeight
                           ? "bg-slate-200 text-slate-700 border-slate-300 cursor-not-allowed"
-                          : "bg-[#F4EFE6] text-[#F7AFA8] border-[#C5BA9E] focus:border-[#F7AFA8]"
+                          : "bg-[#FDE7E6] text-[#D94B5A] border-[#FBCFCB] focus:border-[#F7AFA8]"
                       )}
                     />
                   </div>
@@ -249,11 +249,11 @@ export default function ElectricWeighbridgeSection({
 
                 {/* Electric Tare Weight Input */}
                 <div>
-                  <label htmlFor="electric_tare_weight_kg_239" className="text-[10px] font-bold text-[#5A6E54] uppercase block mb-1">
+                  <label htmlFor="electric_tare_weight_kg_239" className="text-[10px] font-bold text-[#D94B5A] uppercase block mb-1">
                     Electric Tare Weight (kg)
                   </label>
                   <div className="relative">
-                    <Scale className="w-4 h-4 text-[#5A6E54] absolute left-3 top-3" />
+                    <Scale className="w-4 h-4 text-[#D94B5A] absolute left-3 top-3" />
                     <input
  id="electric_tare_weight_kg_239" name="electric_tare_weight_kg" aria-label="Electric Tare Weight (kg)"                      type="number"
                       disabled={!activeLorry.electricGrossWeight || (!!activeLorry.electricTareWeight && currentUserRole !== "SUPER_ADMIN")}
@@ -264,7 +264,7 @@ export default function ElectricWeighbridgeSection({
                         "w-full border rounded-xl pl-10 pr-3 py-2 text-sm font-mono font-bold outline-none",
                         !activeLorry.electricGrossWeight || activeLorry.electricTareWeight
                           ? "bg-slate-200 text-slate-700 border-slate-300 cursor-not-allowed"
-                          : "bg-[#F4EFE6] text-[#F7AFA8] border-[#C5BA9E] focus:border-[#F7AFA8]"
+                          : "bg-[#FDE7E6] text-[#D94B5A] border-[#FBCFCB] focus:border-[#F7AFA8]"
                       )}
                     />
                   </div>
@@ -294,12 +294,12 @@ export default function ElectricWeighbridgeSection({
               )}
 
               {/* Unloading Verification Toggle */}
-              <div className="flex items-center justify-between bg-[#F4EFE6] p-3 rounded-xl border border-[#C5BA9E]">
+              <div className="flex items-center justify-between bg-[#FDE7E6] p-3 rounded-xl border border-[#FBCFCB]">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className={cn("w-5 h-5", isUnloaded ? "text-emerald-700" : "text-[#5A6E54]")} />
+                  <CheckCircle2 className={cn("w-5 h-5", isUnloaded ? "text-emerald-700" : "text-[#D94B5A]")} />
                   <div>
-                    <span className="text-xs font-bold text-[#F7AFA8]">Unloading Verification Status</span>
-                    <p className="text-[10px] text-[#5A6E54]">Confirm material has been fully unloaded in department yard</p>
+                    <span className="text-xs font-bold text-[#D94B5A]">Unloading Verification Status</span>
+                    <p className="text-[10px] text-[#D94B5A]">Confirm material has been fully unloaded in department yard</p>
                   </div>
                 </div>
 
@@ -310,7 +310,7 @@ export default function ElectricWeighbridgeSection({
                     "px-3.5 py-1.5 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer flex items-center gap-1.5",
                     isUnloaded
                       ? "bg-emerald-700 text-white shadow-xs"
-                      : "bg-[#EAE2D2] text-[#F7AFA8] hover:bg-[#C5BA9E]"
+                      : "bg-[#FBCFCB] text-[#D94B5A] hover:bg-[#FBCFCB]"
                   )}
                 >
                   {isUnloaded ? "Status: UNLOADED ✓" : "Mark Unloaded"}
@@ -320,7 +320,7 @@ export default function ElectricWeighbridgeSection({
               {/* Contextual Action Button */}
               <button
                 type="submit"
-                className="w-full py-3 bg-[#F7AFA8] hover:bg-[#2D4D28] text-[#FAF7F0] font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#F7AFA8] hover:bg-[#D94B5A] text-[#FDE7E6] font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 <span>
@@ -335,30 +335,30 @@ export default function ElectricWeighbridgeSection({
       </div>
 
       {/* PENDING QUEUE & SEARCH LIST */}
-      <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
-          <h3 className="text-sm font-black text-[#F7AFA8] uppercase tracking-wider font-mono">
+      <div className="bg-[#FDE7E6] border border-[#FBCFCB] p-5 rounded-2xl shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b border-[#FBCFCB] pb-3">
+          <h3 className="text-sm font-black text-[#D94B5A] uppercase tracking-wider font-mono">
             Pending Electric Weighment Queue ({filteredQueue.length})
           </h3>
         </div>
 
         {/* Live Search Bar */}
         <div className="relative">
-          <Search className="w-4 h-4 text-[#5A6E54] absolute left-3.5 top-3" />
+          <Search className="w-4 h-4 text-[#D94B5A] absolute left-3.5 top-3" />
           <input
  id="search_pending_queue_by_v_330" name="search_pending_queue_by_v" aria-label="Search pending queue by vehicle number or gate pass..."            type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search pending queue by vehicle number or gate pass..."
-            className="w-full bg-[#FAF7F0] border border-[#C5BA9E] text-xs text-[#F7AFA8] font-mono pl-10 pr-4 py-2.5 rounded-xl outline-none focus:border-[#F7AFA8]"
+            className="w-full bg-[#FDE7E6] border border-[#FBCFCB] text-xs text-[#D94B5A] font-mono pl-10 pr-4 py-2.5 rounded-xl outline-none focus:border-[#F7AFA8]"
           />
         </div>
 
         <div className="space-y-3">
           {filteredQueue.length === 0 ? (
-            <div className="bg-[#FAF7F0] border-2 border-dashed border-[#C5BA9E] rounded-2xl p-8 text-center space-y-2 text-[#5A6E54]">
-              <Scale className="w-8 h-8 text-[#F7AFA8] mx-auto" />
-              <h4 className="text-xs font-black uppercase text-[#F7AFA8] font-mono">
+            <div className="bg-[#FDE7E6] border-2 border-dashed border-[#FBCFCB] rounded-2xl p-8 text-center space-y-2 text-[#D94B5A]">
+              <Scale className="w-8 h-8 text-[#D94B5A] mx-auto" />
+              <h4 className="text-xs font-black uppercase text-[#D94B5A] font-mono">
                 No Vehicles Pending Electric Scale Weighment
               </h4>
               <p className="text-xs">Electric scale queue is empty.</p>
@@ -367,12 +367,12 @@ export default function ElectricWeighbridgeSection({
             filteredQueue.map((l) => (
               <div
                 key={l.id}
-                className="bg-[#FAF7F0] border border-[#C5BA9E] hover:border-[#F7AFA8] rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all shadow-xs"
+                className="bg-[#FDE7E6] border border-[#FBCFCB] hover:border-[#F7AFA8] rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all shadow-xs"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-[#F7AFA8] font-mono">{l.lorryNo}</span>
-                    <span className="px-2 py-0.5 bg-[#F7AFA8]/10 text-[#F7AFA8] text-xs font-mono font-bold rounded">
+                    <span className="text-sm font-black text-[#D94B5A] font-mono">{l.lorryNo}</span>
+                    <span className="px-2 py-0.5 bg-[#F7AFA8]/10 text-[#D94B5A] text-xs font-mono font-bold rounded">
                       {l.gatePassNo}
                     </span>
                     <span className="px-2 py-0.5 bg-cyan-100 text-cyan-900 text-[10px] font-bold uppercase rounded">
@@ -380,14 +380,14 @@ export default function ElectricWeighbridgeSection({
                     </span>
                   </div>
 
-                  <p className="text-xs text-[#5A6E54]">
-                    Party: <strong className="text-[#F7AFA8]">{safeStr(l.broker)}</strong> | Status: <span className="font-bold uppercase text-[#F7AFA8]">{l.status.replace(/_/g, " ")}</span>
+                  <p className="text-xs text-[#D94B5A]">
+                    Party: <strong className="text-[#D94B5A]">{safeStr(l.broker)}</strong> | Status: <span className="font-bold uppercase text-[#D94B5A]">{l.status.replace(/_/g, " ")}</span>
                   </p>
                 </div>
 
                 <button
                   onClick={() => handleSelectLorry(l)}
-                  className="px-4 py-2 bg-[#F7AFA8] hover:bg-[#2D4D28] text-[#FAF7F0] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
+                  className="px-4 py-2 bg-[#F7AFA8] hover:bg-[#D94B5A] text-[#FDE7E6] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
                 >
                   <Scale className="w-4 h-4" />
                   <span>Weigh</span>

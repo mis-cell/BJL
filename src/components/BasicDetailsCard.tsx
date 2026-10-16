@@ -30,7 +30,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
         <div className="space-y-3">
           {/* Subtle session reference for User 010 */}
           <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 border border-slate-200/80 rounded-xl px-4 py-2 font-mono">
-            <span className="font-semibold text-slate-600">Contract Session: <strong className="text-[#F7AFA8]">{formData.session || '2026-2027'}</strong></span>
+            <span className="font-semibold text-slate-600">Contract Session: <strong className="text-[#D94B5A]">{formData.session || '2026-2027'}</strong></span>
             <span>Order No: <strong className="text-slate-800 font-bold">{formData.sauda_no || 'Auto'}</strong></span>
           </div>
 
@@ -46,7 +46,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
                 name="po_type"
                 value={formData.po_type || 'Normal'}
                 onChange={onChange}
-                className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs cursor-pointer"
+                className="bg-white border border-[#FBCFCB] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs cursor-pointer"
               >
                 <option value="Normal">Normal</option>
                 <option value="PTF">PTF</option>
@@ -66,7 +66,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
                 name="date"
                 value={formData.date || ''}
                 onChange={onChange}
-                className="w-full bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs cursor-pointer"
+                className="w-full bg-white border border-[#FBCFCB] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs cursor-pointer"
               />
             </div>
 
@@ -99,7 +99,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
               value={formData.session || '2026-2027'}
               onChange={onChange}
               placeholder="e.g. 2026-2027"
-              className="bg-[#EAF4FF] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono"
+              className="bg-[#FDE7E6] border border-sky-300 rounded-xl px-3.5 py-2 text-xs font-bold text-sky-950 outline-none focus:ring-2 focus:ring-sky-300 transition-all shadow-2xs font-mono"
             />
           </div>
 
@@ -123,7 +123,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
               onChange={onChange}
               placeholder="e.g. BJCL/2026-2027/0153"
               required
-              className="bg-[#FFECEC] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-black text-slate-900 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs font-mono"
+              className="bg-[#FDE7E6] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-black text-slate-900 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs font-mono"
             />
           </div>
 
@@ -139,7 +139,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
               name="po_type"
               value={formData.po_type || 'Normal'}
               onChange={onChange}
-              className="bg-[#FFECEC] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs cursor-pointer"
+              className="bg-[#FDE7E6] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs cursor-pointer"
             >
               <option value="Normal">Normal</option>
               <option value="PTF">PTF</option>
@@ -166,7 +166,7 @@ export const BasicDetailsCard: React.FC<BasicDetailsProps> = ({
                 name="date"
                 value={formData.date || ''}
                 onChange={onChange}
-                className="w-full bg-[#FFECEC] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs cursor-pointer"
+                className="w-full bg-[#FDE7E6] border-2 border-rose-300 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-200 transition-all shadow-2xs cursor-pointer"
               />
             </div>
           </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Papa from "papaparse";
 import { supabase } from "../../lib/supabase";
+import { useLiveAutoRefresh } from "../../hooks/useLiveAutoRefresh";
 import { dbModule } from "../../services/dbModule";
 import { enforceEditOrDeletePermission, canViewCompletedData, getCurrentUserContext } from "../../lib/permissions";
 import { comparePoInspection } from "../../lib/poMatch";
@@ -599,36 +600,10 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
     }
   };
 
-  useEffect(() => {
+  useLiveAutoRefresh(() => {
     loadAllMasters();
     loadSavedInspectionsList();
-
-    const handleLocalUpdate = () => {
-      loadAllMasters();
-      loadSavedInspectionsList();
-    };
-    window.addEventListener('app-data-updated', handleLocalUpdate);
-
-    let sub: any = null;
-    if (supabase) {
-      sub = supabase
-        .channel('material_inspection_masters_realtime')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'mill_inspection_master' }, () => {
-          loadAllMasters();
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'material_inspections' }, () => {
-          loadSavedInspectionsList();
-        })
-        .subscribe();
-    }
-
-    return () => {
-      window.removeEventListener('app-data-updated', handleLocalUpdate);
-      if (sub && supabase) {
-        supabase.removeChannel(sub);
-      }
-    };
-  }, []);
+  }, [], { tables: ['material_inspection', 'mill_inspection_master', 'material_inspections', 'purchase_master', 'final_arrival', 'temporary_material_received'] });
 
   // Automatically retrieve full P.O. data from purchase_master whenever po_no changes
   useEffect(() => {

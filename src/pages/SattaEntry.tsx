@@ -775,7 +775,7 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
         </div>
 
         {/* Footer Ribbon */}
-        <div className="flex bg-[#c0c0c0] p-1 border border-black/20 gap-1 mt-2">
+        <div className="flex bg-[#FBCFCB] p-1 border border-black/20 gap-1 mt-2">
            <div className="flex-1" />
            <LegacyButton icon={X} label="Back (Esc)" onClick={onCancel} />
            <LegacyButton icon={Save} label={loading ? "SAVING..." : "SAVE SATTA"} active={!loading} onClick={handleSave} />
@@ -822,7 +822,7 @@ function ComboField({ label, name, value, onChange, options }: any) {
              type="button"
              tabIndex={-1}
              onClick={handleButtonClick}
-             className="bg-[#d4d0c8] px-2 border-l border-gray-400 hover:bg-white"
+             className="bg-[#FBCFCB] px-2 border-l border-gray-400 hover:bg-white"
           >
              <ChevronDown className="h-4 w-4" />
           </button>

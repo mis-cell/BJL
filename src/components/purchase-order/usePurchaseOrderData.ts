@@ -671,44 +671,15 @@ export function usePurchaseOrderData({
     ] 
   });
 
-  // Event Listeners & Channels
+  // Custom event listener for explicit mismatch resolution
   useEffect(() => {
-    fetchPosAndMasters();
-
-    const handleDataUpdate = () => {
+    const handleMismatchResolved = () => {
       fetchPosAndMasters();
     };
 
-    window.addEventListener('app-data-updated', handleDataUpdate);
-    window.addEventListener('mismatch_resolved', handleDataUpdate);
-    window.addEventListener('storage', handleDataUpdate);
-
-    let channel: any = null;
-    if (supabase) {
-      channel = supabase
-        .channel('po-realtime-sub')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_check_point' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_check_point_deductions' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'final_po' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_master' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_check_point_details' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_master' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'material_inspection' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'mill_inspection_master' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_master' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'temporary_material_received' }, handleDataUpdate)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sms_sauda' }, handleDataUpdate)
-        .subscribe();
-    }
-
+    window.addEventListener('mismatch_resolved', handleMismatchResolved);
     return () => {
-      window.removeEventListener('app-data-updated', handleDataUpdate);
-      window.removeEventListener('mismatch_resolved', handleDataUpdate);
-      window.removeEventListener('storage', handleDataUpdate);
-      if (channel && supabase) {
-        supabase.removeChannel(channel);
-      }
+      window.removeEventListener('mismatch_resolved', handleMismatchResolved);
     };
   }, [fetchPosAndMasters]);
 

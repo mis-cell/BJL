@@ -96,9 +96,9 @@ export const AdminDeskLoginModal: React.FC<AdminDeskLoginModalProps> = ({
   };
 
   return (
-    <div className="h-screen w-full bg-[#dfdfdf] flex items-center justify-center p-6 font-sans">
+    <div className="h-screen w-full bg-[#FBCFCB] flex items-center justify-center p-6 font-sans">
       <div className="w-full max-w-sm bg-[#E8E6E1] border-t-white border-l-white border-b-slate-800 border-r-slate-800 border-2 shadow-[2px_2px_0_0_rgba(0,0,0,0.2)]">
-        <div className="bg-[#000080] text-white px-2 py-1 flex justify-between items-center h-8">
+        <div className="bg-[#D94B5A] text-white px-2 py-1 flex justify-between items-center h-8">
           <div className="flex items-center gap-2">
             <Lock className="h-4 w-4" />
             <span className="text-[10px] font-black uppercase tracking-widest italic">Admin Master Lock</span>
@@ -107,7 +107,7 @@ export const AdminDeskLoginModal: React.FC<AdminDeskLoginModalProps> = ({
         <div className="p-8 space-y-6">
           <div className="text-center space-y-1">
             <h2 className="text-2xl font-black text-indigo-950 italic">Administrative Vault</h2>
-            <p className="text-[9px] font-extrabold text-[#000080] uppercase tracking-widest leading-none">Console Override</p>
+            <p className="text-[9px] font-extrabold text-[#D94B5A] uppercase tracking-widest leading-none">Console Override</p>
           </div>
           {error && <div className="p-2 border border-rose-300 bg-rose-50 text-rose-800 text-[10px] uppercase font-bold text-center">{error}</div>}
           <div className="space-y-4">
@@ -135,7 +135,7 @@ export const AdminDeskLoginModal: React.FC<AdminDeskLoginModalProps> = ({
             />
             <button
               onClick={handleLogin}
-              className="w-full py-3 bg-[#000080] text-white font-black uppercase text-[11px] tracking-[0.2em] cursor-pointer hover:bg-blue-900 transition active:scale-95"
+              className="w-full py-3 bg-[#D94B5A] text-white font-black uppercase text-[11px] tracking-[0.2em] cursor-pointer hover:bg-blue-900 transition active:scale-95"
             >
               DESTRUCT CRITICAL OVERRIDE
             </button>

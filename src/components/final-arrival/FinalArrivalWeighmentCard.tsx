@@ -23,9 +23,9 @@ export function FinalArrivalWeighmentCard({
   const diffPct = challanWt > 0 && diffWt !== 0 ? ((diffWt / challanWt) * 100) : 0;
 
   return (
-    <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs p-4 space-y-4 text-xs">
-      <div className="flex items-center gap-2 pb-1 border-b border-[#E6DDC8]">
-        <Scale className="w-4 h-4 text-[#103A20]" />
+    <div className="bg-white rounded-xl border border-[#FBCFCB] shadow-xs p-4 space-y-4 text-xs">
+      <div className="flex items-center gap-2 pb-1 border-b border-[#FBCFCB]">
+        <Scale className="w-4 h-4 text-[#D94B5A]" />
         <span className="font-bold text-slate-800 uppercase tracking-wide">Enterprise Weighment Compilations & Reconciliation</span>
       </div>
 
@@ -43,7 +43,7 @@ export function FinalArrivalWeighmentCard({
                 step="0.001"
                 value={formData.actual_gross_weight || ''}
                 onChange={(e) => handleInputChange('actual_gross_weight', parseFloat(e.target.value) || 0)}
-                className="w-full h-7 bg-white border border-slate-300 rounded px-2 text-right font-mono font-bold text-slate-800 outline-none focus:border-[#103A20]"
+                className="w-full h-7 bg-white border border-slate-300 rounded px-2 text-right font-mono font-bold text-slate-800 outline-none focus:border-[#D94B5A]"
               />
             </div>
             <div>
@@ -53,7 +53,7 @@ export function FinalArrivalWeighmentCard({
                 step="0.001"
                 value={formData.actual_tare_weight || ''}
                 onChange={(e) => handleInputChange('actual_tare_weight', parseFloat(e.target.value) || 0)}
-                className="w-full h-7 bg-white border border-slate-300 rounded px-2 text-right font-mono font-bold text-slate-800 outline-none focus:border-[#103A20]"
+                className="w-full h-7 bg-white border border-slate-300 rounded px-2 text-right font-mono font-bold text-slate-800 outline-none focus:border-[#D94B5A]"
               />
             </div>
             <div className="pt-1 border-t border-slate-200 flex justify-between items-center font-bold">
@@ -76,7 +76,7 @@ export function FinalArrivalWeighmentCard({
                 step="0.001"
                 value={formData.supplier_challan_gross || ''}
                 onChange={(e) => handleInputChange('supplier_challan_gross', parseFloat(e.target.value) || 0)}
-                className="w-full h-7 bg-white border border-slate-300 rounded px-2 text-right font-mono font-bold text-slate-800 outline-none focus:border-[#103A20]"
+                className="w-full h-7 bg-white border border-slate-300 rounded px-2 text-right font-mono font-bold text-slate-800 outline-none focus:border-[#D94B5A]"
               />
             </div>
             <div>
@@ -86,7 +86,7 @@ export function FinalArrivalWeighmentCard({
                 step="0.001"
                 value={formData.supplier_tare_weight || ''}
                 onChange={(e) => handleInputChange('supplier_tare_weight', parseFloat(e.target.value) || 0)}
-                className="w-full h-7 bg-white border border-slate-300 rounded px-2 text-right font-mono font-bold text-slate-800 outline-none focus:border-[#103A20]"
+                className="w-full h-7 bg-white border border-slate-300 rounded px-2 text-right font-mono font-bold text-slate-800 outline-none focus:border-[#D94B5A]"
               />
             </div>
             <div className="pt-1 border-t border-slate-200 flex justify-between items-center font-bold">
@@ -109,7 +109,7 @@ export function FinalArrivalWeighmentCard({
                 step="0.001"
                 value={formData.electronic_gross_weight || ''}
                 onChange={(e) => handleInputChange('electronic_gross_weight', parseFloat(e.target.value) || 0)}
-                className="w-full h-7 bg-white border border-slate-300 rounded px-2 text-right font-mono font-bold text-slate-800 outline-none focus:border-[#103A20]"
+                className="w-full h-7 bg-white border border-slate-300 rounded px-2 text-right font-mono font-bold text-slate-800 outline-none focus:border-[#D94B5A]"
               />
             </div>
             <div>
@@ -119,7 +119,7 @@ export function FinalArrivalWeighmentCard({
                 step="0.001"
                 value={formData.electronic_tare_weight || ''}
                 onChange={(e) => handleInputChange('electronic_tare_weight', parseFloat(e.target.value) || 0)}
-                className="w-full h-7 bg-white border border-slate-300 rounded px-2 text-right font-mono font-bold text-slate-800 outline-none focus:border-[#103A20]"
+                className="w-full h-7 bg-white border border-slate-300 rounded px-2 text-right font-mono font-bold text-slate-800 outline-none focus:border-[#D94B5A]"
               />
             </div>
             <div className="pt-1 border-t border-slate-200 flex justify-between items-center font-bold">
@@ -184,7 +184,7 @@ export function FinalArrivalWeighmentCard({
           value={formData.remarks || ''}
           onChange={(e) => handleInputChange('remarks', e.target.value)}
           placeholder="Enter remarks or advice notes..."
-          className="w-full bg-white border border-slate-300 rounded p-2 text-xs focus:border-[#103A20] outline-none"
+          className="w-full bg-white border border-slate-300 rounded p-2 text-xs focus:border-[#D94B5A] outline-none"
         />
       </div>
     </div>

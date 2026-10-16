@@ -568,7 +568,7 @@ export default function AIPortal({ onClose }: { onClose: () => void }) {
             <div className="flex-1 flex flex-col min-h-0 bg-[#fbfbfa]">
               
               {/* Header Status Bar */}
-              <div className="bg-[#d4d0c8] p-2 border-b border-slate-300 flex items-center justify-between text-[10px] font-bold text-slate-800 ">
+              <div className="bg-[#FBCFCB] p-2 border-b border-slate-300 flex items-center justify-between text-[10px] font-bold text-slate-800 ">
                 <div className="flex items-center gap-2">
                   <Terminal className="h-4 w-4 text-indigo-950" />
                   <span className="uppercase tracking-wider">NATURAL LANGUAGE DATABASE INTERFACE // ONLINE</span>

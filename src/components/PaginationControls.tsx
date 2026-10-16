@@ -127,8 +127,8 @@ export const PaginationControls: React.FC<PaginationControlsProps> = ({
                   className={cn(
                     "min-w-[28px] h-7 px-1.5 rounded font-bold text-xs transition-colors cursor-pointer",
                     isActive
-                      ? "bg-[#024a68] text-white shadow-2xs border border-[#024a68]"
-                      : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                      ? "bg-[#D94B5A] text-white shadow-2xs border border-[#D94B5A]"
+                      : "bg-white text-[#262626] border border-[#CBD5E1] hover:bg-[#FFF2CC]"
                   )}
                 >
                   {pageNum}

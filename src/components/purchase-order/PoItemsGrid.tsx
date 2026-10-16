@@ -113,7 +113,7 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
 }) => {
   return (
     <div className="border border-slate-400 bg-white rounded-md overflow-hidden shadow-xs">
-      <div className="flex items-center gap-2 p-1.5 bg-[#F7AFA8] border-b border-[#0f331d] justify-between text-white">
+      <div className="flex items-center gap-2 p-1.5 bg-[#F7AFA8] border-b border-[#F06D6C] justify-between text-white">
         <div className="text-[10px] font-bold text-amber-300 italic pl-1 flex items-center gap-1">
           <span>⚡ Grid Row Status:</span>
           {selectedItemSrl ? (
@@ -138,7 +138,7 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
           <button 
             type="button"
             onClick={handleAddItem}
-            className="bg-[#103A20] border border-[#235E39] text-white hover:bg-[#1c5932] px-2.5 py-1 text-[10px] flex items-center gap-1 font-bold rounded cursor-pointer shadow-xs"
+            className="bg-[#D94B5A] border border-[#F06D6C] text-white hover:bg-[#1c5932] px-2.5 py-1 text-[10px] flex items-center gap-1 font-bold rounded cursor-pointer shadow-xs"
           >
             <Plus className="w-3 h-3 text-amber-300" /> Spawn Row
           </button>
@@ -153,34 +153,37 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
       </div>
 
       <div className="border border-[#F7AFA8] bg-white shadow-sm overflow-x-auto min-h-[160px] text-black">
-        <table className="w-full min-w-[960px] border-collapse text-xs">
-          <thead className="bg-[#F7AFA8] text-amber-300 border-b border-[#0f331d] select-none">
+        <table className="w-full min-w-[1020px] border-collapse text-xs">
+          <thead className="bg-[#D94B5A] text-white border-b border-[#F06D6C] select-none">
             {/* Top Row: Spanning Group Headers */}
-            <tr className="divide-x divide-[#235E39] uppercase font-black text-amber-300 text-[10px] tracking-wider">
-              <th rowSpan={2} className="px-2 py-2 w-14 text-center align-middle bg-[#144226]">
+            <tr className="divide-x divide-[#F06D6C] uppercase font-black text-white text-[10.5px] tracking-wider">
+              <th rowSpan={2} className="px-2 py-2 w-14 text-center align-middle bg-[#D94B5A]">
                 Srl. No.
               </th>
-              <th rowSpan={2} className="px-2 py-2 w-28 text-center align-middle bg-[#144226]">
+              <th rowSpan={2} className="px-2 py-2 w-28 text-center align-middle bg-[#D94B5A]">
                 Crop Year
               </th>
-              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#F7AFA8]">
+              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#E85A5A]">
                 Grade
               </th>
-              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#F7AFA8]">
+              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#E85A5A]">
                 Agency
               </th>
-              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#F7AFA8]">
+              <th colSpan={2} className="px-2 py-1.5 text-center bg-[#E85A5A]">
                 Marka
               </th>
-              <th rowSpan={2} className="px-3 py-2 w-28 text-right align-middle bg-[#144226]">
+              <th rowSpan={2} className="px-3 py-2 w-28 text-right align-middle bg-[#D94B5A]">
                 Rate / Qntl
               </th>
-              <th rowSpan={2} className="px-3 py-2 w-24 text-right align-middle bg-[#144226]">
+              <th rowSpan={2} className="px-3 py-2 w-24 text-right align-middle bg-[#D94B5A]">
                 Premium
+              </th>
+              <th rowSpan={2} className="px-2 py-2 w-20 text-center align-middle bg-[#D94B5A]">
+                Action
               </th>
             </tr>
             {/* Sub-Header Row: Code & Name for Grade, Agency, Marka */}
-            <tr className="bg-[#103A20] text-amber-200 divide-x divide-[#235E39] border-t border-[#235E39] text-[9.5px] font-black uppercase tracking-wider">
+            <tr className="bg-[#E85A5A] text-white divide-x divide-[#F06D6C] border-t border-[#F06D6C] text-[9.5px] font-black uppercase tracking-wider">
               <th className="w-16 text-center py-1 px-1">Code</th>
               <th className="w-36 text-left py-1 px-2.5">Name</th>
               <th className="w-24 text-center py-1 px-1">Code</th>
@@ -195,7 +198,7 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
                 key={`item_row_${index}_${row.grade_code || ''}_${row.srl || index}`} 
                 onClick={() => setSelectedItemSrl(row.srl || index + 1)}
                 className={`divide-x divide-slate-300 transition-colors ${
-                  (row.srl === selectedItemSrl || (!selectedItemSrl && index === 0)) ? 'bg-blue-100/95 font-bold' : 'hover:bg-blue-50/50'
+                  (row.srl === selectedItemSrl || (!selectedItemSrl && index === 0)) ? 'bg-[#FDE7E6] font-bold' : 'hover:bg-[#FFF5F4]'
                 }`}
               >
                 <td className="px-2 py-1 text-center bg-slate-50 font-bold text-slate-700 w-14 font-mono">{row.srl || index + 1}</td>
@@ -363,6 +366,41 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
                       setFormData(prev => ({ ...prev, items: updated }));
                     }} 
                   />
+                </td>
+                <td className="px-1.5 py-1 text-center w-20">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFormData(prev => {
+                        const filtered = prev.items.filter((_, idx) => idx !== index);
+                        const reindexed = filtered.map((it, idx) => ({ ...it, srl: idx + 1 }));
+                        return {
+                          ...prev,
+                          items: reindexed.length > 0 ? reindexed : [{
+                            srl: 1,
+                            crop: getCropYear(),
+                            grade_code: '',
+                            grade_name: '',
+                            agency_code: '',
+                            agency_name: '',
+                            marka_code: '',
+                            marka_name: '',
+                            rate: 0,
+                            premium: 0
+                          }]
+                        };
+                      });
+                      if (selectedItemSrl === (row.srl || index + 1)) {
+                        setSelectedItemSrl(null);
+                      }
+                    }}
+                    title={`Delete Row #${row.srl || index + 1}`}
+                    className="px-2 py-1 bg-[#D94B5A] hover:bg-[#B42342] text-white rounded text-[10px] font-bold flex items-center justify-center gap-1 mx-auto cursor-pointer shadow-xs transition-colors border border-[#D94B5A]"
+                  >
+                    <Trash2 className="w-3 h-3 text-white" />
+                    <span>Delete</span>
+                  </button>
                 </td>
               </tr>
             ))}

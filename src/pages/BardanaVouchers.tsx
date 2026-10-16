@@ -585,7 +585,7 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
             <button onClick={() => setStatusMessage(null)} className="font-extrabold hover:text-black">✖</button>
           </div>
         )}        {/* Navigation Submenu Tabs */}
-        <div className="flex border-b-2 border-slate-400 bg-[#d4d0c8] p-1 gap-1  text-[10px] font-black uppercase text-[#222] tracking-tight">
+        <div className="flex border-b-2 border-slate-400 bg-[#FBCFCB] p-1 gap-1  text-[10px] font-black uppercase text-[#222] tracking-tight">
           <button 
             type="button"
             onClick={() => setViewTab('desk')}
@@ -631,7 +631,7 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                     }}
                     className={cn(
                       "flex-1 flex flex-col items-center justify-center py-2 border-2 border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] transition-all cursor-pointer",
-                      activeType === type.id ? "bg-blue-850 text-white shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)]" : "bg-[#d4d0c8] text-black"
+                      activeType === type.id ? "bg-blue-850 text-white shadow-[inset_2px_2px_4px_rgba(0,0,0,0.4)]" : "bg-[#FBCFCB] text-black"
                     )}
                   >
                      <type.icon className={cn("h-4 w-4 mb-1", activeType === type.id ? "text-white" : "text-gray-600")} />
@@ -697,7 +697,7 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
                               <button 
                                 type="button"
                                 onClick={() => setShowSuppliersDropdown(!showSuppliersDropdown)}
-                                className="bg-[#d4d0c8] px-2 border-l border-gray-400 cursor-pointer"
+                                className="bg-[#FBCFCB] px-2 border-l border-gray-400 cursor-pointer"
                               >
                                 <ChevronDown className="h-4 w-4" />
                               </button>
@@ -887,7 +887,7 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
 
         {viewTab === 'monitors' && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center bg-[#d4d0c8] p-3 border border-slate-400 rounded-sm">
+            <div className="flex justify-between items-center bg-[#FBCFCB] p-3 border border-slate-400 rounded-sm">
               <div>
                 <h3 className="text-xs font-black uppercase text-indigo-950 font-sans">Warehouse Stock & Maximum Capacity Monitors</h3>
                 <p className="text-[9.5px] font-bold text-gray-500 uppercase">Live telemetry calculated relative to physical godown margins and maximum safe capacities.</p>
@@ -1021,7 +1021,7 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
             {/* Audit Log Table */}
             <div className="border border-slate-450 bg-white overflow-hidden shadow-inner max-h-[460px] overflow-y-auto">
               <table className="w-full text-left text-[11px] border-collapse font-sans">
-                <thead className="sticky top-0 bg-[#d4d0c8] text-slate-800 font-extrabold uppercase border-b border-gray-400 text-[9.5px] shadow z-10">
+                <thead className="sticky top-0 bg-[#FBCFCB] text-slate-800 font-extrabold uppercase border-b border-gray-400 text-[9.5px] shadow z-10">
                   <tr>
                     <th className="p-2 border border-gray-200">Date/Time (UTC)</th>
                     <th className="p-2 border border-gray-200">Log Action</th>
@@ -1089,14 +1089,14 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
         {/* VIEW ARCHIVE MODAL */}
         {showViewModal && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex justify-center items-center z-50 p-4">
-            <div className="bg-[#d4d0c8] border-2 border-white shadow-[4px_4px_10px_rgba(0,0,0,0.35)] w-full max-w-4xl rounded-sm p-4 flex flex-col h-[80vh]">
+            <div className="bg-[#FBCFCB] border-2 border-white shadow-[4px_4px_10px_rgba(0,0,0,0.35)] w-full max-w-4xl rounded-sm p-4 flex flex-col h-[80vh]">
               
               <div className="flex justify-between items-center pb-2 border-b-2 border-gray-400 mb-3 shrink-0">
                 <div className="flex items-center gap-1.5 font-bold text-slate-800">
                   <Database className="h-4 w-4" />
                   <span className="text-xs uppercase font-extrabold tracking-wide">Godown Ledger Archives ({searchFilteredEntries.length} Records)</span>
                 </div>
-                <button onClick={() => setShowViewModal(false)} className="text-xs font-black hover:bg-slate-100 p-1 border border-slate-350 bg-[#d4d0c8]">
+                <button onClick={() => setShowViewModal(false)} className="text-xs font-black hover:bg-slate-100 p-1 border border-slate-350 bg-[#FBCFCB]">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -1120,7 +1120,7 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
               {/* Data Table */}
               <div className="flex-1 overflow-auto border border-gray-400 bg-white">
                 <table className="w-full text-left text-[11px] border-collapse">
-                  <thead className="sticky top-0 bg-[#d4d0c8] text-slate-800 font-extrabold uppercase border-b border-gray-400 text-[10px]  shadow">
+                  <thead className="sticky top-0 bg-[#FBCFCB] text-slate-800 font-extrabold uppercase border-b border-gray-400 text-[10px]  shadow">
                     <tr>
                       <th className="p-2 border border-gray-150">Voucher No</th>
                       <th className="p-2 border border-gray-150">Type</th>
@@ -1184,14 +1184,14 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
         {/* SUMMARY & BALANCES MODAL */}
         {showSummaryModal && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex justify-center items-center z-50 p-4">
-            <div className="bg-[#d4d0c8] border-2 border-white shadow-[4px_4px_10px_rgba(0,0,0,0.35)] w-full max-w-2xl rounded-sm p-4">
+            <div className="bg-[#FBCFCB] border-2 border-white shadow-[4px_4px_10px_rgba(0,0,0,0.35)] w-full max-w-2xl rounded-sm p-4">
               
               <div className="flex justify-between items-center pb-2 border-b-2 border-gray-400 mb-4 text-slate-800">
                 <div className="flex items-center gap-1.5 font-bold">
                   <Calculator className="h-5 w-5" />
                   <span className="text-xs font-black uppercase tracking-wide">Dynamic Stock Valuation & Ledger Balances</span>
                 </div>
-                <button onClick={() => setShowSummaryModal(false)} className="text-xs font-black hover:bg-slate-100 p-1 border border-slate-350 bg-[#d4d0c8]">
+                <button onClick={() => setShowSummaryModal(false)} className="text-xs font-black hover:bg-slate-100 p-1 border border-slate-350 bg-[#FBCFCB]">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -1365,14 +1365,14 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
         {/* BULK TRANSFER WIZARD MODAL */}
         {showBulkTransferModal && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex justify-center items-center z-50 p-4">
-            <div className="bg-[#d4d0c8] border-2 border-white shadow-[4px_4px_10px_rgba(0,0,0,0.35)] w-full max-w-lg rounded-sm p-4">
+            <div className="bg-[#FBCFCB] border-2 border-white shadow-[4px_4px_10px_rgba(0,0,0,0.35)] w-full max-w-lg rounded-sm p-4">
               
               <div className="flex justify-between items-center pb-2 border-b-2 border-gray-400 mb-4 text-slate-800">
                 <div className="flex items-center gap-1.5 font-bold">
                   <ArrowLeftRight className="h-5 w-5 text-indigo-900" />
                   <span className="text-xs font-black uppercase tracking-wide">Bulk Inter-Godown Transfer Wizard</span>
                 </div>
-                <button onClick={() => setShowBulkTransferModal(false)} className="text-xs font-black hover:bg-slate-100 p-1 border border-slate-350 bg-[#d4d0c8]">
+                <button onClick={() => setShowBulkTransferModal(false)} className="text-xs font-black hover:bg-slate-100 p-1 border border-slate-350 bg-[#FBCFCB]">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -1512,7 +1512,7 @@ export default function BardanaVouchers({ onClose }: { onClose?: () => void }) {
         {/* BULK TRANSFER CONFIRMATION DOCKET / IMPACT DIALOG */}
         {showBulkConfirmModal && (
           <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex justify-center items-center z-55 p-4">
-            <div className="bg-[#d4d0c8] border-2 border-white shadow-[6px_6px_15px_rgba(0,0,0,0.5)] w-full max-w-xl rounded-sm p-4 text-black">
+            <div className="bg-[#FBCFCB] border-2 border-white shadow-[6px_6px_15px_rgba(0,0,0,0.5)] w-full max-w-xl rounded-sm p-4 text-black">
               
               <div className="flex justify-between items-center pb-2 border-b border-gray-400 mb-3 font-sans">
                 <div className="flex items-center gap-1.5 font-bold text-red-900">

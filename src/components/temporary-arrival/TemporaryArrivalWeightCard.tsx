@@ -12,7 +12,7 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
   return (
     <div className="w-full rounded-xl border border-[#F7AFA8] bg-white shadow-md overflow-hidden mt-5">
       {/* Header */}
-      <div className="bg-[#F7AFA8] text-white px-4 py-2 border-b border-[#0F351E]">
+      <div className="bg-[#D94B5A] text-white px-4 py-2 border-b border-[#F06D6C]">
         <h3 className="text-sm font-bold tracking-wide uppercase">
           Weight Information
         </h3>
@@ -22,7 +22,7 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
       <div className="grid grid-cols-1 lg:grid-cols-3 divide-x divide-gray-300">
         {/* 1st: Gross Weight */}
         <div className="p-3 space-y-2">
-          <h4 className="text-[11px] font-bold text-[#F7AFA8] border-b border-gray-300 pb-1 uppercase">
+          <h4 className="text-[11px] font-bold text-[#D94B5A] border-b border-gray-300 pb-1 uppercase">
             Gross Weight
           </h4>
 
@@ -71,7 +71,7 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
 
         {/* 2nd: Tare Weight */}
         <div className="p-3 space-y-2">
-          <h4 className="text-[11px] font-bold text-[#F7AFA8] border-b border-gray-300 pb-1 uppercase">
+          <h4 className="text-[11px] font-bold text-[#D94B5A] border-b border-gray-300 pb-1 uppercase">
             Tare Weight
           </h4>
 
@@ -120,7 +120,7 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
 
         {/* 3rd: Net Weight */}
         <div className="p-3 space-y-2">
-          <h4 className="text-[11px] font-bold text-[#F7AFA8] border-b border-gray-300 pb-1 uppercase">
+          <h4 className="text-[11px] font-bold text-[#D94B5A] border-b border-gray-300 pb-1 uppercase">
             Net Weight
           </h4>
 
@@ -170,7 +170,7 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
 
       {/* Footer */}
       <div className="border-t border-gray-300 bg-gray-50 px-4 py-2 flex justify-center items-center gap-3">
-        <span className="text-[11px] font-bold text-[#F7AFA8] uppercase">
+        <span className="text-[11px] font-bold text-[#D94B5A] uppercase">
           Final Weight (M.Ton)
         </span>
 

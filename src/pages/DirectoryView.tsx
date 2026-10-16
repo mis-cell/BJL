@@ -79,7 +79,7 @@ export default function DirectoryView({ title, type, onClose }: DirectoryViewPro
     <LegacyLayout title="P.O Automation" subtitle={`${title} Index Directory`} onClose={onClose}>
       <div className="space-y-4">
         {/* Header Ribbon / Action Bar */}
-        <div className="flex bg-[#c0c0c0] p-1 border border-black/20 gap-2 items-center">
+        <div className="flex bg-[#FBCFCB] p-1 border border-black/20 gap-2 items-center">
            <div className="flex bg-white border border-gray-400 p-px flex-1 shadow-[inset_1px_1px_1px_rgba(0,0,0,0.1)]">
               <input  id="searchterm_84" name="searchterm" aria-label="searchterm"
                  className="flex-1 text-xs px-2 py-1 outline-none font-bold" 
@@ -101,7 +101,7 @@ export default function DirectoryView({ title, type, onClose }: DirectoryViewPro
            {filteredItems.map((item) => (
               <div 
                 key={item.id}
-                className="bg-[#d4d0c8] border-2 border-white shadow-[3px_3px_0_0_rgba(0,0,0,0.5)] p-0.5 group hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] transition-all cursor-default"
+                className="bg-[#FBCFCB] border-2 border-white shadow-[3px_3px_0_0_rgba(0,0,0,0.5)] p-0.5 group hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] transition-all cursor-default"
               >
                  <div className="bg-blue-800 text-white px-2 py-0.5 flex justify-between items-center h-6">
                     <span className="text-[10px] font-bold uppercase tracking-tight italic">ID: {item.id}</span>
@@ -132,7 +132,7 @@ export default function DirectoryView({ title, type, onClose }: DirectoryViewPro
                     </div>
 
                     <div className="mt-4 flex gap-1 border-t border-dashed border-gray-200 pt-3">
-                       <button className="flex-1 bg-[#d4d0c8] border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] py-1.5 text-[10px] font-bold uppercase active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] flex items-center justify-center gap-1 group/btn transition-all">
+                       <button className="flex-1 bg-[#FBCFCB] border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] py-1.5 text-[10px] font-bold uppercase active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] flex items-center justify-center gap-1 group/btn transition-all">
                           <History className="h-3 w-3 group-hover/btn:text-blue-800" /> LEDGER
                        </button>
                        <button className="w-10 bg-blue-800 border border-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] flex items-center justify-center text-white active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] transition-all">
