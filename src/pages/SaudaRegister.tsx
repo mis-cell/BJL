@@ -1638,24 +1638,24 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         </div>
 
         {/* 4. Data Table */}
-        <div className="bg-white border border-slate-200 rounded-[18px] shadow-xs overflow-hidden">
-          <div className="overflow-x-auto min-h-[400px]">
-            <table className={cn("w-full border-collapse text-xs", isUser10 ? "min-w-[480px]" : "min-w-[1050px]")}>
-              <thead className="bg-slate-100/90 border-b border-slate-200 sticky top-0 z-10">
-                <tr className="h-10 text-[10px] font-bold text-slate-600 uppercase tracking-wider">
-                  <th className={cn("py-2 text-center whitespace-nowrap", isUser10 ? "px-2 w-[80px]" : "px-3")}>Date</th>
-                  <th className={cn("py-2 text-center whitespace-nowrap", isUser10 ? "px-2 w-[75px]" : "px-3")}>Order No.</th>
-                  {!isUser10 && <th className="px-3 py-2 text-center">Session</th>}
-                  <th className={cn("py-2 text-left whitespace-nowrap min-w-[130px]", isUser10 ? "px-2" : "px-4")}>Broker</th>
-                  {!isUser10 && <th className="px-4 py-2 text-left">Supplier</th>}
-                  {!isUser10 && <th className="px-3 py-2 text-center">Units/Lorry</th>}
-                  {!isUser10 && <th className="px-3 py-2 text-center bg-amber-50/70 text-amber-950 font-black">Unit</th>}
-                  {!isUser10 && <th className="px-4 py-2 text-right bg-blue-50/60 text-blue-900">B. Rate</th>}
-                  <th className={cn("py-2 text-center whitespace-nowrap min-w-[130px]", isUser10 ? "px-2" : "px-3")}>Status</th>
-                  {(isAdminOrL4 || isUser10) && <th className={cn("py-2 text-center whitespace-nowrap min-w-[50px]", isUser10 ? "px-1" : "px-3")}>Actions</th>}
+        <div className="bg-white border border-[#CBD5E1] rounded-2xl shadow-xs overflow-hidden">
+          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-250px)] min-h-[400px]">
+            <table className={cn("w-full border-collapse text-xs text-[#111111]", isUser10 ? "min-w-[600px]" : "min-w-[1380px]")}>
+              <thead className="bg-[#FDE7E6] border-b-2 border-[#D94B5A] sticky top-0 z-20 shadow-2xs font-black">
+                <tr className="h-10 text-[11px] sm:text-[12px] font-black text-[#111111] uppercase tracking-wider">
+                  <th className={cn("py-2.5 text-center whitespace-nowrap min-w-[110px]", isUser10 ? "px-2" : "px-3")}>Date</th>
+                  <th className={cn("py-2.5 text-center whitespace-nowrap min-w-[120px]", isUser10 ? "px-2" : "px-3")}>Order No.</th>
+                  {!isUser10 && <th className="px-3 py-2.5 text-center whitespace-nowrap min-w-[100px]">Session</th>}
+                  <th className={cn("py-2.5 text-left whitespace-nowrap min-w-[180px]", isUser10 ? "px-2" : "px-4")}>Broker</th>
+                  {!isUser10 && <th className="px-4 py-2.5 text-left whitespace-nowrap min-w-[220px]">Supplier</th>}
+                  {!isUser10 && <th className="px-3 py-2.5 text-center whitespace-nowrap min-w-[110px]">Units/Lorry</th>}
+                  {!isUser10 && <th className="px-3 py-2.5 text-center whitespace-nowrap min-w-[100px] bg-[#FFF2CC] text-[#92400E] font-black">Unit</th>}
+                  {!isUser10 && <th className="px-4 py-2.5 text-right whitespace-nowrap min-w-[120px] bg-blue-50 text-blue-950 font-black">B. Rate</th>}
+                  <th className={cn("py-2.5 text-center whitespace-nowrap min-w-[150px]", isUser10 ? "px-2" : "px-3")}>Status</th>
+                  {(isAdminOrL4 || isUser10) && <th className={cn("py-2.5 text-center whitespace-nowrap min-w-[120px]", isUser10 ? "px-1" : "px-3")}>Actions</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[#E5E7EB]">
                 {filteredSaudas.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((entry, idx) => {
                   const isSelected = selectedSaudaId === entry.sauda_id;
                   const canSeeActions = isAdminOrL4 || isUser10;

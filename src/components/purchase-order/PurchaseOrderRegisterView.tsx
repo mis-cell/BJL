@@ -421,116 +421,116 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
       </div>
 
       {/* PO Grid Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-2xs overflow-x-auto overflow-y-auto max-h-[calc(100vh-290px)] min-h-[320px] w-full max-w-full">
-         <table className="w-full min-w-[1350px] border-collapse text-xs text-black">
-            <thead className="bg-slate-100/90 sticky top-0 z-10 font-bold border-b border-slate-200">
-               <tr className="h-8 text-slate-700 text-[10px]">
+      <div className="bg-white border border-[#CBD5E1] rounded-xl shadow-xs overflow-x-auto overflow-y-auto max-h-[calc(100vh-250px)] min-h-[400px] w-full max-w-full touch-overflow-container">
+         <table className="w-full min-w-[1880px] border-collapse text-xs text-[#111111]">
+            <thead className="bg-[#FDE7E6] sticky top-0 z-20 font-black border-b-2 border-[#D94B5A] shadow-2xs">
+               <tr className="h-10 text-[#111111] text-[11px] sm:text-[12px] uppercase tracking-wider">
                   <th 
                     onClick={() => handleSort('po_no')}
-                    className="px-2.5 py-1.5 text-left border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                    className="px-3 py-2.5 text-left border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[160px]"
                     title="Sort by PO / PTF No"
                   >
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <span>PO / PTF NO</span>
                       {renderSortIndicator('po_no')}
                     </div>
                   </th>
                   <th 
                     onClick={() => handleSort('date')}
-                    className="px-2.5 py-1.5 text-center border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                    className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[110px]"
                     title="Sort by Date"
                   >
-                    <div className="flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-center gap-1.5">
                       <span>DATE</span>
                       {renderSortIndicator('date')}
                     </div>
                   </th>
                   <th 
                     onClick={() => handleSort('type')}
-                    className="px-2.5 py-1.5 text-center border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                    className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[120px]"
                     title="Sort by Type"
                   >
-                    <div className="flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-center gap-1.5">
                       <span>TYPE</span>
                       {renderSortIndicator('type')}
                     </div>
                   </th>
                   <th 
                     onClick={() => handleSort('broker')}
-                    className="px-2.5 py-1.5 text-left border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[120px]"
+                    className="px-3 py-2.5 text-left border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[190px]"
                     title="Sort by Broker"
                   >
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <span>BROKER</span>
                       {renderSortIndicator('broker')}
                     </div>
                   </th>
                   <th 
                     onClick={() => handleSort('supplier')}
-                    className="px-2.5 py-1.5 text-left border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[140px]"
+                    className="px-3 py-2.5 text-left border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[220px]"
                     title="Sort by Party / Supplier"
                   >
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <span>PARTY / SUPPLIER</span>
                       {renderSortIndicator('supplier')}
                     </div>
                   </th>
                   <th 
                     onClick={() => handleSort('unit')}
-                    className="px-2.5 py-1.5 text-center border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                    className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[100px]"
                     title="Sort by Unit"
                   >
-                    <div className="flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-center gap-1.5">
                       <span>UNIT</span>
                       {renderSortIndicator('unit')}
                     </div>
                   </th>
                   <th 
                     onClick={() => handleSort('total_units')}
-                    className="px-2.5 py-1.5 text-right border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                    className="px-3 py-2.5 text-right border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[100px]"
                     title="Sort by Count"
                   >
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-1.5">
                       <span>COUNT</span>
                       {renderSortIndicator('total_units')}
                     </div>
                   </th>
                   <th 
                     onClick={() => handleSort('weight')}
-                    className="px-2.5 py-1.5 text-right border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group"
+                    className="px-3 py-2.5 text-right border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[200px]"
                     title="Sort by Weight"
                   >
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-1.5">
                       <span>WEIGHT</span>
                       {renderSortIndicator('weight')}
                     </div>
                   </th>
                    <th 
                     onClick={() => handleSort('status')}
-                    className="px-2.5 py-1.5 text-center border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[85px]"
+                    className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[125px]"
                     title="Sort by Status"
                   >
-                    <div className="flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-center gap-1.5">
                       <span>STATUS</span>
                       {renderSortIndicator('status')}
                     </div>
                   </th>
                   <th 
                     onClick={() => handleSort('closed_open')}
-                    className="px-2.5 py-1.5 text-center border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[100px]"
+                    className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[155px]"
                     title="Sort by Lorry Status (Closed / Open)"
                   >
-                    <div className="flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-center gap-1.5">
                       <span>LORRY STATUS</span>
                       {renderSortIndicator('closed_open')}
                     </div>
                   </th>
                   <th 
                     onClick={() => handleSort('excess_short')}
-                    className="px-2.5 py-1.5 text-center border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[95px]"
+                    className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[155px]"
                     title="Sort by WT Status. Policy: Lower of 5% or 1500 kg is Tolerable; Penalty = TD5 Difference × Excess Qtl"
                   >
-                    <div className="flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-center gap-1.5">
                       <span>WT STATUS</span>
                       {renderSortIndicator('excess_short')}
                     </div>
@@ -539,36 +539,36 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                     <>
                       <th 
                         onClick={() => handleSort('pass_mismatch')}
-                        className="px-2.5 py-1.5 text-center border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-slate-200/70 transition-colors group min-w-[80px]"
+                        className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[120px]"
                         title="Sort by Pass / Mis"
                       >
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-1.5">
                           <span>PASS/MIS</span>
                           {renderSortIndicator('pass_mismatch')}
                         </div>
                       </th>
                       <th 
-                        className="px-2.5 py-1.5 text-center border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider min-w-[110px]"
+                        className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider min-w-[145px]"
                         title="Current Process Stage"
                       >
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-1.5">
                           <span>STAGE</span>
                         </div>
                       </th>
                     </>
                   )}
                   <th 
-                    className="px-2 py-1.5 text-center border-r border-slate-200 whitespace-nowrap font-bold uppercase tracking-wider min-w-[46px] w-[46px] bg-[#F7AFA8]/10 text-[#D94B5A]"
-                    title="P.O. Histogram & Complete Multi-M.R. History (Click to open Control Tower popup)"
+                    className="px-2 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider min-w-[56px] bg-[#FBCFCB] text-[#111111]"
+                    title="P.O. Histogram & Complete Multi-M.R. History"
                   >
                     <div className="flex items-center justify-center">
-                      <BarChart3 className="w-4 h-4 text-emerald-800" />
+                      <BarChart3 className="w-4 h-4 text-[#D94B5A]" />
                     </div>
                   </th>
-                  <th className="px-2.5 py-1.5 text-center whitespace-nowrap font-bold uppercase tracking-wider min-w-[80px]">ACTIONS</th>
+                  <th className="px-3 py-2.5 text-center whitespace-nowrap font-black uppercase tracking-wider min-w-[130px] bg-[#FDE7E6] text-[#111111]">ACTIONS</th>
                </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-normal">
+            <tbody className="divide-y divide-[#E5E7EB] font-medium">
                {sortedPos.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((item, idx) => {
                   const isSelected = selectedPoNo === item.po_no;
                   const isVoid = item.status === 'cancelled';
@@ -596,24 +596,24 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                         }
                      }}
                      className={cn(
-                        "h-8 sm:h-9 cursor-pointer transition-colors text-xs font-medium",
-                        isSelected ? "bg-[#D94B5A] text-white" : 
+                        "h-10 cursor-pointer transition-colors text-xs font-semibold",
+                        isSelected ? "bg-[#FBCFCB] text-[#111111]" : 
                         isVoid ? "bg-rose-50/40 text-slate-400 line-through decoration-rose-400/50" :
-                        (idx % 2 === 0 ? "bg-white hover:bg-amber-50/50" : "bg-slate-50/40 hover:bg-amber-50/50")
+                        (idx % 2 === 0 ? "bg-white hover:bg-[#FFF2CC]" : "bg-[#FFFCFB] hover:bg-[#FFF2CC]")
                      )}
                   >
-                     <td className={cn("px-2.5 py-1 font-mono font-bold select-text whitespace-nowrap border-r border-slate-200/60", isVoid ? "text-rose-400" : (isSelected ? "text-white" : "text-slate-900"))}>{item.po_no}</td>
-                     <td className={cn("px-2 py-1 text-center font-mono whitespace-nowrap border-r border-slate-200/60", isSelected ? "text-slate-100" : "text-slate-700")}>{item.po_date || item.created_at?.slice(0, 10) || ''}</td>
-                     <td className="px-2 py-1 text-center whitespace-nowrap border-r border-slate-200/60">
-                        <span className={cn("px-1.5 py-0.5 rounded text-[9px] font-black tracking-tight", item.ptf_no ? (isSelected ? "bg-orange-500 text-white" : "bg-orange-100 text-orange-800 border border-orange-200") : (isSelected ? "bg-emerald-500 text-white" : "bg-emerald-100 text-emerald-800 border border-emerald-200"))}>
+                     <td className={cn("px-2.5 py-1.5 font-mono font-bold select-text whitespace-nowrap border-r border-[#CBD5E1]", isVoid ? "text-rose-400" : "text-[#111111]")}>{item.po_no}</td>
+                     <td className="px-2 py-1.5 text-center font-mono whitespace-nowrap border-r border-[#CBD5E1] text-[#262626]">{item.po_date || item.created_at?.slice(0, 10) || ''}</td>
+                     <td className="px-2 py-1.5 text-center whitespace-nowrap border-r border-[#CBD5E1]">
+                        <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold tracking-tight", item.ptf_no ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-emerald-100 text-emerald-900 border border-emerald-300")}>
                            {item.ptf_no ? 'PTF ENTRY' : 'SAUDA LINKED'}
                         </span>
                      </td>
-                     <td className={cn("px-2 py-1 uppercase truncate max-w-[130px] whitespace-nowrap border-r border-slate-200/60", isSelected ? "text-slate-100" : "text-slate-700")}>{item.broker}</td>
-                     <td className={cn("px-2.5 py-1 uppercase truncate max-w-[150px] whitespace-nowrap border-r border-slate-200/60 font-semibold", isSelected ? "text-slate-100" : "text-slate-800")} title={item.supplier}>{item.supplier || '-'}</td>
-                     <td className={cn("px-2 py-1 text-center font-bold uppercase whitespace-nowrap border-r border-slate-200/60 text-[9.5px]", isSelected ? "text-slate-200" : "text-slate-700")}>{item.purchase_unit_name || 'BALES'}</td>
-                     <td className={cn("px-2 py-1 text-right font-mono font-bold whitespace-nowrap border-r border-slate-200/60", isSelected ? "text-white" : "text-slate-900")}>{item.total_units || 0}</td>
-                     <td className="px-2 py-1 text-left font-mono border-r border-slate-200/60 min-w-[150px]">
+                     <td className="px-2.5 py-1.5 uppercase font-semibold border-r border-[#CBD5E1] text-[#111111] max-w-[200px] truncate" title={item.broker}>{item.broker || '-'}</td>
+                     <td className="px-2.5 py-1.5 uppercase font-bold border-r border-[#CBD5E1] text-[#111111] max-w-[220px] truncate" title={item.supplier}>{item.supplier || '-'}</td>
+                     <td className="px-2 py-1.5 text-center font-bold uppercase whitespace-nowrap border-r border-[#CBD5E1] text-[10px] text-[#262626]">{item.purchase_unit_name || 'BALES'}</td>
+                     <td className="px-2 py-1.5 text-right font-mono font-bold whitespace-nowrap border-r border-[#CBD5E1] text-[#111111]">{item.total_units || 0}</td>
+                     <td className="px-2.5 py-1.5 text-left font-mono border-r border-[#CBD5E1] min-w-[180px]">
                         {(() => {
                            const contract = parseFloat(item.total_contract_mt || 0) || 0;
                            const rcvd = Number(item.received_weight_mt || 0);
@@ -621,23 +621,23 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                            const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
                            const pct = contract > 0 ? Math.min(100, Math.max(0, (rcvd / contract) * 100)) : 0;
                            const barGradient = tol.isCompleted 
-                              ? 'from-emerald-500 to-green-400' 
+                              ? 'from-emerald-500 to-green-600' 
                               : pct > 0 
-                              ? 'from-blue-600 to-cyan-400' 
+                              ? 'from-blue-600 to-indigo-600' 
                               : 'from-slate-300 to-slate-400';
                            return (
                               <div>
-                                 <div className="flex items-center justify-between gap-1 text-[9.5px]">
-                                    <span className={cn("font-black whitespace-nowrap", isSelected ? "text-emerald-200" : (tol.isCompleted ? "text-emerald-700 font-bold" : "text-emerald-800"))}>
+                                 <div className="flex items-center justify-between gap-1 text-[10px] font-bold">
+                                    <span className={cn("whitespace-nowrap font-mono", tol.isCompleted ? "text-emerald-800 font-extrabold" : "text-[#111111]")}>
                                        {rcvd.toFixed(3)} MT Rcvd
                                     </span>
-                                    <span className={cn("font-sans text-[8px]", isSelected ? "text-slate-200" : "text-slate-400")}>of</span>
-                                    <span className={cn("font-bold whitespace-nowrap", isSelected ? "text-white" : "text-slate-800")}>
+                                    <span className="font-sans text-[9px] text-[#404040]">of</span>
+                                    <span className="font-mono font-bold whitespace-nowrap text-[#111111]">
                                        {contract.toFixed(3)} MT
                                     </span>
                                  </div>
-                                 <div className="mt-0.5 space-y-0.5">
-                                    <div className="w-full h-1 rounded-full bg-slate-200/80 overflow-hidden" title={`${pct.toFixed(1)}% received.`}>
+                                 <div className="mt-1 space-y-0.5">
+                                    <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden" title={`${pct.toFixed(1)}% received.`}>
                                        <div className={cn("h-full rounded-full bg-gradient-to-r transition-all duration-300", barGradient)} style={{ width: `${tol.isCompleted ? 100 : pct}%` }} />
                                     </div>
                                  </div>
@@ -646,7 +646,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                         })()}
                      </td>
                       {/* Operational Status Column */}
-                      <td className="px-2 py-1 text-center whitespace-nowrap border-r border-slate-200/60 min-w-[85px]">
+                      <td className="px-2 py-1.5 text-center whitespace-nowrap border-r border-[#CBD5E1] min-w-[110px]">
                          {(() => {
                             const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
                             const receivedLorries = item.received_lorries || 0;
@@ -663,10 +663,10 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                             if (isMismatch) {
                               return (
                                 <span 
-                                  className="text-[9px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-300 shadow-2xs inline-flex items-center gap-1 animate-pulse"
+                                  className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center gap-1"
                                   title="Has an active Mismatch awaiting approval"
                                 >
-                                  <AlertTriangle className="w-2.5 h-2.5 text-rose-600 shrink-0" />
+                                  <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
                                   <span>MISMATCH</span>
                                 </span>
                               );
@@ -674,21 +674,15 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
 
                             if (isClosed) {
                               return (
-                                <span className={cn(
-                                  "text-[9px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs inline-flex items-center gap-1", 
-                                  isSelected ? "bg-emerald-500 text-white border-emerald-400" : "text-emerald-700 bg-emerald-50 border-emerald-300"
-                                )}>
-                                  <Check className="w-2.5 h-2.5" />
+                                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full text-[#166534] bg-[#DCFCE7] border border-[#86EFAC] inline-flex items-center gap-1">
+                                  <Check className="w-3 h-3 text-[#166534]" />
                                   <span>COMPLETED</span>
                                 </span>
                               );
                             }
 
                             return (
-                              <span className={cn(
-                                "text-[9px] font-extrabold px-2 py-0.5 rounded-full border shadow-2xs inline-flex items-center gap-1", 
-                                selectPoRowStyle(isSelected)
-                              )}>
+                              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full text-[#92400E] bg-[#FFF2CC] border border-[#FFE08A] inline-flex items-center gap-1">
                                 <span>PENDING</span>
                               </span>
                             );
@@ -696,7 +690,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                       </td>
 
                       {/* CLOSED / OPEN Column (Lorry-wise) */}
-                      <td className="px-2 py-1 text-center whitespace-nowrap border-r border-slate-200/60 min-w-[100px]">
+                      <td className="px-2 py-1.5 text-center whitespace-nowrap border-r border-[#CBD5E1] min-w-[145px]">
                          {(() => {
                             const userCtx = getCurrentUserContext();
                             const userRole = String(userCtx?.userRole || "").toUpperCase();
@@ -709,8 +703,6 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                             const receivedLorries = item.received_lorries || 0;
                             const isClosed = Boolean(item.is_closed || item.status === "closed" || (contractLorries > 0 && receivedLorries >= contractLorries));
 
-                            const allowedTolMt = Math.min(contract * 0.05, 1.500);
-                            const shortageOrExcessMt = Math.abs(contract - rcvd);
                             const canShowReopen = isAdminOrL4 && isClosed;
 
                             let openRemarksData = item.open_remarks;
@@ -723,8 +715,8 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                                 <div className="flex flex-col items-center justify-center gap-1">
                                   <span 
                                     onClick={(e) => { e.stopPropagation(); setClosedNoticePo(item); }}
-                                    className="text-[9.5px] font-black px-2.5 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-slate-700 shadow-2xs flex items-center gap-1 whitespace-nowrap cursor-pointer hover:bg-slate-700 transition-colors"
-                                    title={`Sauda is CLOSED: ${receivedLorries} of ${contractLorries} Lorries Received (${rcvd.toFixed(3)} MT of ${contract.toFixed(3)} MT).`}
+                                    className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-slate-700 flex items-center gap-1 whitespace-nowrap cursor-pointer hover:bg-slate-700 transition-colors"
+                                    title={`Sauda is CLOSED: ${receivedLorries} of ${contractLorries} Lorries Received.`}
                                   >
                                     <Lock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
                                     <span>CLOSED ({receivedLorries}/{contractLorries} Lorry)</span>
@@ -734,14 +726,14 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                                     <button
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); openReopenAuthModal(item); }}
-                                      className="text-[8.5px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
-                                      title="Discrepancy exceeds tolerance policy. Click to Reopen this Closed Sauda (Admin / Super User Password Required)"
+                                      className="text-[9px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 transition-colors flex items-center gap-1 cursor-pointer"
+                                      title="Click to Reopen this Closed Sauda"
                                     >
-                                      <Unlock className="w-2.5 h-2.5 text-emerald-600" />
+                                      <Unlock className="w-2.5 h-2.5 text-emerald-700" />
                                       <span>Reopen</span>
                                     </button>
                                   ) : (
-                                    <span className="text-[7.5px] font-semibold text-slate-400 italic" title="Within tolerance policy – Reopen option disabled">
+                                    <span className="text-[8px] font-semibold text-slate-500 italic">
                                       Within Tolerance
                                     </span>
                                   )}
@@ -752,25 +744,20 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                             return (
                               <div className="flex flex-col items-center justify-center gap-1">
                                 <span 
-                                  className={cn(
-                                    "text-[9.5px] font-black px-2.5 py-0.5 rounded-full border shadow-2xs flex items-center gap-1 whitespace-nowrap",
-                                    isSelected 
-                                      ? "bg-emerald-500 text-white border-emerald-400" 
-                                      : "bg-emerald-50 text-emerald-800 border-emerald-300"
-                                  )}
+                                  className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#166534] border border-[#86EFAC] flex items-center gap-1 whitespace-nowrap"
                                   title={`Sauda is OPEN: ${receivedLorries} of ${contractLorries} Lorries Received.`}
                                 >
-                                  <Unlock className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                                  <Unlock className="w-2.5 h-2.5 text-[#166534] shrink-0" />
                                   <span>OPEN ({receivedLorries}/{contractLorries} Lorry)</span>
                                 </span>
 
                                 {openRemarksData && (
                                   <div
                                     onClick={(e) => { e.stopPropagation(); setAuditViewPo(item); }}
-                                    className="flex items-center gap-1 text-[8px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-1.5 py-0.5 rounded cursor-pointer transition-colors max-w-[150px] shadow-2xs"
-                                    title={`Reopened by: ${openRemarksData.opened_by}\nRemarks: "${openRemarksData.remarks}"\nClick to view audit log.`}
+                                    className="flex items-center gap-1 text-[8.5px] font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded cursor-pointer transition-colors max-w-[150px]"
+                                    title={`Reopened by: ${openRemarksData.opened_by}`}
                                   >
-                                    <UserCheck className="w-2.5 h-2.5 text-indigo-600 shrink-0" />
+                                    <UserCheck className="w-2.5 h-2.5 text-indigo-700 shrink-0" />
                                     <span className="truncate">By {openRemarksData.opened_by}</span>
                                   </div>
                                 )}
@@ -779,10 +766,10 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                                   <button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); handleCloseSauda(item); }}
-                                    className="text-[8px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded border border-slate-200 transition-colors flex items-center gap-0.5 cursor-pointer shadow-2xs"
-                                    title="Manually Close this Sauda before all lorries arrive"
+                                    className="text-[8.5px] font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded border border-slate-300 transition-colors flex items-center gap-0.5 cursor-pointer"
+                                    title="Manually Close this Sauda"
                                   >
-                                    <Lock className="w-2 h-2 text-slate-500" />
+                                    <Lock className="w-2 h-2 text-slate-600" />
                                     <span>Force Close</span>
                                   </button>
                                 )}
@@ -792,7 +779,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                       </td>
 
                       {/* EXCESS / SHORT WEIGHT Column */}
-                      <td className="px-2 py-1 text-center whitespace-nowrap border-r border-slate-200/60 min-w-[95px]">
+                      <td className="px-2 py-1.5 text-center whitespace-nowrap border-r border-[#CBD5E1] min-w-[145px]">
                          {(() => {
                             const contract = parseFloat(item.total_contract_mt || 0) || 0;
                             const rcvd = Number(item.received_weight_mt || 0);
@@ -804,32 +791,30 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                                 <div
                                   onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
                                   className="cursor-pointer group flex flex-col items-center justify-center"
-                                  title="No arrival received yet. Click to view Sauda tolerance & deduction parameters."
+                                  title="No arrival received yet."
                                 >
-                                  <span className="text-[9.5px] text-slate-400 font-medium italic group-hover:text-indigo-600 transition-colors">Pending Arrival</span>
+                                  <span className="text-[10px] text-slate-500 font-medium italic group-hover:text-[#D94B5A] transition-colors">Pending Arrival</span>
                                 </div>
                               );
                             }
 
-                            // 1. Within 3% execution exemption => Tolerable
                             if (tol.isWithinTolerance) {
                               return (
                                 <div 
                                   onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
                                   className="flex flex-col items-center justify-center gap-0.5 cursor-pointer group"
-                                  title={`Weight within 3% Sauda execution exemption (±${tol.toleranceMt.toFixed(3)} MT / ±${tol.toleranceQtl.toFixed(2)} Qtl).\nClick to view settlement & deduction details.`}
+                                  title={`Weight within tolerance.`}
                                 >
-                                  <span className="text-[8.5px] font-black px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs group-hover:bg-emerald-100 transition-colors">
+                                  <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-[#DCFCE7] text-[#166534] border border-[#86EFAC]">
                                     ✓ TOLERABLE (±{tol.toleranceMt.toFixed(2)} MT)
                                   </span>
-                                  <span className="text-[7.5px] font-semibold text-slate-400">
+                                  <span className="text-[8px] font-bold text-[#404040]">
                                     Diff: {tol.diffMt >= 0 ? `+${tol.diffMt.toFixed(3)}` : tol.diffMt.toFixed(3)} MT
                                   </span>
                                 </div>
                               );
                             }
 
-                            // Find Temporary Arrival record for this PO to get Temporary Arrival Date
                             const cleanPo = (s: any) => String(s || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
                             const targetPo = cleanPo(item.po_no);
                             const targetSauda = cleanPo(item.sauda_no || item.contract_po_no);
@@ -845,7 +830,6 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                             const arrivalTd5Rate = getTd5BaseRateForDate(arrivalDateStr);
                             const td5RateDiff = Math.abs((arrivalTd5Rate || 0) - (saudaTd5Rate || 0));
 
-                            // 2. Excess beyond allowed tolerance
                             if (tol.isOverDelivery) {
                               const excessMt = Math.max(0, tol.excessOverToleranceMt || 0);
                               const excessQtl = Math.max(0, tol.excessOverToleranceQtl || 0);
@@ -856,33 +840,29 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                                 <div
                                   onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
                                   className="flex flex-col items-center justify-center gap-0.5 cursor-pointer group"
-                                  title={`Excess exceeds allowed tolerance by ${excessMt.toFixed(3)} MT (${excessQtl.toFixed(2)} Qtl).\nSauda Date (${saudaDateStr}) TD5: ₹${saudaTd5Rate} | Temp Arrival Date (${arrivalDateStr}) TD5: ₹${arrivalTd5Rate}\nTD5 Diff: ₹${td5RateDiff}/Qtl\nPenalty: ₹${penaltyAmount.toLocaleString()}\nClick to open Excess/Short Settlement.`}
                                 >
-                                  <span className="text-[9px] font-black px-1.5 py-0.2 rounded border border-purple-300 bg-purple-50 text-purple-900 shadow-2xs group-hover:bg-purple-100 transition-colors inline-flex items-center gap-1">
-                                    <span>+{excessMt.toFixed(3)} MT Excess</span>
+                                  <span className="text-[9.5px] font-extrabold px-2 py-0.5 rounded border border-purple-300 bg-purple-100 text-purple-950">
+                                    +{excessMt.toFixed(3)} MT Excess
                                   </span>
-                                  <span className="text-[7.5px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-1 py-0.2 rounded-full shadow-2xs">
+                                  <span className="text-[8px] font-extrabold text-[#991B1B] bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded-full">
                                     Penalty: ₹{penaltyAmount.toLocaleString()}
                                   </span>
                                 </div>
                               );
                             }
 
-                            // 3. Short under allowed tolerance
                             if (tol.isUnderDelivery) {
                               const shortMt = Math.max(0, tol.shortUnderToleranceMt || 0);
-                              const shortQtl = Math.max(0, tol.shortUnderToleranceQtl || 0);
 
                               return (
                                 <div
                                   onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
                                   className="flex flex-col items-center justify-center gap-0.5 cursor-pointer group"
-                                  title={`Short under allowed tolerance by ${shortMt.toFixed(3)} MT (${shortQtl.toFixed(2)} Qtl).\nAllowed Tol: ±${tol.toleranceMt.toFixed(3)} MT\nClick to open Excess/Short Settlement.`}
                                 >
-                                  <span className="text-[9px] font-black px-1.5 py-0.2 rounded border border-amber-300 bg-amber-50 text-amber-900 shadow-2xs group-hover:bg-amber-100 transition-colors inline-flex items-center gap-1">
-                                    <span>-{shortMt.toFixed(3)} MT Short</span>
+                                  <span className="text-[9.5px] font-extrabold px-2 py-0.5 rounded border border-[#FFE08A] bg-[#FFF2CC] text-[#92400E]">
+                                    -{shortMt.toFixed(3)} MT Short
                                   </span>
-                                  <span className="text-[7.5px] font-bold text-amber-700">
+                                  <span className="text-[8px] font-bold text-[#92400E]">
                                     Beyond Tol.
                                   </span>
                                 </div>
@@ -893,9 +873,8 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                               <div
                                 onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
                                 className="cursor-pointer group flex flex-col items-center justify-center"
-                                title="Exact weight match (0.00 MT). Click to open settlement & deduction details."
                               >
-                                <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 group-hover:bg-emerald-100 transition-colors">
+                                <span className="text-[9.5px] font-extrabold px-2 py-0.5 rounded bg-[#DCFCE7] text-[#166534] border border-[#86EFAC]">
                                   Exact (0.00 MT)
                                 </span>
                               </div>
@@ -906,7 +885,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                       {isTempPo && (
                         <>
                           {/* PASS / MISMATCH STATUS */}
-                          <td className="px-2 py-1 text-center whitespace-nowrap border-r border-slate-200/60 min-w-[80px]">
+                          <td className="px-2 py-1.5 text-center whitespace-nowrap border-r border-[#CBD5E1] min-w-[110px]">
                             {(() => {
                               const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
                               const receivedLorries = item.received_lorries || 0;
@@ -923,21 +902,20 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
 
                               if (isMismatch) {
                                 return (
-                                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-300 shadow-2xs inline-flex items-center gap-1">
-                                    <AlertTriangle className="w-2.5 h-2.5 text-rose-600 shrink-0" />
+                                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
                                     <span>Mismatch Case</span>
                                   </span>
                                 );
                               }
 
-                              // When Status is PENDING (not yet closed/completed), keep it completely blank
                               if (!isClosed) {
                                 return null;
                               }
 
                               return (
-                                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs inline-flex items-center gap-1">
-                                  <Check className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#DCFCE7] text-[#166534] border border-[#86EFAC] inline-flex items-center gap-1">
+                                  <Check className="w-3 h-3 text-[#166534] shrink-0" />
                                   <span>Pass</span>
                                 </span>
                               );
@@ -945,7 +923,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                           </td>
 
                           {/* PROCESS STAGE & PASS ACTION */}
-                          <td className="px-2 py-1 text-center whitespace-nowrap border-r border-slate-200/60 min-w-[110px]">
+                          <td className="px-2 py-1.5 text-center whitespace-nowrap border-r border-[#CBD5E1] min-w-[135px]">
                             {(() => {
                               const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
                               const receivedLorries = item.received_lorries || 0;
@@ -956,18 +934,17 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
 
                               if (!isAdvDone) {
                                 return (
-                                  <span className="text-[8.5px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 inline-flex items-center gap-1">
-                                    <Clock className="w-2.5 h-2.5 text-slate-400" />
+                                  <span className="text-[9px] font-bold text-[#404040] bg-slate-100 px-2 py-0.5 rounded border border-slate-300 inline-flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-slate-500" />
                                     <span>ADVANCE PENDING</span>
                                   </span>
                                 );
                               }
 
-                              // If lorries are still open / arriving (Status PENDING), do not allow Pass to Final PO yet
                               if (!isClosed) {
                                 return (
-                                  <span className="text-[8.5px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-300 inline-flex items-center gap-1" title="Contract lorries are still arriving / pending.">
-                                    <Clock className="w-2.5 h-2.5 text-amber-600" />
+                                  <span className="text-[9px] font-bold text-[#92400E] bg-[#FFF2CC] px-2 py-0.5 rounded border border-[#FFE08A] inline-flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-[#92400E]" />
                                     <span>LORRY PENDING</span>
                                   </span>
                                 );
@@ -981,10 +958,9 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                                       e.stopPropagation(); 
                                       setExcessShortModalPo(item);
                                     }}
-                                    title="All lorries arrived & Advance completed. Account Settlement is pending — Click to open Excess / Short Settlement."
-                                    className="text-[8.5px] font-black px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-950 border border-blue-300 uppercase cursor-pointer inline-flex items-center gap-1 whitespace-nowrap transition-colors shadow-2xs"
+                                    className="text-[9px] font-black px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-950 border border-blue-300 uppercase cursor-pointer inline-flex items-center gap-1 whitespace-nowrap transition-colors"
                                   >
-                                    <Clock className="w-2.5 h-2.5 text-blue-700" />
+                                    <Clock className="w-3 h-3 text-blue-700" />
                                     <span>SETTLEMENT PENDING</span>
                                   </button>
                                 );
@@ -994,10 +970,9 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                  title="Advance Payment, Lorries & Settlement Completed! Click to Move this P.O to Final P.O"
-                                  className="text-[8.5px] font-black px-2 py-0.5 rounded bg-[#F7AFA8] hover:bg-[#D94B5A] text-white uppercase shadow-xs cursor-pointer inline-flex items-center gap-1 transition-all active:scale-95 whitespace-nowrap"
+                                  className="text-[9px] font-black px-2.5 py-1 rounded bg-[#D94B5A] hover:bg-[#E85A5A] text-white uppercase shadow-xs cursor-pointer inline-flex items-center gap-1 transition-all active:scale-95 whitespace-nowrap"
                                 >
-                                  <Check className="w-3 h-3 text-white stroke-[3]" />
+                                  <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
                                   <span>PASS → FINAL P.O</span>
                                 </button>
                               );
@@ -1005,130 +980,112 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                           </td>
                         </>
                       )}
+
                       {/* HISTOGRAM SMALL ICON ONLY COLUMN */}
-                      <td className="px-1.5 py-1 text-center whitespace-nowrap border-r border-slate-200/60 min-w-[46px] w-[46px]">
+                      <td className="px-1.5 py-1.5 text-center whitespace-nowrap border-r border-[#CBD5E1] min-w-[48px]">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setHistogramModalPo(item);
                           }}
-                          className={cn(
-                            "p-1.5 rounded-lg border shadow-2xs transition-all inline-flex items-center justify-center cursor-pointer active:scale-95 group",
-                            isSelected
-                              ? "bg-white text-[#D94B5A] border-white hover:bg-emerald-50"
-                              : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300 hover:border-emerald-500 shadow-xs"
-                          )}
-                          title={`📊 Open P.O. Histogram & Complete Multi-M.R. History (${item.po_no})`}
+                          className="p-1.5 rounded-lg border border-[#FBCFCB] bg-[#FDE7E6] hover:bg-[#FBCFCB] text-[#D94B5A] transition-all inline-flex items-center justify-center cursor-pointer active:scale-95"
+                          title={`📊 Open P.O. Histogram (${item.po_no})`}
                         >
-                          <BarChart3 className="w-3.5 h-3.5 text-emerald-700 group-hover:scale-110 transition-transform shrink-0" />
+                          <BarChart3 className="w-3.5 h-3.5 text-[#D94B5A] shrink-0" />
                         </button>
                       </td>
-                     <td className="px-3 text-center min-w-[100px] whitespace-nowrap">
-                        {isVoid ? (
-                           <div className="flex items-center justify-center gap-1.5">
-                             <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] uppercase border border-rose-200">CANCELLED</span>
-                             <button
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                 setActionMenu(actionMenu && actionMenu.item.po_no === item.po_no ? null : { item, x: r.right, y: r.bottom });
-                               }}
-                               className="px-2 py-1 rounded-lg border font-bold text-[10px] uppercase flex items-center gap-1 shadow-xs transition-colors cursor-pointer bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-700"
-                               title="Actions (Restore, Email, Delete)"
-                             >
-                               Actions <ChevronDown className="w-3 h-3" />
-                             </button>
-                           </div>
-                        ) : (
-                        <div className="flex justify-center">
-                           <button
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                               setActionMenu(actionMenu && actionMenu.item.po_no === item.po_no ? null : { item, x: r.right, y: r.bottom });
-                             }}
-                             className={cn(
-                               "px-3 py-1 rounded-lg border font-bold text-[10px] uppercase flex items-center gap-1 shadow-xs transition-colors cursor-pointer",
-                               isSelected ? "bg-white/20 text-white border-white/30 hover:bg-white/30" : "bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700"
-                             )}
-                             title="Actions"
-                           >
-                             Actions <ChevronDown className="w-3 h-3" />
-                           </button>
-                        </div>
-                        )}
-                     </td>
-                  </tr>
-               )})}
-               {filteredPos.length === 0 && (
-                  <tr>
-                     <td colSpan={isTempPo ? 15 : 13} className="py-12 text-center text-slate-400 uppercase font-black italic">
-                       No Saved Purchase Orders found matching criteria.
-                     </td>
-                  </tr>
-               )}
-            </tbody>
-         </table>
-      </div>
 
-      {/* Pagination / Total bar */}
-      <div className="bg-white border border-slate-200 rounded-[18px] p-3 shadow-xs flex flex-wrap justify-between items-center gap-3">
-         <div className="flex flex-wrap gap-3 items-center">
-            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 flex items-center gap-2">
-               <span className="text-[10px] font-bold text-slate-500 uppercase">Cumulative Weight:</span>
-               <span className="text-xs font-black text-slate-900 font-mono">
-                 {filteredPos.reduce((acc, s) => acc + parseFloat(s.total_contract_mt || 0), 0).toFixed(3)} MT
-               </span>
-            </div>
-            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 flex items-center gap-2">
-               <span className="text-[10px] font-bold text-slate-500 uppercase">Closed P.O.s:</span>
-               <span className="text-xs font-black text-emerald-700 font-mono">
-                 {filteredPos.filter(p => p.pending === false || p.pending === 'No').length} Closed
-               </span>
-            </div>
-            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 flex items-center gap-2">
-               <span className="text-[10px] font-bold text-slate-500 uppercase">Total Records:</span>
-               <span className="text-xs font-black text-slate-900 font-mono">
-                 {filteredPos.length} POs
-               </span>
-            </div>
-         </div>
-         <div className="flex-1 max-w-xl">
-            <PaginationControls
-              currentPage={currentPage}
-              totalItems={sortedPos.length}
-              pageSize={pageSize}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={setPageSize}
-            />
-         </div>
-      </div>
+                      {/* ACTIONS */}
+                      <td className="px-3 py-1.5 text-center min-w-[110px] whitespace-nowrap">
+                         {isVoid ? (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] uppercase border border-rose-200">CANCELLED</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                  setActionMenu(actionMenu && actionMenu.item.po_no === item.po_no ? null : { item, x: r.right, y: r.bottom });
+                                }}
+                                className="px-2 py-1 rounded-lg border font-bold text-[10px] uppercase flex items-center gap-1 cursor-pointer bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-800"
+                              >
+                                Actions <ChevronDown className="w-3 h-3" />
+                              </button>
+                            </div>
+                         ) : (
+                         <div className="flex justify-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                setActionMenu(actionMenu && actionMenu.item.po_no === item.po_no ? null : { item, x: r.right, y: r.bottom });
+                              }}
+                              className="px-3 py-1 rounded-lg border border-[#CBD5E1] font-bold text-[10px] uppercase flex items-center gap-1 bg-white hover:bg-[#FFF2CC] text-[#111111] transition-colors cursor-pointer shadow-2xs"
+                              title="Actions"
+                            >
+                              Actions <ChevronDown className="w-3 h-3 text-[#404040]" />
+                            </button>
+                         </div>
+                         )}
+                      </td>
+                   </tr>
+                )})}
+                {filteredPos.length === 0 && (
+                   <tr>
+                      <td colSpan={isTempPo ? 15 : 13} className="py-12 text-center text-[#64748B] uppercase font-bold italic">
+                        No Saved Purchase Orders found matching criteria.
+                      </td>
+                   </tr>
+                )}
+             </tbody>
+          </table>
+       </div>
 
-      {/* Floating Quick Add Button - Only for Sauda Check Point */}
-      {isTempPo && (
-        <button
-          onClick={handleGlobalAdd}
-          className="fixed bottom-12 right-8 z-30 bg-[#F7AFA8] hover:bg-[#D94B5A] text-white p-4 rounded-2xl shadow-xl flex items-center gap-2.5 font-bold text-xs transition-all hover:scale-105 active:scale-95 cursor-pointer border border-[#F06D6C] group"
-          title="Create New Manual P.O"
-        >
-          <Plus className="w-5 h-5 text-emerald-300 group-hover:rotate-90 transition-transform duration-300" />
-          <span>New P.O</span>
-        </button>
-      )}
+       {/* Pagination / Total bar */}
+       <div className="bg-white border border-[#CBD5E1] rounded-xl p-3 shadow-2xs flex flex-wrap justify-between items-center gap-3">
+          <div className="flex flex-wrap gap-3 items-center">
+             <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg px-3.5 py-1.5 flex items-center gap-2">
+                <span className="text-[10px] font-bold text-[#404040] uppercase">Cumulative Weight:</span>
+                <span className="text-xs font-black text-[#111111] font-mono">
+                  {filteredPos.reduce((acc, s) => acc + parseFloat(s.total_contract_mt || 0), 0).toFixed(3)} MT
+                </span>
+             </div>
+             <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg px-3.5 py-1.5 flex items-center gap-2">
+                <span className="text-[10px] font-bold text-[#404040] uppercase">Closed P.O.s:</span>
+                <span className="text-xs font-black text-[#166534] font-mono">
+                  {filteredPos.filter(p => p.pending === false || p.pending === 'No').length} Closed
+                </span>
+             </div>
+             <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg px-3.5 py-1.5 flex items-center gap-2">
+                <span className="text-[10px] font-bold text-[#404040] uppercase">Total Records:</span>
+                <span className="text-xs font-black text-[#111111] font-mono">
+                  {filteredPos.length} POs
+                </span>
+             </div>
+          </div>
+          <div className="flex-1 max-w-xl">
+             <PaginationControls
+               currentPage={currentPage}
+               totalItems={sortedPos.length}
+               pageSize={pageSize}
+               onPageChange={setCurrentPage}
+               onPageSizeChange={setPageSize}
+             />
+          </div>
+       </div>
 
-      {/* Histogram Lifecycle & Story Modal */}
-      {histogramModalPo && (
-        <PoHistogramHistoryModal
-          isOpen={Boolean(histogramModalPo)}
-          onClose={() => setHistogramModalPo(null)}
-          po={histogramModalPo}
-          allPayments={allPayments}
-          allSettlements={allSettlements}
-          allArrivals={allTempArrivals}
-          allInspections={allInspections}
-        />
-      )}
+       {/* Histogram Lifecycle & Story Modal */}
+       {histogramModalPo && (
+         <PoHistogramHistoryModal
+           isOpen={Boolean(histogramModalPo)}
+           onClose={() => setHistogramModalPo(null)}
+           po={histogramModalPo}
+           allPayments={allPayments}
+           allSettlements={allSettlements}
+           allArrivals={allTempArrivals}
+           allInspections={allInspections}
+         />
+       )}
     </div>
   );
 };

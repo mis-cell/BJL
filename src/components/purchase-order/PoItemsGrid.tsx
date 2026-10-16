@@ -386,6 +386,8 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
                             agency_name: '',
                             marka_code: '',
                             marka_name: '',
+                            qty: 0,
+                            weight: 0,
                             rate: 0,
                             premium: 0
                           }]
