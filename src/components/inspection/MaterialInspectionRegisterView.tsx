@@ -239,7 +239,7 @@ export const MaterialInspectionRegisterView: React.FC<MaterialInspectionRegister
       </div>
 
       {/* Top Filter & Action Bar */}
-      <div className="flex items-center gap-2.5 flex-wrap rounded-lg border border-slate-300 bg-[#174C2C] p-2 shadow-sm w-full min-w-0">
+      <div className="flex items-center gap-2.5 flex-wrap rounded-lg border border-slate-300 bg-[#D94B5A] p-2 shadow-sm w-full min-w-0">
         <div className="flex flex-1 min-w-0 sm:min-w-[260px] w-full sm:w-auto overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
           <input
             id="search_m_r_no_supplier_na_mat"
@@ -316,7 +316,7 @@ export const MaterialInspectionRegisterView: React.FC<MaterialInspectionRegister
             onClick={() => setCurrentTab("inspections")}
             className={`px-3 py-1 text-xs font-black uppercase tracking-tight flex items-center gap-1.5 border transition-all cursor-pointer rounded-t ${
               currentTab === "inspections"
-                ? "bg-[#174C2C] text-white border-[#174C2C] shadow-sm"
+                ? "bg-[#D94B5A] text-white border-[#D94B5A] shadow-sm"
                 : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
             }`}
           >
@@ -332,7 +332,7 @@ export const MaterialInspectionRegisterView: React.FC<MaterialInspectionRegister
             onClick={() => setCurrentTab("pending_mr")}
             className={`px-3 py-1 text-xs font-black uppercase tracking-tight flex items-center gap-1.5 border transition-all cursor-pointer rounded-t ${
               currentTab === "pending_mr"
-                ? "bg-[#174C2C] text-white border-[#174C2C] shadow-sm"
+                ? "bg-[#D94B5A] text-white border-[#D94B5A] shadow-sm"
                 : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
             }`}
           >
@@ -415,7 +415,7 @@ export const MaterialInspectionRegisterView: React.FC<MaterialInspectionRegister
               setSuccessMessage("");
               setViewMode("entry");
             }}
-            className="bg-[#174C2C] hover:bg-[#123920] text-white font-black text-[11px] uppercase px-3.5 py-1 rounded shadow-sm flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+            className="bg-[#D94B5A] hover:bg-[#123920] text-white font-black text-[11px] uppercase px-3.5 py-1 rounded shadow-sm flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
           >
             <Plus className="w-3.5 h-3.5 text-amber-300" />
             <span>+ New Inspection</span>
@@ -426,7 +426,7 @@ export const MaterialInspectionRegisterView: React.FC<MaterialInspectionRegister
       {/* Main Records Table */}
       <div className="overflow-x-auto border border-slate-300 shadow-sm rounded-lg bg-white">
         <table className="w-full border-collapse text-[11px]">
-          <thead className="bg-[#174C2C] text-white font-extrabold uppercase">
+          <thead className="bg-[#D94B5A] text-white font-extrabold uppercase">
             {currentTab === "inspections" ? (
               <tr className="border-b border-gray-400 text-white h-8 font-black uppercase text-center">
                 {visibleColumns.select && (

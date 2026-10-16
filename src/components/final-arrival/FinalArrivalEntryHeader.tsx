@@ -58,7 +58,7 @@ export function FinalArrivalEntryHeader({
             <button
               type="button"
               onClick={() => loadDetailsFromAmad(formData.temporary_arrival_no)}
-              className="bg-[#103A20] hover:bg-[#1c5932] text-white px-2.5 h-8 rounded text-xs font-bold transition-colors cursor-pointer shrink-0"
+              className="bg-[#D94B5A] hover:bg-[#E85A5A] text-white px-2.5 h-8 rounded text-xs font-bold transition-colors cursor-pointer shrink-0 border border-[#FBCFCB]"
             >
               Pick
             </button>

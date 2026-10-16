@@ -497,21 +497,21 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
     return (
       <div className="flex flex-col space-y-4 font-sans text-slate-800">
         {/* User 10 Executive Header */}
-        <div className="bg-[#174C2C] text-white p-4 rounded-2xl shadow-md border border-[#0F351E] flex flex-wrap items-center justify-between gap-3">
+        <div className="bg-[#D94B5A] text-white p-4 rounded-2xl shadow-md border border-[#B83847] flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-400 text-slate-900 font-black flex items-center justify-center shadow-inner text-sm">
+            <div className="w-10 h-10 rounded-xl bg-[#FDE7E6] text-[#D94B5A] font-black flex items-center justify-center shadow-inner text-sm border border-[#FBCFCB]">
               U10
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-black tracking-wide uppercase text-amber-300">
+                <h2 className="text-base font-black tracking-wide uppercase text-[#FDE7E6]">
                   Sauda Dashboard • User ID 10 Approval Desk
                 </h2>
-                <span className="bg-amber-400/20 text-amber-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-amber-400/30">
+                <span className="bg-[#FDE7E6]/20 text-[#FDE7E6] text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-[#FDE7E6]/30">
                   Authority Level
                 </span>
               </div>
-              <p className="text-xs text-emerald-200">
+              <p className="text-xs text-[#FBCFCB]">
                 Review, preview, and approve or reject Sauda Contracts before they appear in Sauda Check Point.
               </p>
             </div>
@@ -519,9 +519,9 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
 
           <button
             onClick={refreshSaudas}
-            className="px-3 py-1.5 bg-emerald-800/80 hover:bg-emerald-800 border border-emerald-500/40 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+            className="px-3 py-1.5 bg-[#80202C] hover:bg-[#9E2B38] border border-[#F06D6C]/40 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-amber-300" />
+            <RefreshCw className="w-3.5 h-3.5 text-[#FDE7E6]" />
             <span>Refresh</span>
           </button>
         </div>
@@ -585,7 +585,7 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
                 onClick={() => toggleSort('date')}
                 className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95 ${
                   sortField === 'date'
-                    ? 'bg-[#174C2C] text-white shadow-2xs'
+                    ? 'bg-[#D94B5A] text-white shadow-2xs'
                     : 'text-slate-700 hover:bg-slate-200'
                 }`}
                 title={`Sort by Date (${sortField === 'date' && sortOrder === 'asc' ? 'Oldest first' : 'Newest first'})`}
@@ -603,7 +603,7 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
                 onClick={() => toggleSort('order_no')}
                 className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95 ${
                   sortField === 'order_no'
-                    ? 'bg-[#174C2C] text-white shadow-2xs'
+                    ? 'bg-[#D94B5A] text-white shadow-2xs'
                     : 'text-slate-700 hover:bg-slate-200'
                 }`}
                 title={`Sort by Order No. (${sortField === 'order_no' && sortOrder === 'asc' ? 'Ascending #0001 → #9999' : 'Descending #9999 → #0001'})`}
@@ -675,7 +675,7 @@ export const SaudaDashboardView: React.FC<SaudaDashboardViewProps> = ({ saudaDat
         <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
           <div className="overflow-x-auto min-h-[350px]">
             <table className="w-full border-collapse text-xs min-w-[700px]">
-              <thead className="bg-[#174C2C] text-white sticky top-0 z-10">
+              <thead className="bg-[#D94B5A] text-white sticky top-0 z-10">
                 <tr className="h-10 text-[11px] font-black uppercase tracking-wider">
                   <th
                     onClick={() => toggleSort('date')}

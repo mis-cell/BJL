@@ -28,7 +28,7 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
   lockedMessage
 }) => {
   return (
-    <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#174C2C]/40 hover:shadow-lg transition-all overflow-hidden">
+    <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#D94B5A]/40 hover:shadow-lg transition-all overflow-hidden">
       <SectionHeader icon={FileText} title="Remarks & Finalisation" />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-2">
@@ -40,7 +40,7 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
             rows={4}
             value={formData.remarks ?? 'Area, Agency Grade, Grade differential can change as per market.'}
             onChange={onChange}
-            className="w-full bg-white border border-[#D5D0C5] focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 rounded-xl p-3 text-xs font-medium text-slate-800 outline-none transition-all shadow-2xs resize-none"
+            className="w-full bg-white border border-[#D5D0C5] focus:border-[#D94B5A] focus:ring-2 focus:ring-[#D94B5A]/20 rounded-xl p-3 text-xs font-medium text-slate-800 outline-none transition-all shadow-2xs resize-none"
           />
         </div>
 
@@ -55,7 +55,7 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
               name="b_rate"
               value={formData.b_rate ?? 0}
               onChange={onChange}
-              className="bg-white border border-[#D5D0C5] focus:border-[#174C2C] rounded-xl px-3.5 py-2 text-xs font-bold text-[#174C2C] text-right outline-none transition-all shadow-2xs"
+              className="bg-white border border-[#D5D0C5] focus:border-[#D94B5A] rounded-xl px-3.5 py-2 text-xs font-bold text-[#D94B5A] text-right outline-none transition-all shadow-2xs"
             />
           </div>
 
@@ -67,7 +67,7 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
               name="b_date"
               value={formData.b_date || ''}
               onChange={onChange}
-              className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#174C2C] transition-all shadow-2xs cursor-pointer"
+              className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#D94B5A] transition-all shadow-2xs cursor-pointer"
             />
           </div>
 

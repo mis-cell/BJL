@@ -708,7 +708,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
       <button
         key={item.id}
         onClick={() => setSubAnalysisMode(item.id)}
-        className={` group relative flex flex-1 min-w-[220px] items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/50 ${ isActive ? 'border-[#174C2C] bg-gradient-to-br from-[#1E5A32] to-[#123D25] text-white shadow-md' : 'border-[#E2E9DF] bg-white text-[#334536] hover:border-[#B7CDB5] hover:bg-[#F4F8F1] hover:shadow-sm' } `}
+        className={` group relative flex flex-1 min-w-[220px] items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/50 ${ isActive ? 'border-[#D94B5A] bg-gradient-to-br from-[#1E5A32] to-[#123D25] text-white shadow-md' : 'border-[#E2E9DF] bg-white text-[#334536] hover:border-[#B7CDB5] hover:bg-[#F4F8F1] hover:shadow-sm' } `}
       >
         <span
           className={`

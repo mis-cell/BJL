@@ -55,7 +55,7 @@ export function FinalArrivalDataTable({
       <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs overflow-x-auto overflow-y-auto min-h-[350px] w-full max-w-full">
         {loading ? (
           <div className="flex flex-col items-center justify-center p-12 py-24">
-            <RefreshCw className="h-8 w-8 text-[#1E4D2B] animate-spin mb-3" />
+            <RefreshCw className="h-8 w-8 text-[#D94B5A] animate-spin mb-3" />
             <span className="text-xs font-bold uppercase tracking-widest text-slate-700">Reindexing Final Arrival registries...</span>
           </div>
         ) : filteredRecords.length === 0 ? (
@@ -68,17 +68,17 @@ export function FinalArrivalDataTable({
           </div>
         ) : (
           <table className="w-full border-collapse text-xs font-sans min-w-[1100px]">
-            <thead className="bg-[#1E4D2B] text-white font-serif sticky top-0 z-10">
-              <tr className="border-b border-[#163E21] h-10 text-emerald-50">
-                <th className="px-3 border-r border-[#163E21] font-bold text-center w-24 whitespace-nowrap">Voucher Date</th>
-                <th className="px-3 border-r border-[#163E21] font-bold text-center w-24 whitespace-nowrap">Arrival #</th>
-                <th className="px-3 border-r border-[#163E21] font-bold text-center w-28 whitespace-nowrap">PO #</th>
-                <th className="px-3 border-r border-[#163E21] font-bold text-left whitespace-nowrap">Supplier Name</th>
-                <th className="px-3 border-r border-[#163E21] font-bold text-left whitespace-nowrap">Broker Reference</th>
-                <th className="px-3 border-r border-[#163E21] font-bold text-center w-28 whitespace-nowrap">Lorry Number</th>
-                <th className="px-3 border-r border-[#163E21] font-bold text-center w-20 whitespace-nowrap">Unit</th>
-                <th className="px-3 border-r border-[#163E21] font-bold text-right w-20 whitespace-nowrap">Qty</th>
-                <th className="px-3 border-r border-[#163E21] font-bold text-right w-24 text-amber-200 whitespace-nowrap">Weight</th>
+            <thead className="bg-[#D94B5A] text-white font-serif sticky top-0 z-10">
+              <tr className="border-b border-[#B83847] h-10 text-white">
+                <th className="px-3 border-r border-[#C23948] font-bold text-center w-24 whitespace-nowrap">Voucher Date</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-center w-24 whitespace-nowrap">Arrival #</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-center w-28 whitespace-nowrap">PO #</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-left whitespace-nowrap">Supplier Name</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-left whitespace-nowrap">Broker Reference</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-center w-28 whitespace-nowrap">Lorry Number</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-center w-20 whitespace-nowrap">Unit</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-right w-20 whitespace-nowrap">Qty</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-right w-24 text-amber-200 whitespace-nowrap">Weight</th>
                 <th className="px-3 font-bold text-center w-24 whitespace-nowrap">Actions</th>
               </tr>
             </thead>

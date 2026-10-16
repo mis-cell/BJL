@@ -684,7 +684,7 @@ export default function LegacyLayout({
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                 className="flex items-center gap-1.5 sm:gap-2 bg-[#103A20] hover:bg-[#215E38] border border-[#2D7344] rounded-full px-2.5 sm:px-3 py-1 text-xs font-bold text-white transition-colors cursor-pointer shadow-xs"
               >
-                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#174C2C] border border-[#2D7344] text-[#D4AF37] flex items-center justify-center text-[10px] sm:text-[11px] font-bold">
+                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#D94B5A] border border-[#2D7344] text-[#D4AF37] flex items-center justify-center text-[10px] sm:text-[11px] font-bold">
                   <User className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 </div>
                 <span className="hidden sm:inline font-bold text-white">{currentUser}</span>
@@ -759,8 +759,8 @@ export default function LegacyLayout({
 
 export function LegacyFieldset({ legend, children, className }: { legend: string, children: React.ReactNode, className?: string }) {
   return (
-    <fieldset className={cn("border border-[#D6CAA8] rounded-xl p-4 pt-2.5 bg-[#FAF7F0] shadow-xs relative hover:border-[#1E331B] transition-colors", className)}>
-      <legend className="px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-[#1E331B] tracking-wider bg-[#EAE2D2] rounded-md border border-[#D6CAA8] shadow-2xs">{legend}</legend>
+    <fieldset className={cn("border border-[#D6CAA8] rounded-xl p-4 pt-2.5 bg-[#FAF7F0] shadow-xs relative hover:border-[#9E2B38] transition-colors", className)}>
+      <legend className="px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-[#9E2B38] tracking-wider bg-[#EAE2D2] rounded-md border border-[#D6CAA8] shadow-2xs">{legend}</legend>
       {children}
     </fieldset>
   );
@@ -772,9 +772,9 @@ export function LegacyButton({ label, icon: Icon, onClick, active, variant = 'de
     <button 
       onClick={onClick}
       className={cn(
-        "bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg shadow-2xs hover:shadow-xs active:scale-[0.98] px-3.5 py-1.5 text-[#1E331B] transition-all font-semibold cursor-pointer hover:bg-[#EAE2D2] hover:border-[#1E331B]",
+        "bg-[#FAF7F0] border border-[#D6CAA8] rounded-lg shadow-2xs hover:shadow-xs active:scale-[0.98] px-3.5 py-1.5 text-[#9E2B38] transition-all font-semibold cursor-pointer hover:bg-[#EAE2D2] hover:border-[#9E2B38]",
         !isCustom && "flex flex-col items-center min-w-[80px]",
-        active && "bg-[#1E331B] border-[#1E331B] text-[#FAF7F0] shadow-inner font-bold",
+        active && "bg-[#9E2B38] border-[#9E2B38] text-[#FAF7F0] shadow-inner font-bold",
         variant === 'danger' && "text-rose-700 bg-rose-50/50 hover:bg-rose-100 border-rose-300",
         className
       )}

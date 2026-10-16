@@ -138,12 +138,12 @@ export const UniversalAuditLogModal: React.FC<UniversalAuditLogModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-[#FAF7F0] border-2 border-[#1E331B] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-[#FAF7F0] border-2 border-[#9E2B38] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Header Bar */}
         <div className="bg-[#103A20] text-white px-5 py-3.5 flex items-center justify-between border-b-2 border-[#D4AF37] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#174C2C] border-2 border-[#D4AF37] flex items-center justify-center text-[#D4AF37] shadow-inner">
+            <div className="w-9 h-9 rounded-xl bg-[#D94B5A] border-2 border-[#D4AF37] flex items-center justify-center text-[#D4AF37] shadow-inner">
               <History className="w-5 h-5" />
             </div>
             <div>
@@ -166,7 +166,7 @@ export const UniversalAuditLogModal: React.FC<UniversalAuditLogModalProps> = ({
               onClick={handleExportCsv}
               disabled={filteredLogs.length === 0}
               title="Export to CSV"
-              className="px-3 py-1.5 bg-[#174C2C] hover:bg-[#235E39] text-[#D4AF37] border border-[#D4AF37]/50 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-40"
+              className="px-3 py-1.5 bg-[#D94B5A] hover:bg-[#235E39] text-[#D4AF37] border border-[#D4AF37]/50 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer shadow-xs disabled:opacity-40"
             >
               <Download className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Export CSV</span>
@@ -174,7 +174,7 @@ export const UniversalAuditLogModal: React.FC<UniversalAuditLogModalProps> = ({
             <button
               onClick={loadLogs}
               title="Refresh Logs"
-              className="p-1.5 bg-[#174C2C] hover:bg-[#235E39] text-white border border-[#2D7344] rounded-lg transition-all cursor-pointer"
+              className="p-1.5 bg-[#D94B5A] hover:bg-[#235E39] text-white border border-[#2D7344] rounded-lg transition-all cursor-pointer"
             >
               <RefreshCcw className={cn("w-4 h-4", isLoading && "animate-spin text-[#D4AF37]")} />
             </button>
@@ -199,7 +199,7 @@ export const UniversalAuditLogModal: React.FC<UniversalAuditLogModalProps> = ({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search record, field, values, or user..."
-                className="w-full bg-[#FAF8F5] border border-slate-300 text-xs font-medium pl-8 pr-3 py-1.5 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-[#1E331B]"
+                className="w-full bg-[#FAF8F5] border border-slate-300 text-xs font-medium pl-8 pr-3 py-1.5 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-[#9E2B38]"
               />
             </div>
 
@@ -210,7 +210,7 @@ export const UniversalAuditLogModal: React.FC<UniversalAuditLogModalProps> = ({
               <select
                 value={selectedModule}
                 onChange={(e) => setSelectedModule(e.target.value)}
-                className="bg-transparent text-xs font-bold text-[#1E331B] outline-none cursor-pointer"
+                className="bg-transparent text-xs font-bold text-[#9E2B38] outline-none cursor-pointer"
               >
                 <option value="ALL">All Modules</option>
                 {availableModules.map(m => (
@@ -226,7 +226,7 @@ export const UniversalAuditLogModal: React.FC<UniversalAuditLogModalProps> = ({
               <select
                 value={selectedUser}
                 onChange={(e) => setSelectedUser(e.target.value)}
-                className="bg-transparent text-xs font-bold text-[#1E331B] outline-none cursor-pointer"
+                className="bg-transparent text-xs font-bold text-[#9E2B38] outline-none cursor-pointer"
               >
                 <option value="ALL">All Users</option>
                 {availableUsers.map(u => (
@@ -276,7 +276,7 @@ export const UniversalAuditLogModal: React.FC<UniversalAuditLogModalProps> = ({
         <div className="flex-1 overflow-auto min-h-0 bg-white">
           {isLoading ? (
             <div className="p-12 flex flex-col items-center justify-center gap-3 text-slate-500">
-              <div className="w-8 h-8 border-3 border-[#1E331B] border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-3 border-[#9E2B38] border-t-transparent rounded-full animate-spin" />
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Loading Change History...</span>
             </div>
           ) : filteredLogs.length === 0 ? (
@@ -289,7 +289,7 @@ export const UniversalAuditLogModal: React.FC<UniversalAuditLogModalProps> = ({
             </div>
           ) : (
             <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-[#1E331B] text-white uppercase text-[10px] font-black tracking-wider sticky top-0 z-10 shadow-xs">
+              <thead className="bg-[#9E2B38] text-white uppercase text-[10px] font-black tracking-wider sticky top-0 z-10 shadow-xs">
                 <tr className="border-b-2 border-[#D4AF37]">
                   <th className="py-2.5 px-3 border-r border-[#162B14] min-w-[140px]">Date & Time</th>
                   <th className="py-2.5 px-3 border-r border-[#162B14] min-w-[150px]">Section / Module</th>
@@ -322,7 +322,7 @@ export const UniversalAuditLogModal: React.FC<UniversalAuditLogModalProps> = ({
                     >
                       {/* Timestamp */}
                       <td className="py-2.5 px-3 border-r border-slate-200 font-mono text-[11px] text-slate-700 whitespace-nowrap">
-                        <div className="font-bold text-[#1E331B]">{formattedDate}</div>
+                        <div className="font-bold text-[#9E2B38]">{formattedDate}</div>
                         <div className="text-[10px] text-slate-500 flex items-center gap-1">
                           <Clock className="w-2.5 h-2.5 text-[#D4AF37]" />
                           {formattedTime}
@@ -344,7 +344,7 @@ export const UniversalAuditLogModal: React.FC<UniversalAuditLogModalProps> = ({
                       </td>
 
                       {/* Field Changed */}
-                      <td className="py-2.5 px-3 border-r border-slate-200 font-extrabold text-[#1E331B]">
+                      <td className="py-2.5 px-3 border-r border-slate-200 font-extrabold text-[#9E2B38]">
                         <div>{log.field_label || log.field_name}</div>
                         <div className="text-[9.5px] font-mono text-slate-400 font-medium">{log.field_name}</div>
                       </td>

@@ -19,7 +19,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
   isUser010 = false
 }) => {
   return (
-    <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#174C2C]/40 hover:shadow-lg transition-all">
+    <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#D94B5A]/40 hover:shadow-lg transition-all">
       <SectionHeader icon={Truck} title="Unit & Transportation Details" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -121,7 +121,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             required={['BALES', 'BALE', 'DRUM', 'DRUMS'].includes(
               String(formData.unit_type || '').toUpperCase().trim()
             )}
-            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs font-mono"
+            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#D94B5A] focus:ring-2 focus:ring-[#D94B5A]/20 transition-all shadow-2xs font-mono"
           />
         </div>
 
@@ -164,7 +164,7 @@ export const TransportationCard: React.FC<TransportationCardProps> = ({
             required={['LOOSE', 'LOOSES'].includes(
               String(formData.unit_type || '').toUpperCase().trim()
             )}
-            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 transition-all shadow-2xs font-mono"
+            className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#D94B5A] focus:ring-2 focus:ring-[#D94B5A]/20 transition-all shadow-2xs font-mono"
           />
         </div>
 

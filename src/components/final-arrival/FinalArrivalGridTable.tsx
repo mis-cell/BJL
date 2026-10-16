@@ -60,7 +60,7 @@ export function FinalArrivalGridTable({
 
       <div className="overflow-x-auto border border-slate-200 rounded-lg">
         <table className="w-full border-collapse text-xs font-sans min-w-[1200px]">
-          <thead className="bg-[#103A20] text-white font-serif">
+          <thead className="bg-[#D94B5A] text-white font-serif">
             <tr className="h-8 text-[11px]">
               <th className="px-2 border-r border-[#1C5130] font-bold text-center w-12">Srl</th>
               <th className="px-2 border-r border-[#1C5130] font-bold text-center w-28">Receipt Grade</th>

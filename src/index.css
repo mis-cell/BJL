@@ -19,6 +19,67 @@
   --color-rose-shade-5: #F06D6C;
   --color-rose-shade-6: #E85A5A;
   --color-rose-shade-7: #D94B5A;
+
+  /* Global App Theme Mapping: Convert Emerald & Green Utilities to Rose/Coral Palette */
+  --color-emerald-50: #FDE7E6;
+  --color-emerald-100: #FBCFCB;
+  --color-emerald-200: #F7AFA8;
+  --color-emerald-300: #F48F8B;
+  --color-emerald-400: #F06D6C;
+  --color-emerald-500: #E85A5A;
+  --color-emerald-600: #D94B5A;
+  --color-emerald-700: #C23948;
+  --color-emerald-800: #9E2B38;
+  --color-emerald-900: #7A1C27;
+  --color-emerald-950: #520F18;
+
+  --color-green-50: #FDE7E6;
+  --color-green-100: #FBCFCB;
+  --color-green-200: #F7AFA8;
+  --color-green-300: #F48F8B;
+  --color-green-400: #F06D6C;
+  --color-green-500: #E85A5A;
+  --color-green-600: #D94B5A;
+  --color-green-700: #C23948;
+  --color-green-800: #9E2B38;
+  --color-green-900: #7A1C27;
+  --color-green-950: #520F18;
+
+  --color-teal-50: #FDE7E6;
+  --color-teal-100: #FBCFCB;
+  --color-teal-200: #F7AFA8;
+  --color-teal-300: #F48F8B;
+  --color-teal-400: #F06D6C;
+  --color-teal-500: #E85A5A;
+  --color-teal-600: #D94B5A;
+  --color-teal-700: #C23948;
+  --color-teal-800: #9E2B38;
+  --color-teal-900: #7A1C27;
+  --color-teal-950: #520F18;
+
+  --color-indigo-50: #FDE7E6;
+  --color-indigo-100: #FBCFCB;
+  --color-indigo-200: #F7AFA8;
+  --color-indigo-300: #F48F8B;
+  --color-indigo-400: #F06D6C;
+  --color-indigo-500: #E85A5A;
+  --color-indigo-600: #D94B5A;
+  --color-indigo-700: #C23948;
+  --color-indigo-800: #9E2B38;
+  --color-indigo-900: #7A1C27;
+  --color-indigo-950: #520F18;
+
+  --color-blue-50: #FDE7E6;
+  --color-blue-100: #FBCFCB;
+  --color-blue-200: #F7AFA8;
+  --color-blue-300: #F48F8B;
+  --color-blue-400: #F06D6C;
+  --color-blue-500: #E85A5A;
+  --color-blue-600: #D94B5A;
+  --color-blue-700: #C23948;
+  --color-blue-800: #9E2B38;
+  --color-blue-900: #7A1C27;
+  --color-blue-950: #520F18;
 }
 
 @layer base {

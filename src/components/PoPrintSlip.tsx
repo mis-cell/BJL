@@ -125,16 +125,16 @@ export default function PoPrintSlip({ po }: Props) {
         <div className="flex-1 min-w-0 px-[6mm] py-[4mm] flex flex-col overflow-hidden">
 
           {/* HEADER */}
-          <header className="border-b-2 border-[#174C2C] pb-2">
+          <header className="border-b-2 border-[#D94B5A] pb-2">
 
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-lg bg-[#174C2C] text-white flex items-center justify-center font-black text-sm">
+                <div className="w-9 h-9 rounded-lg bg-[#D94B5A] text-white flex items-center justify-center font-black text-sm">
                   BJ
                 </div>
 
                 <div className="leading-tight">
-                  <div className="font-black text-[16px] tracking-tight text-[#174C2C]">
+                  <div className="font-black text-[16px] tracking-tight text-[#D94B5A]">
                     BALLY JUTE COMPANY LIMITED
                   </div>
                   <div className="text-[9px] font-semibold tracking-[0.12em] text-slate-500 uppercase">
@@ -147,7 +147,7 @@ export default function PoPrintSlip({ po }: Props) {
               </div>
 
               <div className="text-right shrink-0">
-                <div className="text-[16px] font-black tracking-[0.08em] text-[#174C2C]">
+                <div className="text-[16px] font-black tracking-[0.08em] text-[#D94B5A]">
                   RAW JUTE
                 </div>
                 <div className="text-[11px] font-bold tracking-[0.18em] text-slate-500">
@@ -224,7 +224,7 @@ export default function PoPrintSlip({ po }: Props) {
 
               <table className="w-full table-fixed border-collapse text-[10px]">
                 <thead>
-                  <tr className="bg-[#174C2C] text-white">
+                  <tr className="bg-[#D94B5A] text-white">
                     <th className="w-[8%] px-2 py-1.5 text-left font-bold">Lorries</th>
                     <th className="w-[12%] px-2 py-1.5 text-left font-bold">Crop Year</th>
                     <th className="w-[20%] px-2 py-1.5 text-left font-bold">Agency</th>
@@ -387,7 +387,7 @@ export default function PoPrintSlip({ po }: Props) {
             {/* TERMS */}
             <div className="mt-1.5 flex gap-3 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 min-h-[34px]">
 
-              <div className="shrink-0 text-[9px] font-black uppercase text-[#174C2C]">
+              <div className="shrink-0 text-[9px] font-black uppercase text-[#D94B5A]">
                 Terms & Condition
               </div>
 

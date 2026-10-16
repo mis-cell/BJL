@@ -19,7 +19,7 @@ export const FooterActions: React.FC<FooterActionsProps> = ({
   lockedMessage
 }) => {
   return (
-    <div className="bg-[#174C2C] border-t border-[#0F351E] px-6 py-3.5 flex items-center justify-between text-white -mx-5 -mb-5 mt-5 rounded-b-[17px]">
+    <div className="bg-[#D94B5A] border-t border-[#0F351E] px-6 py-3.5 flex items-center justify-between text-white -mx-5 -mb-5 mt-5 rounded-b-[17px]">
       <div className="flex items-center gap-3">
         {/* Print Button */}
         <button

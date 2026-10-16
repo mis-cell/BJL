@@ -819,7 +819,7 @@ export default function App() {
       <div className="flex h-screen w-full items-center justify-center bg-[#FAF7F0] font-sans">
         <div className="text-center p-8 bg-white rounded-xl shadow-lg border border-slate-200 max-w-sm w-full">
           <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <h2 className="text-base font-bold text-[#1E331B] uppercase tracking-wide">Loading your workspace...</h2>
+          <h2 className="text-base font-bold text-[#9E2B38] uppercase tracking-wide">Loading your workspace...</h2>
           <p className="text-xs text-slate-500 mt-1">Verifying access permissions and active session...</p>
         </div>
       </div>
@@ -835,7 +835,7 @@ export default function App() {
           <p className="text-xs text-slate-600 mt-1">Unable to load workspace security context. Please check your connection and reload.</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-[#1E331B] text-white rounded text-xs font-bold uppercase cursor-pointer"
+            className="mt-4 px-4 py-2 bg-[#9E2B38] text-white rounded text-xs font-bold uppercase cursor-pointer"
           >
             Reload Application
           </button>
@@ -890,7 +890,7 @@ export default function App() {
                       <div className="w-14 h-14 rounded-full bg-red-100 border border-red-200 text-red-600 flex items-center justify-center mx-auto mb-4 shadow-inner">
                         <Lock className="w-7 h-7" />
                       </div>
-                      <h3 className="text-lg font-bold text-[#1E331B] uppercase tracking-wide">Access Restricted</h3>
+                      <h3 className="text-lg font-bold text-[#9E2B38] uppercase tracking-wide">Access Restricted</h3>
                       <p className="text-sm text-[#5A6E54] mt-2">
                         Your operator account does not hold permissions to access module <span className="font-mono font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">[{ALL_SYSTEM_MODULES.find(x => x.id === currentPage || x.pageId === currentPage || x.aliases.includes(currentPage))?.label || currentPage}]</span>.
                       </p>
@@ -926,7 +926,7 @@ export default function App() {
                             const firstAllowed = getFirstAllowedPage(allowedModules, isAdmin) as Page;
                             globalNavigate(firstAllowed);
                           }}
-                          className="w-full sm:w-auto px-5 py-2.5 bg-[#1E331B] text-[#FAF7F0] rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#2A4426] transition-all shadow-sm active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                          className="w-full sm:w-auto px-5 py-2.5 bg-[#9E2B38] text-[#FAF7F0] rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#2A4426] transition-all shadow-sm active:scale-95 cursor-pointer flex items-center justify-center gap-2"
                         >
                           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                           Go to Permitted Module
@@ -1559,7 +1559,7 @@ export default function App() {
                   setShowGlobalSattaWarning(false);
                   globalNavigate('satta_chart');
                 }}
-                className="flex-1 bg-[#174C2C] hover:bg-[#205c36] active:bg-[#133b23] text-amber-300 font-bold py-1.5 px-3 rounded-lg text-xs transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 bg-[#D94B5A] hover:bg-[#205c36] active:bg-[#133b23] text-amber-300 font-bold py-1.5 px-3 rounded-lg text-xs transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span>Upload Chart ↗</span>
               </button>

@@ -342,7 +342,7 @@ export default function ExecutiveBiDashboard({
     )}>
       
       {/* 1. EXECUTIVE HEADER BANNER */}
-      <div className="bg-gradient-to-r from-[#1E331B] via-[#2A4426] to-[#1E331B] rounded-2xl p-4 sm:p-5 text-white shadow-lg border border-[#D6CAA8] flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-[#9E2B38] via-[#2A4426] to-[#9E2B38] rounded-2xl p-4 sm:p-5 text-white shadow-lg border border-[#D6CAA8] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-white/10 text-emerald-300">
@@ -383,7 +383,7 @@ export default function ExecutiveBiDashboard({
           >
             <div>
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold uppercase text-[#9E2B38] tracking-wider flex items-center gap-1">
                   <span>📦</span> Sauda Check Point
                 </span>
                 <div className="p-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
@@ -393,7 +393,7 @@ export default function ExecutiveBiDashboard({
 
               {/* Main Total Metrics */}
               <div className="my-1">
-                <div className="text-xl font-mono font-extrabold text-[#1E331B] tracking-tight leading-tight">
+                <div className="text-xl font-mono font-extrabold text-[#9E2B38] tracking-tight leading-tight">
                   {dbMetrics.totalContractsCount}{' '}
                   <span className="text-xs font-sans font-semibold text-[#5A6E54]">Contracts</span>
                 </div>
@@ -404,7 +404,7 @@ export default function ExecutiveBiDashboard({
 
               {/* Direct Integrated Breakdown (No Tabs) */}
               <div className="pt-2 border-t border-[#F2EDE0] space-y-1 text-[10px]">
-                <div className="flex items-center justify-between text-[#1E331B]">
+                <div className="flex items-center justify-between text-[#9E2B38]">
                   <span className="font-bold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
                     Sauda:
@@ -414,7 +414,7 @@ export default function ExecutiveBiDashboard({
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-[#1E331B]">
+                <div className="flex items-center justify-between text-[#9E2B38]">
                   <span className="font-bold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
                     P.T.F / Final:
@@ -446,7 +446,7 @@ export default function ExecutiveBiDashboard({
           >
             <div>
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold uppercase text-[#9E2B38] tracking-wider flex items-center gap-1">
                   <span>⏳</span> Pending Sauda
                 </span>
                 <div className="p-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 group-hover:bg-amber-200 transition-colors">
@@ -467,7 +467,7 @@ export default function ExecutiveBiDashboard({
 
               {/* Direct Integrated Breakdown (No Tabs) */}
               <div className="pt-2 border-t border-[#F2EDE0] space-y-1 text-[10px]">
-                <div className="flex items-center justify-between text-[#1E331B]">
+                <div className="flex items-center justify-between text-[#9E2B38]">
                   <span className="font-bold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
                     Sauda:
@@ -477,7 +477,7 @@ export default function ExecutiveBiDashboard({
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-[#1E331B]">
+                <div className="flex items-center justify-between text-[#9E2B38]">
                   <span className="font-bold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
                     P.T.F / Final:
@@ -509,7 +509,7 @@ export default function ExecutiveBiDashboard({
           >
             <div>
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold uppercase text-[#9E2B38] tracking-wider flex items-center gap-1">
                   <span>💳</span> Total Payable Value
                 </span>
                 <div className="p-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
@@ -519,7 +519,7 @@ export default function ExecutiveBiDashboard({
 
               <div className="my-1">
                 <div 
-                  className="text-lg sm:text-xl font-mono font-extrabold text-[#1E331B] tracking-tight leading-tight truncate"
+                  className="text-lg sm:text-xl font-mono font-extrabold text-[#9E2B38] tracking-tight leading-tight truncate"
                   title={`₹${formatIndianCurrency(dbMetrics.totalPayableValue)}`}
                 >
                   {formatIndianCompactCurrency(dbMetrics.totalPayableValue)}
@@ -530,15 +530,15 @@ export default function ExecutiveBiDashboard({
               </div>
 
               <div className="pt-2 border-t border-[#F2EDE0] space-y-1 text-[10px]">
-                <div className="flex items-center justify-between text-[#1E331B]">
+                <div className="flex items-center justify-between text-[#9E2B38]">
                   <span className="font-bold">Total Vouchers:</span>
                   <span className="font-extrabold font-mono text-[#2E6B3E]">
                     {paymentRecords.length} Vouchers
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-[#1E331B]">
+                <div className="flex items-center justify-between text-[#9E2B38]">
                   <span className="font-bold">Total Contracts:</span>
-                  <span className="font-extrabold font-mono text-[#1E331B]">
+                  <span className="font-extrabold font-mono text-[#9E2B38]">
                     {dbMetrics.totalContractsCount}
                   </span>
                 </div>
@@ -565,7 +565,7 @@ export default function ExecutiveBiDashboard({
           >
             <div>
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold uppercase text-[#9E2B38] tracking-wider flex items-center gap-1">
                   <span>💸</span> Paid Amount
                 </span>
                 <div className="p-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
@@ -586,13 +586,13 @@ export default function ExecutiveBiDashboard({
               </div>
 
               <div className="pt-2 border-t border-[#F2EDE0] space-y-1 text-[10px]">
-                <div className="flex items-center justify-between text-[#1E331B]">
+                <div className="flex items-center justify-between text-[#9E2B38]">
                   <span className="font-bold">Paid Contracts:</span>
                   <span className="font-extrabold font-mono text-[#2E6B3E]">
                     {dbMetrics.allContracts.filter(c => c.paidAmount > 0).length}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-[#1E331B]">
+                <div className="flex items-center justify-between text-[#9E2B38]">
                   <span className="font-bold">Fully Settled:</span>
                   <span className="font-extrabold font-mono text-emerald-800">
                     {dbMetrics.allContracts.filter(c => c.paymentStatus === 'PAID').length}
@@ -621,7 +621,7 @@ export default function ExecutiveBiDashboard({
           >
             <div>
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold uppercase text-[#9E2B38] tracking-wider flex items-center gap-1">
                   <span>⚖️</span> Remaining Amount
                 </span>
                 <div className="p-1 rounded-lg bg-rose-100 text-rose-900 border border-rose-300 group-hover:bg-rose-200 transition-colors">
@@ -642,13 +642,13 @@ export default function ExecutiveBiDashboard({
               </div>
 
               <div className="pt-2 border-t border-[#F2EDE0] space-y-1 text-[10px]">
-                <div className="flex items-center justify-between text-[#1E331B]">
+                <div className="flex items-center justify-between text-[#9E2B38]">
                   <span className="font-bold">Pending Contracts:</span>
                   <span className="font-extrabold font-mono text-rose-700">
                     {dbMetrics.allContracts.filter(c => c.remainingAmount > 0).length}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-[#1E331B]">
+                <div className="flex items-center justify-between text-[#9E2B38]">
                   <span className="font-bold">Due Status:</span>
                   <span className="font-extrabold font-mono text-rose-800">
                     Active Dues
@@ -683,7 +683,7 @@ export default function ExecutiveBiDashboard({
           >
             <div>
               <div className="flex items-center justify-between gap-1 mb-1">
-                <span className="text-[11px] font-bold uppercase text-[#1E331B] tracking-wider flex items-center gap-1">
+                <span className="text-[11px] font-bold uppercase text-[#9E2B38] tracking-wider flex items-center gap-1">
                   <span>🏢</span> Godown Stock
                 </span>
                 <div className="p-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 group-hover:bg-emerald-200 transition-colors">
@@ -692,7 +692,7 @@ export default function ExecutiveBiDashboard({
               </div>
 
               <div className="my-1">
-                <div className="text-lg sm:text-xl font-mono font-extrabold text-[#1E331B] tracking-tight leading-tight">
+                <div className="text-lg sm:text-xl font-mono font-extrabold text-[#9E2B38] tracking-tight leading-tight">
                   {dbMetrics.totalStockMt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
                   <span className="text-xs font-sans font-semibold text-[#5A6E54]">MT</span>
                 </div>
@@ -702,13 +702,13 @@ export default function ExecutiveBiDashboard({
               </div>
 
               <div className="pt-2 border-t border-[#F2EDE0] space-y-1 text-[10px]">
-                <div className="flex items-center justify-between text-[#1E331B]">
+                <div className="flex items-center justify-between text-[#9E2B38]">
                   <span className="font-bold">Active Godowns:</span>
                   <span className="font-extrabold font-mono text-[#2E6B3E]">
                     {godowns.length > 0 ? godowns.length : 20}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-[#1E331B]">
+                <div className="flex items-center justify-between text-[#9E2B38]">
                   <span className="font-bold">Stock Capacity:</span>
                   <span className="font-extrabold font-mono text-emerald-800">
                     Normal
@@ -733,11 +733,11 @@ export default function ExecutiveBiDashboard({
         {/* Section Header with Dynamic Year Dropdown Filter */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#D6CAA8] pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-[#1E331B] text-emerald-300 shadow-2xs">
+            <div className="p-2 rounded-xl bg-[#9E2B38] text-emerald-300 shadow-2xs">
               <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-serif font-black text-[#1E331B] tracking-wide flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-serif font-black text-[#9E2B38] tracking-wide flex items-center gap-2">
                 <span>Contract</span>
               </h2>
             </div>
@@ -745,7 +745,7 @@ export default function ExecutiveBiDashboard({
 
           {/* Dynamic Year Selector Dropdown & Collapse Drawer Toggle */}
           <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-            <label htmlFor="dashboard-year-select" className="text-xs font-bold font-sans text-[#1E331B] flex items-center gap-1">
+            <label htmlFor="dashboard-year-select" className="text-xs font-bold font-sans text-[#9E2B38] flex items-center gap-1">
               <Filter className="w-3.5 h-3.5 text-[#5A6E54]" />
               <span>Select Year:</span>
             </label>
@@ -753,7 +753,7 @@ export default function ExecutiveBiDashboard({
               id="dashboard-year-select"
               value={activeYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="h-9 px-3 bg-white border-2 border-[#1E331B] rounded-xl text-xs font-mono font-bold text-[#1E331B] shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1E331B]/40"
+              className="h-9 px-3 bg-white border-2 border-[#9E2B38] rounded-xl text-xs font-mono font-bold text-[#9E2B38] shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#9E2B38]/40"
             >
               {dbMetrics.availableYears.map(yr => (
                 <option key={yr} value={yr} className="font-mono font-bold">
@@ -764,7 +764,7 @@ export default function ExecutiveBiDashboard({
 
             <button
               onClick={() => setCollapseMonthSummary(!collapseMonthSummary)}
-              className="h-9 px-3 bg-white border-2 border-[#1E331B] rounded-xl text-xs font-mono font-bold text-[#1E331B] shadow-xs cursor-pointer flex items-center gap-1.5 hover:bg-[#FAF7F0] transition-colors"
+              className="h-9 px-3 bg-white border-2 border-[#9E2B38] rounded-xl text-xs font-mono font-bold text-[#9E2B38] shadow-xs cursor-pointer flex items-center gap-1.5 hover:bg-[#FAF7F0] transition-colors"
               title={collapseMonthSummary ? "Expand Month-Wise Summary" : "Collapse Month-Wise Summary"}
             >
               {collapseMonthSummary ? <ChevronDown className="w-3.5 h-3.5 text-emerald-800" /> : <ChevronUp className="w-3.5 h-3.5 text-emerald-800" />}
@@ -785,13 +785,13 @@ export default function ExecutiveBiDashboard({
                     subtitle: `${m.totalContracts} contracts belonging to ${m.monthName} ${m.year} (${m.pendingContracts} pending, ${m.partialContracts} partial)`,
                     contracts: m.contracts
                   })}
-                  className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs h-full"
+                  className="bg-white border-2 border-[#D6CAA8] hover:border-[#9E2B38] rounded-xl p-2.5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none text-xs h-full"
                   title={`Click to view ${m.monthName} ${m.year} contract records`}
                 >
                   <div>
                     {/* Card Header: Month Name + Year */}
                     <div className="flex items-center justify-between gap-1 mb-1.5 pb-1 border-b border-[#F2EDE0]">
-                      <h3 className="text-xs sm:text-sm font-serif font-black text-[#1E331B] flex items-center gap-1.5 truncate">
+                      <h3 className="text-xs sm:text-sm font-serif font-black text-[#9E2B38] flex items-center gap-1.5 truncate">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0"></span>
                         <span>{m.monthName}</span>
                       </h3>
@@ -801,7 +801,7 @@ export default function ExecutiveBiDashboard({
                     {/* Contract Count */}
                     <div className="flex items-center justify-between text-xs py-1 border-b border-[#F2EDE0]">
                       <span className="text-[#5A6E54] font-semibold">Cont:</span>
-                      <span className="font-mono font-extrabold text-[#1E331B]">
+                      <span className="font-mono font-extrabold text-[#9E2B38]">
                         {m.totalContracts}
                       </span>
                     </div>
@@ -855,11 +855,11 @@ export default function ExecutiveBiDashboard({
         {/* Pipeline Workflow & Pending P.O. Tracker Banner ({activeYear}) */}
         <div className="bg-gradient-to-r from-[#FAF7F0] via-[#F3ECE0] to-[#FAF7F0] border-2 border-[#D6CAA8] rounded-xl p-3 sm:p-3.5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-[#1E331B] text-emerald-300 rounded-lg shrink-0">
+                <div className="p-2 bg-[#9E2B38] text-emerald-300 rounded-lg shrink-0">
                   <Clock className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="font-serif font-black text-[#1E331B] text-xs sm:text-sm flex items-center gap-1.5">
+                  <h4 className="font-serif font-black text-[#9E2B38] text-xs sm:text-sm flex items-center gap-1.5">
                     <span>P.O. Tracker</span>
                   </h4>
                 </div>
@@ -885,13 +885,13 @@ export default function ExecutiveBiDashboard({
                       allPendingPipelineList: m.allPendingPipelineList,
                       initialTab: m.totalPendingPoCount > 0 ? 'pipeline' : 'inspections'
                     })}
-                    className="bg-white border-2 border-[#D6CAA8] hover:border-[#1E331B] rounded-xl p-3 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group select-none text-xs h-full relative"
+                    className="bg-white border-2 border-[#D6CAA8] hover:border-[#9E2B38] rounded-xl p-3 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group select-none text-xs h-full relative"
                     title={`Click to view ${m.monthName} ${m.year} Temporary Arrival, Final MR, Inspection, Payment, and Settlement details`}
                   >
                     <div>
                       {/* Card Header: Month Name + Year + Pending POs Badge */}
                       <div className="flex items-center justify-between gap-1 mb-2 pb-1.5 border-b border-[#F2EDE0]">
-                        <h3 className="text-xs sm:text-sm font-serif font-black text-[#1E331B] flex items-center gap-1 truncate">
+                        <h3 className="text-xs sm:text-sm font-serif font-black text-[#9E2B38] flex items-center gap-1 truncate">
                           <span className="w-2 h-2 rounded-full bg-emerald-700 shrink-0"></span>
                           <span>{m.monthName}</span>
                           <span className="text-[10px] font-mono text-[#5A6E54] font-normal">{m.year}</span>
@@ -920,7 +920,7 @@ export default function ExecutiveBiDashboard({
                       <div className="flex items-center justify-between py-1 border-t border-[#F2EDE0]">
                         <span className="text-[11px] text-[#5A6E54] font-semibold">1. MR (Inward):</span>
                         <div className="text-right">
-                          <span className="font-mono font-extrabold text-[#1E331B] text-xs">
+                          <span className="font-mono font-extrabold text-[#9E2B38] text-xs">
                             {m.temporaryArrivalsCount} MR
                           </span>
                           <span className="text-[9.5px] font-mono text-slate-500 block">
@@ -1080,7 +1080,7 @@ export default function ExecutiveBiDashboard({
                             {m.avgMoisture}%
                           </span>
                           <span className="text-slate-300">•</span>
-                          <span className="font-bold text-[#1E331B]">
+                          <span className="font-bold text-[#9E2B38]">
                             {m.avgGradeDown}%
                           </span>
                         </div>
@@ -1134,7 +1134,7 @@ export default function ExecutiveBiDashboard({
                         <span>CSV</span>
                       </button>
 
-                      <div className="text-[10px] font-black text-[#1E331B] flex items-center gap-1 group-hover:translate-x-0.5 transition-transform text-right truncate">
+                      <div className="text-[10px] font-black text-[#9E2B38] flex items-center gap-1 group-hover:translate-x-0.5 transition-transform text-right truncate">
                         <span>View Details</span>
                         <span className="text-[11px]">→</span>
                       </div>

@@ -115,7 +115,7 @@ export default function DepartmentDashboardSection({
   };
 
   return (
-    <div className="space-y-6 text-[#1E331B]">
+    <div className="space-y-6 text-[#9E2B38]">
       
       {/* DEPARTMENT ROLE SELECTOR TABS */}
       <div className="flex items-center gap-2 border-b border-[#C5BA9E] pb-3 overflow-x-auto">
@@ -134,7 +134,7 @@ export default function DepartmentDashboardSection({
               "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider font-mono transition-all cursor-pointer flex items-center gap-2 shrink-0",
               activeDeptTab === item.dept
                 ? `${item.color} text-white shadow-md`
-                : "bg-[#FAF7F0] text-[#5A6E54] hover:text-[#1E331B] border border-[#C5BA9E]"
+                : "bg-[#FAF7F0] text-[#5A6E54] hover:text-[#9E2B38] border border-[#C5BA9E]"
             )}
           >
             <Building2 className="w-4 h-4" />
@@ -146,11 +146,11 @@ export default function DepartmentDashboardSection({
       {/* TOP HEADER BANNER */}
       <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-[#1E331B] text-[#FAF7F0] rounded-2xl shrink-0">
+          <div className="p-3 bg-[#9E2B38] text-[#FAF7F0] rounded-2xl shrink-0">
             <PackageCheck className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-base font-black text-[#1E331B] uppercase tracking-wider font-mono">
+            <h2 className="text-base font-black text-[#9E2B38] uppercase tracking-wider font-mono">
               {activeDeptTab} Department Verification Station
             </h2>
             <p className="text-xs text-[#5A6E54] font-medium">
@@ -167,7 +167,7 @@ export default function DepartmentDashboardSection({
       {/* ACTIVE LORRIES TABLE VIEW (RESPONSIVE GRID) */}
       <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4">
         <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
-          <h3 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
+          <h3 className="text-sm font-black text-[#9E2B38] uppercase tracking-wider font-mono">
             Active {activeDeptTab} Lorries Table ({filteredTableLorries.length})
           </h3>
 
@@ -178,14 +178,14 @@ export default function DepartmentDashboardSection({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search lorry or pass..."
-              className="w-full bg-[#FAF7F0] border border-[#C5BA9E] text-xs text-[#1E331B] font-mono pl-8 pr-3 py-1.5 rounded-xl outline-none"
+              className="w-full bg-[#FAF7F0] border border-[#C5BA9E] text-xs text-[#9E2B38] font-mono pl-8 pr-3 py-1.5 rounded-xl outline-none"
             />
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs min-w-[650px]">
-            <thead className="bg-[#EAE2D2] text-[#1E331B] uppercase text-[10px] font-mono font-black border-b border-[#C5BA9E]">
+            <thead className="bg-[#EAE2D2] text-[#9E2B38] uppercase text-[10px] font-mono font-black border-b border-[#C5BA9E]">
               <tr>
                 <th className="py-2.5 px-3">Lorry No</th>
                 <th className="py-2.5 px-3">Gate Pass</th>
@@ -206,9 +206,9 @@ export default function DepartmentDashboardSection({
               ) : (
                 filteredTableLorries.map((l) => (
                   <tr key={l.id} className="hover:bg-[#FAF7F0] transition-colors">
-                    <td className="py-3 px-3 font-black text-[#1E331B] font-mono">{l.lorryNo}</td>
+                    <td className="py-3 px-3 font-black text-[#9E2B38] font-mono">{l.lorryNo}</td>
                     <td className="py-3 px-3 font-mono text-[#5A6E54]">{l.gatePassNo}</td>
-                    <td className="py-3 px-3 font-medium text-[#1E331B]">{safeStr(l.broker)}</td>
+                    <td className="py-3 px-3 font-medium text-[#9E2B38]">{safeStr(l.broker)}</td>
                     <td className="py-3 px-3 font-mono text-[#5A6E54] text-[11px]">{new Date(l.inTime).toLocaleTimeString("en-IN")}</td>
                     <td className="py-3 px-3">
                       <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded text-[10px] font-bold uppercase">
@@ -219,14 +219,14 @@ export default function DepartmentDashboardSection({
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => setSelectedLorryForModal(l)}
-                          className="px-2.5 py-1 bg-[#FAF7F0] hover:bg-[#EAE2D2] border border-[#C5BA9E] text-[#1E331B] text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                          className="px-2.5 py-1 bg-[#FAF7F0] hover:bg-[#EAE2D2] border border-[#C5BA9E] text-[#9E2B38] text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>View</span>
                         </button>
                         <button
                           onClick={() => handleSelectLorryForProcessing(l)}
-                          className="px-2.5 py-1 bg-[#1E331B] hover:bg-[#2D4D28] text-[#FAF7F0] text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                          className="px-2.5 py-1 bg-[#9E2B38] hover:bg-[#2D4D28] text-[#FAF7F0] text-xs font-bold rounded-lg transition-colors cursor-pointer"
                         >
                           Process Clearance
                         </button>
@@ -242,7 +242,7 @@ export default function DepartmentDashboardSection({
 
       {/* PROCESSING FORM SECTION */}
       <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4">
-        <h3 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono border-b border-[#C5BA9E] pb-2">
+        <h3 className="text-sm font-black text-[#9E2B38] uppercase tracking-wider font-mono border-b border-[#C5BA9E] pb-2">
           Process {activeDeptTab} Clearance Sign-Off
         </h3>
 
@@ -258,7 +258,7 @@ export default function DepartmentDashboardSection({
               if (l) handleSelectLorryForProcessing(l);
               else setSelectedLorryId("");
             }}
-            className="w-full bg-[#FAF7F0] border border-[#C5BA9E] text-xs font-mono font-bold text-[#1E331B] p-3 rounded-xl outline-none focus:border-[#1E331B]"
+            className="w-full bg-[#FAF7F0] border border-[#C5BA9E] text-xs font-mono font-bold text-[#9E2B38] p-3 rounded-xl outline-none focus:border-[#9E2B38]"
           >
             <option value="">-- Choose {activeDeptTab} Vehicle --</option>
             {deptLorries.map((l) => (
@@ -271,21 +271,21 @@ export default function DepartmentDashboardSection({
 
         {/* PROCESSING FORM CARD */}
         {activeLorry && (
-          <form onSubmit={handleSubmitProcessing} className="bg-[#FAF7F0] border-2 border-[#1E331B] p-4 rounded-2xl space-y-4 shadow-xs">
+          <form onSubmit={handleSubmitProcessing} className="bg-[#FAF7F0] border-2 border-[#9E2B38] p-4 rounded-2xl space-y-4 shadow-xs">
             
             {/* Header Summary Metadata Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-[#F4EFE6] p-3 rounded-xl border border-[#C5BA9E]">
               <div>
                 <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Vehicle & Pass</span>
-                <span className="font-extrabold text-[#1E331B] font-mono">{activeLorry.lorryNo} ({activeLorry.gatePassNo})</span>
+                <span className="font-extrabold text-[#9E2B38] font-mono">{activeLorry.lorryNo} ({activeLorry.gatePassNo})</span>
               </div>
               <div>
                 <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Supplier / Party</span>
-                <span className="font-extrabold text-[#1E331B]">{safeStr(activeLorry.broker)}</span>
+                <span className="font-extrabold text-[#9E2B38]">{safeStr(activeLorry.broker)}</span>
               </div>
               <div>
                 <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Category / Quality</span>
-                <span className="font-extrabold text-[#1E331B]">{activeLorry.quality}</span>
+                <span className="font-extrabold text-[#9E2B38]">{activeLorry.quality}</span>
               </div>
             </div>
 
@@ -303,7 +303,7 @@ export default function DepartmentDashboardSection({
                     className={cn(
                       "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer",
                       processStatus === st
-                        ? "bg-[#1E331B] text-[#FAF7F0] shadow-xs"
+                        ? "bg-[#9E2B38] text-[#FAF7F0] shadow-xs"
                         : "bg-[#F4EFE6] text-[#5A6E54] border border-[#C5BA9E]"
                     )}
                   >
@@ -323,7 +323,7 @@ export default function DepartmentDashboardSection({
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
                 placeholder="Enter verification notes..."
-                className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2.5 text-xs text-[#1E331B] outline-none"
+                className="w-full bg-[#F4EFE6] border border-[#C5BA9E] rounded-xl p-2.5 text-xs text-[#9E2B38] outline-none"
               />
             </div>
 
@@ -334,14 +334,14 @@ export default function DepartmentDashboardSection({
                 "p-3 rounded-xl border-2 cursor-pointer flex items-center gap-3 transition-all",
                 isClearForGateExit
                   ? "bg-emerald-100 border-emerald-600 text-emerald-950"
-                  : "bg-[#F4EFE6] border-[#C5BA9E] text-[#1E331B]"
+                  : "bg-[#F4EFE6] border-[#C5BA9E] text-[#9E2B38]"
               )}
             >
               <input
  id="checkbox_322" name="checkbox" aria-label="checkbox"                type="checkbox"
                 checked={isClearForGateExit}
                 onChange={(e) => setIsClearForGateExit(e.target.checked)}
-                className="w-4 h-4 accent-[#1E331B]"
+                className="w-4 h-4 accent-[#9E2B38]"
               />
               <span className="text-xs font-black uppercase font-mono">
                 Lorry Yes Clear For Out Main Gate
@@ -351,7 +351,7 @@ export default function DepartmentDashboardSection({
             {/* Submission Button */}
             <button
               type="submit"
-              className="w-full py-3 bg-[#1E331B] hover:bg-[#2D4D28] text-[#FAF7F0] font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-3 bg-[#9E2B38] hover:bg-[#2D4D28] text-[#FAF7F0] font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <Check className="w-4 h-4 text-emerald-400" />
               <span>Submit & Clear Lorry for Gate Exit</span>
@@ -363,7 +363,7 @@ export default function DepartmentDashboardSection({
       {/* LORRY DETAILS MODAL DIALOG */}
       {selectedLorryForModal && (
         <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[#F4EFE6] border border-[#C5BA9E] w-full max-w-lg p-6 rounded-2xl shadow-2xl space-y-4 text-[#1E331B]">
+          <div className="bg-[#F4EFE6] border border-[#C5BA9E] w-full max-w-lg p-6 rounded-2xl shadow-2xl space-y-4 text-[#9E2B38]">
             <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
               <h3 className="text-sm font-black uppercase font-mono">
                 Lorry Dispatch Details ({selectedLorryForModal.lorryNo})
@@ -412,7 +412,7 @@ export default function DepartmentDashboardSection({
 
             <button
               onClick={() => setSelectedLorryForModal(null)}
-              className="w-full py-2.5 bg-[#1E331B] text-[#FAF7F0] text-xs font-bold uppercase rounded-xl cursor-pointer"
+              className="w-full py-2.5 bg-[#9E2B38] text-[#FAF7F0] text-xs font-bold uppercase rounded-xl cursor-pointer"
             >
               Close Details
             </button>

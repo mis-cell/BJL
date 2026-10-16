@@ -90,7 +90,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
                       sessionStorage.removeItem('bjl_last_chunk_reload');
                       window.location.reload();
                     }}
-                    className="flex items-center gap-2 bg-[#1E331B] hover:bg-[#2A4426] text-white px-4 py-2 font-bold text-xs uppercase transition-colors shadow-xs"
+                    className="flex items-center gap-2 bg-[#9E2B38] hover:bg-[#2A4426] text-white px-4 py-2 font-bold text-xs uppercase transition-colors shadow-xs"
                   >
                     <RefreshCw className="h-4 w-4 animate-spin" />
                     Reload & Load Latest Version

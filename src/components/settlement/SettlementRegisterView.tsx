@@ -344,7 +344,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
         </div>
 
         {/* Dashboard Controls */}
-        <div className="flex bg-[#174C2C] p-3 border border-[#103A20] rounded-lg gap-3 items-center flex-wrap shadow-md">
+        <div className="flex bg-[#D94B5A] p-3 border border-[#103A20] rounded-lg gap-3 items-center flex-wrap shadow-md">
           {/* SEARCH */}
           <div className="flex bg-white border border-white/30 rounded-md flex-1 min-w-[280px] overflow-hidden shadow-sm">
             <input
@@ -359,7 +359,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
                 setCurrentPage(1);
               }}
             />
-            <button className="bg-[#103A20] px-3 border-l border-[#174C2C] hover:bg-[#0b2b18] transition-colors cursor-pointer" type="button">
+            <button className="bg-[#103A20] px-3 border-l border-[#D94B5A] hover:bg-[#0b2b18] transition-colors cursor-pointer" type="button">
               <Search className="h-4 w-4 text-white" />
             </button>
           </div>
@@ -468,7 +468,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse font-sans min-w-[1100px]">
               <thead>
-                <tr className="bg-[#174C2C] text-[10px] font-black uppercase text-white tracking-wide">
+                <tr className="bg-[#D94B5A] text-[10px] font-black uppercase text-white tracking-wide">
                   <th className="px-3 py-2.5 border-r border-white/20 whitespace-nowrap">
                     M.R. No.
                   </th>

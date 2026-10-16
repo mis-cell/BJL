@@ -1745,7 +1745,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     name="lorry_date"
                     value={formData.lorry_date}
                     onChange={handleChange}
-                    className="flex-1 border border-gray-400 rounded bg-white px-2 h-7 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#174C2C]"
+                    className="flex-1 border border-gray-400 rounded bg-white px-2 h-7 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#D94B5A]"
                   />
                 </div>
 
@@ -1786,7 +1786,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     value={formData.consignment_note_no}
                     onChange={handleChange}
                     readOnly={formData.jci === 'No'}
-                    className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                    className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#D94B5A]"  }`}
                   />
                 </div>
 
@@ -1806,7 +1806,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       value={formData.di_no}
                       onChange={handleChange}
                       readOnly={formData.jci === 'No'}
-                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#D94B5A]"  }`}
                       //className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                     />
 
@@ -1818,7 +1818,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       onChange={handleChange}
                       //className="h-7 rounded border border-gray-300 px-2 text-xs"
                       readOnly={formData.jci === 'No'}
-                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#D94B5A]"  }`}
                     />
 
                   </div>
@@ -1840,7 +1840,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       value={formData.invoice_no}
                       onChange={handleChange}
                       readOnly={formData.jci === 'No'}
-                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#D94B5A]"  }`}
                       //className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                     />
 
@@ -1851,7 +1851,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       value={formData.invoice_date}
                       onChange={handleChange}
                       readOnly={formData.jci === 'No'}
-                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#D94B5A]"  }`}
                       //className="h-7 rounded border border-gray-300 px-2 text-xs"
                     />
 
@@ -2037,7 +2037,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       placeholder="Way Bill No."
                       //className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                       readOnly={formData.jci === 'No'}
-                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#D94B5A]"  }`}
                     />
 
                     <input
@@ -2048,7 +2048,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       onChange={handleChange}
                       //className="h-7 rounded border border-gray-300 px-2 text-xs"
                       readOnly={formData.jci === 'No'}
-                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#174C2C]"  }`}
+                      className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No'? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed": "border-gray-300 focus:border-[#D94B5A]"  }`}
                     />
 
                   </div>
@@ -2069,7 +2069,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     placeholder="0.00"
                     value={formData.apmc_fees !== undefined && formData.apmc_fees !== null ? formData.apmc_fees : ""}
                     onChange={handleChange}
-                    className="w-full h-7 rounded border border-gray-300 px-2 text-right text-xs font-bold focus:border-[#174C2C]"
+                    className="w-full h-7 rounded border border-gray-300 px-2 text-right text-xs font-bold focus:border-[#D94B5A]"
                   />
                 </div>
 

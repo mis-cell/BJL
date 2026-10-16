@@ -66,7 +66,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       <div className="bg-[#d4d0c8] border-2 border-white shadow-[4px_4px_16px_rgba(0,0,0,0.45),inset_1.5px_1.5px_0px_white] w-full max-w-lg flex flex-col rounded shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
         
         {/* Old School Windows Titlebar */}
-        <div className="bg-[#174C2C] text-white px-4 py-2 flex items-center justify-between border-b border-white">
+        <div className="bg-[#D94B5A] text-white px-4 py-2 flex items-center justify-between border-b border-white">
           <div className="flex items-center gap-2">
             <span className="text-xs font-black uppercase tracking-wider font-sans">
               {isEditing ? 'Modify Stock Ledger Entry' : 'Add New Store Ledger Row'}
@@ -95,14 +95,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="formstate_opening_date_2326"
-                    className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                   >
                     Opening Date *
                   </label>
 
-                  <div className="flex overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm focus-within:border-[#174C2C] focus-within:ring-1 focus-within:ring-[#174C2C]/20">
+                  <div className="flex overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm focus-within:border-[#D94B5A] focus-within:ring-1 focus-within:ring-[#D94B5A]/20">
                     <div className="px-2.5 bg-slate-50 flex items-center border-r border-slate-200">
-                      <Calendar className="h-3.5 w-3.5 text-[#174C2C]" />
+                      <Calendar className="h-3.5 w-3.5 text-[#D94B5A]" />
                     </div>
 
                     <input
@@ -127,7 +127,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="godown_2341"
-                    className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                   >
                     Godown *
                   </label>
@@ -147,7 +147,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                       }))
                     }
                     placeholder="Select or Type Godown..."
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none uppercase font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none uppercase font-mono shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20"
                   />
 
                   <datalist id="godown_op_datalist">
@@ -161,7 +161,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="area_station_2362"
-                    className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                   >
                     Area Station *
                   </label>
@@ -181,7 +181,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                       }))
                     }
                     placeholder="Select or Type Area..."
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none uppercase font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none uppercase font-mono shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20"
                   />
 
                   <datalist id="area_op_datalist">
@@ -196,7 +196,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="component_grade_2384"
-                    className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                   >
                     Component Grade *
                   </label>
@@ -216,7 +216,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                       }))
                     }
                     placeholder="Select or Type Grade..."
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none uppercase font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none uppercase font-mono shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20"
                   />
 
                   <datalist id="grade_op_datalist">
@@ -231,7 +231,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="is_j_c_i_govt_supplied_2406"
-                    className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                   >
                     Is J.C.I Govt Supplied? *
                   </label>
@@ -248,7 +248,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                         jci: e.target.value,
                       }))
                     }
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20 cursor-pointer"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20 cursor-pointer"
                   >
                     <option value="No">No - Private/Regular Commercial</option>
                     <option value="Yes">Yes - Government JCI</option>
@@ -261,7 +261,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="unit_master_2423"
-                      className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                     >
                       Unit Master *
                     </label>
@@ -278,7 +278,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                           unit: e.target.value,
                         }))
                       }
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20 uppercase cursor-pointer"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20 uppercase cursor-pointer"
                     >
                       <option value="">-- SELECT UNIT --</option>
                       {mergedUnits.map((u, i) => (
@@ -293,7 +293,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="quantity_2440"
-                      className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                     >
                       Quantity *
                     </label>
@@ -318,7 +318,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                           avg_weight: avg,
                         }));
                       }}
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20"
                     />
                   </div>
                 </div>
@@ -328,7 +328,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="weight_qtl_2464"
-                      className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                     >
                       Weight (Qtl) *
                     </label>
@@ -353,14 +353,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                           avg_weight: avg,
                         }));
                       }}
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20"
                     />
                   </div>
 
                   <div>
                     <label
                       htmlFor="formstate_avg_weight_2484"
-                      className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                     >
                       Avg Wt (Qtl/Unit)
                     </label>
@@ -390,7 +390,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-5 py-2 rounded-md bg-[#174C2C] hover:bg-[#103A20] border border-[#174C2C] text-white font-black uppercase text-[10px] tracking-wider shadow-sm transition-all duration-150 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-5 py-2 rounded-md bg-[#D94B5A] hover:bg-[#103A20] border border-[#D94B5A] text-white font-black uppercase text-[10px] tracking-wider shadow-sm transition-all duration-150 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? "Saving..." : "💾 Save Record"}
                   </button>
@@ -408,14 +408,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="closingformstate_stock_da_2535"
-                    className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                   >
                     Opening Stock Audit Date *
                   </label>
 
-                  <div className="flex overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm focus-within:border-[#174C2C] focus-within:ring-1 focus-within:ring-[#174C2C]/20">
+                  <div className="flex overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm focus-within:border-[#D94B5A] focus-within:ring-1 focus-within:ring-[#D94B5A]/20">
                     <div className="px-2.5 bg-slate-50 flex items-center border-r border-slate-200">
-                      <Calendar className="h-3.5 w-3.5 text-[#174C2C]" />
+                      <Calendar className="h-3.5 w-3.5 text-[#D94B5A]" />
                     </div>
 
                     <input
@@ -440,7 +440,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="godown_location_2550"
-                    className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                   >
                     Godown Location *
                   </label>
@@ -457,7 +457,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                         godown: e.target.value,
                       }))
                     }
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20 cursor-pointer"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20 cursor-pointer"
                   >
                     <option value="">-- SELECT STORAGE LOCATION --</option>
                     {mergedGodowns.map((g, i) => (
@@ -473,7 +473,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="commodity_2571"
-                      className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                     >
                       Commodity *
                     </label>
@@ -491,14 +491,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                           commodity: e.target.value,
                         }))
                       }
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20"
                     />
                   </div>
 
                   <div>
                     <label
                       htmlFor="variety_2583"
-                      className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                     >
                       Variety
                     </label>
@@ -515,7 +515,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                           variety: e.target.value,
                         }))
                       }
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none uppercase shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none uppercase shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20"
                       placeholder="e.g. TOSSA"
                     />
                   </div>
@@ -525,7 +525,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="quality_grade_rating_2598"
-                    className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                   >
                     Quality Grade Rating *
                   </label>
@@ -550,7 +550,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                         setCustomGradeValueClosing("");
                       }
                     }}
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20 cursor-pointer"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20 cursor-pointer"
                   >
                     <option value="">-- SELECT GRADE --</option>
                     {mergedGrades.map((g: any, i: number) => {
@@ -591,7 +591,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="no_of_bales_2641"
-                      className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                     >
                       No. of Bales *
                     </label>
@@ -605,7 +605,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                       min="0"
                       value={closingFormState.no_of_bales}
                       onChange={(e) => handleClosingFieldChange("no_of_bales", e.target.value)}
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20"
                       placeholder="0"
                     />
                   </div>
@@ -613,7 +613,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="net_weight_qtl_2655"
-                      className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                     >
                       Net Weight (Qtl) *
                     </label>
@@ -628,7 +628,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                       step="any"
                       value={closingFormState.weight_qtl}
                       onChange={(e) => handleClosingFieldChange("weight_qtl", e.target.value)}
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20"
                       placeholder="0.00"
                     />
                   </div>
@@ -639,7 +639,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="rate_per_qtl_2674"
-                      className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                     >
                       Rate per Qtl *
                     </label>
@@ -654,7 +654,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                       step="any"
                       value={closingFormState.rate_per_qtl}
                       onChange={(e) => handleClosingFieldChange("rate_per_qtl", e.target.value)}
-                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 font-bold text-xs text-slate-700 outline-none font-mono shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20"
                       placeholder="6500"
                     />
                   </div>
@@ -662,7 +662,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="asset_book_value_rs_2689"
-                      className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                     >
                       Asset Book Value (Rs.)
                     </label>
@@ -694,7 +694,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="remarks_storage_quality_n_2703"
-                    className="block mb-1 font-black text-[#174C2C] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
                   >
                     Remarks / Storage Quality Notes
                   </label>
@@ -711,7 +711,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                         remarks: e.target.value,
                       }))
                     }
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs font-bold text-slate-700 outline-none shadow-sm focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs font-bold text-slate-700 outline-none shadow-sm focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20"
                     placeholder="e.g. Wet stack audits completed alright."
                   />
                 </div>
@@ -729,7 +729,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-5 py-2 rounded-md bg-[#174C2C] hover:bg-[#103A20] border border-[#174C2C] text-white font-black uppercase text-[10px] tracking-wider shadow-sm transition-all duration-150 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-5 py-2 rounded-md bg-[#D94B5A] hover:bg-[#103A20] border border-[#D94B5A] text-white font-black uppercase text-[10px] tracking-wider shadow-sm transition-all duration-150 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? "Creating..." : "💾 Register Closing"}
                   </button>

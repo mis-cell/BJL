@@ -133,17 +133,17 @@ export default function ElectricWeighbridgeSection({
   };
 
   return (
-    <div className="space-y-6 text-[#1E331B]">
+    <div className="space-y-6 text-[#9E2B38]">
       
       {/* HEADER STATION BANNER */}
       <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#C5BA9E] pb-3 gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-[#1E331B] text-[#FAF7F0] rounded-2xl shrink-0">
+            <div className="p-3 bg-[#9E2B38] text-[#FAF7F0] rounded-2xl shrink-0">
               <Scale className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-base font-black text-[#1E331B] uppercase tracking-wider font-mono">
+              <h2 className="text-base font-black text-[#9E2B38] uppercase tracking-wider font-mono">
                 Electric Weighbridge Station
               </h2>
               <p className="text-xs text-[#5A6E54] font-medium">
@@ -169,7 +169,7 @@ export default function ElectricWeighbridgeSection({
               if (l) handleSelectLorry(l);
               else setSelectedLorryId("");
             }}
-            className="w-full bg-[#FAF7F0] border border-[#C5BA9E] text-xs font-mono font-bold text-[#1E331B] p-3 rounded-xl outline-none focus:border-[#1E331B]"
+            className="w-full bg-[#FAF7F0] border border-[#C5BA9E] text-xs font-mono font-bold text-[#9E2B38] p-3 rounded-xl outline-none focus:border-[#9E2B38]"
           >
             <option value="">-- Choose Vehicle for Electric Weighment --</option>
             {pendingElectricLorries.map((l) => (
@@ -182,13 +182,13 @@ export default function ElectricWeighbridgeSection({
 
         {/* SELECTED VEHICLE CARD */}
         {activeLorry && (
-          <div className="bg-[#FAF7F0] border-2 border-[#1E331B] p-4 rounded-2xl space-y-4 animate-fade-in shadow-xs">
+          <div className="bg-[#FAF7F0] border-2 border-[#9E2B38] p-4 rounded-2xl space-y-4 animate-fade-in shadow-xs">
             <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
               <div className="flex items-center gap-2">
-                <Truck className="w-5 h-5 text-[#1E331B]" />
+                <Truck className="w-5 h-5 text-[#9E2B38]" />
                 <div>
-                  <h3 className="text-sm font-black text-[#1E331B] font-mono">{activeLorry.lorryNo}</h3>
-                  <p className="text-[11px] text-[#5A6E54]">Gate Pass: <strong className="text-[#1E331B] font-mono">{activeLorry.gatePassNo}</strong></p>
+                  <h3 className="text-sm font-black text-[#9E2B38] font-mono">{activeLorry.lorryNo}</h3>
+                  <p className="text-[11px] text-[#5A6E54]">Gate Pass: <strong className="text-[#9E2B38] font-mono">{activeLorry.gatePassNo}</strong></p>
                 </div>
               </div>
 
@@ -203,15 +203,15 @@ export default function ElectricWeighbridgeSection({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div className="bg-[#F4EFE6] p-2.5 rounded-xl border border-[#C5BA9E]">
                 <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Party / Broker</span>
-                <span className="font-extrabold text-[#1E331B]">{safeStr(activeLorry.broker)}</span>
+                <span className="font-extrabold text-[#9E2B38]">{safeStr(activeLorry.broker)}</span>
               </div>
               <div className="bg-[#F4EFE6] p-2.5 rounded-xl border border-[#C5BA9E]">
                 <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Department</span>
-                <span className="font-extrabold text-[#1E331B]">{safeStr(activeLorry.department)}</span>
+                <span className="font-extrabold text-[#9E2B38]">{safeStr(activeLorry.department)}</span>
               </div>
               <div className="bg-[#F4EFE6] p-2.5 rounded-xl border border-[#C5BA9E]">
                 <span className="text-[10px] text-[#5A6E54] font-bold block uppercase">Mokam / Marka</span>
-                <span className="font-extrabold text-[#1E331B]">{safeStr(activeLorry.mokam)} / {safeStr(activeLorry.marka)}</span>
+                <span className="font-extrabold text-[#9E2B38]">{safeStr(activeLorry.mokam)} / {safeStr(activeLorry.marka)}</span>
               </div>
             </div>
 
@@ -236,7 +236,7 @@ export default function ElectricWeighbridgeSection({
                         "w-full border rounded-xl pl-10 pr-3 py-2 text-sm font-mono font-bold outline-none",
                         activeLorry.electricGrossWeight
                           ? "bg-slate-200 text-slate-700 border-slate-300 cursor-not-allowed"
-                          : "bg-[#F4EFE6] text-[#1E331B] border-[#C5BA9E] focus:border-[#1E331B]"
+                          : "bg-[#F4EFE6] text-[#9E2B38] border-[#C5BA9E] focus:border-[#9E2B38]"
                       )}
                     />
                   </div>
@@ -264,7 +264,7 @@ export default function ElectricWeighbridgeSection({
                         "w-full border rounded-xl pl-10 pr-3 py-2 text-sm font-mono font-bold outline-none",
                         !activeLorry.electricGrossWeight || activeLorry.electricTareWeight
                           ? "bg-slate-200 text-slate-700 border-slate-300 cursor-not-allowed"
-                          : "bg-[#F4EFE6] text-[#1E331B] border-[#C5BA9E] focus:border-[#1E331B]"
+                          : "bg-[#F4EFE6] text-[#9E2B38] border-[#C5BA9E] focus:border-[#9E2B38]"
                       )}
                     />
                   </div>
@@ -298,7 +298,7 @@ export default function ElectricWeighbridgeSection({
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className={cn("w-5 h-5", isUnloaded ? "text-emerald-700" : "text-[#5A6E54]")} />
                   <div>
-                    <span className="text-xs font-bold text-[#1E331B]">Unloading Verification Status</span>
+                    <span className="text-xs font-bold text-[#9E2B38]">Unloading Verification Status</span>
                     <p className="text-[10px] text-[#5A6E54]">Confirm material has been fully unloaded in department yard</p>
                   </div>
                 </div>
@@ -310,7 +310,7 @@ export default function ElectricWeighbridgeSection({
                     "px-3.5 py-1.5 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer flex items-center gap-1.5",
                     isUnloaded
                       ? "bg-emerald-700 text-white shadow-xs"
-                      : "bg-[#EAE2D2] text-[#1E331B] hover:bg-[#C5BA9E]"
+                      : "bg-[#EAE2D2] text-[#9E2B38] hover:bg-[#C5BA9E]"
                   )}
                 >
                   {isUnloaded ? "Status: UNLOADED ✓" : "Mark Unloaded"}
@@ -320,7 +320,7 @@ export default function ElectricWeighbridgeSection({
               {/* Contextual Action Button */}
               <button
                 type="submit"
-                className="w-full py-3 bg-[#1E331B] hover:bg-[#2D4D28] text-[#FAF7F0] font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#9E2B38] hover:bg-[#2D4D28] text-[#FAF7F0] font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 <span>
@@ -337,7 +337,7 @@ export default function ElectricWeighbridgeSection({
       {/* PENDING QUEUE & SEARCH LIST */}
       <div className="bg-[#F4EFE6] border border-[#C5BA9E] p-5 rounded-2xl shadow-sm space-y-4">
         <div className="flex items-center justify-between border-b border-[#C5BA9E] pb-3">
-          <h3 className="text-sm font-black text-[#1E331B] uppercase tracking-wider font-mono">
+          <h3 className="text-sm font-black text-[#9E2B38] uppercase tracking-wider font-mono">
             Pending Electric Weighment Queue ({filteredQueue.length})
           </h3>
         </div>
@@ -350,15 +350,15 @@ export default function ElectricWeighbridgeSection({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search pending queue by vehicle number or gate pass..."
-            className="w-full bg-[#FAF7F0] border border-[#C5BA9E] text-xs text-[#1E331B] font-mono pl-10 pr-4 py-2.5 rounded-xl outline-none focus:border-[#1E331B]"
+            className="w-full bg-[#FAF7F0] border border-[#C5BA9E] text-xs text-[#9E2B38] font-mono pl-10 pr-4 py-2.5 rounded-xl outline-none focus:border-[#9E2B38]"
           />
         </div>
 
         <div className="space-y-3">
           {filteredQueue.length === 0 ? (
             <div className="bg-[#FAF7F0] border-2 border-dashed border-[#C5BA9E] rounded-2xl p-8 text-center space-y-2 text-[#5A6E54]">
-              <Scale className="w-8 h-8 text-[#1E331B] mx-auto" />
-              <h4 className="text-xs font-black uppercase text-[#1E331B] font-mono">
+              <Scale className="w-8 h-8 text-[#9E2B38] mx-auto" />
+              <h4 className="text-xs font-black uppercase text-[#9E2B38] font-mono">
                 No Vehicles Pending Electric Scale Weighment
               </h4>
               <p className="text-xs">Electric scale queue is empty.</p>
@@ -367,12 +367,12 @@ export default function ElectricWeighbridgeSection({
             filteredQueue.map((l) => (
               <div
                 key={l.id}
-                className="bg-[#FAF7F0] border border-[#C5BA9E] hover:border-[#1E331B] rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all shadow-xs"
+                className="bg-[#FAF7F0] border border-[#C5BA9E] hover:border-[#9E2B38] rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all shadow-xs"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-[#1E331B] font-mono">{l.lorryNo}</span>
-                    <span className="px-2 py-0.5 bg-[#1E331B]/10 text-[#1E331B] text-xs font-mono font-bold rounded">
+                    <span className="text-sm font-black text-[#9E2B38] font-mono">{l.lorryNo}</span>
+                    <span className="px-2 py-0.5 bg-[#9E2B38]/10 text-[#9E2B38] text-xs font-mono font-bold rounded">
                       {l.gatePassNo}
                     </span>
                     <span className="px-2 py-0.5 bg-cyan-100 text-cyan-900 text-[10px] font-bold uppercase rounded">
@@ -381,13 +381,13 @@ export default function ElectricWeighbridgeSection({
                   </div>
 
                   <p className="text-xs text-[#5A6E54]">
-                    Party: <strong className="text-[#1E331B]">{safeStr(l.broker)}</strong> | Status: <span className="font-bold uppercase text-[#1E331B]">{l.status.replace(/_/g, " ")}</span>
+                    Party: <strong className="text-[#9E2B38]">{safeStr(l.broker)}</strong> | Status: <span className="font-bold uppercase text-[#9E2B38]">{l.status.replace(/_/g, " ")}</span>
                   </p>
                 </div>
 
                 <button
                   onClick={() => handleSelectLorry(l)}
-                  className="px-4 py-2 bg-[#1E331B] hover:bg-[#2D4D28] text-[#FAF7F0] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
+                  className="px-4 py-2 bg-[#9E2B38] hover:bg-[#2D4D28] text-[#FAF7F0] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
                 >
                   <Scale className="w-4 h-4" />
                   <span>Weigh</span>

@@ -99,7 +99,7 @@ export const PurchaseOrderFormView: React.FC<PurchaseOrderFormViewProps> = ({
       <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 w-full pb-10">
         
         {/* Header Bar - Matching Mill Inspection Aesthetics (Compact Height) */}
-        <div className="bg-[#174C2C] text-white px-5 py-2.5 rounded-lg shadow-md flex flex-wrap items-center justify-between border border-[#0F351E] gap-3">
+        <div className="bg-[#D94B5A] text-white px-5 py-2.5 rounded-lg shadow-md flex flex-wrap items-center justify-between border border-[#0F351E] gap-3">
           {/* Left Badge & Title */}
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-emerald-800/40 border border-emerald-400/40 flex items-center justify-center text-amber-300 shadow-inner shrink-0">
@@ -213,7 +213,7 @@ export const PurchaseOrderFormView: React.FC<PurchaseOrderFormViewProps> = ({
              <button 
                onClick={handleSave} 
                disabled={loading}
-               className="bg-[#174C2C] hover:bg-[#103A20] text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+               className="bg-[#D94B5A] hover:bg-[#103A20] text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
                title="Validate and save changes to DB" 
              >
                <Save className="w-4 h-4 text-emerald-200" /> {loading ? "Saving..." : "Save P.O"}
@@ -221,7 +221,7 @@ export const PurchaseOrderFormView: React.FC<PurchaseOrderFormViewProps> = ({
 
              <button 
                onClick={() => setViewMode('register')} 
-               className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 hover:border-[#174C2C] px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+               className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 hover:border-[#D94B5A] px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95"
                title="Switch back to records ledger overview" 
              >
                <FileText className="w-4 h-4 text-slate-600" /> View All P.O

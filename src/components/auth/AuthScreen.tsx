@@ -43,7 +43,7 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
             <div className="w-full bg-[#f0e9e0]/95 backdrop-blur-md p-4 sm:p-5 lg:p-6 rounded-[18px] sm:rounded-[20px] shadow-[0_15px_35px_rgba(0,0,0,0.18)] border border-[#d6caa8]/80 transition-all">
 
               <div className="text-center mb-3">
-                <h2 className="text-lg sm:text-xl font-bold text-[#1E331B] tracking-tight">
+                <h2 className="text-lg sm:text-xl font-bold text-[#9E2B38] tracking-tight">
                   Bally Jute Company Limited Login
                 </h2>
 
@@ -183,7 +183,7 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
             {/* Header */}
             <div className="text-center mb-6">
 
-              <h2 className="text-2xl font-bold text-[#1E331B] tracking-tight">
+              <h2 className="text-2xl font-bold text-[#9E2B38] tracking-tight">
                 Bally Jute Company Limited Login
               </h2>
 

@@ -240,12 +240,12 @@ export const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
           disabled
             ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
             : isOpen
-            ? `bg-white border-[#174C2C] ring-2 ring-[#174C2C]/20 shadow-sm`
+            ? `bg-white border-[#D94B5A] ring-2 ring-[#D94B5A]/20 shadow-sm`
             : isAutoPopulated || selectedValues.length > 0
             ? 'bg-emerald-50/50 border-emerald-300 hover:border-emerald-500'
             : isRequired
             ? 'bg-[#FFECEC] border-2 border-rose-300 hover:border-rose-400'
-            : 'bg-white border-[#D5D0C5] hover:border-[#174C2C]'
+            : 'bg-white border-[#D5D0C5] hover:border-[#D94B5A]'
         }`}
       >
         {/* Selected chips / placeholder */}
@@ -290,7 +290,7 @@ export const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
           )}
           <ChevronDown
             className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${
-              isOpen ? 'rotate-180 text-[#174C2C]' : ''
+              isOpen ? 'rotate-180 text-[#D94B5A]' : ''
             }`}
           />
         </div>
@@ -299,7 +299,7 @@ export const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
       {/* Dropdown Checklist Menu */}
       {isOpen && (
         <div
-          className={`absolute left-0 right-0 z-50 bg-white border-2 border-[#174C2C] rounded-xl shadow-2xl overflow-hidden flex flex-col ${
+          className={`absolute left-0 right-0 z-50 bg-white border-2 border-[#D94B5A] rounded-xl shadow-2xl overflow-hidden flex flex-col ${
             openUpward ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
           } max-h-[300px] min-w-[260px] animate-in fade-in zoom-in-95 duration-100`}
         >
@@ -325,7 +325,7 @@ export const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
                   }
                 }}
                 placeholder="Search or type custom..."
-                className="w-full pl-8 pr-2 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20 font-medium"
+                className="w-full pl-8 pr-2 py-1.5 text-xs bg-white border border-slate-300 rounded-lg outline-none focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20 font-medium"
               />
             </div>
 
@@ -408,7 +408,7 @@ export const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-3 py-1 bg-[#174C2C] hover:bg-[#113A21] text-white text-[11px] font-bold rounded-lg cursor-pointer shadow-2xs"
+              className="px-3 py-1 bg-[#D94B5A] hover:bg-[#113A21] text-white text-[11px] font-bold rounded-lg cursor-pointer shadow-2xs"
             >
               Done ({selectedValues.length})
             </button>

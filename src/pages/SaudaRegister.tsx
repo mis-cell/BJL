@@ -1519,7 +1519,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
               name="search_broker_or_supplier" 
               aria-label="Search Broker or Supplier..."
               type="text"
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#174C2C]/20 focus:border-[#174C2C] transition-all" 
+              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#D94B5A]/20 focus:border-[#D94B5A] transition-all" 
               placeholder="Search Broker or Supplier..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -2062,7 +2062,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                     <td colSpan={isUser10 ? 5 : (isAdminOrL4 ? 10 : 9)} className="py-14 text-center text-slate-500 bg-slate-50/50">
                       <div className="flex flex-col items-center justify-center space-y-2.5">
                         <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
-                          <ClipboardList className="h-8 w-8 text-[#174C2C]" />
+                          <ClipboardList className="h-8 w-8 text-[#D94B5A]" />
                         </div>
                         <p className="font-bold text-sm text-slate-700">
                           {statusTab === 'pending'
@@ -2078,7 +2078,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                           <button
                             type="button"
                             onClick={() => setStatusTab('all')}
-                            className="mt-1 px-4 py-2 bg-white border border-slate-300 hover:border-[#174C2C] hover:bg-emerald-50/40 rounded-xl text-xs font-bold text-[#174C2C] transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
+                            className="mt-1 px-4 py-2 bg-white border border-slate-300 hover:border-[#D94B5A] hover:bg-emerald-50/40 rounded-xl text-xs font-bold text-[#D94B5A] transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
                           >
                             <span>View All Saudas History ({totalSaudas})</span>
                           </button>
@@ -2117,7 +2117,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
             <div className="bg-white px-4 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-right">
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Filtered Book Value</p>
-              <p className="text-xs font-black text-[#174C2C] font-mono">
+              <p className="text-xs font-black text-[#D94B5A] font-mono">
                 ₹{bookTotalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
               </p>
             </div>

@@ -352,8 +352,8 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 ? "rounded-lg px-2.5 py-1.5 text-xs font-bold bg-[#EAF4FF] border border-sky-300 text-sky-950 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 placeholder:text-sky-400"
                 : "rounded-xl px-3.5 py-2 text-xs font-bold bg-[#EAF4FF] border border-sky-300 text-sky-950 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 placeholder:text-sky-400"
               : compact
-              ? "rounded-lg px-2.5 py-1.5 text-xs font-bold bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#174C2C] focus:ring-1 focus:ring-[#174C2C]/20"
-              : "rounded-xl px-3.5 py-2 text-xs font-semibold bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#174C2C] focus:ring-2 focus:ring-[#174C2C]/20 placeholder:text-slate-400"
+              ? "rounded-lg px-2.5 py-1.5 text-xs font-bold bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#D94B5A] focus:ring-1 focus:ring-[#D94B5A]/20"
+              : "rounded-xl px-3.5 py-2 text-xs font-semibold bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#D94B5A] focus:ring-2 focus:ring-[#D94B5A]/20 placeholder:text-slate-400"
           } ${inputClassName}`}
         />
 
@@ -380,9 +380,9 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 setHighlightedIndex(-1);
               }
             }}
-            className="text-slate-400 hover:text-[#174C2C] p-1 rounded cursor-pointer transition-colors"
+            className="text-slate-400 hover:text-[#D94B5A] p-1 rounded cursor-pointer transition-colors"
           >
-            <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180 text-[#174C2C]' : ''}`} />
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180 text-[#D94B5A]' : ''}`} />
           </button>
         </div>
 
@@ -402,10 +402,10 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                   const customVal = queryText.trim().toUpperCase();
                   handleSelectOption({ label: customVal, value: customVal });
                 }}
-                className="px-3.5 py-2 cursor-pointer flex items-center justify-between font-bold text-[#174C2C] bg-emerald-50 hover:bg-emerald-100 border-b border-emerald-200 transition-colors"
+                className="px-3.5 py-2 cursor-pointer flex items-center justify-between font-bold text-[#D94B5A] bg-emerald-50 hover:bg-emerald-100 border-b border-emerald-200 transition-colors"
               >
                 <span className="uppercase text-xs flex items-center gap-1.5">
-                  <span className="bg-[#174C2C] text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-2xs">+ MANUAL INPUT</span>
+                  <span className="bg-[#D94B5A] text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-2xs">+ MANUAL INPUT</span>
                   <span>Use &quot;{queryText.trim().toUpperCase()}&quot;</span>
                 </span>
               </div>
@@ -425,14 +425,14 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                     onMouseEnter={() => setHighlightedIndex(idx)}
                     className={`px-3.5 py-2 cursor-pointer flex items-center justify-between font-medium transition-colors ${
                       isSelected
-                        ? 'bg-[#174C2C]/10 text-[#174C2C] font-bold'
+                        ? 'bg-[#D94B5A]/10 text-[#D94B5A] font-bold'
                         : isHighlighted
-                        ? 'bg-[#F2F7F4] text-[#174C2C] font-semibold'
+                        ? 'bg-[#F2F7F4] text-[#D94B5A] font-semibold'
                         : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     <span className="uppercase">{typeof opt.label === 'object' ? String((opt.label as any)?.name || (opt.label as any)?.title || JSON.stringify(opt.label)) : String(opt.label || '')}</span>
-                    {isSelected && <Check className="h-3.5 w-3.5 text-[#174C2C] shrink-0 ml-2" />}
+                    {isSelected && <Check className="h-3.5 w-3.5 text-[#D94B5A] shrink-0 ml-2" />}
                   </div>
                 );
               })

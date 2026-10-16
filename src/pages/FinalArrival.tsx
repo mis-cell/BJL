@@ -125,7 +125,7 @@ export default function FinalArrival({ onClose, isArchiveView = false, initialDa
       onClose={onClose}
       activeNavTab="final_mr"
     >
-      <div className="bg-[#F9F5EC] text-slate-800 font-sans flex flex-col selection:bg-[#1E4D2B] selection:text-white p-2 md:p-4 space-y-5 max-w-[1700px] w-full mx-auto">
+      <div className="bg-[#F9F5EC] text-slate-800 font-sans flex flex-col selection:bg-[#D94B5A] selection:text-white p-2 md:p-4 space-y-5 max-w-[1700px] w-full mx-auto">
         {/* KPI CARDS & STATUS BANNER */}
         <FinalArrivalStatsRibbon
           stats={stats}

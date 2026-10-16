@@ -71,7 +71,7 @@ export const MonthlyClosingStockView: React.FC<MonthlyClosingStockViewProps> = (
         {/* New Record */}
         <button
           onClick={onNewRecord}
-          className="h-8 px-3.5 bg-[#174C2C] hover:bg-[#103A20] text-white rounded-md text-[10px] font-extrabold uppercase tracking-wide flex items-center gap-1.5 shadow-sm transition-all active:scale-95 whitespace-nowrap cursor-pointer"
+          className="h-8 px-3.5 bg-[#D94B5A] hover:bg-[#103A20] text-white rounded-md text-[10px] font-extrabold uppercase tracking-wide flex items-center gap-1.5 shadow-sm transition-all active:scale-95 whitespace-nowrap cursor-pointer"
         >
           <Plus className="h-3.5 w-3.5 stroke-[3]" />
           New Monthly Record
@@ -100,7 +100,7 @@ export const MonthlyClosingStockView: React.FC<MonthlyClosingStockViewProps> = (
         <div className="h-6 w-px bg-slate-200 mx-0.5" />
 
         {/* Search */}
-        <div className="flex items-center flex-1 min-w-0 h-8 bg-slate-50 border border-slate-300 rounded-md overflow-hidden focus-within:border-[#174C2C] focus-within:ring-1 focus-within:ring-[#174C2C]/20 transition-all">
+        <div className="flex items-center flex-1 min-w-0 h-8 bg-slate-50 border border-slate-300 rounded-md overflow-hidden focus-within:border-[#D94B5A] focus-within:ring-1 focus-within:ring-[#D94B5A]/20 transition-all">
           <div className="flex items-center justify-center w-8 h-full bg-slate-100 border-r border-slate-200 shrink-0">
             <Search className="h-3.5 w-3.5 text-slate-500" />
           </div>
@@ -143,7 +143,7 @@ export const MonthlyClosingStockView: React.FC<MonthlyClosingStockViewProps> = (
         {/* ========================================================= */}
         <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
           {/* Header */}
-          <div className="bg-[#174C2C] px-4 py-2.5 flex items-center justify-between">
+          <div className="bg-[#D94B5A] px-4 py-2.5 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-7 w-7 rounded-md bg-white/10 border border-white/20 flex items-center justify-center">
                 <Calendar className="h-3.5 w-3.5 text-white" />
@@ -218,7 +218,7 @@ export const MonthlyClosingStockView: React.FC<MonthlyClosingStockViewProps> = (
                                   "w-1.5 h-1.5 rounded-full inline-block",
                                   isSelectedDate
                                     ? "bg-red-500 animate-pulse"
-                                    : "bg-[#174C2C]"
+                                    : "bg-[#D94B5A]"
                                 )}
                               />
                               {new Date(rep.date).toLocaleDateString(
@@ -238,7 +238,7 @@ export const MonthlyClosingStockView: React.FC<MonthlyClosingStockViewProps> = (
                           </td>
 
                           {/* Bales */}
-                          <td className="px-3 text-right font-black text-[#174C2C] border-l border-slate-100">
+                          <td className="px-3 text-right font-black text-[#D94B5A] border-l border-slate-100">
                             {rep.quantity.toLocaleString()}
                           </td>
 
@@ -259,8 +259,8 @@ export const MonthlyClosingStockView: React.FC<MonthlyClosingStockViewProps> = (
                               className={cn(
                                 "px-2.5 py-1 rounded-md text-[8px] font-black uppercase transition-all cursor-pointer",
                                 isSelectedDate
-                                  ? "bg-[#174C2C] text-white"
-                                  : "bg-emerald-50 text-[#174C2C] hover:bg-[#174C2C] hover:text-white"
+                                  ? "bg-[#D94B5A] text-white"
+                                  : "bg-emerald-50 text-[#D94B5A] hover:bg-[#D94B5A] hover:text-white"
                               )}
                             >
                               {isSelectedDate ? "Selected" : "View"}
@@ -313,7 +313,7 @@ export const MonthlyClosingStockView: React.FC<MonthlyClosingStockViewProps> = (
         <div>
           <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
             {/* Header */}
-            <div className="bg-[#174C2C] px-4 py-2.5 flex items-center justify-between">
+            <div className="bg-[#D94B5A] px-4 py-2.5 flex items-center justify-between">
               <div>
                 <div className="text-[11px] font-black text-white uppercase tracking-wider">
                   Closing Stock Records
@@ -364,7 +364,7 @@ export const MonthlyClosingStockView: React.FC<MonthlyClosingStockViewProps> = (
                             className={cn(
                               "h-9 border-b border-slate-100 cursor-pointer transition-all",
                               isSelected
-                                ? "bg-[#174C2C] text-white"
+                                ? "bg-[#D94B5A] text-white"
                                 : i % 2 === 0
                                   ? "bg-white hover:bg-emerald-50"
                                   : "bg-slate-50/60 hover:bg-emerald-50"
@@ -399,7 +399,7 @@ export const MonthlyClosingStockView: React.FC<MonthlyClosingStockViewProps> = (
                                 <button
                                   onClick={() => onEditClosing(row)}
                                   title="Edit Closing Record"
-                                  className="h-6 w-6 flex items-center justify-center rounded-md text-[#174C2C] hover:bg-emerald-100 cursor-pointer"
+                                  className="h-6 w-6 flex items-center justify-center rounded-md text-[#D94B5A] hover:bg-emerald-100 cursor-pointer"
                                 >
                                   <Edit className="h-3.5 w-3.5" />
                                 </button>
@@ -455,7 +455,7 @@ export const MonthlyClosingStockView: React.FC<MonthlyClosingStockViewProps> = (
 
             <div className="bg-white border border-slate-200 rounded-lg px-3 py-2.5 shadow-sm">
               <div className="text-[8px] font-black text-slate-400 uppercase">Total Bales</div>
-              <div className="mt-1 text-sm font-black text-[#174C2C]">
+              <div className="mt-1 text-sm font-black text-[#D94B5A]">
                 {totalClosingBales.toLocaleString()}
                 <span className="text-[8px] ml-1 text-slate-400">BALES</span>
               </div>
@@ -473,7 +473,7 @@ export const MonthlyClosingStockView: React.FC<MonthlyClosingStockViewProps> = (
 
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5 shadow-sm">
               <div className="text-[8px] font-black text-emerald-700 uppercase">Store Asset Value</div>
-              <div className="mt-1 text-sm font-black text-[#174C2C]">
+              <div className="mt-1 text-sm font-black text-[#D94B5A]">
                 ₹{" "}
                 {totalClosingValue.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
