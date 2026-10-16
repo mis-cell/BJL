@@ -58,9 +58,9 @@ export const AmadReportView: React.FC<AmadReportViewProps> = ({
   }, [filteredAmads]);
 
   return (
-    <div className="bg-[#FBCFCB] border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] p-4 space-y-4" id="report-amad-container">
+    <div className="bg-[#d4d0c8] border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.5)] p-4 space-y-4" id="report-amad-container">
       {/* Filter block */}
-      <div className="flex flex-wrap gap-3 items-end bg-[#FBCFCB] p-3 border border-black/10 shadow-[inset_1px_1px_1px_rgba(0,0,0,0.1)] rounded-sm">
+      <div className="flex flex-wrap gap-3 items-end bg-[#c0c0c0] p-3 border border-black/10 shadow-[inset_1px_1px_1px_rgba(0,0,0,0.1)] rounded-sm">
         <div className="space-y-1">
           <label htmlFor="period_start_1716" className="text-[10px] font-bold text-gray-700 uppercase italic block ml-1">Period Start</label>
           <div className="flex bg-white border border-gray-400 p-px">
@@ -102,7 +102,7 @@ export const AmadReportView: React.FC<AmadReportViewProps> = ({
               value={amadSearch}
               onChange={(e) => setAmadSearch(e.target.value)}
             />
-            <button className="bg-[#FBCFCB] px-2 border-l border-gray-400">
+            <button className="bg-[#d4d0c8] px-2 border-l border-gray-400">
               <Search className="h-3 w-3" />
             </button>
           </div>
@@ -111,7 +111,7 @@ export const AmadReportView: React.FC<AmadReportViewProps> = ({
         <div className="flex gap-1.5 shrink-0">
           <button 
             onClick={onRefresh}
-            className="bg-[#FBCFCB] p-1.5 border border-white hover:bg-white active:shadow-inner text-[10px] font-bold uppercase flex items-center gap-1 shadow-[1px_1px_0_0_black]"
+            className="bg-[#d4d0c8] p-1.5 border border-white hover:bg-white active:shadow-inner text-[10px] font-bold uppercase flex items-center gap-1 shadow-[1px_1px_0_0_black]"
           >
             <RefreshCw className={cn("h-3 w-3 text-slate-700", loading && "animate-spin")} />
             <span>Refresh</span>
@@ -122,7 +122,7 @@ export const AmadReportView: React.FC<AmadReportViewProps> = ({
       {/* Records Output Grid */}
       <div className="bg-white border border-gray-400 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.1)] overflow-x-auto">
         <table className="w-full border-collapse text-[10px] min-w-[700px]">
-          <thead className="bg-[#FBCFCB] font-bold text-center border-b border-gray-400 ">
+          <thead className="bg-[#c0c0c0] font-bold text-center border-b border-gray-400 ">
             <tr className="h-8">
               <th className="px-3 text-left border-r border-gray-300">DATE</th>
               <th className="px-3 border-r border-gray-300">AMAD NO</th>

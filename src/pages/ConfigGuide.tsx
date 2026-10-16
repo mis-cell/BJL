@@ -215,7 +215,7 @@ export default function ConfigGuide({ onClose }: { onClose?: () => void }) {
     <LegacyLayout title="P.O Automation" subtitle="System Configuration & Connectivity Wizard" onClose={onClose}>
       <div className="space-y-4">
         {/* Connection Status Header */}
-        <div className="bg-[#FBCFCB] p-1 border border-black/20 flex items-center justify-between">
+        <div className="bg-[#c0c0c0] p-1 border border-black/20 flex items-center justify-between">
            <div className="flex items-center gap-2 px-3 h-8 bg-white border border-gray-400">
               <span className="text-[10px] font-black text-gray-500 uppercase italic">Central Server Status:</span>
               <div className="flex items-center gap-1.5 ml-2">
@@ -352,7 +352,7 @@ export default function ConfigGuide({ onClose }: { onClose?: () => void }) {
                         btn.disabled = false;
                       }
                     }}
-                    className="px-4 py-2 bg-[#D94B5A] hover:bg-blue-900 text-white font-bold text-[10px] uppercase tracking-widest rounded-sm transition-colors border border-black shadow-[inset_1px_1px_0_rgba(255,255,255,0.4),2px_2px_0_rgba(0,0,0,0.4)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
+                    className="px-4 py-2 bg-[#000080] hover:bg-blue-900 text-white font-bold text-[10px] uppercase tracking-widest rounded-sm transition-colors border border-black shadow-[inset_1px_1px_0_rgba(255,255,255,0.4),2px_2px_0_rgba(0,0,0,0.4)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
                   >
                     Diagnostic Connection Test
                   </button>
@@ -405,7 +405,7 @@ export default function ConfigGuide({ onClose }: { onClose?: () => void }) {
                             alert(`API Base URL reset to default fallback.`);
                           }
                         }}
-                        className="px-4 py-1.5 bg-[#D94B5A] hover:bg-blue-900 text-white font-bold text-[10px] uppercase tracking-wider rounded-sm transition-colors border border-black shadow-[inset_1px_1px_0_rgba(255,255,255,0.4),1px_1px_0_rgba(0,0,0,0.4)]"
+                        className="px-4 py-1.5 bg-[#000080] hover:bg-blue-900 text-white font-bold text-[10px] uppercase tracking-wider rounded-sm transition-colors border border-black shadow-[inset_1px_1px_0_rgba(255,255,255,0.4),1px_1px_0_rgba(0,0,0,0.4)]"
                       >
                         Save & Apply
                       </button>
@@ -435,7 +435,7 @@ export default function ConfigGuide({ onClose }: { onClose?: () => void }) {
             <div className="p-2 space-y-4">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-slate-200 p-2.5 border border-black/10">
                 <div className="flex items-center gap-3">
-                  <div className="p-1 px-2.5 bg-[#D94B5A] text-white text-[10px] uppercase font-black tracking-widest flex items-center gap-1.5 rounded-sm">
+                  <div className="p-1 px-2.5 bg-[#000080] text-white text-[10px] uppercase font-black tracking-widest flex items-center gap-1.5 rounded-sm">
                     <Activity className="h-3 w-3 animate-pulse text-green-400" />
                     Sync Status: ONLINE
                   </div>
@@ -446,7 +446,7 @@ export default function ConfigGuide({ onClose }: { onClose?: () => void }) {
 
                 {/* SLIDER FOR ACCURATE THRESHOLD SELECTION */}
                 <div className="flex items-center gap-2 bg-white border border-gray-400 p-1 px-2.5 rounded shadow-inner font-sans">
-                  <Sliders className="h-3.5 w-3.5 text-[#D94B5A]" />
+                  <Sliders className="h-3.5 w-3.5 text-[#000080]" />
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">Tolerance Sensitivity:</span>
                   <input
  id="threshold_451" name="threshold" aria-label="threshold"                    type="range"
@@ -459,7 +459,7 @@ export default function ConfigGuide({ onClose }: { onClose?: () => void }) {
                       setThreshold(val);
                       analyzeDiscrepancies(arrivals, val);
                     }}
-                    className="w-24 cursor-pointer accent-[#D94B5A]"
+                    className="w-24 cursor-pointer accent-[#000080]"
                   />
                   <span className="text-xs font-mono font-black text-indigo-950">{threshold.toFixed(2)} MT</span>
                 </div>
@@ -482,7 +482,7 @@ export default function ConfigGuide({ onClose }: { onClose?: () => void }) {
                   </div>
                   <button
                     onClick={() => loadArrivalsAndScan(threshold)}
-                    className="bg-[#FBCFCB] border-2 border-white hover:border-black active:translate-x-[0.5px] p-1 text-center text-[10px] font-extrabold uppercase tracking-wide flex items-center justify-center gap-1.5 shadow-[1px_1px_0_0_rgba(0,0,0,0.85)] w-full py-1.5 cursor-pointer font-sans"
+                    className="bg-[#d4d0c8] border-2 border-white hover:border-black active:translate-x-[0.5px] p-1 text-center text-[10px] font-extrabold uppercase tracking-wide flex items-center justify-center gap-1.5 shadow-[1px_1px_0_0_rgba(0,0,0,0.85)] w-full py-1.5 cursor-pointer font-sans"
                   >
                     <RefreshCw className={cn("h-3 w-3", loading ? "animate-spin" : "")} />
                     Run Integrity Audit Trigger
@@ -522,7 +522,7 @@ export default function ConfigGuide({ onClose }: { onClose?: () => void }) {
                           <button
                             disabled={syncingRecordId === item.final_arrival_id}
                             onClick={() => handleReSyncSingleRecord(item.final_arrival_id, item.final_arrival_no)}
-                            className="bg-[#D94B5A] text-white hover:bg-indigo-950 font-black text-[9px] uppercase px-2 py-1.5 rounded flex items-center gap-1 disabled:opacity-60 cursor-pointer shadow"
+                            className="bg-[#000080] text-white hover:bg-indigo-950 font-black text-[9px] uppercase px-2 py-1.5 rounded flex items-center gap-1 disabled:opacity-60 cursor-pointer shadow"
                           >
                             {syncingRecordId === item.final_arrival_id ? (
                               <>

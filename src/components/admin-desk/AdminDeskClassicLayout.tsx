@@ -58,9 +58,9 @@ export const AdminDeskClassicLayout: React.FC<AdminDeskClassicLayoutProps> = ({
   );
 
   return (
-    <div className="w-full h-full bg-[#FBCFCB] flex flex-col font-sans overflow-hidden text-slate-800">
+    <div className="w-full h-full bg-[#dfdfdf] flex flex-col font-sans overflow-hidden text-slate-800">
       {/* Title Bar */}
-      <div className="bg-[#D94B5A] text-white px-3 py-1 flex justify-between items-center h-8 shrink-0 shadow-xs">
+      <div className="bg-[#000080] text-white px-3 py-1 flex justify-between items-center h-8 shrink-0 shadow-xs">
         <div className="flex items-center gap-2">
           <Database className="h-4 w-4 text-white" />
           <span className="text-[11px] font-black uppercase tracking-wider italic">
@@ -70,7 +70,7 @@ export const AdminDeskClassicLayout: React.FC<AdminDeskClassicLayoutProps> = ({
         {onClose && (
           <button
             onClick={onClose}
-            className="px-2 py-0.5 bg-[#FBCFCB] hover:bg-rose-600 hover:text-white text-slate-900 border-t-white border-l-white border-b-black border-r-black border text-[10px] font-black cursor-pointer transition-colors"
+            className="px-2 py-0.5 bg-[#c0c0c0] hover:bg-rose-600 hover:text-white text-slate-900 border-t-white border-l-white border-b-black border-r-black border text-[10px] font-black cursor-pointer transition-colors"
             title="Close Admin Console"
           >
             ✕
@@ -79,12 +79,12 @@ export const AdminDeskClassicLayout: React.FC<AdminDeskClassicLayoutProps> = ({
       </div>
 
       {/* Main Container */}
-      <div className="flex-1 p-3 flex flex-col min-h-0 space-y-2 overflow-hidden bg-[#FBCFCB]">
+      <div className="flex-1 p-3 flex flex-col min-h-0 space-y-2 overflow-hidden bg-[#dfdfdf]">
         {/* Row Data Browser */}
         <div className="flex-1 bg-[#E8E6E1] border-t-white border-l-white border-b-slate-800 border-r-slate-800 border-2 p-3 flex flex-col min-h-0 overflow-hidden shadow-inner">
           <div className="flex-1 flex flex-col min-h-0 space-y-3">
             {/* Controls Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-2 bg-[#FBCFCB] p-2 border-t-white border-l-white border-b-slate-700 border-r-slate-700 border">
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-[#dfdfdf] p-2 border-t-white border-l-white border-b-slate-700 border-r-slate-700 border">
               {/* Left Controls: Select Table & Refresh */}
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black text-slate-700">Select Table:</span>
@@ -104,7 +104,7 @@ export const AdminDeskClassicLayout: React.FC<AdminDeskClassicLayoutProps> = ({
                 </select>
                 <button
                   onClick={fetchData}
-                  className="px-2.5 py-1 bg-[#FBCFCB] hover:bg-slate-200 border-t-white border-l-white border-b-black border-r-black border text-xs font-bold cursor-pointer transition-colors"
+                  className="px-2.5 py-1 bg-[#c0c0c0] hover:bg-slate-200 border-t-white border-l-white border-b-black border-r-black border text-xs font-bold cursor-pointer transition-colors"
                 >
                   <RefreshCcw className="h-3.5 w-3.5 inline mr-1" />
                   Refresh
@@ -132,7 +132,7 @@ export const AdminDeskClassicLayout: React.FC<AdminDeskClassicLayoutProps> = ({
                     if (setIsNewRow) setIsNewRow(true);
                     setEditingRow(emptyRow);
                   }}
-                  className="px-3 py-1 bg-[#D94B5A] text-white font-black text-xs border-t-blue-400 border-l-blue-400 border-b-blue-950 border-r-blue-950 border cursor-pointer hover:bg-blue-900 transition-colors"
+                  className="px-3 py-1 bg-[#000080] text-white font-black text-xs border-t-blue-400 border-l-blue-400 border-b-blue-950 border-r-blue-950 border cursor-pointer hover:bg-blue-900 transition-colors"
                 >
                   <Plus className="h-3.5 w-3.5 inline mr-1" />
                   + New Record
@@ -158,7 +158,7 @@ export const AdminDeskClassicLayout: React.FC<AdminDeskClassicLayoutProps> = ({
             {/* Data Table */}
             <div className="flex-1 bg-white border-t-slate-800 border-l-slate-800 border-b-white border-r-white border-2 overflow-auto font-mono">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#D94B5A] text-white sticky top-0 font-sans text-[11px] font-black uppercase tracking-wider shadow-xs">
+                <thead className="bg-[#000080] text-white sticky top-0 font-sans text-[11px] font-black uppercase tracking-wider shadow-xs">
                   <tr>
                     <th className="p-2 text-center w-20 border-r border-blue-900">ACTIONS</th>
                     {currentColumns.map((col) => (
@@ -192,7 +192,7 @@ export const AdminDeskClassicLayout: React.FC<AdminDeskClassicLayoutProps> = ({
                                 if (setIsNewRow) setIsNewRow(false);
                                 setEditingRow(row);
                               }}
-                              className="px-2 py-0.5 bg-[#FBCFCB] hover:bg-slate-300 text-slate-900 text-[10px] font-bold border border-slate-600 mr-1 cursor-pointer"
+                              className="px-2 py-0.5 bg-[#c0c0c0] hover:bg-slate-300 text-slate-900 text-[10px] font-bold border border-slate-600 mr-1 cursor-pointer"
                             >
                               Edit
                             </button>
@@ -219,7 +219,7 @@ export const AdminDeskClassicLayout: React.FC<AdminDeskClassicLayoutProps> = ({
             </div>
 
             {/* Bottom Status */}
-            <div className="flex justify-between items-center text-xs font-bold text-slate-600 bg-[#FBCFCB] px-2 py-1 border border-slate-400">
+            <div className="flex justify-between items-center text-xs font-bold text-slate-600 bg-[#dfdfdf] px-2 py-1 border border-slate-400">
               <span>
                 Showing {filteredData.length} records in {selectedTable?.name}
               </span>

@@ -648,9 +648,9 @@ export const DualComboBox = ({
 
   // Background and border styling consistent with standard field color rules
   const getContainerBg = () => {
-    if (isInvalid) return "bg-[#FDE7E6] border-rose-500 ring-1 ring-rose-300";
-    if (isRequired) return "bg-[#FDE7E6] border-rose-300";
-    if (hasSaudaHighlight) return "bg-[#FDE7E6] border-sky-300";
+    if (isInvalid) return "bg-[#FFECEC] border-rose-500 ring-1 ring-rose-300";
+    if (isRequired) return "bg-[#FFECEC] border-rose-300";
+    if (hasSaudaHighlight) return "bg-[#EAF4FF] border-sky-300";
     return "bg-white border-slate-400";
   };
 
@@ -672,9 +672,9 @@ export const DualComboBox = ({
             placeholder="CODE"
             className={`w-16 p-0.5 outline-none border text-center font-bold font-mono text-xs transition-colors duration-150 cursor-pointer ${
               hasSaudaHighlight
-                ? "bg-[#FDE7E6] border-sky-300 text-sky-950"
+                ? "bg-[#EAF4FF] border-sky-300 text-sky-950"
                 : isRequired
-                ? "bg-[#FDE7E6] border-rose-300 text-slate-900"
+                ? "bg-[#FFECEC] border-rose-300 text-slate-900"
                 : "bg-slate-100 border-slate-400 text-slate-800"
             }`}
             value={code || (selectedOption ? selectedOption[codeField] : '')}

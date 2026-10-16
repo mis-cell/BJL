@@ -18,7 +18,7 @@ export const FormLegend: React.FC<FormLegendProps> = ({
       <div className="flex flex-wrap items-center gap-3 md:gap-4">
         {/* Auto Populated */}
         <div className="flex items-center gap-1.5">
-          <span className="w-3.5 h-3.5 rounded bg-[#FDE7E6] border border-[#BFDBFE] flex items-center justify-center text-[#1E3A8A] shadow-2xs">
+          <span className="w-3.5 h-3.5 rounded bg-[#EAF4FF] border border-[#BFDBFE] flex items-center justify-center text-[#1E3A8A] shadow-2xs">
             <Sparkles className="w-2.5 h-2.5" />
           </span>
           <span className="text-[11px] text-sky-950 font-bold">
@@ -28,7 +28,7 @@ export const FormLegend: React.FC<FormLegendProps> = ({
 
         {/* Mandatory */}
         <div className="flex items-center gap-1.5">
-          <span className="w-3.5 h-3.5 rounded bg-[#FDE7E6] border border-[#FCA5A5] flex items-center justify-center text-rose-700 font-black text-[10px] shadow-2xs">
+          <span className="w-3.5 h-3.5 rounded bg-[#FFECEC] border border-[#FCA5A5] flex items-center justify-center text-rose-700 font-black text-[10px] shadow-2xs">
             *
           </span>
           <span className="text-[11px] text-rose-950 font-bold">

@@ -300,9 +300,9 @@ export default function MaterialInspection({
         {/* MAIN VISUAL CARD CONTAINER */}
         <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 w-full pb-10">
           {/* HEADER BAR */}
-          <div className="bg-[#D94B5A] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#FBCFCB] gap-4">
+          <div className="bg-[#F7AFA8] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#FBCFCB] gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#D94B5A]/40 border border-[#FBCFCB]/40 flex items-center justify-center text-[#FDE7E6] shadow-inner">
+              <div className="w-10 h-10 rounded-xl bg-[#80202C]/40 border border-[#FBCFCB]/40 flex items-center justify-center text-[#FDE7E6] shadow-inner">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
@@ -315,7 +315,7 @@ export default function MaterialInspection({
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="px-3.5 py-1.5 bg-[#D94B5A] hover:bg-[#D94B5A] text-amber-300 border border-[#F06D6C] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+                className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
                 title="Back to Sauda Desk (Esc)"
                 onClick={() => setViewMode("dashboard")}
               >

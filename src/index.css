@@ -7,165 +7,89 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --color-legacy-bg: #FDE7E6;
   --color-legacy-border: #FBCFCB;
-  --color-legacy-blue: #D94B5A;
-  --color-legacy-navy: #D94B5A;
-  --color-legacy-teal: #E85A5A;
+  --color-legacy-blue: #F7AFA8;
+  --color-legacy-navy: #F7AFA8;
+  --color-legacy-teal: #F7AFA8;
 
-  /* Approved 7-Color Theme Palette Tokens */
-  --color-bally-1: #FDE7E6; /* Light background and subtle surfaces */
-  --color-bally-2: #FBCFCB; /* Secondary backgrounds and panels */
-  --color-bally-3: #F7AFA8; /* Highlighted sections and selected elements */
-  --color-bally-4: #F48F8B; /* Primary buttons and interactive elements */
-  --color-bally-5: #F06D6C; /* Active states and important actions */
-  --color-bally-6: #E85A5A; /* Strong emphasis and status highlights */
-  --color-bally-7: #D94B5A; /* Darkest accent for prominent elements */
-
+  /* App Theme Palette (7 Rose/Coral/Crimson Shades) */
   --color-rose-shade-1: #FDE7E6;
   --color-rose-shade-2: #FBCFCB;
   --color-rose-shade-3: #F7AFA8;
   --color-rose-shade-4: #F48F8B;
-  --color-rose-shade-5: #F06D6C;
-  --color-rose-shade-6: #E85A5A;
-  --color-rose-shade-7: #D94B5A;
+  --color-rose-shade-5: #FBCFCB;
+  --color-rose-shade-6: #F7AFA8;
+  --color-rose-shade-7: #F7AFA8;
 
-  /* Semantic Theme Tokens */
-  --color-app-bg: #FFF9F8;
-  --color-surface: #FFFFFF;
-  --color-surface-muted: #FFF1F0;
-
-  --color-text-primary: #1F2937;
-  --color-text-heading: #243247;
-  --color-text-card-heading: #334155;
-  --color-text-body: #374151;
-  --color-text-numeric: #111827;
-  --color-text-label: #334155;
-  --color-text-input: #111827;
-  --color-text-secondary: #475569;
-  --color-text-placeholder: #64748B;
-  --color-text-readonly: #475569;
-  --color-text-disabled: #6B7280;
-  --color-text-link: #B42342;
-  --color-text-important: #B42342;
-  --color-text-error: #B91C1C;
-  --color-text-success: #166534;
-  --color-text-warning: #92400E;
-  --color-text-info: #1D4ED8;
-
-  --color-border-default: #CBD5E1;
-
-  --color-brand-primary: #D94B5A;
-  --color-brand-hover: #A52D40;
-  --color-brand-subtle: #FDE7E6;
-
-  --color-table-header: #FFF1F0;
-  --color-table-hover: #FFF5F4;
-  --color-status-success: #216E45;
-  --color-status-warning: #925C13;
-  --color-status-error: #B42318;
-  --color-status-info: #175CD3;
-
-  /* Global App Theme Mapping: Convert Tailwind color families to the 7 Approved Shades */
+  /* Global App Theme Mapping: Convert Emerald, Green, Teal, Indigo, Blue, Rose & Red to 3 Plate Palette */
   --color-emerald-50: #FDE7E6;
   --color-emerald-100: #FDE7E6;
   --color-emerald-200: #FBCFCB;
-  --color-emerald-300: #F7AFA8;
-  --color-emerald-400: #F48F8B;
-  --color-emerald-500: #F06D6C;
-  --color-emerald-600: #E85A5A;
-  --color-emerald-700: #D94B5A;
-  --color-emerald-800: #D94B5A;
-  --color-emerald-900: #D94B5A;
-  --color-emerald-950: #D94B5A;
+  --color-emerald-300: #FBCFCB;
+  --color-emerald-400: #F7AFA8;
+  --color-emerald-500: #F7AFA8;
+  --color-emerald-600: #F7AFA8;
+  --color-emerald-700: #F7AFA8;
+  --color-emerald-800: #F7AFA8;
+  --color-emerald-900: #F7AFA8;
+  --color-emerald-950: #F7AFA8;
 
   --color-green-50: #FDE7E6;
   --color-green-100: #FDE7E6;
   --color-green-200: #FBCFCB;
-  --color-green-300: #F7AFA8;
-  --color-green-400: #F48F8B;
-  --color-green-500: #F06D6C;
-  --color-green-600: #E85A5A;
-  --color-green-700: #D94B5A;
-  --color-green-800: #D94B5A;
-  --color-green-900: #D94B5A;
-  --color-green-950: #D94B5A;
+  --color-green-300: #FBCFCB;
+  --color-green-400: #F7AFA8;
+  --color-green-500: #F7AFA8;
+  --color-green-600: #F7AFA8;
+  --color-green-700: #F7AFA8;
+  --color-green-800: #F7AFA8;
+  --color-green-900: #F7AFA8;
+  --color-green-950: #F7AFA8;
 
   --color-teal-50: #FDE7E6;
   --color-teal-100: #FDE7E6;
   --color-teal-200: #FBCFCB;
-  --color-teal-300: #F7AFA8;
-  --color-teal-400: #F48F8B;
-  --color-teal-500: #F06D6C;
-  --color-teal-600: #E85A5A;
-  --color-teal-700: #D94B5A;
-  --color-teal-800: #D94B5A;
-  --color-teal-900: #D94B5A;
-  --color-teal-950: #D94B5A;
+  --color-teal-300: #FBCFCB;
+  --color-teal-400: #F7AFA8;
+  --color-teal-500: #F7AFA8;
+  --color-teal-600: #F7AFA8;
+  --color-teal-700: #F7AFA8;
+  --color-teal-800: #F7AFA8;
+  --color-teal-900: #F7AFA8;
+  --color-teal-950: #F7AFA8;
 
   --color-indigo-50: #FDE7E6;
   --color-indigo-100: #FDE7E6;
   --color-indigo-200: #FBCFCB;
-  --color-indigo-300: #F7AFA8;
-  --color-indigo-400: #F48F8B;
-  --color-indigo-500: #F06D6C;
-  --color-indigo-600: #E85A5A;
-  --color-indigo-700: #D94B5A;
-  --color-indigo-800: #D94B5A;
-  --color-indigo-900: #D94B5A;
-  --color-indigo-950: #D94B5A;
+  --color-indigo-300: #FBCFCB;
+  --color-indigo-400: #F7AFA8;
+  --color-indigo-500: #F7AFA8;
+  --color-indigo-600: #F7AFA8;
+  --color-indigo-700: #F7AFA8;
+  --color-indigo-800: #F7AFA8;
+  --color-indigo-900: #F7AFA8;
+  --color-indigo-950: #F7AFA8;
 
   --color-blue-50: #FDE7E6;
   --color-blue-100: #FDE7E6;
   --color-blue-200: #FBCFCB;
-  --color-blue-300: #F7AFA8;
-  --color-blue-400: #F48F8B;
-  --color-blue-500: #F06D6C;
-  --color-blue-600: #E85A5A;
-  --color-blue-700: #D94B5A;
-  --color-blue-800: #D94B5A;
-  --color-blue-900: #D94B5A;
-  --color-blue-950: #D94B5A;
+  --color-blue-300: #FBCFCB;
+  --color-blue-400: #F7AFA8;
+  --color-blue-500: #F7AFA8;
+  --color-blue-600: #F7AFA8;
+  --color-blue-700: #F7AFA8;
+  --color-blue-800: #F7AFA8;
+  --color-blue-900: #F7AFA8;
+  --color-blue-950: #F7AFA8;
 
-  --color-rose-50: #FDE7E6;
-  --color-rose-100: #FDE7E6;
-  --color-rose-200: #FBCFCB;
-  --color-rose-300: #F7AFA8;
-  --color-rose-400: #F48F8B;
-  --color-rose-500: #F06D6C;
-  --color-rose-600: #E85A5A;
-  --color-rose-700: #D94B5A;
-  --color-rose-800: #D94B5A;
-  --color-rose-900: #D94B5A;
-  --color-rose-950: #D94B5A;
+  /* Map dark slate headers and active tabs to Rose/Crimson theme */
+  --color-slate-900: #F7AFA8;
+  --color-slate-950: #F7AFA8;
 
-  --color-red-50: #FDE7E6;
-  --color-red-100: #FDE7E6;
-  --color-red-200: #FBCFCB;
-  --color-red-300: #F7AFA8;
-  --color-red-400: #F48F8B;
-  --color-red-500: #F06D6C;
-  --color-red-600: #E85A5A;
-  --color-red-700: #D94B5A;
-  --color-red-800: #D94B5A;
-  --color-red-900: #D94B5A;
-  --color-red-950: #D94B5A;
-
-  /* Dark headers and active tab containers mapped to Darkest Accent */
-  --color-slate-900: #D94B5A;
-  --color-slate-950: #D94B5A;
-  --color-slate-800: #E85A5A;
-
-  /* Golden Yellow Palette (Secondary Accent) */
-  --color-gold-50: #FFFBEB;
-  --color-gold-100: #FFF2CC;
-  --color-gold-200: #FFE08A;
-  --color-gold-300: #F5B942;
-  --color-gold-400: #D69E18;
-
-  /* Accent buttons mapped to Shade 4 and Shade 1 */
-  --color-yellow-300: #FFF2CC;
-  --color-yellow-400: #F5B942;
-  --color-amber-300: #FFF2CC;
-  --color-amber-400: #F5B942;
+  /* Map yellow and amber accent buttons to Rose/Coral theme */
+  --color-yellow-300: #FBCFCB;
+  --color-yellow-400: #F7AFA8;
+  --color-amber-300: #FBCFCB;
+  --color-amber-400: #F7AFA8;
 }
 
 @layer base {
@@ -173,40 +97,13 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum" 1, "lnum" 1;
     font-variant-numeric: tabular-nums lining-nums;
 
-    /* Single Source of Truth Theme Design Tokens */
-    --bally-shade-1: #FDE7E6; /* Light background and subtle surfaces */
-    --bally-shade-2: #FBCFCB; /* Secondary backgrounds and panels */
-    --bally-shade-3: #F7AFA8; /* Highlighted sections and selected elements */
-    --bally-shade-4: #F48F8B; /* Primary buttons and interactive elements */
-    --bally-shade-5: #F06D6C; /* Active states and important actions */
-    --bally-shade-6: #E85A5A; /* Strong emphasis and status highlights */
-    --bally-shade-7: #D94B5A; /* Darkest accent for prominent elements */
-
     --app-shade-1: #FDE7E6;
     --app-shade-2: #FBCFCB;
     --app-shade-3: #F7AFA8;
     --app-shade-4: #F48F8B;
-    --app-shade-5: #F06D6C;
-    --app-shade-6: #E85A5A;
-    --app-shade-7: #D94B5A;
-
-    --color-app-bg: #FFF9F8;
-    --color-surface: #FFFFFF;
-    --color-surface-muted: #FFF1F0;
-    --color-text-primary: #29252B;
-    --color-text-secondary: #475467;
-    --color-text-muted: #667085;
-    --color-text-disabled: #98A2B3;
-    --color-border-default: #FBCFCB;
-    --color-brand-primary: #D94B5A;
-    --color-brand-hover: #A52D40;
-    --color-brand-subtle: #FDE7E6;
-    --color-table-header: #FFF1F0;
-    --color-table-hover: #FFF5F4;
-    --color-status-success: #216E45;
-    --color-status-warning: #925C13;
-    --color-status-error: #B42318;
-    --color-status-info: #175CD3;
+    --app-shade-5: #FBCFCB;
+    --app-shade-6: #F7AFA8;
+    --app-shade-7: #F7AFA8;
   }
 
   html,
@@ -226,19 +123,8 @@
   }
 
   body {
-    @apply font-sans bg-[#FFF9F8] text-[#374151] antialiased selection:bg-[#FBCFCB] selection:text-[#B42342];
+    @apply font-sans bg-[#FDE7E6]/30 text-slate-900 antialiased selection:bg-[#FBCFCB] selection:text-white;
     font-variant-numeric: tabular-nums lining-nums;
-  }
-
-  /* Standardized high-contrast labels and headings */
-  h1 { color: #1F2937; font-weight: 800; }
-  h2 { color: #243247; font-weight: 700; }
-  h3 { color: #334155; font-weight: 700; }
-  h4, h5, h6 { color: #334155; font-weight: 600; }
-  
-  label {
-    color: #334155 !important;
-    font-weight: 600 !important;
   }
 
   /* Universal numeric styling for tables, inputs, stats, and badges */
@@ -250,7 +136,6 @@
   [data-numeric] {
     font-variant-numeric: tabular-nums lining-nums !important;
     font-feature-settings: "tnum" 1, "lnum" 1 !important;
-    color: #111827;
   }
 
   .font-numeric {
@@ -260,7 +145,7 @@
     letter-spacing: -0.025em;
   }
 
-  /* Modern input, select, and textarea global enhancements with WCAG contrast */
+  /* Modern input, select, and textarea global enhancements */
   input[type="text"],
   input[type="number"],
   input[type="date"],
@@ -270,33 +155,18 @@
   textarea {
     border-radius: 0.375rem !important;
     transition: all 0.15s ease-in-out !important;
-    color: #111827 !important;
-    background-color: #FFFFFF !important;
-    border-color: #CBD5E1 !important;
-  }
-
-  select option {
-    color: #1F2937 !important;
-    background-color: #FFFFFF !important;
-  }
-
-  input::placeholder,
-  textarea::placeholder {
-    color: #64748B !important;
-    opacity: 1 !important;
   }
 
   input[type="date"]::-webkit-datetime-edit-month-field,
   input[type="date"]::-webkit-datetime-edit-day-field,
   input[type="date"]::-webkit-datetime-edit-year-field {
     text-transform: uppercase;
-    color: #111827 !important;
   }
 
   input[type="date"]:invalid::-webkit-datetime-edit,
   input[type="date"]:not([value])::-webkit-datetime-edit,
   input[type="date"][value=""]::-webkit-datetime-edit {
-    color: #64748B !important;
+    color: #64748b;
   }
 
   input[type="text"]:focus,
@@ -306,12 +176,12 @@
   input[type="password"]:focus,
   select:focus,
   textarea:focus {
-    border-color: #D94B5A !important;
-    box-shadow: 0 0 0 3px rgba(217, 75, 90, 0.22) !important;
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18) !important;
     outline: none !important;
   }
 
-  /* High contrast table styling */
+  /* Modern table styling */
   table {
     border-collapse: separate !important;
     border-spacing: 0 !important;
@@ -320,14 +190,6 @@
   table th {
     font-weight: 700 !important;
     letter-spacing: 0.025em !important;
-    border-color: #CBD5E1 !important;
-    background-color: #FFF1F0;
-    color: #243247 !important;
-  }
-
-  table td {
-    border-color: #CBD5E1 !important;
-    color: #1F2937 !important;
   }
 
   table tbody tr {
@@ -335,37 +197,32 @@
   }
 
   table tbody tr:hover {
-    background-color: #FFF5F4 !important;
-  }
-
-  table tbody tr.selected,
-  table tbody tr[aria-selected="true"] {
-    background-color: #FDE7E6 !important;
+    background-color: rgba(238, 242, 255, 0.6) !important;
   }
 
   /* Modern fieldset styling */
   fieldset {
     border-radius: 0.5rem !important;
-    background-color: rgba(253, 231, 230, 0.45) !important;
+    background-color: rgba(255, 255, 255, 0.85) !important;
     backdrop-filter: blur(4px) !important;
-    border: 1px solid #FBCFCB !important;
-    box-shadow: 0 1px 3px 0 rgba(217, 75, 90, 0.05) !important;
+    border: 1px solid rgba(203, 213, 225, 0.8) !important;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03) !important;
   }
 
-  /* Distinct Form Field Styles for Auto-Populated, Mandatory & Normal Input Data using 7 Approved Colors */
+  /* Distinct Form Field Styles for Auto-Populated, Mandatory & Normal Input Data */
   :root {
-    --field-auto-bg: #FDE7E6;
-    --field-auto-border: #FBCFCB;
-    --field-auto-text: #D94B5A;
-    --field-mandatory-bg: #FDE7E6;
-    --field-mandatory-border: #F48F8B;
+    --field-auto-bg: #EAF4FF;
+    --field-auto-border: #BFDBFE;
+    --field-auto-text: #1E3A8A;
+    --field-mandatory-bg: #FFECEC;
+    --field-mandatory-border: #FCA5A5;
     --field-mandatory-text: #1F2937;
     --field-manual-bg: #FFFFFF;
-    --field-manual-border: #FBCFCB;
+    --field-manual-border: #D1D5DB;
     --field-manual-text: #111827;
   }
 
-  /* 1. Auto-populated / system-filled fields -> Soft Tint (#FDE7E6) with Coral Border (#FBCFCB) */
+  /* 1. Auto-populated / system-filled fields -> Light Blue (#EAF4FF) */
   .field-auto-populated,
   .field-auto,
   [data-field-type="auto"],
@@ -374,9 +231,9 @@
   input.field-auto-populated,
   select.field-auto-populated,
   textarea.field-auto-populated {
-    background-color: #FDE7E6 !important;
-    border-color: #FBCFCB !important;
-    color: #D94B5A !important;
+    background-color: #EAF4FF !important;
+    border-color: #BFDBFE !important;
+    color: #1E3A8A !important;
     font-weight: 600 !important;
   }
 
@@ -384,12 +241,12 @@
   input.field-auto-populated:focus,
   select.field-auto-populated:focus,
   textarea.field-auto-populated:focus {
-    border-color: #F06D6C !important;
-    box-shadow: 0 0 0 3px rgba(240, 109, 108, 0.22) !important;
+    border-color: #3B82F6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
     outline: none !important;
   }
 
-  /* 2. Mandatory / required fields -> Soft Shade (#FDE7E6) with Active Accent Border (#F48F8B) */
+  /* 2. Mandatory / required fields -> Light Red (#FFECEC) */
   .field-mandatory,
   .field-required,
   [data-field-type="mandatory"],
@@ -401,8 +258,8 @@
   input.field-mandatory,
   select.field-mandatory,
   textarea.field-mandatory {
-    background-color: #FDE7E6 !important;
-    border-color: #F48F8B !important;
+    background-color: #FFECEC !important;
+    border-color: #FCA5A5 !important;
     color: #1F2937 !important;
   }
 
@@ -414,24 +271,24 @@
   input.field-mandatory:focus,
   select.field-mandatory:focus,
   textarea.field-mandatory:focus {
-    border-color: #E85A5A !important;
-    box-shadow: 0 0 0 3px rgba(232, 90, 90, 0.25) !important;
+    border-color: #EF4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22) !important;
     outline: none !important;
   }
 
-  /* Priority rule: Mandatory takes precedence over Auto-populated if both apply */
+  /* Priority rule: Mandatory (Light Red) takes precedence over Auto-populated if both apply */
   .field-mandatory.field-auto-populated,
   input[required].field-auto-populated,
   select[required].field-auto-populated,
   textarea[required].field-auto-populated,
   [data-field-type="mandatory"][data-field-type="auto"],
   [data-mandatory="true"][data-auto="true"] {
-    background-color: #FDE7E6 !important;
-    border-color: #E85A5A !important;
+    background-color: #FFECEC !important;
+    border-color: #F87171 !important;
     color: #1F2937 !important;
   }
 
-  /* 3. Normal manual input fields -> White (#FFFFFF) with Soft Border (#FBCFCB) */
+  /* 3. Normal manual input fields -> White (#FFFFFF) */
   .field-manual,
   .field-normal,
   [data-field-type="manual"],
@@ -439,7 +296,7 @@
   select.field-manual,
   textarea.field-manual {
     background-color: #FFFFFF !important;
-    border-color: #FBCFCB !important;
+    border-color: #D1D5DB !important;
     color: #111827 !important;
   }
 
@@ -448,24 +305,24 @@
   input:disabled.field-auto-populated,
   select:disabled.field-auto-populated,
   textarea:disabled.field-auto-populated {
-    background-color: #FDE7E6 !important;
-    color: #D94B5A !important;
-    border-color: #FBCFCB !important;
+    background-color: #EAF4FF !important;
+    color: #1E3A8A !important;
+    border-color: #BFDBFE !important;
     cursor: default;
   }
 
   input:read-only.field-mandatory,
   input:disabled.field-mandatory {
-    background-color: #FDE7E6 !important;
+    background-color: #FFECEC !important;
     color: #1F2937 !important;
-    border-color: #F48F8B !important;
+    border-color: #FCA5A5 !important;
   }
 
-  /* Modern modal overlays using approved darkest accent tone */
+  /* Modern modal overlays */
   [role="dialog"],
   .modal-overlay {
     backdrop-filter: blur(6px) !important;
-    background-color: rgba(217, 75, 90, 0.45) !important;
+    background-color: rgba(15, 23, 42, 0.55) !important;
   }
 }
 
@@ -560,7 +417,7 @@
   #tractor-feed-holes-left, #tractor-feed-holes-right {
     display: flex !important;
     width: 32px !important;
-    background-color: #FDE7E6 !important;
+    background-color: #faf8f5 !important;
     border-color: #000000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
@@ -737,185 +594,23 @@ input, select, textarea {
   max-width: 100%;
 }
 
-/* Scrollbar polish using Approved Bally Jute Theme */
+/* Scrollbar polish for zoomed viewports */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 14px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #FDE7E6;
+  background: rgba(0, 0, 0, 0.04);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #F7AFA8;
-  border-radius: 6px;
-  border: 2px solid #FDE7E6;
+  background: rgba(30, 51, 27, 0.35);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #F48F8B;
-}
-
-/* ==========================================================================
-   GLOSSY & POLISHED FULL HD THEME SYSTEM (APPROVED 7-COLOR PALETTE)
-   - Shade 1: #FDE7E6 (Light background and subtle surfaces)
-   - Shade 2: #FBCFCB (Secondary backgrounds and panels)
-   - Shade 3: #F7AFA8 (Highlighted sections and selected elements)
-   - Shade 4: #F48F8B (Primary buttons and interactive elements)
-   - Shade 5: #F06D6C (Active states and important actions)
-   - Shade 6: #E85A5A (Strong emphasis and status highlights)
-   - Shade 7: #D94B5A (Darkest accent for prominent elements)
-   ========================================================================== */
-
-/* Glossy Surface & Container Classes */
-.glossy-header {
-  background: linear-gradient(135deg, #D94B5A 0%, #E85A5A 50%, #D94B5A 100%) !important;
-  border-bottom: 2px solid #D94B5A !important;
-  box-shadow: 0 4px 16px -2px rgba(217, 75, 90, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
-}
-
-.glossy-subnav {
-  background: linear-gradient(180deg, #FDE7E6 0%, #FBCFCB 100%) !important;
-  border: 1px solid #F7AFA8 !important;
-  box-shadow: 0 2px 8px rgba(217, 75, 90, 0.08) !important;
-}
-
-.glossy-card {
-  background: linear-gradient(180deg, #FFFFFF 0%, #FDE7E6 100%) !important;
-  border: 1px solid #FBCFCB !important;
-  box-shadow: 0 4px 14px rgba(217, 75, 90, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
-  border-radius: 0.75rem !important;
-}
-
-.glossy-card-highlight {
-  background: linear-gradient(180deg, #FDE7E6 0%, #FBCFCB 100%) !important;
-  border: 1.5px solid #F7AFA8 !important;
-  box-shadow: 0 4px 12px rgba(217, 75, 90, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
-  border-radius: 0.75rem !important;
-}
-
-.glossy-panel {
-  background-color: #FDE7E6 !important;
-  border: 1px solid #FBCFCB !important;
-  box-shadow: inset 0 1px 3px rgba(217, 75, 90, 0.05) !important;
-  border-radius: 0.75rem !important;
-}
-
-/* Glossy Button Classes */
-.glossy-btn-primary {
-  background: linear-gradient(180deg, #F48F8B 0%, #F06D6C 100%) !important;
-  color: #FFFFFF !important;
-  border: 1px solid #F06D6C !important;
-  box-shadow: 0 2px 6px rgba(240, 109, 108, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
-  transition: all 0.15s ease-in-out !important;
-}
-.glossy-btn-primary:hover {
-  background: linear-gradient(180deg, #F06D6C 0%, #E85A5A 100%) !important;
-  box-shadow: 0 4px 10px rgba(232, 90, 90, 0.45) !important;
-  transform: translateY(-1px) !important;
-}
-.glossy-btn-primary:active {
-  transform: translateY(1px) !important;
-  box-shadow: 0 1px 3px rgba(232, 90, 90, 0.4) !important;
-}
-
-.glossy-btn-action {
-  background: linear-gradient(180deg, #F06D6C 0%, #E85A5A 100%) !important;
-  color: #FFFFFF !important;
-  border: 1px solid #E85A5A !important;
-  box-shadow: 0 2px 8px rgba(232, 90, 90, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
-  transition: all 0.15s ease-in-out !important;
-}
-.glossy-btn-action:hover {
-  background: linear-gradient(180deg, #E85A5A 0%, #D94B5A 100%) !important;
-  box-shadow: 0 4px 12px rgba(217, 75, 90, 0.5) !important;
-  transform: translateY(-1px) !important;
-}
-
-.glossy-btn-accent {
-  background: linear-gradient(180deg, #E85A5A 0%, #D94B5A 100%) !important;
-  color: #FFFFFF !important;
-  border: 1px solid #D94B5A !important;
-  box-shadow: 0 2px 8px rgba(217, 75, 90, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
-  transition: all 0.15s ease-in-out !important;
-}
-.glossy-btn-accent:hover {
-  background: #D94B5A !important;
-  box-shadow: 0 4px 14px rgba(217, 75, 90, 0.55) !important;
-}
-
-.glossy-btn-secondary {
-  background: linear-gradient(180deg, #FFFFFF 0%, #FDE7E6 100%) !important;
-  color: #D94B5A !important;
-  border: 1px solid #FBCFCB !important;
-  box-shadow: 0 1px 4px rgba(217, 75, 90, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
-  transition: all 0.15s ease-in-out !important;
-}
-.glossy-btn-secondary:hover {
-  background: #FDE7E6 !important;
-  border-color: #F7AFA8 !important;
-  box-shadow: 0 2px 6px rgba(217, 75, 90, 0.15) !important;
-}
-
-/* Glossy Table Headers */
-.glossy-th {
-  background: linear-gradient(180deg, #E85A5A 0%, #D94B5A 100%) !important;
-  color: #FFFFFF !important;
-  font-weight: 800 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  border-color: #D94B5A !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-}
-
-/* Badges */
-.glossy-badge-highlight {
-  background-color: #F7AFA8 !important;
-  color: #D94B5A !important;
-  border: 1px solid #F48F8B !important;
-  font-weight: 700 !important;
-}
-
-.glossy-badge-active {
-  background-color: #F06D6C !important;
-  color: #FFFFFF !important;
-  border: 1px solid #E85A5A !important;
-  font-weight: 700 !important;
-}
-
-.glossy-badge-status {
-  background-color: #FDE7E6 !important;
-  color: #D94B5A !important;
-  border: 1px solid #FBCFCB !important;
-  font-weight: 700 !important;
-}
-
-/* Golden Yellow Palette Highlights & Total Rows */
-.table-total-row,
-.total-row-highlight {
-  background-color: #FFF2CC !important;
-  color: #111111 !important;
-  font-weight: 700 !important;
-  border-top: 2px solid #F5B942 !important;
-}
-
-.gold-card-highlight {
-  background: linear-gradient(180deg, #FFFBEB 0%, #FFF2CC 100%) !important;
-  border: 1px solid #FFE08A !important;
-  box-shadow: 0 2px 8px rgba(214, 158, 24, 0.12) !important;
-}
-
-.glossy-btn-gold {
-  background: linear-gradient(180deg, #FFF2CC 0%, #FFE08A 100%) !important;
-  color: #111111 !important;
-  border: 1px solid #F5B942 !important;
-  font-weight: 700 !important;
-  box-shadow: 0 1px 4px rgba(214, 158, 24, 0.2) !important;
-}
-.glossy-btn-gold:hover {
-  background: #FFE08A !important;
-  border-color: #D69E18 !important;
+  background: rgba(30, 51, 27, 0.6);
 }
 
 

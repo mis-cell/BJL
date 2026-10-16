@@ -52,10 +52,10 @@ export function FinalArrivalDataTable({
 }: FinalArrivalDataTableProps) {
   return (
     <div className="space-y-2">
-      <div className="bg-white rounded-xl border border-[#FBCFCB] shadow-xs overflow-x-auto overflow-y-auto min-h-[350px] w-full max-w-full">
+      <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs overflow-x-auto overflow-y-auto min-h-[350px] w-full max-w-full">
         {loading ? (
           <div className="flex flex-col items-center justify-center p-12 py-24">
-            <RefreshCw className="h-8 w-8 text-[#D94B5A] animate-spin mb-3" />
+            <RefreshCw className="h-8 w-8 text-[#F7AFA8] animate-spin mb-3" />
             <span className="text-xs font-bold uppercase tracking-widest text-slate-700">Reindexing Final Arrival registries...</span>
           </div>
         ) : filteredRecords.length === 0 ? (
@@ -68,17 +68,17 @@ export function FinalArrivalDataTable({
           </div>
         ) : (
           <table className="w-full border-collapse text-xs font-sans min-w-[1100px]">
-            <thead className="bg-[#D94B5A] text-white font-serif sticky top-0 z-10">
+            <thead className="bg-[#F7AFA8] text-white font-serif sticky top-0 z-10">
               <tr className="border-b border-[#FBCFCB] h-10 text-white">
-                <th className="px-3 border-r border-[#D94B5A] font-bold text-center w-24 whitespace-nowrap">Voucher Date</th>
-                <th className="px-3 border-r border-[#D94B5A] font-bold text-center w-24 whitespace-nowrap">Arrival #</th>
-                <th className="px-3 border-r border-[#D94B5A] font-bold text-center w-28 whitespace-nowrap">PO #</th>
-                <th className="px-3 border-r border-[#D94B5A] font-bold text-left whitespace-nowrap">Supplier Name</th>
-                <th className="px-3 border-r border-[#D94B5A] font-bold text-left whitespace-nowrap">Broker Reference</th>
-                <th className="px-3 border-r border-[#D94B5A] font-bold text-center w-28 whitespace-nowrap">Lorry Number</th>
-                <th className="px-3 border-r border-[#D94B5A] font-bold text-center w-20 whitespace-nowrap">Unit</th>
-                <th className="px-3 border-r border-[#D94B5A] font-bold text-right w-20 whitespace-nowrap">Qty</th>
-                <th className="px-3 border-r border-[#D94B5A] font-bold text-right w-24 text-amber-200 whitespace-nowrap">Weight</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-center w-24 whitespace-nowrap">Voucher Date</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-center w-24 whitespace-nowrap">Arrival #</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-center w-28 whitespace-nowrap">PO #</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-left whitespace-nowrap">Supplier Name</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-left whitespace-nowrap">Broker Reference</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-center w-28 whitespace-nowrap">Lorry Number</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-center w-20 whitespace-nowrap">Unit</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-right w-20 whitespace-nowrap">Qty</th>
+                <th className="px-3 border-r border-[#C23948] font-bold text-right w-24 text-amber-200 whitespace-nowrap">Weight</th>
                 <th className="px-3 font-bold text-center w-24 whitespace-nowrap">Actions</th>
               </tr>
             </thead>
@@ -182,7 +182,7 @@ export function FinalArrivalDataTable({
                           onClick={(e) => e.stopPropagation()} 
                           className="absolute right-0 top-10 bg-[#E8E6E1] border-2 border-white shadow-2xl p-3 z-50 rounded text-slate-800 text-[10px] w-64 text-left font-sans font-medium space-y-2"
                         >
-                          <div className="bg-[#D94B5A] text-white p-1 text-[9.5px] font-black uppercase flex justify-between items-center">
+                          <div className="bg-[#000080] text-white p-1 text-[9.5px] font-black uppercase flex justify-between items-center">
                             <span>📊 QUANTITATIVE AUDIT TRACE</span>
                             <button 
                               onClick={(ev) => {
@@ -259,7 +259,7 @@ export function FinalArrivalDataTable({
                                   <span>{totalDed.toFixed(1)}%</span>
                                 </div>
 
-                                <div className="bg-white p-1.5 font-mono text-[9px] text-[#D94B5A] border border-slate-300 rounded leading-none">
+                                <div className="bg-white p-1.5 font-mono text-[9px] text-[#000080] border border-slate-300 rounded leading-none">
                                   <p className="font-bold uppercase text-[8px] text-slate-500">RECONCILIATION MATH:</p>
                                   <p className="mt-1">{grossRawVal.toFixed(3)} MT * (1 - {totalDed.toFixed(1)}%)</p>
                                   <p className="text-red-700 font-black mt-1.5">Net weight = {calculatedNetVal.toFixed(3)} MT</p>

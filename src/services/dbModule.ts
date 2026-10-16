@@ -96,67 +96,27 @@ function extractMissingColumn(msg?: string): string | null {
   return match ? match[1] : null;
 }
 
-// High-Performance In-Memory Master Cache with automatic TTL and write-invalidation
-const masterTableCache = new Map<string, { timestamp: number; data: any[] }>();
-const CACHE_TTL_MS = 60000; // 60 seconds
-const CACHED_MASTER_TABLES = new Set([
-  'broker_master',
-  'supply_master',
-  'area_master',
-  'agency_master',
-  'grade_master',
-  'marka_master',
-  'godown_master',
-  'unit_master',
-  'batch_master',
-  'department_master'
-]);
-
-function invalidateMasterCache(table: string) {
-  const norm = table.toLowerCase();
-  if (CACHED_MASTER_TABLES.has(norm)) {
-    masterTableCache.delete(norm);
-  }
-}
-
 export const dbModule = {
   async fetchAll(table: string, orderCol?: string, ascending: boolean = true, limit?: number): Promise<any[]> {
     if (!supabase) throw new Error("Offline Mode: Connection not established.");
-    const norm = table.toLowerCase();
-    
-    // Check in-memory master cache for static/semi-static master tables
-    if (!limit && !orderCol && CACHED_MASTER_TABLES.has(norm)) {
-      const cached = masterTableCache.get(norm);
-      if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
-        return cached.data;
-      }
-    }
-
     let query = supabase.from(table).select("*");
     if (orderCol) query = query.order(orderCol, { ascending });
     if (limit) query = query.limit(limit);
     
     const { data, error } = await query;
     if (error) throw error;
-    const result = data || [];
-
-    if (!limit && !orderCol && CACHED_MASTER_TABLES.has(norm)) {
-      masterTableCache.set(norm, { timestamp: Date.now(), data: result });
-    }
-
-    return result;
+    return data || [];
   },
 
   async insert(table: string, data: any) {
     if (!supabase) throw new Error("Offline Mode: Connection not established.");
-    invalidateMasterCache(table);
     if (!navigator.onLine) {
       queueOfflineAction({ action: 'insert', table, data });
       notifyDataChanged(table);
       return data;
     }
     let payload = { ...data };
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 8; attempt++) {
       const { data: result, error } = await supabase
         .from(table)
         .insert(payload)
@@ -203,7 +163,6 @@ export const dbModule = {
 
   async upsert(table: string, data: any, idCol?: string) {
     if (!supabase) throw new Error("Offline Mode: Connection not established.");
-    invalidateMasterCache(table);
     if (!navigator.onLine) {
       queueOfflineAction({ action: 'insert', table, data });
       notifyDataChanged(table);
@@ -221,7 +180,7 @@ export const dbModule = {
       return data;
     }
     let payload = { ...data };
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 8; attempt++) {
       const { data: result, error } = await supabase
         .from(table)
         .upsert(payload, idCol ? { onConflict: idCol } : undefined)
@@ -267,7 +226,6 @@ export const dbModule = {
 
   async update(table: string, idCol: string, idVal: any, data: any) {
     if (!supabase) throw new Error("Offline Mode: Connection not established.");
-    invalidateMasterCache(table);
     if (!navigator.onLine) {
       queueOfflineAction({ action: 'update', table, idCol, idVal, data });
       notifyDataChanged(table);
@@ -285,7 +243,7 @@ export const dbModule = {
       return data;
     }
     let payload = { ...data };
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 8; attempt++) {
       const { data: result, error } = await supabase
         .from(table)
         .update(payload)
@@ -332,7 +290,6 @@ export const dbModule = {
 
   async delete(table: string, idCol: string, idVal: any) {
     if (!supabase) throw new Error("Offline Mode: Connection not established.");
-    invalidateMasterCache(table);
     if (!navigator.onLine) {
       queueOfflineAction({ action: 'delete', table, idCol, idVal });
       notifyDataChanged(table);

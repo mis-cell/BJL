@@ -306,9 +306,34 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
   useLiveAutoRefresh(loadSaudaMasterRecords, [], { tables: ['sauda_master', 'sauda_quality_details', 'sms_sauda'] });
 
   useEffect(() => {
+    loadSaudaMasterRecords();
     loadMarkedSmsRecords();
     fetchGoogleSheetSms();
     fetchEmails();
+
+    const handleDataUpdate = () => {
+      loadSaudaMasterRecords();
+      loadMarkedSmsRecords();
+    };
+
+    window.addEventListener('app-data-updated', handleDataUpdate);
+    window.addEventListener('storage', handleDataUpdate);
+
+    let channel: any = null;
+    if (supabase) {
+      channel = supabase
+        .channel('sms-sauda-matching-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_master' }, handleDataUpdate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_quality_details' }, handleDataUpdate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sms_sauda' }, handleDataUpdate)
+        .subscribe();
+    }
+
+    return () => {
+      window.removeEventListener('app-data-updated', handleDataUpdate);
+      window.removeEventListener('storage', handleDataUpdate);
+      if (channel && supabase) supabase.removeChannel(channel);
+    };
   }, []);
 
   // Handle Mark Done (Link SMS ↔ Sauda Master)

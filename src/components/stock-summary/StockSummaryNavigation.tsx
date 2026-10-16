@@ -57,8 +57,8 @@ export const StockSummaryNavigation: React.FC<StockSummaryNavigationProps> = ({
             className={cn(
               "group flex items-center gap-2 rounded-lg border px-4 py-2 text-[11px] font-black uppercase tracking-wide transition-all duration-200 cursor-pointer",
               activeTab === 'live'
-                ? "border-[#D94B5A] bg-[#D94B5A] text-white shadow-md"
-                : "border-slate-200 bg-white text-slate-600 hover:border-[#D94B5A]/40 hover:bg-emerald-50 hover:text-[#D94B5A]"
+                ? "border-[#0b6e54] bg-[#0b6e54] text-white shadow-md"
+                : "border-slate-200 bg-white text-slate-600 hover:border-[#0b6e54]/40 hover:bg-emerald-50 hover:text-[#0b6e54]"
             )}
           >
             <span className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 text-sm">
@@ -179,7 +179,7 @@ export const StockSummaryNavigation: React.FC<StockSummaryNavigationProps> = ({
                   className={cn(
                     "flex items-center gap-1 rounded px-2 py-1 text-[9px] font-black uppercase transition-all cursor-pointer",
                     metricCalculationMode === 'period'
-                      ? "bg-[#D94B5A] text-white shadow-sm"
+                      ? "bg-[#0b6e54] text-white shadow-sm"
                       : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
                   )}
                   title="Only activity/transactions occurred inside selected period"

@@ -342,18 +342,18 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
           autoComplete="off"
           className={`w-full uppercase placeholder:normal-case outline-none transition-all pr-12 shadow-2xs ${
             isInvalid
-              ? "border-2 border-rose-500 ring-2 ring-rose-200 bg-[#FDE7E6] text-slate-900"
+              ? "border-2 border-rose-500 ring-2 ring-rose-200 bg-[#FFECEC] text-slate-900"
               : isRequired
               ? compact
-                ? "rounded-lg px-2.5 py-1.5 text-xs font-bold bg-[#FDE7E6] border-2 border-rose-300 text-slate-900 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 placeholder:text-rose-400/70"
-                : "rounded-xl px-3.5 py-2 text-xs font-semibold bg-[#FDE7E6] border-2 border-rose-300 text-slate-900 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 placeholder:text-rose-400/70"
+                ? "rounded-lg px-2.5 py-1.5 text-xs font-bold bg-[#FFECEC] border-2 border-rose-300 text-slate-900 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 placeholder:text-rose-400/70"
+                : "rounded-xl px-3.5 py-2 text-xs font-semibold bg-[#FFECEC] border-2 border-rose-300 text-slate-900 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 placeholder:text-rose-400/70"
               : isAutoPopulated
               ? compact
-                ? "rounded-lg px-2.5 py-1.5 text-xs font-bold bg-[#FDE7E6] border border-sky-300 text-sky-950 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 placeholder:text-sky-400"
-                : "rounded-xl px-3.5 py-2 text-xs font-bold bg-[#FDE7E6] border border-sky-300 text-sky-950 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 placeholder:text-sky-400"
+                ? "rounded-lg px-2.5 py-1.5 text-xs font-bold bg-[#EAF4FF] border border-sky-300 text-sky-950 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 placeholder:text-sky-400"
+                : "rounded-xl px-3.5 py-2 text-xs font-bold bg-[#EAF4FF] border border-sky-300 text-sky-950 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 placeholder:text-sky-400"
               : compact
-              ? "rounded-lg px-2.5 py-1.5 text-xs font-bold bg-white border border-[#FBCFCB] text-slate-800 focus:border-[#F7AFA8] focus:ring-1 focus:ring-[#F7AFA8]/20"
-              : "rounded-xl px-3.5 py-2 text-xs font-semibold bg-white border border-[#FBCFCB] text-slate-800 focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 placeholder:text-slate-400"
+              ? "rounded-lg px-2.5 py-1.5 text-xs font-bold bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#F7AFA8] focus:ring-1 focus:ring-[#F7AFA8]/20"
+              : "rounded-xl px-3.5 py-2 text-xs font-semibold bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 placeholder:text-slate-400"
           } ${inputClassName}`}
         />
 
@@ -380,9 +380,9 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 setHighlightedIndex(-1);
               }
             }}
-            className="text-slate-400 hover:text-[#D94B5A] p-1 rounded cursor-pointer transition-colors"
+            className="text-slate-400 hover:text-[#F7AFA8] p-1 rounded cursor-pointer transition-colors"
           >
-            <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180 text-[#D94B5A]' : ''}`} />
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180 text-[#F7AFA8]' : ''}`} />
           </button>
         </div>
 
@@ -402,10 +402,10 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                   const customVal = queryText.trim().toUpperCase();
                   handleSelectOption({ label: customVal, value: customVal });
                 }}
-                className="px-3.5 py-2 cursor-pointer flex items-center justify-between font-bold text-[#D94B5A] bg-emerald-50 hover:bg-emerald-100 border-b border-emerald-200 transition-colors"
+                className="px-3.5 py-2 cursor-pointer flex items-center justify-between font-bold text-[#F7AFA8] bg-emerald-50 hover:bg-emerald-100 border-b border-emerald-200 transition-colors"
               >
                 <span className="uppercase text-xs flex items-center gap-1.5">
-                  <span className="bg-[#D94B5A] text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-2xs">+ MANUAL INPUT</span>
+                  <span className="bg-[#F7AFA8] text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-2xs">+ MANUAL INPUT</span>
                   <span>Use &quot;{queryText.trim().toUpperCase()}&quot;</span>
                 </span>
               </div>
@@ -425,14 +425,14 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                     onMouseEnter={() => setHighlightedIndex(idx)}
                     className={`px-3.5 py-2 cursor-pointer flex items-center justify-between font-medium transition-colors ${
                       isSelected
-                        ? 'bg-[#F7AFA8]/10 text-[#D94B5A] font-bold'
+                        ? 'bg-[#F7AFA8]/10 text-[#F7AFA8] font-bold'
                         : isHighlighted
-                        ? 'bg-[#F2F7F4] text-[#D94B5A] font-semibold'
+                        ? 'bg-[#F2F7F4] text-[#F7AFA8] font-semibold'
                         : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     <span className="uppercase">{typeof opt.label === 'object' ? String((opt.label as any)?.name || (opt.label as any)?.title || JSON.stringify(opt.label)) : String(opt.label || '')}</span>
-                    {isSelected && <Check className="h-3.5 w-3.5 text-[#D94B5A] shrink-0 ml-2" />}
+                    {isSelected && <Check className="h-3.5 w-3.5 text-[#F7AFA8] shrink-0 ml-2" />}
                   </div>
                 );
               })

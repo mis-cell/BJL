@@ -52,12 +52,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     <LegacyLayout title="FINAL ARRIVAL" subtitle="MATERIAL RECEIVED WORKSTATION" onClose={onCancel} activeNavTab="final_mr">
       <div 
         ref={containerRef}
-        className="bg-[#FDE7E6] text-slate-800 font-sans flex flex-col p-2 md:p-3 space-y-4 max-w-[1700px] w-full mx-auto select-text selection:bg-[#D94B5A] selection:text-white"
+        className="bg-[#F9F5EC] text-slate-800 font-sans flex flex-col p-2 md:p-3 space-y-4 max-w-[1700px] w-full mx-auto select-text selection:bg-[#103A20] selection:text-white"
       >
         {/* 1. HERO BANNER HEADER - DEEP GREEN THEME */}
-        <div className="bg-gradient-to-r from-[#F7AFA8] to-[#D94B5A] rounded-xl border border-[#F06D6C] p-3.5 text-white shadow-sm flex items-center justify-between gap-3">
+        <div className="bg-gradient-to-r from-[#F7AFA8] to-[#103A20] rounded-xl border border-[#0d301b] p-3.5 text-white shadow-sm flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#D94B5A] text-amber-300 flex items-center justify-center border border-[#F06D6C] shrink-0 shadow-xs">
+            <div className="w-10 h-10 rounded-lg bg-[#103A20] text-amber-300 flex items-center justify-center border border-[#235E39] shrink-0 shadow-xs">
               <ClipboardCheck className="w-5 h-5 text-amber-300" />
             </div>
             <div>
@@ -73,14 +73,14 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           <div className="relative z-10 flex items-center gap-3">
             <button
               type="button"
-              className="px-3.5 py-1.5 bg-[#D94B5A] hover:bg-[#D94B5A] text-amber-300 border border-[#F06D6C] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+              className="px-3.5 py-1.5 bg-[#103A20] hover:bg-[#1C5130] text-amber-300 border border-[#235E39] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
               title="Back to Sauda Desk (Esc)"
               onClick={onCancel}
             >
               <ArrowLeft className="h-4 w-4 text-amber-300" />
               <span>Back</span>
             </button>
-            <div className="bg-[#D94B5A] border border-[#F06D6C] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
+            <div className="bg-[#103A20] border border-[#235E39] px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-2 shadow-2xs">
               <span className="text-emerald-200/80 font-medium">Session:</span>
               <span className="font-bold text-amber-300 font-mono text-xs">BJCL/2026-2027/</span>
             </div>
@@ -126,7 +126,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
         />
 
         {/* 5. FOOTER ACTIONS */}
-        <div className="bg-white rounded-xl border border-[#FBCFCB] shadow-xs p-3 flex justify-between items-center">
+        <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs p-3 flex justify-between items-center">
           <div className="text-[11px] text-slate-500 font-medium">
             <span className="font-bold text-slate-700">Ctrl + S</span> to Save | <span className="font-bold text-slate-700">Esc</span> to Cancel
           </div>
@@ -143,7 +143,7 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               type="button"
               onClick={handleSave}
               disabled={loading}
-              className="px-5 py-2 bg-[#D94B5A] hover:bg-[#D94B5A] disabled:opacity-50 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+              className="px-5 py-2 bg-[#103A20] hover:bg-[#1C5130] disabled:opacity-50 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
             >
               {loading ? (
                 <>

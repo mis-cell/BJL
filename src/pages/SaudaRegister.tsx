@@ -979,11 +979,43 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
   useLiveAutoRefresh(() => {
     if (isActive) fetchSaudas();
-  }, [isActive], { tables: ['sauda_master', 'sauda_quality_details', 'sms_sauda', 'purchase_master', 'temporary_material_received', 'sauda_check_point', 'sauda_check_point_details'] });
+  }, [isActive], { tables: ['sauda_master', 'sms_sauda', 'purchase_master', 'temporary_material_received', 'sauda_check_point', 'sauda_check_point_details'] });
 
   useEffect(() => {
     initUserMap();
-  }, []);
+    if (isActive) {
+      fetchSaudas();
+    }
+
+    const handleDataUpdate = () => {
+      fetchSaudas();
+    };
+
+    window.addEventListener('app-data-updated', handleDataUpdate);
+    window.addEventListener('storage', handleDataUpdate);
+
+    let channel: any = null;
+    if (supabase) {
+      channel = supabase
+        .channel('sauda-register-realtime-sub')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda' }, handleDataUpdate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_check_point' }, handleDataUpdate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'final_po' }, handleDataUpdate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_master' }, handleDataUpdate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sauda_quality_details' }, handleDataUpdate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_master' }, handleDataUpdate)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sms_sauda' }, handleDataUpdate)
+        .subscribe();
+    }
+
+    return () => {
+      window.removeEventListener('app-data-updated', handleDataUpdate);
+      window.removeEventListener('storage', handleDataUpdate);
+      if (channel && supabase) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [isActive]);
 
   const handleDelete = async (id: string) => {
     const target = saudaList.find(s => s.sauda_id === id || (s as any).id === id);
@@ -1547,7 +1579,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
             {!isUser10 && (
               <button
                 onClick={onNew}
-                className="bg-[#F7AFA8] hover:bg-[#D94B5A] text-white px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 border border-[#FBCFCB]"
+                className="bg-[#F7AFA8] hover:bg-[#F7AFA8] text-white px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 border border-[#FBCFCB]"
               >
                 <Plus className="h-4 w-4 text-[#FDE7E6]" />
                 <span>New Sauda</span>
@@ -1563,7 +1595,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                   setPrintingBook(true);
                 }
               }}
-              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#D94B5A] border border-slate-300 hover:border-[#F7AFA8] px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#F7AFA8] border border-slate-300 hover:border-[#F7AFA8] px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <Printer className="h-4 w-4" />
               <span>Print Book</span>
@@ -1574,10 +1606,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 setAuditRecordId(undefined);
                 setAuditModalOpen(true);
               }}
-              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#D94B5A] border border-slate-300 hover:border-[#F7AFA8] px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="bg-white hover:bg-slate-50 text-slate-700 hover:text-[#F7AFA8] border border-slate-300 hover:border-[#F7AFA8] px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
               title="View Universal Audit Trail for Sauda Contracts"
             >
-              <History className="h-4 w-4 text-[#D94B5A]" />
+              <History className="h-4 w-4 text-[#F7AFA8]" />
               <span>Audit Trail</span>
             </button>
 
@@ -1589,7 +1621,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
                   statusTab === 'pending'
-                    ? "bg-[#D94B5A] text-white shadow-2xs"
+                    ? "bg-[#F7AFA8] text-white shadow-2xs"
                     : "text-slate-700 hover:bg-slate-200"
                 )}
                 title="Main Dashboard (Pending Saudas)"
@@ -1689,7 +1721,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                       className={cn(
                         "h-10 cursor-pointer transition-colors text-xs font-medium", 
                         isSelected 
-                          ? "bg-[#D94B5A] text-white" 
+                          ? "bg-[#F7AFA8] text-white" 
                           : (idx % 2 === 0 ? "bg-white hover:bg-amber-50/50" : "bg-slate-50/40 hover:bg-amber-50/50")
                       )}
                     >
@@ -2030,7 +2062,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                     <td colSpan={isUser10 ? 5 : (isAdminOrL4 ? 10 : 9)} className="py-14 text-center text-slate-500 bg-slate-50/50">
                       <div className="flex flex-col items-center justify-center space-y-2.5">
                         <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
-                          <ClipboardList className="h-8 w-8 text-[#D94B5A]" />
+                          <ClipboardList className="h-8 w-8 text-[#F7AFA8]" />
                         </div>
                         <p className="font-bold text-sm text-slate-700">
                           {statusTab === 'pending'
@@ -2046,7 +2078,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                           <button
                             type="button"
                             onClick={() => setStatusTab('all')}
-                            className="mt-1 px-4 py-2 bg-white border border-slate-300 hover:border-[#F7AFA8] hover:bg-emerald-50/40 rounded-xl text-xs font-bold text-[#D94B5A] transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
+                            className="mt-1 px-4 py-2 bg-white border border-slate-300 hover:border-[#F7AFA8] hover:bg-emerald-50/40 rounded-xl text-xs font-bold text-[#F7AFA8] transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
                           >
                             <span>View All Saudas History ({totalSaudas})</span>
                           </button>
@@ -2085,7 +2117,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
             <div className="bg-white px-4 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-right">
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Filtered Book Value</p>
-              <p className="text-xs font-black text-[#D94B5A] font-mono">
+              <p className="text-xs font-black text-[#F7AFA8] font-mono">
                 ₹{bookTotalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
               </p>
             </div>
@@ -2095,12 +2127,12 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
       {printingBook && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 no-print">
-          <div className="bg-[#FBCFCB] border-2 border-white border-r-gray-800 border-b-gray-800 p-1 w-96 shadow-lg">
+          <div className="bg-[#d4d0c8] border-2 border-white border-r-gray-800 border-b-gray-800 p-1 w-96 shadow-lg">
             <div className="bg-gradient-to-r from-blue-800 to-blue-600 px-2 py-1 flex items-center justify-between text-white font-bold text-sm">
               <span>Print Preview</span>
               <button onClick={() => setPrintingBook(false)} className="hover:bg-red-500 px-1 rounded-sm">✕</button>
             </div>
-            <div className="p-6 bg-[#FBCFCB] flex flex-col items-center">
+            <div className="p-6 bg-[#d4d0c8] flex flex-col items-center">
               <Printer className="w-12 h-12 text-gray-700 mb-4" />
               <p className="text-center font-bold text-sm mb-2">Print Sauda Register Book</p>
               <p className="text-center text-xs text-gray-600 mb-6">Are you sure you want to print the current register view? The view will be printed exactly as shown in the table.</p>
@@ -2111,13 +2143,13 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                     window.print();
                     setPrintingBook(false);
                   }} 
-                  className="px-6 py-1.5 bg-[#FBCFCB] border-2 border-white border-r-gray-800 border-b-gray-800 active:border-r-white active:border-b-white active:border-t-gray-800 active:border-l-gray-800 focus:outline-none focus:ring-1 focus:ring-black font-bold flex items-center gap-2"
+                  className="px-6 py-1.5 bg-[#d4d0c8] border-2 border-white border-r-gray-800 border-b-gray-800 active:border-r-white active:border-b-white active:border-t-gray-800 active:border-l-gray-800 focus:outline-none focus:ring-1 focus:ring-black font-bold flex items-center gap-2"
                 >
                   <Printer className="w-4 h-4" /> Print
                 </button>
                 <button 
                   onClick={() => setPrintingBook(false)} 
-                  className="px-6 py-1.5 bg-[#FBCFCB] border-2 border-white border-r-gray-800 border-b-gray-800 active:border-r-white active:border-b-white active:border-t-gray-800 active:border-l-gray-800 focus:outline-none focus:ring-1 focus:ring-black"
+                  className="px-6 py-1.5 bg-[#d4d0c8] border-2 border-white border-r-gray-800 border-b-gray-800 active:border-r-white active:border-b-white active:border-t-gray-800 active:border-l-gray-800 focus:outline-none focus:ring-1 focus:ring-black"
                 >
                   Cancel
                 </button>
@@ -2359,7 +2391,7 @@ function AccountsModal({ saudaList, poList, arrivalsList, onClose }: any) {
         {/* Table */}
         <div className="flex-1 overflow-auto bg-gray-50 p-3">
           <table className="w-full border-collapse text-[10px] bg-white border border-gray-400 shadow-sm">
-            <thead className="bg-[#FBCFCB] sticky top-0 z-10">
+            <thead className="bg-[#c0c0c0] sticky top-0 z-10">
               <tr className="border-b border-gray-400 shadow-[inset_0_-1px_0_rgba(0,0,0,0.1)] h-8">
                 <th className="text-left px-2 font-bold uppercase tracking-tight text-gray-600 border-r border-[#808080]/30">Date</th>
                 <th className="text-left px-2 font-bold uppercase tracking-tight text-gray-600 border-r border-[#808080]/30">Sauda No</th>

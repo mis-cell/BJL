@@ -186,7 +186,7 @@ export const PurchaseOrderSummaryFilters: React.FC<PurchaseOrderSummaryFiltersPr
             type="button"
             onClick={fetchPurchaseOrders}
             disabled={loading}
-            className="bg-[#FBCFCB] border border-white hover:bg-white px-3 py-1.5 text-[10px] font-bold uppercase flex items-center gap-1 shadow-[1px_1px_0_0_black] cursor-pointer"
+            className="bg-[#d4d0c8] border border-white hover:bg-white px-3 py-1.5 text-[10px] font-bold uppercase flex items-center gap-1 shadow-[1px_1px_0_0_black] cursor-pointer"
           >
             <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
           </button>
@@ -201,7 +201,7 @@ export const PurchaseOrderReportSidebar: React.FC<{
   setActivePoReportKey: (k: string) => void;
 }> = ({ activePoReportKey, setActivePoReportKey }) => {
   return (
-    <div className="col-span-12 lg:col-span-4 bg-[#FBCFCB] border-2 border-white p-2 flex flex-col shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] h-auto lg:max-h-[500px] overflow-y-auto">
+    <div className="col-span-12 lg:col-span-4 bg-[#c0c0c0] border-2 border-white p-2 flex flex-col shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] h-auto lg:max-h-[500px] overflow-y-auto">
       <div className="text-[9.5px] font-black text-slate-900 border-b border-gray-400 pb-1.5 mb-2 uppercase tracking-tight">
         Select Sourcing Report Format
       </div>
@@ -217,7 +217,7 @@ export const PurchaseOrderReportSidebar: React.FC<{
                 "w-full text-left p-2.5 text-[10px] font-bold flex flex-col justify-start rounded-sm transition-all border cursor-pointer",
                 isActive
                   ? "bg-indigo-950 text-white border-slate-950 shadow-inner"
-                  : "bg-[#FBCFCB] hover:bg-white text-slate-800 border-gray-300"
+                  : "bg-[#d4d0c8] hover:bg-white text-slate-800 border-gray-300"
               )}
             >
               <span className="uppercase text-[10px] font-black tracking-tight">

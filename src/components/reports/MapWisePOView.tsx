@@ -558,7 +558,7 @@ export const MapWisePOView: React.FC<MapWisePOViewProps> = ({
                 setSelectedArea(null);
               }
             }}
-            className="w-full mt-3 bg-[#FBCFCB] py-1.5 border border-white hover:bg-white text-[9.5px] font-bold uppercase shadow-[1px_1px_0_0_black]"
+            className="w-full mt-3 bg-[#d4d0c8] py-1.5 border border-white hover:bg-white text-[9.5px] font-bold uppercase shadow-[1px_1px_0_0_black]"
           >
             Select Default Prime Agency
           </button>

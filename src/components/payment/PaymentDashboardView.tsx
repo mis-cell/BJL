@@ -482,7 +482,7 @@ export function PaymentDashboardView({
           />
         </div>
         <div className="flex items-center gap-2 w-full md:w-auto">
-          <div className="flex items-center gap-1.5 bg-[#FDE7E6] border border-[#FBCFCB] rounded-lg px-2.5 py-1.5">
+          <div className="flex items-center gap-1.5 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-2.5 py-1.5">
             
             <span className="text-[10px] font-bold text-slate-500 uppercase">
               From:

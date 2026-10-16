@@ -113,7 +113,7 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
 }) => {
   return (
     <div className="border border-slate-400 bg-white rounded-md overflow-hidden shadow-xs">
-      <div className="flex items-center gap-2 p-1.5 bg-[#F7AFA8] border-b border-[#F06D6C] justify-between text-white">
+      <div className="flex items-center gap-2 p-1.5 bg-[#F7AFA8] border-b border-[#0f331d] justify-between text-white">
         <div className="text-[10px] font-bold text-amber-300 italic pl-1 flex items-center gap-1">
           <span>⚡ Grid Row Status:</span>
           {selectedItemSrl ? (
@@ -138,7 +138,7 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
           <button 
             type="button"
             onClick={handleAddItem}
-            className="bg-[#D94B5A] border border-[#F06D6C] text-white hover:bg-[#1c5932] px-2.5 py-1 text-[10px] flex items-center gap-1 font-bold rounded cursor-pointer shadow-xs"
+            className="bg-[#103A20] border border-[#235E39] text-white hover:bg-[#1c5932] px-2.5 py-1 text-[10px] flex items-center gap-1 font-bold rounded cursor-pointer shadow-xs"
           >
             <Plus className="w-3 h-3 text-amber-300" /> Spawn Row
           </button>
@@ -154,9 +154,9 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
 
       <div className="border border-[#F7AFA8] bg-white shadow-sm overflow-x-auto min-h-[160px] text-black">
         <table className="w-full min-w-[960px] border-collapse text-xs">
-          <thead className="bg-[#D94B5A] text-amber-300 border-b border-[#F06D6C] select-none">
+          <thead className="bg-[#F7AFA8] text-amber-300 border-b border-[#0f331d] select-none">
             {/* Top Row: Spanning Group Headers */}
-            <tr className="divide-x divide-[#F06D6C] uppercase font-black text-amber-300 text-[10px] tracking-wider">
+            <tr className="divide-x divide-[#235E39] uppercase font-black text-amber-300 text-[10px] tracking-wider">
               <th rowSpan={2} className="px-2 py-2 w-14 text-center align-middle bg-[#144226]">
                 Srl. No.
               </th>
@@ -180,7 +180,7 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
               </th>
             </tr>
             {/* Sub-Header Row: Code & Name for Grade, Agency, Marka */}
-            <tr className="bg-[#D94B5A] text-amber-200 divide-x divide-[#F06D6C] border-t border-[#F06D6C] text-[9.5px] font-black uppercase tracking-wider">
+            <tr className="bg-[#103A20] text-amber-200 divide-x divide-[#235E39] border-t border-[#235E39] text-[9.5px] font-black uppercase tracking-wider">
               <th className="w-16 text-center py-1 px-1">Code</th>
               <th className="w-36 text-left py-1 px-2.5">Name</th>
               <th className="w-24 text-center py-1 px-1">Code</th>

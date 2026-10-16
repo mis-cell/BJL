@@ -487,7 +487,7 @@ export const SaudaAdvancedReportsView: React.FC<SaudaAdvancedReportsViewProps> =
   };
 
   const chartColors = [
-    '#D94B5A',
+    '#047857',
     '#0f766e',
     '#15803d',
     '#059669',
@@ -724,8 +724,8 @@ export const SaudaAdvancedReportsView: React.FC<SaudaAdvancedReportsViewProps> =
                     >
                       <defs>
                         <linearGradient id="saudaPrGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#D94B5A" stopOpacity={0.75} />
-                          <stop offset="95%" stopColor="#D94B5A" stopOpacity={0.05} />
+                          <stop offset="5%" stopColor="#047857" stopOpacity={0.75} />
+                          <stop offset="95%" stopColor="#047857" stopOpacity={0.05} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#d1fae5" />
@@ -735,7 +735,7 @@ export const SaudaAdvancedReportsView: React.FC<SaudaAdvancedReportsViewProps> =
                       <Area
                         type="monotone"
                         dataKey="weight"
-                        stroke="#D94B5A"
+                        stroke="#047857"
                         fillOpacity={1}
                         fill="url(#saudaPrGrad)"
                         name="Dispatched Mass (MT)"
@@ -802,7 +802,7 @@ export const SaudaAdvancedReportsView: React.FC<SaudaAdvancedReportsViewProps> =
                       <Bar
                         dataKey="lorries"
                         name="Lorry Dispatches (Trips)"
-                        fill="#D94B5A"
+                        fill="#047857"
                         barSize={20}
                       />
                       <Line
@@ -847,7 +847,7 @@ export const SaudaAdvancedReportsView: React.FC<SaudaAdvancedReportsViewProps> =
                       <Bar
                         dataKey="weight"
                         name="Outward Volume (MT)"
-                        fill="#D94B5A"
+                        fill="#047857"
                         radius={[5, 5, 0, 0]}
                       >
                         {saudaReportOutput.chartData.map((_entry, index) => (

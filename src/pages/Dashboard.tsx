@@ -191,8 +191,8 @@ export default function Dashboard({
             className={cn(
               "h-9 px-4 border-2 flex items-center gap-2 transition-all active:translate-x-[1px] active:translate-y-[1px] rounded-lg cursor-pointer text-xs uppercase tracking-wider font-extrabold",
               currentTab === 'menu'
-                ? "bg-[#F7AFA8] border-[#F7AFA8] text-[#FDE7E6] shadow-sm"
-                : "bg-[#FDE7E6] border-[#FBCFCB] text-[#D94B5A] hover:bg-[#FBCFCB] hover:text-[#D94B5A]"
+                ? "bg-[#F7AFA8] border-[#F7AFA8] text-[#FAF7F0] shadow-sm"
+                : "bg-[#FAF7F0] border-[#D6CAA8] text-[#5A6E54] hover:bg-[#EAE2D2] hover:text-[#F7AFA8]"
             )}
           >
             <LayoutDashboard className="h-4 w-4 text-emerald-400" />
@@ -204,8 +204,8 @@ export default function Dashboard({
             className={cn(
               "h-9 px-4 border-2 flex items-center gap-2 transition-all active:translate-x-[1px] active:translate-y-[1px] rounded-lg cursor-pointer text-xs uppercase tracking-wider font-extrabold",
               currentTab === 'reports'
-                ? "bg-[#F7AFA8] border-[#F7AFA8] text-[#FDE7E6] shadow-sm"
-                : "bg-[#FDE7E6] border-[#FBCFCB] text-[#D94B5A] hover:bg-[#FBCFCB] hover:text-[#D94B5A]"
+                ? "bg-[#F7AFA8] border-[#F7AFA8] text-[#FAF7F0] shadow-sm"
+                : "bg-[#FAF7F0] border-[#D6CAA8] text-[#5A6E54] hover:bg-[#EAE2D2] hover:text-[#F7AFA8]"
             )}
           >
             <BarChart3 className="h-4 w-4 text-amber-400" />
@@ -215,10 +215,10 @@ export default function Dashboard({
           <button
             onClick={() => onNavigate('admindesk')}
             className={cn(
-              "h-9 px-4 border-2 flex items-center gap-2 transition-all active:translate-x-[1px] active:translate-y-[1px] rounded-lg cursor-pointer text-xs uppercase tracking-wider font-extrabold bg-[#FBCFCB] border-[#FBCFCB] text-[#D94B5A] hover:bg-[#FDE7E6]"
+              "h-9 px-4 border-2 flex items-center gap-2 transition-all active:translate-x-[1px] active:translate-y-[1px] rounded-lg cursor-pointer text-xs uppercase tracking-wider font-extrabold bg-[#EAE2D2] border-[#D6CAA8] text-[#F7AFA8] hover:bg-[#FAF7F0]"
             )}
           >
-            <Lock className="h-4 w-4 text-[#D94B5A]" />
+            <Lock className="h-4 w-4 text-[#F7AFA8]" />
             <span>Admin Desk</span>
           </button>
           
@@ -235,10 +235,10 @@ export default function Dashboard({
               setIsProfileOpen(true);
             }}
             className={cn(
-              "h-9 px-4 border-2 flex items-center gap-2 transition-all active:translate-x-[1px] active:translate-y-[1px] rounded-lg cursor-pointer text-xs uppercase tracking-wider font-extrabold bg-[#FDE7E6] border-[#FBCFCB] text-[#D94B5A] hover:bg-[#FBCFCB] ml-auto"
+              "h-9 px-4 border-2 flex items-center gap-2 transition-all active:translate-x-[1px] active:translate-y-[1px] rounded-lg cursor-pointer text-xs uppercase tracking-wider font-extrabold bg-[#FAF7F0] border-[#D6CAA8] text-[#F7AFA8] hover:bg-[#EAE2D2] ml-auto"
             )}
           >
-            <User className="h-4 w-4 text-[#D94B5A]" />
+            <User className="h-4 w-4 text-[#F7AFA8]" />
             <span>{getCurrentUserContext().username || "ADMIN"}</span>
           </button>
         </div>

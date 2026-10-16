@@ -94,56 +94,56 @@ export const calculateNetWeightVal = (
 const FactorySketchIllustration = () => (
   <svg className="w-32 h-20 opacity-80" viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg">
     {/* Background hills */}
-    <path d="M10 100 Q 50 70 100 95 Q 150 110 190 90 L 190 110 L 10 110 Z" fill="#FBCFCB" opacity="0.5" />
+    <path d="M10 100 Q 50 70 100 95 Q 150 110 190 90 L 190 110 L 10 110 Z" fill="#E6DDC8" opacity="0.5" />
     {/* Factory Chimney */}
-    <rect x="150" y="30" width="14" height="70" fill="#D94B5A" opacity="0.8" />
+    <rect x="150" y="30" width="14" height="70" fill="#476A35" opacity="0.8" />
     <polygon points="148,30 166,30 164,25 150,25" fill="#F7AFA8" />
     {/* Chimney Smoke */}
-    <path d="M157 20 Q 152 10 162 5 T 155 -5" stroke="#F48F8B" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.6" />
+    <path d="M157 20 Q 152 10 162 5 T 155 -5" stroke="#C6A15B" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.6" />
     {/* Factory Main Building */}
     <rect x="30" y="55" width="115" height="45" fill="#F7AFA8" opacity="0.85" rx="1" />
     {/* Roof sawteeth */}
-    <polygon points="30,55 50,40 50,55 70,40 70,55 90,40 90,55 110,40 110,55 130,40 130,55 145,55" fill="#E85A5A" />
+    <polygon points="30,55 50,40 50,55 70,40 70,55 90,40 90,55 110,40 110,55 130,40 130,55 145,55" fill="#476A35" />
     {/* Factory Windows */}
-    <rect x="40" y="65" width="12" height="15" fill="#FDE7E6" opacity="0.9" />
-    <rect x="60" y="65" width="12" height="15" fill="#FDE7E6" opacity="0.9" />
-    <rect x="80" y="65" width="12" height="15" fill="#FDE7E6" opacity="0.9" />
-    <rect x="100" y="65" width="12" height="15" fill="#FDE7E6" opacity="0.9" />
-    <rect x="120" y="65" width="15" height="25" fill="#F06D6C" />
+    <rect x="40" y="65" width="12" height="15" fill="#F9F5EC" opacity="0.9" />
+    <rect x="60" y="65" width="12" height="15" fill="#F9F5EC" opacity="0.9" />
+    <rect x="80" y="65" width="12" height="15" fill="#F9F5EC" opacity="0.9" />
+    <rect x="100" y="65" width="12" height="15" fill="#F9F5EC" opacity="0.9" />
+    <rect x="120" y="65" width="15" height="25" fill="#C6A15B" />
     {/* Ground line */}
     <line x1="10" y1="100" x2="190" y2="100" stroke="#F7AFA8" strokeWidth="2" strokeLinecap="round" />
     {/* Small Jute plants */}
-    <path d="M15 100 Q 12 90 8 85 M15 100 Q 18 88 22 84 M15 100 L 15 82" stroke="#D94B5A" strokeWidth="1.5" strokeLinecap="round" />
+    <path d="M15 100 Q 12 90 8 85 M15 100 Q 18 88 22 84 M15 100 L 15 82" stroke="#476A35" strokeWidth="1.5" strokeLinecap="round" />
   </svg>
 );
 
 const JuteBagStackIllustration = ({ className = "w-14 h-11 shrink-0" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
     {/* Bottom Sack 1 */}
-    <rect x="10" y="50" width="55" height="35" rx="6" fill="#F7AFA8" stroke="#D94B5A" strokeWidth="2" />
-    <path d="M10 58 Q 37 62 65 58" stroke="#E85A5A" strokeWidth="1.5" />
+    <rect x="10" y="50" width="55" height="35" rx="6" fill="#C6A15B" stroke="#8C6D33" strokeWidth="2" />
+    <path d="M10 58 Q 37 62 65 58" stroke="#A88342" strokeWidth="1.5" />
     {/* Bottom Sack 2 */}
-    <rect x="58" y="52" width="52" height="33" rx="6" fill="#FBCFCB" stroke="#D94B5A" strokeWidth="2" />
+    <rect x="58" y="52" width="52" height="33" rx="6" fill="#B8944D" stroke="#8C6D33" strokeWidth="2" />
     {/* Top Sack */}
-    <rect x="30" y="24" width="60" height="36" rx="6" fill="#FDE7E6" stroke="#D94B5A" strokeWidth="2" />
+    <rect x="30" y="24" width="60" height="36" rx="6" fill="#D9B76E" stroke="#8C6D33" strokeWidth="2" />
     {/* Sack Tie / Rope */}
-    <path d="M30 32 L 90 32" stroke="#E85A5A" strokeWidth="2.5" strokeDasharray="3 2" />
+    <path d="M30 32 L 90 32" stroke="#476A35" strokeWidth="2.5" strokeDasharray="3 2" />
     {/* BJ Stamp on Top Sack */}
-    <rect x="48" y="38" width="24" height="16" rx="2" fill="#FDE7E6" stroke="#F7AFA8" strokeWidth="1" />
-    <text x="60" y="47" fontSize="8" fontWeight="bold" fill="#D94B5A" textAnchor="middle" fontFamily="serif">Bj</text>
-    <text x="60" y="52" fontSize="4" fontWeight="bold" fill="#D94B5A" textAnchor="middle">BALLY JUTE</text>
+    <rect x="48" y="38" width="24" height="16" rx="2" fill="#F9F5EC" stroke="#F7AFA8" strokeWidth="1" />
+    <text x="60" y="47" fontSize="8" fontWeight="bold" fill="#F7AFA8" textAnchor="middle" fontFamily="serif">Bj</text>
+    <text x="60" y="52" fontSize="4" fontWeight="bold" fill="#476A35" textAnchor="middle">BALLY JUTE</text>
   </svg>
 );
 
 const JuteRopeLeavesIllustration = () => (
   <svg className="w-24 h-20" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
     {/* Coiled Rope */}
-    <path d="M20 60 Q 40 40 60 60 T 90 50" stroke="#F48F8B" strokeWidth="6" strokeLinecap="round" fill="none" />
-    <path d="M20 60 Q 40 40 60 60 T 90 50" stroke="#D94B5A" strokeWidth="1.5" strokeDasharray="2 3" strokeLinecap="round" fill="none" />
+    <path d="M20 60 Q 40 40 60 60 T 90 50" stroke="#C6A15B" strokeWidth="6" strokeLinecap="round" fill="none" />
+    <path d="M20 60 Q 40 40 60 60 T 90 50" stroke="#8C6D33" strokeWidth="1.5" strokeDasharray="2 3" strokeLinecap="round" fill="none" />
     {/* Botanical Leaves */}
-    <path d="M60 40 Q 75 20 85 25 Q 70 38 60 40 Z" fill="#D94B5A" />
+    <path d="M60 40 Q 75 20 85 25 Q 70 38 60 40 Z" fill="#476A35" />
     <path d="M60 40 Q 80 35 90 42 Q 72 50 60 40 Z" fill="#F7AFA8" />
-    <path d="M40 30 Q 30 10 20 15 Q 32 28 40 30 Z" fill="#E85A5A" />
+    <path d="M40 30 Q 30 10 20 15 Q 32 28 40 30 Z" fill="#2E7D32" />
   </svg>
 );
 
@@ -646,7 +646,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
 
   return (
     <LegacyLayout title="TEMPORARY M.R" subtitle="TEMPORARY ARRIVAL WORKSTATION" onClose={onClose} activeNavTab="amad">
-      <div className="bg-[#FDE7E6] text-slate-800 font-sans flex flex-col selection:bg-[#F7AFA8] selection:text-white p-2 md:p-3">
+      <div className="bg-[#F9F5EC] text-slate-800 font-sans flex flex-col selection:bg-[#F7AFA8] selection:text-white p-2 md:p-3">
 
         {/* MAIN CONTENT AREA */}
         <div className="flex-1 space-y-4 w-full">
@@ -654,10 +654,10 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           {/* 3. KPI CARDS GRID */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
           {/* KPI 1 */}
-          <div className="bg-white rounded-xl border border-[#FBCFCB] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Filtered Loads</span>
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#D94B5A] flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#F7AFA8] flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Truck className="w-4 h-4" />
               </div>
             </div>
@@ -668,7 +668,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           </div>
 
           {/* KPI 2 */}
-          <div className="bg-white rounded-xl border border-[#FBCFCB] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Total Packets</span>
               <div className="w-8 h-8 rounded-lg bg-amber-50 text-[#8C6D33] flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -680,10 +680,10 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           </div>
 
           {/* KPI 3 */}
-          <div className="bg-white rounded-xl border border-[#FBCFCB] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Total Weight</span>
-              <div className="w-8 h-8 rounded-lg bg-[#FDE7E6] text-[#D94B5A] flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-8 h-8 rounded-lg bg-[#F9F5EC] text-[#F7AFA8] flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Scale className="w-4 h-4" />
               </div>
             </div>
@@ -692,7 +692,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           </div>
 
           {/* KPI 4 */}
-          <div className="bg-white rounded-xl border border-[#FBCFCB] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Pending Inspection</span>
               <div className="w-8 h-8 rounded-lg bg-orange-50 text-amber-700 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -704,7 +704,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           </div>
 
           {/* KPI 5 */}
-          <div className="bg-white rounded-xl border border-[#FBCFCB] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Completed Inspection</span>
               <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -716,7 +716,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           </div>
 
           {/* KPI 6 */}
-          <div className="bg-white rounded-xl border border-[#FBCFCB] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
+          <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs hover:border-[#F7AFA8]/40 transition-all group">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Last Updated</span>
               <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -729,9 +729,9 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
         </div>
 
         {/* 5. SEARCH & FILTER TOOLBAR */}
-        <div className="bg-white rounded-xl border border-[#FBCFCB] p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="bg-white rounded-xl border border-[#E6DDC8] p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
           {/* Search Box */}
-          <div className="flex items-center gap-2 bg-[#FDE7E6] border border-[#FBCFCB] rounded-lg px-3 py-1.5 flex-1 min-w-[280px]">
+          <div className="flex items-center gap-2 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-3 py-1.5 flex-1 min-w-[280px]">
             <Search className="w-4 h-4 text-slate-400 shrink-0" />
             <input
  id="search_by_voucher_no_supp_841" name="search_by_voucher_no_supp" aria-label="Search by Voucher No, Supplier, Broker Name or Lorry plate..."              type="text"
@@ -744,7 +744,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
 
           {/* Date Pickers */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-[#FDE7E6] border border-[#FBCFCB] rounded-lg px-2.5 py-1 text-xs">
+            <div className="flex items-center gap-1.5 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-2.5 py-1 text-xs">
               <span className="text-[10px] font-bold text-slate-500 uppercase">From:</span>
               <input
  id="startdatefilter_854" name="startdatefilter" aria-label="startdatefilter"                type="date"
@@ -753,7 +753,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
                 className="bg-transparent outline-none text-xs font-mono text-slate-800"
               />
             </div>
-            <div className="flex items-center gap-1.5 bg-[#FDE7E6] border border-[#FBCFCB] rounded-lg px-2.5 py-1 text-xs">
+            <div className="flex items-center gap-1.5 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-2.5 py-1 text-xs">
               <span className="text-[10px] font-bold text-slate-500 uppercase">To:</span>
               <input
  id="enddatefilter_863" name="enddatefilter" aria-label="enddatefilter"                type="date"
@@ -768,14 +768,14 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportToExcel}
-              className="bg-[#F48F8B] hover:bg-[#F06D6C] text-white px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer border border-[#F06D6C]"
+              className="bg-[#F7AFA8] hover:bg-[#C23948] text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-white" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-[#C6A15B]" />
               Export to CSV
             </button>
             <button
               onClick={() => { setSearchTerm(''); setStartDateFilter(''); setEndDateFilter(''); }}
-              className="bg-[#FDE7E6] hover:bg-[#FBCFCB] text-[#D94B5A] border border-[#FBCFCB] px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+              className="bg-[#F9F5EC] hover:bg-[#EAE3D2] text-slate-700 border border-[#E6DDC8] px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
               Clear
@@ -783,7 +783,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
             <button
               onClick={fetchAmads}
               disabled={loading}
-              className="bg-[#F48F8B] hover:bg-[#F06D6C] text-white px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50 border border-[#F06D6C]"
+              className="bg-[#F7AFA8] hover:bg-[#C23948] text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
               <RefreshCcw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
               Refresh
@@ -791,8 +791,8 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           </div>
 
           {/* Metric counter */}
-          <div className="text-xs font-mono font-bold text-slate-700 bg-[#FDE7E6] border border-[#FBCFCB] px-3 py-1.5 rounded-lg">
-            TOTAL FILTERED METRIC TONS : <span className="text-[#D94B5A] font-extrabold">{totalWeightMt.toFixed(3)} MT</span>
+          <div className="text-xs font-mono font-bold text-slate-700 bg-[#F9F5EC] border border-[#E6DDC8] px-3 py-1.5 rounded-lg">
+            TOTAL FILTERED METRIC TONS : <span className="text-[#F7AFA8] font-extrabold">{totalWeightMt.toFixed(3)} MT</span>
           </div>
         </div>
 
@@ -800,9 +800,9 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
         <div className="flex items-center gap-2">
           <button
             onClick={onNew}
-            className="bg-[#D94B5A] hover:bg-[#E85A5A] text-white px-4 py-2 rounded-lg text-xs font-black flex items-center gap-2 shadow-md transition-all cursor-pointer border border-[#D94B5A] active:scale-95"
+            className="bg-[#F7AFA8] hover:bg-[#C23948] text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
           >
-            <Plus className="w-4 h-4 text-white" />
+            <Plus className="w-4 h-4 text-[#C6A15B]" />
             New Arrival Entry
           </button>
           <button
@@ -815,9 +815,9 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
                 alert("Please select a row from the table first");
               }
             }}
-            className="bg-white border border-[#FBCFCB] hover:bg-[#FDE7E6] text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+            className="bg-white border border-[#E6DDC8] hover:bg-[#F9F5EC] text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
           >
-            <Printer className="w-4 h-4 text-[#D94B5A]" />
+            <Printer className="w-4 h-4 text-[#F7AFA8]" />
             Print Selected Slip
           </button>
         </div>
@@ -834,18 +834,18 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
         )}
 
         {/* 7. LEDGER DATA TABLE */}
-        <div className="bg-white rounded-xl border border-[#FBCFCB] shadow-xs overflow-hidden relative">
+        <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs overflow-hidden relative">
           {loading && (
             <div className="absolute inset-0 bg-white/80 backdrop-blur-xs flex flex-col items-center justify-center z-20">
-              <RefreshCcw className="w-8 h-8 text-[#D94B5A] animate-spin mb-2" />
-              <p className="text-xs font-bold text-[#D94B5A]">Updating Ledger Data...</p>
+              <RefreshCcw className="w-8 h-8 text-[#F7AFA8] animate-spin mb-2" />
+              <p className="text-xs font-bold text-[#F7AFA8]">Updating Ledger Data...</p>
             </div>
           )}
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-[#D94B5A] text-white font-serif text-xs">
+                <tr className="bg-[#F7AFA8] text-white font-serif text-xs">
                   <th className="py-3 px-3 font-semibold text-center border-r border-[#F7AFA8]/30">Voucher Date</th>
                   <th className="py-3 px-3 font-semibold text-center border-r border-[#F7AFA8]/30">Temp Arrival #</th>
                   <th className="py-3 px-3 font-semibold text-center border-r border-[#F7AFA8]/30">PO #</th>
@@ -858,7 +858,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
                   <th className="py-3 px-3 font-semibold text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#FBCFCB]/60 font-mono text-xs">
+              <tbody className="divide-y divide-[#E6DDC8]/60 font-mono text-xs">
                 {filteredAmads.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((amad, idx) => {
                   const isSelected = selectedAmadId === amad.amad_id;
                   const formattedDate = amad.date ? new Date(amad.date).toLocaleDateString('en-GB') : '--';
@@ -873,8 +873,8 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
                       onClick={() => setSelectedAmadId(amad.amad_id || null)}
                       onDoubleClick={() => { if(!isVoid) handleEditAmad(amad); }}
                       className={cn(
-                        "hover:bg-[#FDE7E6] transition-colors cursor-pointer h-10",
-                        isSelected ? "bg-[#F7AFA8]/10 font-bold" : (idx % 2 === 0 ? "bg-white" : "bg-[#FDE7E6]/40")
+                        "hover:bg-[#F9F5EC] transition-colors cursor-pointer h-10",
+                        isSelected ? "bg-[#F7AFA8]/10 font-bold" : (idx % 2 === 0 ? "bg-white" : "bg-[#F9F5EC]/40")
                       )}
                     >
                       <td className="py-2 px-3 text-center text-slate-600">{formattedDate}</td>
@@ -958,7 +958,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
         </div>
 
         {/* 8. BOTTOM SUMMARY CARDS - DEEP GREEN ULTRA COMPACT THEME (HALF SIZE) */}
-        <div className="max-w-2xl mx-auto w-full bg-gradient-to-r from-[#F7AFA8] to-[#D94B5A] rounded-lg border border-[#F06D6C] py-1.5 px-3 text-white shadow-xs flex flex-col sm:flex-row items-center justify-between gap-2 relative overflow-hidden">
+        <div className="max-w-2xl mx-auto w-full bg-gradient-to-r from-[#F7AFA8] to-[#103A20] rounded-lg border border-[#0d301b] py-1.5 px-3 text-white shadow-xs flex flex-col sm:flex-row items-center justify-between gap-2 relative overflow-hidden">
           {/* Bottom Left Jute Bags Illustration */}
           <div className="flex items-center gap-2">
             <JuteBagStackIllustration className="w-8 h-7 shrink-0" />
@@ -972,15 +972,15 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
 
           {/* Center Cumulative Cards */}
           <div className="flex items-center gap-1.5 text-center">
-            <div className="bg-[#D94B5A] border border-[#F06D6C] px-2 py-0.5 rounded">
+            <div className="bg-[#103A20] border border-[#235E39] px-2 py-0.5 rounded">
               <p className="text-[7.5px] font-bold text-emerald-200 uppercase leading-none">Loads</p>
               <p className="text-[11px] font-bold font-mono text-amber-300 leading-none">{filteredAmads.length} <span className="text-[8px] text-emerald-200 font-sans">Lorries</span></p>
             </div>
-            <div className="bg-[#D94B5A] border border-[#F06D6C] px-2 py-0.5 rounded">
+            <div className="bg-[#103A20] border border-[#235E39] px-2 py-0.5 rounded">
               <p className="text-[7.5px] font-bold text-emerald-200 uppercase leading-none">Packets</p>
               <p className="text-[11px] font-bold font-mono text-amber-300 leading-none">{totalBales} <span className="text-[8px] text-emerald-200 font-sans">Bales</span></p>
             </div>
-            <div className="bg-[#D94B5A] border border-[#F06D6C] px-2 py-0.5 rounded">
+            <div className="bg-[#103A20] border border-[#235E39] px-2 py-0.5 rounded">
               <p className="text-[7.5px] font-bold text-emerald-200 uppercase leading-none">Net Weight</p>
               <p className="text-[11px] font-bold font-mono text-amber-300 leading-none">{totalWeightMt.toFixed(3)} <span className="text-[8px] text-emerald-200 font-sans">MT</span></p>
             </div>
@@ -988,7 +988,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
 
           {/* Bottom Right Operational Status Badge */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <div className="bg-[#D94B5A] text-white p-1 px-2 rounded flex items-center gap-1 border border-[#F06D6C] shadow-xs">
+            <div className="bg-[#103A20] text-white p-1 px-2 rounded flex items-center gap-1 border border-[#235E39] shadow-xs">
               <ShieldCheck className="w-3 h-3 text-amber-300" />
               <div>
                 <p className="text-[7.5px] font-bold tracking-wider text-amber-300 uppercase leading-none">STATUS</p>
@@ -1010,15 +1010,15 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
           <div className="bg-white p-6 rounded-lg text-slate-800 text-xs font-mono max-w-4xl mx-auto space-y-4 printable-slip">
             {/* Header */}
             <div className="text-center border-b-2 border-slate-900 pb-3">
-              <h2 className="text-xl font-bold font-serif text-[#D94B5A]">BALLY JUTE COMPANY LIMITED</h2>
+              <h2 className="text-xl font-bold font-serif text-[#F7AFA8]">BALLY JUTE COMPANY LIMITED</h2>
               <p className="text-xs font-sans font-semibold text-slate-600">P.O. BALLY, DIST. HOWRAH (WEST BENGAL)</p>
-              <h3 className="text-sm font-bold text-[#D94B5A] mt-2 underline tracking-wider uppercase font-serif">
+              <h3 className="text-sm font-bold text-[#F7AFA8] mt-2 underline tracking-wider uppercase font-serif">
                 MARKS & QUALITY RECEIVED SLIP (TEMPORARY M.R)
               </h3>
             </div>
 
             {/* Meta Details Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#FDE7E6] p-3 rounded border border-[#FBCFCB]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#F9F5EC] p-3 rounded border border-[#E6DDC8]">
               <div>
                 <span className="text-[10px] text-slate-500 uppercase font-bold block">Arrival Voucher #</span>
                 <span className="font-bold text-slate-900">#{printData.amad_no}</span>
@@ -1062,7 +1062,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
  id="checkbox_1200" name="checkbox" aria-label="checkbox"                    type="checkbox"
                     checked={(printColumns as any)[col]}
                     onChange={(e) => setPrintColumns(prev => ({ ...prev, [col]: e.target.checked }))}
-                    className="rounded text-[#D94B5A]"
+                    className="rounded text-[#F7AFA8]"
                   />
                   <span className="capitalize">{col.replace(/_/g, ' ')}</span>
                 </label>
@@ -1073,7 +1073,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
             <div className="overflow-x-auto border border-slate-900 rounded">
               <table className="w-full text-left text-[11px] border-collapse">
                 <thead>
-                  <tr className="bg-[#D94B5A] text-white font-serif">
+                  <tr className="bg-[#F7AFA8] text-white font-serif">
                     {printColumns.crop_year && <th className="p-1.5 border-r border-slate-700 text-center">Crop Year</th>}
                     {printColumns.marka && <th className="p-1.5 border-r border-slate-700">Marka</th>}
                     {printColumns.quality && <th className="p-1.5 border-r border-slate-700">Quality / Grade</th>}

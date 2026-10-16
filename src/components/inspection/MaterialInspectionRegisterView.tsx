@@ -316,7 +316,7 @@ export const MaterialInspectionRegisterView: React.FC<MaterialInspectionRegister
             onClick={() => setCurrentTab("inspections")}
             className={`px-3 py-1 text-xs font-black uppercase tracking-tight flex items-center gap-1.5 border transition-all cursor-pointer rounded-t ${
               currentTab === "inspections"
-                ? "bg-[#D94B5A] text-white border-[#F7AFA8] shadow-sm"
+                ? "bg-[#F7AFA8] text-white border-[#F7AFA8] shadow-sm"
                 : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
             }`}
           >
@@ -332,7 +332,7 @@ export const MaterialInspectionRegisterView: React.FC<MaterialInspectionRegister
             onClick={() => setCurrentTab("pending_mr")}
             className={`px-3 py-1 text-xs font-black uppercase tracking-tight flex items-center gap-1.5 border transition-all cursor-pointer rounded-t ${
               currentTab === "pending_mr"
-                ? "bg-[#D94B5A] text-white border-[#F7AFA8] shadow-sm"
+                ? "bg-[#F7AFA8] text-white border-[#F7AFA8] shadow-sm"
                 : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
             }`}
           >
@@ -426,7 +426,7 @@ export const MaterialInspectionRegisterView: React.FC<MaterialInspectionRegister
       {/* Main Records Table */}
       <div className="overflow-x-auto border border-slate-300 shadow-sm rounded-lg bg-white">
         <table className="w-full border-collapse text-[11px]">
-          <thead className="bg-[#D94B5A] text-white font-extrabold uppercase">
+          <thead className="bg-[#F7AFA8] text-white font-extrabold uppercase">
             {currentTab === "inspections" ? (
               <tr className="border-b border-gray-400 text-white h-8 font-black uppercase text-center">
                 {visibleColumns.select && (
@@ -837,7 +837,7 @@ export const MaterialInspectionRegisterView: React.FC<MaterialInspectionRegister
                             </div>
 
                             {/* Itemized Grade Allotment List */}
-                            <div className="mt-4 bg-[#f8f9fa] border border-[#FBCFCB] p-3 rounded-sm">
+                            <div className="mt-4 bg-[#f8f9fa] border border-[#d4d0c8] p-3 rounded-sm">
                               <h6 className="font-black text-slate-750 uppercase text-[9px] tracking-wider mb-2 flex items-center gap-1">
                                 🏷️ Itemized Component Allocations & Color Grades
                               </h6>

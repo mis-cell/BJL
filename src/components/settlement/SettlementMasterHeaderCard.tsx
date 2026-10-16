@@ -40,7 +40,7 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
   return (
     <div className="space-y-3 font-sans">
       {/* Control Center Toolbar */}
-      <div className="bg-[#FBCFCB] p-3 border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] space-y-3">
+      <div className="bg-[#d4d0c8] p-3 border-2 border-white shadow-[2px_2px_0_0_rgba(0,0,0,0.15)] space-y-3">
         <div className="flex items-center gap-4 flex-wrap text-xs">
           {/* PO Number Searchable Dropdown */}
           <div className="flex items-center gap-2 bg-white border border-gray-400 p-1 rounded-sm">
@@ -91,7 +91,7 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
                 handleProceedWithMrNo(masterData.mr_no, true);
               }
             }}
-            className="bg-[#FBCFCB] hover:bg-white text-[10px] uppercase font-black px-4 py-2 border border-gray-400 cursor-pointer shadow-xs active:translate-y-px rounded"
+            className="bg-[#d4d0c8] hover:bg-white text-[10px] uppercase font-black px-4 py-2 border border-gray-400 cursor-pointer shadow-xs active:translate-y-px rounded"
           >
             Force Sync Inspection
           </button>
@@ -340,7 +340,7 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               <label htmlFor="actual_apmc_fees_header_card" className="text-slate-500 text-[8px] uppercase font-bold">
                 Actual APMC Fees (1%)
               </label>
-              <span className="text-[7.5px] font-black bg-[#D94B5A] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
+              <span className="text-[7.5px] font-black bg-[#F7AFA8] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
               <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-72 bg-slate-900 text-white p-2.5 text-[8.5px] rounded border border-slate-700 shadow-xl leading-normal font-normal normal-case">
                 <p className="text-yellow-300 font-bold">Actual APMC Fees (1%) Formula</p>
                 <p className="mt-0.5 text-slate-200 font-mono text-[8px]">1% × (Material Value − Delivery Claim − Deduction Amount − Ded Claim Total − Excess/Short)</p>

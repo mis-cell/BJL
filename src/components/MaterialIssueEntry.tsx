@@ -47,7 +47,7 @@ function EntryContainer({
   if (embedded) {
     return (
       <div className="border border-slate-300 rounded overflow-hidden flex flex-col bg-[#eae7e1] flex-1">
-        <div className="bg-[#D94B5A] text-white font-mono px-3 py-1.5 flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+        <div className="bg-[#000080] text-white font-mono px-3 py-1.5 flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
           <span>📋 {getRouteTitle()}</span>
           <button 
             type="button" 
@@ -235,7 +235,7 @@ export function MaterialIssueEntry({
                 issueRoute === 'godown'
                   ? "bg-gradient-to-r from-[#1c4587] via-[#3b82c4] to-[#1c4587]"
                   : issueRoute === 'mill'
-                  ? "bg-gradient-to-r from-[#D94B5A] via-[#159c74] to-[#D94B5A]"
+                  ? "bg-gradient-to-r from-[#0b6e54] via-[#159c74] to-[#0b6e54]"
                   : "bg-gradient-to-r from-[#1c4587] via-[#3b82c4] to-[#1c4587]"
               )}
             />
@@ -249,7 +249,7 @@ export function MaterialIssueEntry({
                     issueRoute === 'godown'
                       ? "bg-[#eaf0f8] text-[#1c4587]"
                       : issueRoute === 'mill'
-                      ? "bg-emerald-50 text-[#D94B5A]"
+                      ? "bg-emerald-50 text-[#0b6e54]"
                       : "bg-[#eaf0f8] text-[#1c4587]"
                   )}
                 >
@@ -299,7 +299,7 @@ export function MaterialIssueEntry({
                     issueRoute === 'godown'
                       ? "bg-[#1c4587] hover:bg-[#143160]"
                       : issueRoute === 'mill'
-                      ? "bg-[#D94B5A] hover:bg-[#08523f]"
+                      ? "bg-[#0b6e54] hover:bg-[#08523f]"
                       : "bg-[#1c4587] hover:bg-[#143160]"
                   )}
                 >

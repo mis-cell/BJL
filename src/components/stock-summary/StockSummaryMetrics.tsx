@@ -36,7 +36,7 @@ export function StockMetric({
       textMain: 'text-blue-900',
       textSec: 'text-indigo-800/80',
       badgeBg: 'bg-blue-100 text-blue-800',
-      shadow: 'shadow-[3px_3px_0_0_#D94B5A]'
+      shadow: 'shadow-[3px_3px_0_0_#000080]'
     } :
     type === 'sold' ? {
       headerBg: 'bg-gradient-to-r from-emerald-800 to-teal-800 border-b border-emerald-900',
@@ -66,7 +66,7 @@ export function StockMetric({
     };
 
   return (
-    <div className={cn("border-2 p-0.5 rounded transition-transform hover:-translate-y-0.5 duration-200 bg-[#FBCFCB]", theme.cardBg, theme.shadow)}>
+    <div className={cn("border-2 p-0.5 rounded transition-transform hover:-translate-y-0.5 duration-200 bg-[#d4d0c8]", theme.cardBg, theme.shadow)}>
       {/* Card header with icon and name */}
       <div className={cn("h-7 flex items-center px-2 gap-2 text-white font-mono rounded-t-sm", theme.headerBg)}>
         <div className={cn("p-0.5 rounded flex items-center justify-center", theme.iconBg)}>
@@ -174,7 +174,7 @@ export function StockItemRow({
         title="Click to expand/collapse grade breakdown (Grade → Area → Godown)"
       >
         <td className="px-6 text-indigo-950 uppercase tracking-tight font-black flex items-center gap-2">
-          <span className="w-5 h-5 rounded bg-[#D94B5A] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+          <span className="w-5 h-5 rounded bg-[#F7AFA8] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
             {isExpanded ? '-' : '+'}
           </span>
           <span className="truncate">🏷️ Grade: {name}</span>

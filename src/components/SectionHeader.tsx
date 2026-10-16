@@ -11,10 +11,10 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ icon: Icon, title,
   return (
     <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#EAE6DD]">
       <div className="flex items-center gap-2.5">
-        <div className="p-1.5 rounded-lg bg-[#F7AFA8]/10 text-[#D94B5A]">
+        <div className="p-1.5 rounded-lg bg-[#F7AFA8]/10 text-[#F7AFA8]">
           <Icon className="h-5 w-5" />
         </div>
-        <h2 className="font-serif font-bold text-lg text-[#D94B5A] tracking-tight">{title}</h2>
+        <h2 className="font-serif font-bold text-lg text-[#F7AFA8] tracking-tight">{title}</h2>
       </div>
       {rightAction && <div>{rightAction}</div>}
     </div>

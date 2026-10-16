@@ -178,7 +178,7 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
     >
       <div 
         id="print-modal-inner" 
-        className="w-full max-w-[1250px] bg-[#FBCFCB] border-2 border-white shadow-[3px_3px_10px_rgba(0,0,0,0.6)] flex flex-col my-4 sm:my-6 print:my-0 print:border-none print:shadow-none"
+        className="w-full max-w-[1250px] bg-[#d4d0c8] border-2 border-white shadow-[3px_3px_10px_rgba(0,0,0,0.6)] flex flex-col my-4 sm:my-6 print:my-0 print:border-none print:shadow-none"
       >
         {/* Top Retro Menubar */}
         <div className="bg-[#2a3088] text-white px-3 py-1.5 flex justify-between items-center text-xs font-black  border-b border-white no-print">
@@ -365,7 +365,7 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
         </div>
 
         {/* Bottom Status feedback */}
-        <div className="bg-[#FBCFCB] py-1 px-3 text-[10px] text-gray-600 font-bold uppercase  border-t border-gray-400 flex justify-between no-print">
+        <div className="bg-[#d4d0c8] py-1 px-3 text-[10px] text-gray-600 font-bold uppercase  border-t border-gray-400 flex justify-between no-print">
           <span>Standard Form No: JMCL/QR/2026</span>
           <span>Layout Optimized for Dot-Matrix & Standard Laser Printing</span>
         </div>

@@ -1876,7 +1876,7 @@ export default function FinalArrivalReconciliation({ onBack, onSelectInspectionF
       )}
 
       {/* Main comparative workspace table */}
-      <div className="bg-[#FBCFCB] p-1 border border-white shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.2)] overflow-x-auto rounded">
+      <div className="bg-[#d4d0c8] p-1 border border-white shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.2)] overflow-x-auto rounded">
         <table className="w-full text-left text-[11px] border-collapse bg-white">
           <thead>
             <tr className="bg-slate-800 text-white font-mono text-[10px] uppercase ">

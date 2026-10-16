@@ -88,5 +88,5 @@ export const PO_REPORTS = [
 
 export const BAR_COLORS = [
   '#0f766e', '#1d4ed8', '#7e22ce', '#be185d', '#b45309',
-  '#15803d', '#334155', '#c2410c', '#4338ca', '#D94B5A'
+  '#15803d', '#334155', '#c2410c', '#4338ca', '#047857'
 ];

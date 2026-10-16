@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { dbModule } from '../../services/dbModule';
 import { supabase } from '../../lib/supabase';
 import { poService } from '../../services/poService';
-import { notifyDataChanged } from '../../hooks/useLiveAutoRefresh';
 import { calculateWeightTolerance } from '../../lib/weightTolerance';
 import { getCurrentUserContext, isUserAdmin, isL5OrAdmin, canAccess, canEditOrDelete } from '../../lib/permissions';
 import { formatPoNumber, compareQualities, resolveSattaRate } from '../../utils/purchaseOrderCalculations';
@@ -1161,17 +1160,33 @@ export function usePurchaseOrderFormLogic({
         s_date: formData.s_date || null
       };
 
-      // 1. Single efficient upsert into master table
-      await dbModule.upsert(MASTER_TABLE, payload, 'po_no');
+      const alreadyExists = (poList || []).some((p: any) => String(p.po_no).trim().toUpperCase() === finalPoNo.toUpperCase());
 
-      // 2. Batch persist details
+      if (supabase) {
+        try {
+          await supabase.from(MASTER_TABLE).upsert(payload, { onConflict: 'po_no' });
+        } catch (e) {
+          console.warn(`Supabase upsert into ${MASTER_TABLE} warning:`, e);
+        }
+      }
+
+      if (alreadyExists) {
+        try {
+          await dbModule.update(MASTER_TABLE, 'po_no', finalPoNo, payload);
+        } catch {
+          await dbModule.insert(MASTER_TABLE, payload).catch(() => {});
+        }
+      } else {
+        await dbModule.insert(MASTER_TABLE, payload).catch(() => {});
+      }
+
       await poService.savePoDetails(DETAIL_TABLE, finalPoNo, formData.items, {
         gradeList,
         agencyList,
         markaList
       });
 
-      // 3. If saved in Sauda Check Point (isTempPo), clean up the source Sauda in parallel
+      // If saved successfully in Sauda Check Point (isTempPo), delete the source Sauda from sauda_master and sauda_quality_details
       if (isTempPo && (formData.no || formData.contract_po_no || finalPoNo)) {
         const saudaNoRef = (formData.no || formData.contract_po_no || finalPoNo || '').trim().toUpperCase();
         const saudaNoRefDigits = getCleanSaudaDigits(saudaNoRef);
@@ -1190,33 +1205,38 @@ export function usePurchaseOrderFormLogic({
         const cleanDigits = saudaNoRefDigits || getCleanSaudaDigits(targetSaudaNo);
 
         try {
-          const deleteOps: Promise<any>[] = [];
           if (supabase) {
             if (targetSaudaId) {
-              deleteOps.push(Promise.resolve(supabase.from('sauda_quality_details').delete().eq('sauda_id', targetSaudaId)));
-              deleteOps.push(Promise.resolve(supabase.from('sauda_master').delete().eq('sauda_id', targetSaudaId)));
+              await supabase.from('sauda_quality_details').delete().eq('sauda_id', targetSaudaId);
+              await supabase.from('sauda_master').delete().eq('sauda_id', targetSaudaId);
             }
             if (targetSaudaNo) {
-              deleteOps.push(Promise.resolve(supabase.from('sauda_quality_details').delete().eq('sauda_no', targetSaudaNo)));
-              deleteOps.push(Promise.resolve(supabase.from('sauda_master').delete().eq('sauda_no', targetSaudaNo)));
+              await supabase.from('sauda_quality_details').delete().eq('sauda_no', targetSaudaNo);
+              await supabase.from('sauda_master').delete().eq('sauda_no', targetSaudaNo);
             }
             if (saudaNoRef && saudaNoRef !== targetSaudaNo) {
-              deleteOps.push(Promise.resolve(supabase.from('sauda_quality_details').delete().eq('sauda_no', saudaNoRef)));
-              deleteOps.push(Promise.resolve(supabase.from('sauda_master').delete().eq('sauda_no', saudaNoRef)));
+              await supabase.from('sauda_quality_details').delete().eq('sauda_no', saudaNoRef);
+              await supabase.from('sauda_master').delete().eq('sauda_no', saudaNoRef);
             }
-            // Only delete exact targetSaudaId, targetSaudaNo, or saudaNoRef. Never delete with broad wildcards!
+            if (cleanDigits) {
+              await supabase.from('sauda_quality_details').delete().ilike('sauda_no', `%${cleanDigits}%`);
+              await supabase.from('sauda_master').delete().ilike('sauda_no', `%${cleanDigits}%`);
+            }
           }
-          await Promise.allSettled(deleteOps);
+          if (targetSaudaId) {
+            await dbModule.delete('sauda_quality_details', 'sauda_id', targetSaudaId).catch(() => {});
+            await dbModule.delete('sauda_master', 'sauda_id', targetSaudaId).catch(() => {});
+          }
+          if (targetSaudaNo) {
+            await dbModule.delete('sauda_quality_details', 'sauda_no', targetSaudaNo).catch(() => {});
+            await dbModule.delete('sauda_master', 'sauda_no', targetSaudaNo).catch(() => {});
+          }
         } catch (delErr) {
           console.warn("Failed to delete source sauda from sauda_master:", delErr);
         }
       }
       
-      notifyDataChanged(MASTER_TABLE);
-      notifyDataChanged(DETAIL_TABLE);
-      if (isTempPo) {
-        notifyDataChanged('sauda_master');
-      }
+      window.dispatchEvent(new CustomEvent('app-data-updated'));
       alert(`Purchase Order ${finalPoNo} saved successfully!`);
       setViewMode('register');
       fetchPosAndMasters();

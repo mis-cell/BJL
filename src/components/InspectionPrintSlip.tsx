@@ -350,7 +350,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
           }
           body {
             background: white !important;
-            color: #D94B5A !important;
+            color: #d60000 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -373,7 +373,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
       `}</style>
 
       {/* CONTINUOUS STATIONERY FORM WRAPPER (LANDSCAPE 297mm x 210mm) */}
-      <div className="print-stationery-landscape w-[297mm] min-h-[210mm] max-w-[297mm] bg-[#ffffff] shadow-2xl border border-red-200 p-5 sm:p-6 flex select-text shrink-0 relative overflow-hidden print:shadow-none print:border-none print:bg-white box-sizing:border-box text-[#D94B5A]">
+      <div className="print-stationery-landscape w-[297mm] min-h-[210mm] max-w-[297mm] bg-[#ffffff] shadow-2xl border border-red-200 p-5 sm:p-6 flex select-text shrink-0 relative overflow-hidden print:shadow-none print:border-none print:bg-white box-sizing:border-box text-[#d60000]">
         
         {/* Left Sprocket Feed Holes */}
         <div className="w-[24px] bg-transparent flex flex-col justify-between py-2 shrink-0 pr-1.5 mr-2 select-none print:hidden">
@@ -390,17 +390,17 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
               {/* Mill Copy top right */}
               <div className="absolute right-0 top-0 text-right">
                 {copyType==='1'&&(
-                  <span className="font-black text-base sm:text-lg text-[#D94B5A] tracking-wider uppercase">
+                  <span className="font-black text-base sm:text-lg text-[#d60000] tracking-wider uppercase">
                     MILL COPY
                   </span>
                 )}
                 {copyType==='2'&&(
-                  <span className="font-black text-base sm:text-lg text-[#D94B5A] tracking-wider uppercase">
+                  <span className="font-black text-base sm:text-lg text-[#d60000] tracking-wider uppercase">
                     Original Copy
                   </span>
                 )}
                 {copyType==='3'&&(
-                  <span className="font-black text-base sm:text-lg text-[#D94B5A] tracking-wider uppercase">
+                  <span className="font-black text-base sm:text-lg text-[#d60000] tracking-wider uppercase">
                     Not for Bill
                   </span>
                 )}
@@ -409,28 +409,28 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
 
               {/* Center Main Heading */}
               <div className="text-center pt-0 pb-0.5">
-                <h1 className="font-black text-2xl sm:text-3xl text-[#D94B5A] tracking-wide uppercase">
+                <h1 className="font-black text-2xl sm:text-3xl text-[#d60000] tracking-wide uppercase">
                   MARKS & QUALITY RECEIVED
                 </h1>
               </div>
 
               {/* Company Info Left */}
               <div className="mt-0.5">
-                <h2 className="font-black text-lg sm:text-xl text-[#D94B5A] tracking-tight uppercase leading-none">
+                <h2 className="font-black text-lg sm:text-xl text-[#d60000] tracking-tight uppercase leading-none">
                   BALLY JUTE COMPANY LIMITED
                 </h2>
-                <p className="text-[12px] font-bold text-[#D94B5A] mt-0.5">
+                <p className="text-[12px] font-bold text-[#d60000] mt-0.5">
                   5, Sree Charan Sarani, Bally, West Bengal.
                 </p>
               </div>
             </div>
 
             {/* Header Metadata Fields with Full Width Underlines */}
-            <div className="space-y-2 mt-2 mb-2.5 text-[11.5px] font-bold text-[#D94B5A]">
+            <div className="space-y-2 mt-2 mb-2.5 text-[11.5px] font-bold text-[#d60000]">
               {/* Line 1: From */}
               <div className="flex items-end">
                 <span className="shrink-0 font-black mr-2 text-[12px]">From :</span>
-                <span className="flex-1 border-b border-[#D94B5A] pb-0.5 px-2 font-black text-[12.5px] uppercase text-[#D94B5A] whitespace-normal">
+                <span className="flex-1 border-b border-[#d60000] pb-0.5 px-2 font-black text-[12.5px] uppercase text-[#d60000] whitespace-normal">
                   {safeStr(master.supplier_name || (master as any).supplier, '')}
                 </span>
               </div>
@@ -439,28 +439,28 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
               <div className="grid grid-cols-12 gap-x-4 items-end">
                 <div className="col-span-3 flex items-end">
                   <span className="shrink-0 font-black mr-1.5">M.R.No. :</span>
-                  <span className="flex-1 border-b border-[#D94B5A] pb-0.5 px-1.5 font-black uppercase font-mono text-[12px]">
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 font-black uppercase font-mono text-[12px]">
                     {mrNo}
                   </span>
                 </div>
 
                 <div className="col-span-3 flex items-end">
                   <span className="shrink-0 font-black mr-1.5">Date :</span>
-                  <span className="flex-1 border-b border-[#D94B5A] pb-0.5 px-1.5 font-bold font-mono text-[12px]">
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 font-bold font-mono text-[12px]">
                     {formatDate(mrDate)}
                   </span>
                 </div>
 
                 <div className="col-span-3 flex items-end">
                   <span className="shrink-0 font-black mr-1.5">Order No. :</span>
-                  <span className="flex-1 border-b border-[#D94B5A] pb-0.5 px-1.5 font-black uppercase font-mono text-[12px] whitespace-nowrap overflow-visible">
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 font-black uppercase font-mono text-[12px] whitespace-nowrap overflow-visible">
                     {orderNo}
                   </span>
                 </div>
 
                 <div className="col-span-3 flex items-end">
                   <span className="shrink-0 font-black mr-1.5">Date :</span>
-                  <span className="flex-1 border-b border-[#D94B5A] pb-0.5 px-1.5 font-bold font-mono text-[12px]">
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 font-bold font-mono text-[12px]">
                     {formatDate(orderDate)}
                   </span>
                 </div>
@@ -468,11 +468,11 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
             </div>
 
             {/* MARKS & QUALITY RECEIVED GRID TABLE */}
-            <div className="border-2 border-[#D94B5A] bg-white mt-2 overflow-hidden">
+            <div className="border-2 border-[#d60000] bg-white mt-2 overflow-hidden">
               <table className="w-full border-collapse text-[10.5px] text-center">
                 <thead>
                   {/* Top Header Row */}
-                  <tr className="bg-[#D94B5A] text-white font-extrabold uppercase text-[10px]">
+                  <tr className="bg-[#d60000] text-white font-extrabold uppercase text-[10px]">
                     <th rowSpan={2} className="border-r border-b border-white px-2 py-1 w-16">Crop</th>
                     <th rowSpan={2} className="border-r border-b border-white px-2 py-1 w-20">Mark</th>
                     <th rowSpan={2} className="border-r border-b border-white px-2 py-1 w-18">Quality</th>
@@ -487,7 +487,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                     <th rowSpan={2} className="border-b border-white px-2 py-1 w-16">Rate</th>
                   </tr>
                   {/* Sub-header Row */}
-                  <tr className="bg-[#D94B5A] text-white font-extrabold uppercase text-[9px]">
+                  <tr className="bg-[#d60000] text-white font-extrabold uppercase text-[9px]">
                     <th className="border-r border-b border-white px-1 py-0.5 w-10">%</th>
                     <th className="border-r border-b border-white px-1 py-0.5 w-10">Kg.</th>
                     <th className="border-r border-b border-white px-1 py-0.5 w-10">%</th>
@@ -501,28 +501,28 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-[#D94B5A] font-bold text-[#D94B5A]">
+                <tbody className="divide-y divide-[#d60000] font-bold text-[#d60000]">
                   {paddedRows.map((row, idx) => {
                     if (!row) {
                       return (
                         <tr key={idx} className="h-6.5">
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
-                          <td className="border-r border-[#D94B5A]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
+                          <td className="border-r border-[#d60000]"></td>
                           <td></td>
                         </tr>
                       );
@@ -534,65 +534,65 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                     return (
                       <tr key={idx} className="h-6.5 text-[10px]">
                         {/* Crop */}
-                        <td className="border-r border-[#D94B5A] px-1 font-mono">
+                        <td className="border-r border-[#d60000] px-1 font-mono">
                           {row.crop_year || '2026-27'}
                         </td>
                         {/* Mark */}
-                        <td className="border-r border-[#D94B5A] px-1 font-mono uppercase">
+                        <td className="border-r border-[#d60000] px-1 font-mono uppercase">
                           {row.marka || row.marks || master.area || 'NO MARK'}
                         </td>
                         {/* Quality */}
-                        <td className="border-r border-[#D94B5A] px-1 font-bold uppercase">
+                        <td className="border-r border-[#d60000] px-1 font-bold uppercase">
                           {row.stock_grade_name || row.arrival_grade || row.stock_grade_code || 'TD6'}
                         </td>
                         {/* Quantity */}
-                        <td className="border-r border-[#D94B5A] px-1 font-mono text-[10.5px]">
+                        <td className="border-r border-[#d60000] px-1 font-mono text-[10.5px]">
                           {row.quantity !== undefined && row.quantity !== '' ? row.quantity : ''}
                         </td>
                         {/* Claim */}
-                        <td className="border-r border-[#D94B5A] px-1 font-mono">
+                        <td className="border-r border-[#d60000] px-1 font-mono">
                           {row.claim || '-'}
                         </td>
                         {/* Gross Wt. */}
-                        <td className="border-r border-[#D94B5A] px-1 font-mono text-[10.5px]">
+                        <td className="border-r border-[#d60000] px-1 font-mono text-[10.5px]">
                           {grossWt > 0 ? (grossWt * 1000).toFixed(0) : ''}
                         </td>
                         {/* Moisture % */}
-                        <td className="border-r border-[#D94B5A] px-0.5 font-mono">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {moistNum > 0 ? `${moistNum}%` : (moistPctRaw ? `${moistPctRaw}${typeof moistPctRaw === 'number' ? '%' : ''}` : '')}
                         </td>
                         {/* Moisture Kg. */}
-                        <td className="border-r border-[#D94B5A] px-0.5 font-mono">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {moistureKg > 0 ? Math.round(moistureKg) : ''}
                         </td>
                         {/* Dust % */}
-                        <td className="border-r border-[#D94B5A] px-0.5 font-mono">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {dustNum > 0 ? `${dustNum}%` : (dustPctRaw ? `${dustPctRaw}${typeof dustPctRaw === 'number' ? '%' : ''}` : '')}
                         </td>
                         {/* Dust Kg. */}
-                        <td className="border-r border-[#D94B5A] px-0.5 font-mono">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {dustKg > 0 ? dustKg.toFixed(1) : ''}
                         </td>
                         {/* NCV % */}
-                        <td className="border-r border-[#D94B5A] px-0.5 font-mono">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {ncvNum > 0 ? `${ncvNum}%` : (ncvPctRaw ? `${ncvPctRaw}${typeof ncvPctRaw === 'number' ? '%' : ''}` : '')}
                         </td>
                         {/* NCV Kg. */}
-                        <td className="border-r border-[#D94B5A] px-0.5 font-mono">
+                        <td className="border-r border-[#d60000] px-0.5 font-mono">
                           {ncvKg > 0 ? ncvKg.toFixed(1) : ''}
                         </td>
                         {/* Net Wt. */}
-                        <td className="border-r border-[#D94B5A] px-1 font-mono text-[10.5px]">
+                        <td className="border-r border-[#d60000] px-1 font-mono text-[10.5px]">
                           {netWt > 0 ? (netWt * 1000).toFixed(0) : (grossWt > 0 ? (grossWt * 1000).toFixed(0) : '')}
                         </td>
                         {/* Settlement Grade - Blank in Mill Inspection Slip */}
-                        <td className="border-r border-[#D94B5A] px-0.5 font-mono"></td>
+                        <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
                         {/* Settlement Moisture - Blank in Mill Inspection Slip */}
-                        <td className="border-r border-[#D94B5A] px-0.5 font-mono"></td>
+                        <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
                         {/* Settlement Dust - Blank in Mill Inspection Slip */}
-                        <td className="border-r border-[#D94B5A] px-0.5 font-mono"></td>
+                        <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
                         {/* Settlement Prem./Less - Blank in Mill Inspection Slip */}
-                        <td className="border-r border-[#D94B5A] px-0.5 font-mono"></td>
+                        <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
                         {/* Rate */}
                         <td className="px-1 font-mono">
                           {row.rate || row.rate_qntl || ''}
@@ -602,36 +602,36 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                   })}
 
                   {/* TOTAL ROW */}
-                  <tr className="bg-[#ffe8e8] font-black text-[#D94B5A] h-6.5 border-t-2 border-[#D94B5A] text-[10px]">
-                    <td colSpan={3} className="border-r border-[#D94B5A] px-3 text-left uppercase tracking-wider text-[11px]">
+                  <tr className="bg-[#ffe8e8] font-black text-[#d60000] h-6.5 border-t-2 border-[#d60000] text-[10px]">
+                    <td colSpan={3} className="border-r border-[#d60000] px-3 text-left uppercase tracking-wider text-[11px]">
                       TOTAL
                     </td>
-                    <td className="border-r border-[#D94B5A] px-1 font-mono text-[11px]">
+                    <td className="border-r border-[#d60000] px-1 font-mono text-[11px]">
                       {totalQuantity > 0 ? totalQuantity : ''}
                     </td>
-                    <td className="border-r border-[#D94B5A] px-1 font-mono">-</td>
-                    <td className="border-r border-[#D94B5A] px-1 font-mono text-[11px]">
+                    <td className="border-r border-[#d60000] px-1 font-mono">-</td>
+                    <td className="border-r border-[#d60000] px-1 font-mono text-[11px]">
                       {totalGrossWt > 0 ? (totalGrossWt * 1000).toFixed(0) : ''}
                     </td>
-                    <td className="border-r border-[#D94B5A] px-0.5 font-mono">-</td>
-                    <td className="border-r border-[#D94B5A] px-0.5 font-mono">
+                    <td className="border-r border-[#d60000] px-0.5 font-mono">-</td>
+                    <td className="border-r border-[#d60000] px-0.5 font-mono">
                       {totalMoistureKg > 0 ? Math.round(totalMoistureKg) : ''}
                     </td>
-                    <td className="border-r border-[#D94B5A] px-0.5 font-mono">-</td>
-                    <td className="border-r border-[#D94B5A] px-0.5 font-mono">
+                    <td className="border-r border-[#d60000] px-0.5 font-mono">-</td>
+                    <td className="border-r border-[#d60000] px-0.5 font-mono">
                       {totalDustKg > 0 ? totalDustKg.toFixed(1) : ''}
                     </td>
-                    <td className="border-r border-[#D94B5A] px-0.5 font-mono">-</td>
-                    <td className="border-r border-[#D94B5A] px-0.5 font-mono">
+                    <td className="border-r border-[#d60000] px-0.5 font-mono">-</td>
+                    <td className="border-r border-[#d60000] px-0.5 font-mono">
                       {totalNcvKg > 0 ? totalNcvKg.toFixed(1) : ''}
                     </td>
-                    <td className="border-r border-[#D94B5A] px-1 font-mono text-[11px]">
+                    <td className="border-r border-[#d60000] px-1 font-mono text-[11px]">
                       {totalNetWt > 0 ? (totalNetWt * 1000).toFixed(0) : (totalGrossWt > 0 ? (totalGrossWt * 1000).toFixed(0) : '')}
                     </td>
-                    <td className="border-r border-[#D94B5A] px-0.5 font-mono"></td>
-                    <td className="border-r border-[#D94B5A] px-0.5 font-mono"></td>
-                    <td className="border-r border-[#D94B5A] px-0.5 font-mono"></td>
-                    <td className="border-r border-[#D94B5A] px-0.5 font-mono"></td>
+                    <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
+                    <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
+                    <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
+                    <td className="border-r border-[#d60000] px-0.5 font-mono"></td>
                     <td className="px-1 font-mono"></td>
                   </tr>
                 </tbody>
@@ -639,33 +639,33 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
             </div>
 
             {/* Remarks Row */}
-            <div className="mt-2 flex items-start text-[11.5px] font-bold text-[#D94B5A]">
+            <div className="mt-2 flex items-start text-[11.5px] font-bold text-[#d60000]">
               <span className="shrink-0 font-black mr-2 text-[12px]">Remarks:</span>
-              <p className="flex-1 font-semibold text-xs text-[#D94B5A] min-h-[16px] leading-snug">
+              <p className="flex-1 font-semibold text-xs text-[#d60000] min-h-[16px] leading-snug">
                 {safeStr(master.remarks, '')}
               </p>
             </div>
 
             {/* Boxed Information Section (Challan No & Date, Vehicle, Stations) with full text width */}
-            <div className="mt-2 border-2 border-[#D94B5A] p-2 bg-white text-[11.5px] font-bold text-[#D94B5A]">
+            <div className="mt-2 border-2 border-[#d60000] p-2 bg-white text-[11.5px] font-bold text-[#d60000]">
               <div className="grid grid-cols-12 gap-3 items-center">
                 <div className="col-span-4 flex items-center">
                   <span className="shrink-0 font-black mr-1.5">Challan No & Date :</span>
-                  <span className="flex-1 border-b border-[#D94B5A] pb-0.5 px-1.5 font-mono whitespace-nowrap overflow-visible">
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 font-mono whitespace-nowrap overflow-visible">
                     {challanDisplay}
                   </span>
                 </div>
 
                 <div className="col-span-4 flex items-center">
                   <span className="shrink-0 font-black mr-1.5">Vehicle :</span>
-                  <span className="flex-1 border-b border-[#D94B5A] pb-0.5 px-1.5 font-mono uppercase whitespace-nowrap overflow-visible">
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 font-mono uppercase whitespace-nowrap overflow-visible">
                     {safeStr(master.lorry_number || master.vehicle_no, '')}
                   </span>
                 </div>
 
                 <div className="col-span-4 flex items-center">
                   <span className="shrink-0 font-black mr-1.5">Stations :</span>
-                  <span className="flex-1 border-b border-[#D94B5A] pb-0.5 px-1.5 uppercase whitespace-nowrap overflow-visible font-semibold">
+                  <span className="flex-1 border-b border-[#d60000] pb-0.5 px-1.5 uppercase whitespace-nowrap overflow-visible font-semibold">
                     {stationsDisplay}
                   </span>
                 </div>
@@ -673,9 +673,9 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
             </div>
 
             {/* Bottom Footer Section with Notes & Authorized Signatory */}
-            <div className="mt-2 border-t border-[#D94B5A] pt-1.5 grid grid-cols-12 gap-4 text-[#D94B5A]">
+            <div className="mt-2 border-t border-[#d60000] pt-1.5 grid grid-cols-12 gap-4 text-[#d60000]">
               {/* Left Side: Legal Notes */}
-              <div className="col-span-8 pr-3 border-r border-[#D94B5A] text-[9.5px] leading-tight space-y-1">
+              <div className="col-span-8 pr-3 border-r border-[#d60000] text-[9.5px] leading-tight space-y-1">
                 <p className="font-black text-[10px]">Note:</p>
                 <p className="font-semibold text-justify">
                   1. Initiate your offer of settlement at an early date failing which we shall refer the matter to B.C.C.I for arbitrator.
@@ -695,7 +695,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
                 </p>
                 
                 <div className="w-full pt-8">
-                  <div className="w-48 mx-auto border-t border-[#D94B5A] mb-1"></div>
+                  <div className="w-48 mx-auto border-t border-[#d60000] mb-1"></div>
                   <p className="font-black text-[10.5px] tracking-wider uppercase">
                     AUTHORISED SIGNATORY
                   </p>

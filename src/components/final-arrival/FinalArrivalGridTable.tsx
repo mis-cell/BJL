@@ -31,8 +31,8 @@ export function FinalArrivalGridTable({
   totalNettoWeight
 }: FinalArrivalGridTableProps) {
   return (
-    <div className="bg-white rounded-xl border border-[#FBCFCB] shadow-xs p-4 space-y-3 text-xs">
-      <div className="flex items-center justify-between pb-1 border-b border-[#FBCFCB]">
+    <div className="bg-white rounded-xl border border-[#E6DDC8] shadow-xs p-4 space-y-3 text-xs">
+      <div className="flex items-center justify-between pb-1 border-b border-[#E6DDC8]">
         <div className="flex items-center gap-2">
           <span className="font-bold text-slate-800 uppercase tracking-wide text-xs">Receipt Grade Details</span>
           <span className="text-[11px] text-slate-500 font-mono">({details.length} Items Listed)</span>
@@ -60,19 +60,19 @@ export function FinalArrivalGridTable({
 
       <div className="overflow-x-auto border border-slate-200 rounded-lg">
         <table className="w-full border-collapse text-xs font-sans min-w-[1200px]">
-          <thead className="bg-[#D94B5A] text-white font-serif">
+          <thead className="bg-[#F7AFA8] text-white font-serif">
             <tr className="h-8 text-[11px]">
-              <th className="px-2 border-r border-[#D94B5A] font-bold text-center w-12">Srl</th>
-              <th className="px-2 border-r border-[#D94B5A] font-bold text-center w-28">Receipt Grade</th>
-              <th className="px-2 border-r border-[#D94B5A] font-bold text-center w-24">Crop Year</th>
-              <th className="px-2 border-r border-[#D94B5A] font-bold text-left w-32">Challan Grade</th>
-              <th className="px-2 border-r border-[#D94B5A] font-bold text-left w-36">Agency Name</th>
-              <th className="px-2 border-r border-[#D94B5A] font-bold text-left w-32">Marka Name</th>
-              <th className="px-2 border-r border-[#D94B5A] font-bold text-right w-24">Challan Qty</th>
-              <th className="px-2 border-r border-[#D94B5A] font-bold text-right w-24">Receipt Qty</th>
-              <th className="px-2 border-r border-[#D94B5A] font-bold text-right w-28 text-amber-200">Netto (M.T)</th>
-              <th className="px-2 border-r border-[#D94B5A] font-bold text-center w-24">Unit</th>
-              <th className="px-2 border-r border-[#D94B5A] font-bold text-left w-32">Marks / Phota</th>
+              <th className="px-2 border-r border-[#1C5130] font-bold text-center w-12">Srl</th>
+              <th className="px-2 border-r border-[#1C5130] font-bold text-center w-28">Receipt Grade</th>
+              <th className="px-2 border-r border-[#1C5130] font-bold text-center w-24">Crop Year</th>
+              <th className="px-2 border-r border-[#1C5130] font-bold text-left w-32">Challan Grade</th>
+              <th className="px-2 border-r border-[#1C5130] font-bold text-left w-36">Agency Name</th>
+              <th className="px-2 border-r border-[#1C5130] font-bold text-left w-32">Marka Name</th>
+              <th className="px-2 border-r border-[#1C5130] font-bold text-right w-24">Challan Qty</th>
+              <th className="px-2 border-r border-[#1C5130] font-bold text-right w-24">Receipt Qty</th>
+              <th className="px-2 border-r border-[#1C5130] font-bold text-right w-28 text-amber-200">Netto (M.T)</th>
+              <th className="px-2 border-r border-[#1C5130] font-bold text-center w-24">Unit</th>
+              <th className="px-2 border-r border-[#1C5130] font-bold text-left w-32">Marks / Phota</th>
               <th className="px-2 font-bold text-left">Remarks</th>
             </tr>
           </thead>
@@ -99,7 +99,7 @@ export function FinalArrivalGridTable({
                         handleRowChange(idx, 'receipt_grade_name', match ? match.grade_name : val);
                       }}
                       placeholder="Select Grade"
-                      className="w-full h-6 px-1.5 bg-white border border-slate-200 rounded text-xs uppercase focus:border-[#D94B5A] outline-none"
+                      className="w-full h-6 px-1.5 bg-white border border-slate-200 rounded text-xs uppercase focus:border-[#103A20] outline-none"
                     />
                     <datalist id={`grade-list-${idx}`}>
                       {grades.map((g, gIdx) => (
@@ -114,7 +114,7 @@ export function FinalArrivalGridTable({
                       type="text"
                       value={row.crop_year || '2026-27'}
                       onChange={(e) => handleRowChange(idx, 'crop_year', e.target.value)}
-                      className="w-full h-6 px-1 text-center bg-white border border-slate-200 rounded text-xs focus:border-[#D94B5A] outline-none"
+                      className="w-full h-6 px-1 text-center bg-white border border-slate-200 rounded text-xs focus:border-[#103A20] outline-none"
                     />
                   </td>
 
@@ -124,7 +124,7 @@ export function FinalArrivalGridTable({
                       type="text"
                       value={row.challan_grade_name || ''}
                       onChange={(e) => handleRowChange(idx, 'challan_grade_name', e.target.value.toUpperCase())}
-                      className="w-full h-6 px-1.5 bg-white border border-slate-200 rounded text-xs uppercase focus:border-[#D94B5A] outline-none"
+                      className="w-full h-6 px-1.5 bg-white border border-slate-200 rounded text-xs uppercase focus:border-[#103A20] outline-none"
                     />
                   </td>
 
@@ -141,7 +141,7 @@ export function FinalArrivalGridTable({
                         handleRowChange(idx, 'agency_code', match ? match.agency_code : '');
                       }}
                       placeholder="Select Agency"
-                      className="w-full h-6 px-1.5 bg-white border border-slate-200 rounded text-xs uppercase focus:border-[#D94B5A] outline-none"
+                      className="w-full h-6 px-1.5 bg-white border border-slate-200 rounded text-xs uppercase focus:border-[#103A20] outline-none"
                     />
                     <datalist id={`agency-list-${idx}`}>
                       {agencies.map((a, aIdx) => (
@@ -163,7 +163,7 @@ export function FinalArrivalGridTable({
                         handleRowChange(idx, 'challan_marka_code', match ? match.marka_code : '');
                       }}
                       placeholder="Select Marka"
-                      className="w-full h-6 px-1.5 bg-white border border-slate-200 rounded text-xs uppercase focus:border-[#D94B5A] outline-none"
+                      className="w-full h-6 px-1.5 bg-white border border-slate-200 rounded text-xs uppercase focus:border-[#103A20] outline-none"
                     />
                     <datalist id={`marka-list-${idx}`}>
                       {markas.map((m, mIdx) => (
@@ -181,7 +181,7 @@ export function FinalArrivalGridTable({
                       onChange={(e) => handleRowChange(idx, 'quantity_chln', parseFloat(e.target.value) || 0)}
                       className={cn(
                         "w-full h-6 px-1.5 text-right border rounded text-xs font-bold outline-none",
-                        isLoose ? "bg-slate-100 text-slate-400 border-slate-200" : "bg-white text-slate-800 border-slate-200 focus:border-[#D94B5A]"
+                        isLoose ? "bg-slate-100 text-slate-400 border-slate-200" : "bg-white text-slate-800 border-slate-200 focus:border-[#103A20]"
                       )}
                     />
                   </td>
@@ -195,7 +195,7 @@ export function FinalArrivalGridTable({
                       onChange={(e) => handleRowChange(idx, 'quantity_rcpt', parseFloat(e.target.value) || 0)}
                       className={cn(
                         "w-full h-6 px-1.5 text-right border rounded text-xs font-bold outline-none",
-                        isLoose ? "bg-slate-100 text-slate-400 border-slate-200" : "bg-white text-blue-900 border-slate-200 focus:border-[#D94B5A]"
+                        isLoose ? "bg-slate-100 text-slate-400 border-slate-200" : "bg-white text-blue-900 border-slate-200 focus:border-[#103A20]"
                       )}
                     />
                   </td>
@@ -207,7 +207,7 @@ export function FinalArrivalGridTable({
                       step="0.001"
                       value={row.netto_pnto ?? ''}
                       onChange={(e) => handleRowChange(idx, 'netto_pnto', parseFloat(e.target.value) || 0)}
-                      className="w-full h-6 px-1.5 text-right bg-amber-50/40 text-rose-700 border border-amber-200 rounded text-xs font-black outline-none focus:border-[#D94B5A]"
+                      className="w-full h-6 px-1.5 text-right bg-amber-50/40 text-rose-700 border border-amber-200 rounded text-xs font-black outline-none focus:border-[#103A20]"
                     />
                   </td>
 
@@ -230,7 +230,7 @@ export function FinalArrivalGridTable({
                       type="text"
                       value={row.marks_phota || ''}
                       onChange={(e) => handleRowChange(idx, 'marks_phota', e.target.value)}
-                      className="w-full h-6 px-1.5 bg-white border border-slate-200 rounded text-xs outline-none focus:border-[#D94B5A]"
+                      className="w-full h-6 px-1.5 bg-white border border-slate-200 rounded text-xs outline-none focus:border-[#103A20]"
                     />
                   </td>
 
@@ -240,7 +240,7 @@ export function FinalArrivalGridTable({
                       type="text"
                       value={row.remarks || ''}
                       onChange={(e) => handleRowChange(idx, 'remarks', e.target.value)}
-                      className="w-full h-6 px-1.5 bg-white border border-slate-200 rounded text-xs outline-none focus:border-[#D94B5A]"
+                      className="w-full h-6 px-1.5 bg-white border border-slate-200 rounded text-xs outline-none focus:border-[#103A20]"
                     />
                   </td>
                 </tr>

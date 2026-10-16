@@ -25,7 +25,7 @@ export function FinalArrivalFilterToolbar({
   onPrintSelected
 }: FinalArrivalFilterToolbarProps) {
   return (
-    <div className="bg-white rounded-xl border border-[#FBCFCB] p-3.5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
+    <div className="bg-white rounded-xl border border-[#E6DDC8] p-3.5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
       {/* Search Input */}
       <div className="relative flex-1 w-full">
         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -37,7 +37,7 @@ export function FinalArrivalFilterToolbar({
           placeholder="Search by FA No, MR No, PO No, Supplier Name, Lorry..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-[#FDE7E6] border border-[#FBCFCB] rounded-lg pl-9 pr-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#F7AFA8]"
+          className="w-full bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg pl-9 pr-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#F7AFA8]"
         />
         {searchQuery && (
           <button
@@ -51,7 +51,7 @@ export function FinalArrivalFilterToolbar({
 
       {/* Date Filters */}
       <div className="flex items-center gap-2 w-full md:w-auto">
-        <div className="flex items-center gap-1.5 bg-[#FDE7E6] border border-[#FBCFCB] rounded-lg px-2.5 py-1.5">
+        <div className="flex items-center gap-1.5 bg-[#F9F5EC] border border-[#E6DDC8] rounded-lg px-2.5 py-1.5">
           <span className="text-[10px] font-bold text-slate-500 uppercase">From:</span>
           <input
             id="startdatefilter_register"
@@ -79,13 +79,13 @@ export function FinalArrivalFilterToolbar({
       <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
         <button
           onClick={onNewArrival}
-          className="bg-[#F7AFA8] hover:bg-[#D94B5A] text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer border border-[#FBCFCB]"
+          className="bg-[#F7AFA8] hover:bg-[#F7AFA8] text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer border border-[#FBCFCB]"
         >
           <Plus className="w-3.5 h-3.5" /> New Final M.R
         </button>
         <button
           onClick={onExportCsv}
-          className="bg-[#FDE7E6] hover:bg-[#FBCFCB] border border-[#F7AFA8] text-[#D94B5A] px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+          className="bg-[#FDE7E6] hover:bg-[#FBCFCB] border border-[#F7AFA8] text-[#F7AFA8] px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
         >
           <FileSpreadsheet className="w-3.5 h-3.5" /> Export CSV
         </button>

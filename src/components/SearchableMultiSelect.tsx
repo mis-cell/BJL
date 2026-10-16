@@ -244,8 +244,8 @@ export const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
             : isAutoPopulated || selectedValues.length > 0
             ? 'bg-emerald-50/50 border-emerald-300 hover:border-emerald-500'
             : isRequired
-            ? 'bg-[#FDE7E6] border-2 border-rose-300 hover:border-rose-400'
-            : 'bg-white border-[#FBCFCB] hover:border-[#F7AFA8]'
+            ? 'bg-[#FFECEC] border-2 border-rose-300 hover:border-rose-400'
+            : 'bg-white border-[#D5D0C5] hover:border-[#F7AFA8]'
         }`}
       >
         {/* Selected chips / placeholder */}
@@ -290,7 +290,7 @@ export const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
           )}
           <ChevronDown
             className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${
-              isOpen ? 'rotate-180 text-[#D94B5A]' : ''
+              isOpen ? 'rotate-180 text-[#F7AFA8]' : ''
             }`}
           />
         </div>

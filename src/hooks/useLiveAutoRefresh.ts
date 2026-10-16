@@ -136,21 +136,14 @@ export function useLiveAutoRefresh(
       const changedTable = customEvent.detail?.table ? String(customEvent.detail.table).toLowerCase() : null;
       const changedTables: string[] = (customEvent.detail?.tables || (changedTable ? [changedTable] : [])).map((t: string) => String(t).toLowerCase());
 
-      // If specific tables changed:
-      if (changedTables.length > 0) {
-        if (normalizedTables.length > 0) {
-          // Only refresh if this hook listens to one of the tables that changed
-          const hasMatch = changedTables.some(t => normalizedTables.includes(t));
-          if (hasMatch) {
-            triggerDebounced();
-          }
+      if (changedTables.length > 0 && normalizedTables.length > 0) {
+        // Only refresh if this hook listens to one of the tables that changed
+        const hasMatch = changedTables.some(t => normalizedTables.includes(t));
+        if (hasMatch) {
+          triggerDebounced();
         }
-        // If this hook has no tables specified, DO NOT trigger on specific table updates of other modules!
-        return;
-      }
-
-      // If global broadcast with no specific tables mentioned, trigger if hook is also global or all-tables
-      if (normalizedTables.length === 0) {
+      } else {
+        // If no specific table was provided in the event or hook has no table filter
         triggerDebounced();
       }
     };

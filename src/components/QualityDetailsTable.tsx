@@ -332,7 +332,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
       <div className="rounded-xl border border-[#E0DBCF] shadow-2xs bg-white mb-5 w-full overflow-visible relative z-10">
         <table className="w-full text-left border-collapse table-fixed">
           <thead className="sticky top-0 z-20 shadow-2xs">
-            <tr className="bg-[#EDF4EF] text-[#D94B5A] font-bold text-xs uppercase border-b border-[#D8E4DC]">
+            <tr className="bg-[#EDF4EF] text-[#F7AFA8] font-bold text-xs uppercase border-b border-[#D8E4DC]">
               <th className="px-3 py-2.5 w-[31%] bg-[#EDF4EF] rounded-tl-xl">
                 Agency <span className="text-[10px] text-emerald-700 font-semibold normal-case">(Multiple Select)</span>
               </th>
@@ -433,8 +433,8 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                           placeholder={isUser010 ? "Rs." : "Rs. *"}
                           className={`w-full rounded-lg px-2.5 py-2 text-xs font-bold text-right outline-none transition-all font-mono ${
                             isUser010
-                              ? "bg-white border border-[#FBCFCB] text-slate-800 focus:border-[#F7AFA8] focus:ring-1 focus:ring-[#F7AFA8]/20"
-                              : "bg-[#FDE7E6] border-2 border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 text-slate-900 font-black"
+                              ? "bg-white border border-[#D5D0C5] text-slate-800 focus:border-[#F7AFA8] focus:ring-1 focus:ring-[#F7AFA8]/20"
+                              : "bg-[#FFECEC] border-2 border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 text-slate-900 font-black"
                           }`}
                         />
                       </td>
@@ -467,7 +467,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                 <Layers className="w-3.5 h-3.5" />
               </div>
               <div>
-                <h4 className="text-xs font-black text-[#D94B5A] tracking-wide uppercase">
+                <h4 className="text-xs font-black text-[#F7AFA8] tracking-wide uppercase">
                   Active Combinations Matrix ({allCombinations.length})
                 </h4>
                 <p className="text-[10px] text-slate-500 font-medium">

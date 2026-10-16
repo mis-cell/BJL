@@ -63,10 +63,10 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#FBCFCB] border-2 border-white shadow-[4px_4px_16px_rgba(0,0,0,0.45),inset_1.5px_1.5px_0px_white] w-full max-w-lg flex flex-col rounded shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+      <div className="bg-[#d4d0c8] border-2 border-white shadow-[4px_4px_16px_rgba(0,0,0,0.45),inset_1.5px_1.5px_0px_white] w-full max-w-lg flex flex-col rounded shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
         
         {/* Old School Windows Titlebar */}
-        <div className="bg-[#D94B5A] text-white px-4 py-2 flex items-center justify-between border-b border-white">
+        <div className="bg-[#F7AFA8] text-white px-4 py-2 flex items-center justify-between border-b border-white">
           <div className="flex items-center gap-2">
             <span className="text-xs font-black uppercase tracking-wider font-sans">
               {isEditing ? 'Modify Stock Ledger Entry' : 'Add New Store Ledger Row'}
@@ -95,14 +95,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="formstate_opening_date_2326"
-                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                   >
                     Opening Date *
                   </label>
 
                   <div className="flex overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm focus-within:border-[#F7AFA8] focus-within:ring-1 focus-within:ring-[#F7AFA8]/20">
                     <div className="px-2.5 bg-slate-50 flex items-center border-r border-slate-200">
-                      <Calendar className="h-3.5 w-3.5 text-[#D94B5A]" />
+                      <Calendar className="h-3.5 w-3.5 text-[#F7AFA8]" />
                     </div>
 
                     <input
@@ -127,7 +127,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="godown_2341"
-                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                   >
                     Godown *
                   </label>
@@ -161,7 +161,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="area_station_2362"
-                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                   >
                     Area Station *
                   </label>
@@ -196,7 +196,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="component_grade_2384"
-                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                   >
                     Component Grade *
                   </label>
@@ -231,7 +231,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="is_j_c_i_govt_supplied_2406"
-                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                   >
                     Is J.C.I Govt Supplied? *
                   </label>
@@ -261,7 +261,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="unit_master_2423"
-                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                     >
                       Unit Master *
                     </label>
@@ -293,7 +293,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="quantity_2440"
-                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                     >
                       Quantity *
                     </label>
@@ -328,7 +328,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="weight_qtl_2464"
-                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                     >
                       Weight (Qtl) *
                     </label>
@@ -360,7 +360,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="formstate_avg_weight_2484"
-                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                     >
                       Avg Wt (Qtl/Unit)
                     </label>
@@ -390,7 +390,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-5 py-2 rounded-md bg-[#F7AFA8] hover:bg-[#D94B5A] border border-[#F7AFA8] text-white font-black uppercase text-[10px] tracking-wider shadow-sm transition-all duration-150 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-5 py-2 rounded-md bg-[#F7AFA8] hover:bg-[#103A20] border border-[#F7AFA8] text-white font-black uppercase text-[10px] tracking-wider shadow-sm transition-all duration-150 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? "Saving..." : "💾 Save Record"}
                   </button>
@@ -408,14 +408,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="closingformstate_stock_da_2535"
-                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                   >
                     Opening Stock Audit Date *
                   </label>
 
                   <div className="flex overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm focus-within:border-[#F7AFA8] focus-within:ring-1 focus-within:ring-[#F7AFA8]/20">
                     <div className="px-2.5 bg-slate-50 flex items-center border-r border-slate-200">
-                      <Calendar className="h-3.5 w-3.5 text-[#D94B5A]" />
+                      <Calendar className="h-3.5 w-3.5 text-[#F7AFA8]" />
                     </div>
 
                     <input
@@ -440,7 +440,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="godown_location_2550"
-                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                   >
                     Godown Location *
                   </label>
@@ -473,7 +473,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="commodity_2571"
-                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                     >
                       Commodity *
                     </label>
@@ -498,7 +498,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="variety_2583"
-                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                     >
                       Variety
                     </label>
@@ -525,7 +525,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="quality_grade_rating_2598"
-                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                   >
                     Quality Grade Rating *
                   </label>
@@ -591,7 +591,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="no_of_bales_2641"
-                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                     >
                       No. of Bales *
                     </label>
@@ -613,7 +613,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="net_weight_qtl_2655"
-                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                     >
                       Net Weight (Qtl) *
                     </label>
@@ -639,7 +639,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="rate_per_qtl_2674"
-                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                     >
                       Rate per Qtl *
                     </label>
@@ -662,7 +662,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <div>
                     <label
                       htmlFor="asset_book_value_rs_2689"
-                      className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                      className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                     >
                       Asset Book Value (Rs.)
                     </label>
@@ -694,7 +694,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div>
                   <label
                     htmlFor="remarks_storage_quality_n_2703"
-                    className="block mb-1 font-black text-[#D94B5A] uppercase tracking-wider text-[9px]"
+                    className="block mb-1 font-black text-[#F7AFA8] uppercase tracking-wider text-[9px]"
                   >
                     Remarks / Storage Quality Notes
                   </label>
@@ -729,7 +729,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-5 py-2 rounded-md bg-[#F7AFA8] hover:bg-[#D94B5A] border border-[#F7AFA8] text-white font-black uppercase text-[10px] tracking-wider shadow-sm transition-all duration-150 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-5 py-2 rounded-md bg-[#F7AFA8] hover:bg-[#103A20] border border-[#F7AFA8] text-white font-black uppercase text-[10px] tracking-wider shadow-sm transition-all duration-150 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? "Creating..." : "💾 Register Closing"}
                   </button>
@@ -969,7 +969,7 @@ export const StockClosingPrintModal: React.FC<{
                 </div>
 
                 {/* Valuation Banner */}
-                <div className="my-3 border bg-[#D94B5A]/5 border-blue-900 p-4 text-center select-text">
+                <div className="my-3 border bg-[#000080]/5 border-blue-900 p-4 text-center select-text">
                   <p className="text-[10px] font-bold text-indigo-900 font-sans uppercase tracking-widest leading-none">Valued Inventory Asset Book Value</p>
                   <p className="text-3xl font-black font-mono text-red-900 tracking-tighter italic mt-1 pb-1">
                     ₹ {Number(printClosingData.total_value).toLocaleString(undefined, {minimumFractionDigits: 2})}
@@ -1095,10 +1095,10 @@ export const StockCapacityAuditModal: React.FC<{
 
   return (
     <div role="dialog" className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-      <div className="bg-[#FBCFCB] border-2 border-white shadow-[4px_4px_24px_rgba(0,0,0,0.65)] w-full max-w-4xl p-1 animate-in zoom-in-95 duration-150 flex flex-col rounded-md overflow-hidden">
+      <div className="bg-[#d4d0c8] border-2 border-white shadow-[4px_4px_24px_rgba(0,0,0,0.65)] w-full max-w-4xl p-1 animate-in zoom-in-95 duration-150 flex flex-col rounded-md overflow-hidden">
         
         {/* Retro Windows Title Bar */}
-        <div className="bg-[#D94B5A] text-white p-2.5 text-xs font-black uppercase tracking-wider flex justify-between items-center">
+        <div className="bg-[#000080] text-white p-2.5 text-xs font-black uppercase tracking-wider flex justify-between items-center">
           <span className="flex items-center gap-2">
             <Info className="h-4 w-4 text-[#80ffd0]" />
             <span>📊 Jute Godown Capacity & Allocation Audit Registry</span>
@@ -1109,7 +1109,7 @@ export const StockCapacityAuditModal: React.FC<{
               onClose();
               setPopupSearchQuery("");
             }}
-            className="bg-[#FBCFCB] text-black border border-white hover:bg-red-655 hover:text-white font-extrabold text-[12px] leading-none h-6 w-6 flex items-center justify-center p-0 shadow-[1px_1px_0_0_black]"
+            className="bg-[#d4d0c8] text-black border border-white hover:bg-red-655 hover:text-white font-extrabold text-[12px] leading-none h-6 w-6 flex items-center justify-center p-0 shadow-[1px_1px_0_0_black]"
             title="Close Audit Registry View"
           >
             ✕
@@ -1151,7 +1151,7 @@ export const StockCapacityAuditModal: React.FC<{
           </div>
 
           {/* Modal Search Bar filter */}
-          <div className="flex items-center gap-2 bg-[#FBCFCB] p-1.5 border border-black/20 shadow-xs">
+          <div className="flex items-center gap-2 bg-[#d4d0c8] p-1.5 border border-black/20 shadow-xs">
             <span className="text-[10px] font-black text-slate-700 uppercase shrink-0">Search Godowns:</span>
             <div className="relative flex-1">
               <input 
@@ -1253,7 +1253,7 @@ export const StockCapacityAuditModal: React.FC<{
         </div>
 
         {/* Popup action strip bar */}
-        <div className="bg-[#FBCFCB] py-2 px-4 border-t border-white/60 flex justify-end">
+        <div className="bg-[#d4d0c8] py-2 px-4 border-t border-white/60 flex justify-end">
           <button 
             type="button" 
             onClick={() => {
@@ -1294,8 +1294,8 @@ export const StockTransferModal: React.FC<{
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-[#FBCFCB] border-2 border-white shadow-2xl w-full max-w-md rounded p-4 space-y-4">
-        <div className="bg-[#D94B5A] text-white px-3 py-1 font-mono font-black text-xs flex justify-between items-center">
+      <div className="bg-[#d4d0c8] border-2 border-white shadow-2xl w-full max-w-md rounded p-4 space-y-4">
+        <div className="bg-[#000080] text-white px-3 py-1 font-mono font-black text-xs flex justify-between items-center">
           <span>🚚 Transfer Stock: {transferRecord.grade}</span>
           <button onClick={onClose} className="text-white hover:text-red-300 font-bold">×</button>
         </div>
@@ -1358,8 +1358,8 @@ export const StockUpdateGodownModal: React.FC<{
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-[#FBCFCB] border-2 border-white shadow-2xl w-full max-w-md rounded p-4 space-y-4">
-        <div className="bg-[#D94B5A] text-white px-3 py-1 font-mono font-black text-xs flex justify-between items-center">
+      <div className="bg-[#d4d0c8] border-2 border-white shadow-2xl w-full max-w-md rounded p-4 space-y-4">
+        <div className="bg-[#000080] text-white px-3 py-1 font-mono font-black text-xs flex justify-between items-center">
           <span>📍 Update Godown Location: {updateGodownRecord.grade}</span>
           <button onClick={onClose} className="text-white hover:text-red-300 font-bold">×</button>
         </div>

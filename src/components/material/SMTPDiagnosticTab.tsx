@@ -136,7 +136,7 @@ export default function SMTPDiagnosticTab() {
                 <button 
                   onClick={runTest}
                   disabled={isRunning}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#D94B5A] hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-widest rounded-sm transition-colors border border-black shadow-[inset_1px_1px_0_rgba(255,255,255,0.4),2px_2px_0_rgba(0,0,0,0.4)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#000080] hover:bg-blue-900 text-white font-bold text-xs uppercase tracking-widest rounded-sm transition-colors border border-black shadow-[inset_1px_1px_0_rgba(255,255,255,0.4),2px_2px_0_rgba(0,0,0,0.4)] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isRunning ? (
                     <><Activity className="h-4 w-4 animate-spin" /> Executing Handshake...</>

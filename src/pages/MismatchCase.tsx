@@ -837,6 +837,19 @@ export default function MismatchCase({ onClose, variant = 'satta' }: { onClose?:
 
   useLiveAutoRefresh(loadMismatches, [], { tables: ['material_mismatch', 'satta_mismatch', 'sauda_check_point', 'purchase_master', 'sauda_master', 'satta_master'] });
 
+  useEffect(() => {
+    loadMismatches();
+    const handleUpdate = () => {
+      loadMismatches();
+    };
+    window.addEventListener('app-data-updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('app-data-updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
+
   const handleResolve = async (itemId: string, itemPoNo: string) => {
     const rawRemarks = remarksMap[itemId] || '';
     const remarks = rawRemarks.trim() || 'Approved and cleared by Administrator';

@@ -154,10 +154,10 @@ export default function DashboardDrilldownModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto">
-      <div className="bg-[#FDE7E6] border-2 border-[#F7AFA8] rounded-2xl shadow-2xl w-full max-w-7xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-[#FAF7F0] border-2 border-[#F7AFA8] rounded-2xl shadow-2xl w-full max-w-7xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="bg-[#F7AFA8] text-[#FDE7E6] px-5 py-3.5 flex items-center justify-between border-b border-[#FBCFCB]">
+        <div className="bg-[#F7AFA8] text-[#FAF7F0] px-5 py-3.5 flex items-center justify-between border-b border-[#D6CAA8]">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-white/10 text-emerald-300">
               <Layers className="h-5 w-5" />
@@ -169,14 +169,14 @@ export default function DashboardDrilldownModal({
                   {stats.count} Records
                 </span>
               </h2>
-              {subtitle && <p className="text-xs text-[#FBCFCB] font-sans mt-0.5">{subtitle}</p>}
+              {subtitle && <p className="text-xs text-[#D6CAA8] font-sans mt-0.5">{subtitle}</p>}
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportCsv}
-              className="px-3 py-1.5 bg-[#FDE7E6] text-[#D94B5A] text-xs font-bold rounded-lg hover:bg-white transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              className="px-3 py-1.5 bg-[#FAF7F0] text-[#F7AFA8] text-xs font-bold rounded-lg hover:bg-white transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
               title="Export filtered records to CSV"
             >
               <Download className="h-3.5 w-3.5" />
@@ -184,7 +184,7 @@ export default function DashboardDrilldownModal({
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 text-[#FBCFCB] hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+              className="p-1.5 text-[#D6CAA8] hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
               title="Close modal (Esc)"
             >
               <X className="h-5 w-5" />
@@ -193,44 +193,44 @@ export default function DashboardDrilldownModal({
         </div>
 
         {/* Quick KPI Summary Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 p-3 bg-[#FBCFCB]/60 border-b border-[#FBCFCB] text-xs font-sans">
-          <div className="bg-white/90 p-2 rounded-xl border border-[#FBCFCB] shadow-2xs">
-            <div className="text-[10px] font-bold text-[#D94B5A] uppercase">Total Contracts</div>
-            <div className="text-sm font-mono font-extrabold text-[#D94B5A]">{stats.count}</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 p-3 bg-[#EAE2D2]/60 border-b border-[#D6CAA8] text-xs font-sans">
+          <div className="bg-white/90 p-2 rounded-xl border border-[#D6CAA8] shadow-2xs">
+            <div className="text-[10px] font-bold text-[#5A6E54] uppercase">Total Contracts</div>
+            <div className="text-sm font-mono font-extrabold text-[#F7AFA8]">{stats.count}</div>
           </div>
-          <div className="bg-white/90 p-2 rounded-xl border border-[#FBCFCB] shadow-2xs">
-            <div className="text-[10px] font-bold text-[#D94B5A] uppercase">Total Weight</div>
-            <div className="text-sm font-mono font-extrabold text-[#D94B5A]">{stats.totalWt.toLocaleString('en-IN')} MT</div>
+          <div className="bg-white/90 p-2 rounded-xl border border-[#D6CAA8] shadow-2xs">
+            <div className="text-[10px] font-bold text-[#5A6E54] uppercase">Total Weight</div>
+            <div className="text-sm font-mono font-extrabold text-[#F7AFA8]">{stats.totalWt.toLocaleString('en-IN')} MT</div>
           </div>
-          <div className="bg-white/90 p-2 rounded-xl border border-[#FBCFCB] shadow-2xs">
-            <div className="text-[10px] font-bold text-[#D94B5A] uppercase">Pending Weight</div>
+          <div className="bg-white/90 p-2 rounded-xl border border-[#D6CAA8] shadow-2xs">
+            <div className="text-[10px] font-bold text-[#5A6E54] uppercase">Pending Weight</div>
             <div className="text-sm font-mono font-extrabold text-amber-700">{stats.pendWt.toLocaleString('en-IN')} MT</div>
           </div>
-          <div className="bg-white/90 p-2 rounded-xl border border-[#FBCFCB] shadow-2xs">
-            <div className="text-[10px] font-bold text-[#D94B5A] uppercase">Contract Value</div>
-            <div className="text-sm font-mono font-extrabold text-[#D94B5A]">₹{formatIndianCurrency(stats.totalVal)}</div>
+          <div className="bg-white/90 p-2 rounded-xl border border-[#D6CAA8] shadow-2xs">
+            <div className="text-[10px] font-bold text-[#5A6E54] uppercase">Contract Value</div>
+            <div className="text-sm font-mono font-extrabold text-[#F7AFA8]">₹{formatIndianCurrency(stats.totalVal)}</div>
           </div>
-          <div className="bg-white/90 p-2 rounded-xl border border-[#FBCFCB] shadow-2xs">
-            <div className="text-[10px] font-bold text-[#D94B5A] uppercase">Paid Amount</div>
+          <div className="bg-white/90 p-2 rounded-xl border border-[#D6CAA8] shadow-2xs">
+            <div className="text-[10px] font-bold text-[#5A6E54] uppercase">Paid Amount</div>
             <div className="text-sm font-mono font-extrabold text-emerald-800">₹{formatIndianCurrency(stats.paidVal)}</div>
           </div>
-          <div className="bg-white/90 p-2 rounded-xl border border-[#FBCFCB] shadow-2xs">
-            <div className="text-[10px] font-bold text-[#D94B5A] uppercase">Remaining Amt</div>
+          <div className="bg-white/90 p-2 rounded-xl border border-[#D6CAA8] shadow-2xs">
+            <div className="text-[10px] font-bold text-[#5A6E54] uppercase">Remaining Amt</div>
             <div className="text-sm font-mono font-extrabold text-rose-700">₹{formatIndianCurrency(stats.remVal)}</div>
           </div>
         </div>
 
         {/* Filters Controls */}
-        <div className="p-3 bg-[#FDE7E6] border-b border-[#FBCFCB] flex flex-wrap items-center justify-between gap-2.5">
+        <div className="p-3 bg-[#FAF7F0] border-b border-[#D6CAA8] flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[280px]">
             <div className="relative flex-1 max-w-xs">
-              <Search className="h-3.5 w-3.5 absolute left-3 top-2.5 text-[#D94B5A]" />
+              <Search className="h-3.5 w-3.5 absolute left-3 top-2.5 text-[#5A6E54]" />
               <input
                 type="text"
                 placeholder="Search contract no, supplier, broker, voucher..."
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full h-8 pl-8 pr-3 bg-white border border-[#FBCFCB] rounded-xl text-xs text-[#D94B5A] placeholder-[#D94B5A]/60 focus:outline-none focus:ring-1 focus:ring-[#F7AFA8]"
+                className="w-full h-8 pl-8 pr-3 bg-white border border-[#D6CAA8] rounded-xl text-xs text-[#F7AFA8] placeholder-[#5A6E54]/60 focus:outline-none focus:ring-1 focus:ring-[#F7AFA8]"
               />
               {searchTerm && (
                 <button 
@@ -246,7 +246,7 @@ export default function DashboardDrilldownModal({
             <select
               value={typeFilter}
               onChange={(e) => { setTypeFilter(e.target.value as any); setCurrentPage(1); }}
-              className="h-8 px-2.5 bg-white border border-[#FBCFCB] rounded-xl text-xs font-semibold text-[#D94B5A] focus:outline-none"
+              className="h-8 px-2.5 bg-white border border-[#D6CAA8] rounded-xl text-xs font-semibold text-[#F7AFA8] focus:outline-none"
             >
               <option value="ALL">All Types</option>
               <option value="SAUDA">Sauda Only</option>
@@ -257,7 +257,7 @@ export default function DashboardDrilldownModal({
             <select
               value={arrivalFilter}
               onChange={(e) => { setArrivalFilter(e.target.value as any); setCurrentPage(1); }}
-              className="h-8 px-2.5 bg-white border border-[#FBCFCB] rounded-xl text-xs font-semibold text-[#D94B5A] focus:outline-none"
+              className="h-8 px-2.5 bg-white border border-[#D6CAA8] rounded-xl text-xs font-semibold text-[#F7AFA8] focus:outline-none"
             >
               <option value="ALL">All Arrivals</option>
               <option value="PENDING">Pending (Un-arrived)</option>
@@ -269,7 +269,7 @@ export default function DashboardDrilldownModal({
             <select
               value={paymentFilter}
               onChange={(e) => { setPaymentFilter(e.target.value as any); setCurrentPage(1); }}
-              className="h-8 px-2.5 bg-white border border-[#FBCFCB] rounded-xl text-xs font-semibold text-[#D94B5A] focus:outline-none"
+              className="h-8 px-2.5 bg-white border border-[#D6CAA8] rounded-xl text-xs font-semibold text-[#F7AFA8] focus:outline-none"
             >
               <option value="ALL">All Payments</option>
               <option value="PAID">Fully Paid</option>
@@ -278,12 +278,12 @@ export default function DashboardDrilldownModal({
             </select>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-mono text-[#D94B5A]">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#5A6E54]">
             <span>Rows:</span>
             <select
               value={pageSize}
               onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-              className="h-8 px-2 bg-white border border-[#FBCFCB] rounded-xl text-xs font-semibold text-[#D94B5A] focus:outline-none"
+              className="h-8 px-2 bg-white border border-[#D6CAA8] rounded-xl text-xs font-semibold text-[#F7AFA8] focus:outline-none"
             >
               <option value={10}>10</option>
               <option value={15}>15</option>
@@ -297,35 +297,35 @@ export default function DashboardDrilldownModal({
         {/* Main Records Table */}
         <div className="flex-1 overflow-auto bg-white">
           <table className="w-full text-left border-collapse text-xs">
-            <thead className="sticky top-0 z-10 bg-[#FDE7E6] border-b border-[#FBCFCB] text-[#D94B5A] font-mono text-[10px] uppercase tracking-wider shadow-2xs">
+            <thead className="sticky top-0 z-10 bg-[#FAF7F0] border-b border-[#D6CAA8] text-[#F7AFA8] font-mono text-[10px] uppercase tracking-wider shadow-2xs">
               <tr>
-                <th className="p-2.5 border-r border-[#FBCFCB] text-center w-12 font-bold">#</th>
-                <th className="p-2.5 border-r border-[#FBCFCB] font-bold">Contract / P.O. No</th>
-                <th className="p-2.5 border-r border-[#FBCFCB] font-bold">Type</th>
-                <th className="p-2.5 border-r border-[#FBCFCB] font-bold">Date</th>
-                <th className="p-2.5 border-r border-[#FBCFCB] font-bold">Supplier</th>
-                <th className="p-2.5 border-r border-[#FBCFCB] font-bold">Broker</th>
-                <th className="p-2.5 border-r border-[#FBCFCB] text-right font-bold">Weight (MT)</th>
-                <th className="p-2.5 border-r border-[#FBCFCB] text-right font-bold">Rate (₹/Qtl)</th>
-                <th className="p-2.5 border-r border-[#FBCFCB] text-right font-bold">Value (₹)</th>
-                <th className="p-2.5 border-r border-[#FBCFCB] text-center font-bold">Arrival Status</th>
-                <th className="p-2.5 border-r border-[#FBCFCB] text-right font-bold">Rcvd / Pend (MT)</th>
-                <th className="p-2.5 border-r border-[#FBCFCB] text-right font-bold">Paid (₹)</th>
-                <th className="p-2.5 border-r border-[#FBCFCB] text-right font-bold">Remaining (₹)</th>
+                <th className="p-2.5 border-r border-[#EAE2D2] text-center w-12 font-bold">#</th>
+                <th className="p-2.5 border-r border-[#EAE2D2] font-bold">Contract / P.O. No</th>
+                <th className="p-2.5 border-r border-[#EAE2D2] font-bold">Type</th>
+                <th className="p-2.5 border-r border-[#EAE2D2] font-bold">Date</th>
+                <th className="p-2.5 border-r border-[#EAE2D2] font-bold">Supplier</th>
+                <th className="p-2.5 border-r border-[#EAE2D2] font-bold">Broker</th>
+                <th className="p-2.5 border-r border-[#EAE2D2] text-right font-bold">Weight (MT)</th>
+                <th className="p-2.5 border-r border-[#EAE2D2] text-right font-bold">Rate (₹/Qtl)</th>
+                <th className="p-2.5 border-r border-[#EAE2D2] text-right font-bold">Value (₹)</th>
+                <th className="p-2.5 border-r border-[#EAE2D2] text-center font-bold">Arrival Status</th>
+                <th className="p-2.5 border-r border-[#EAE2D2] text-right font-bold">Rcvd / Pend (MT)</th>
+                <th className="p-2.5 border-r border-[#EAE2D2] text-right font-bold">Paid (₹)</th>
+                <th className="p-2.5 border-r border-[#EAE2D2] text-right font-bold">Remaining (₹)</th>
                 <th className="p-2.5 text-center font-bold">Vouchers</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#FBCFCB] font-sans">
+            <tbody className="divide-y divide-[#EAE2D2] font-sans">
               {paginatedRows.length > 0 ? (
                 paginatedRows.map((row, idx) => {
                   const seq = (safePage - 1) * pageSize + idx + 1;
                   return (
-                    <tr key={row.id || `${row.contractNo}-${idx}`} className="hover:bg-[#FDE7E6]/80 transition-colors">
-                      <td className="p-2.5 border-r border-[#FBCFCB] text-center font-mono text-[#D94B5A]">{seq}</td>
-                      <td className="p-2.5 border-r border-[#FBCFCB] font-mono font-bold text-[#D94B5A] whitespace-nowrap">
+                    <tr key={row.id || `${row.contractNo}-${idx}`} className="hover:bg-[#FAF7F0]/80 transition-colors">
+                      <td className="p-2.5 border-r border-[#EAE2D2] text-center font-mono text-[#5A6E54]">{seq}</td>
+                      <td className="p-2.5 border-r border-[#EAE2D2] font-mono font-bold text-[#F7AFA8] whitespace-nowrap">
                         {row.contractNo}
                       </td>
-                      <td className="p-2.5 border-r border-[#FBCFCB] whitespace-nowrap">
+                      <td className="p-2.5 border-r border-[#EAE2D2] whitespace-nowrap">
                         <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-extrabold uppercase ${
                           row.contractType === 'SAUDA' 
                             ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' 
@@ -334,25 +334,25 @@ export default function DashboardDrilldownModal({
                           {row.contractType === 'SAUDA' ? 'Sauda' : 'Final P.O.'}
                         </span>
                       </td>
-                      <td className="p-2.5 border-r border-[#FBCFCB] font-mono text-slate-700 whitespace-nowrap">
+                      <td className="p-2.5 border-r border-[#EAE2D2] font-mono text-slate-700 whitespace-nowrap">
                         {row.contractDate}
                       </td>
-                      <td className="p-2.5 border-r border-[#FBCFCB] font-semibold text-[#D94B5A] max-w-[180px] truncate" title={row.supplier}>
+                      <td className="p-2.5 border-r border-[#EAE2D2] font-semibold text-[#F7AFA8] max-w-[180px] truncate" title={row.supplier}>
                         {row.supplier}
                       </td>
-                      <td className="p-2.5 border-r border-[#FBCFCB] text-slate-600 max-w-[140px] truncate" title={row.broker}>
+                      <td className="p-2.5 border-r border-[#EAE2D2] text-slate-600 max-w-[140px] truncate" title={row.broker}>
                         {row.broker}
                       </td>
-                      <td className="p-2.5 border-r border-[#FBCFCB] text-right font-mono font-bold text-[#D94B5A] whitespace-nowrap">
+                      <td className="p-2.5 border-r border-[#EAE2D2] text-right font-mono font-bold text-[#F7AFA8] whitespace-nowrap">
                         {row.totalWeightMt.toFixed(2)}
                       </td>
-                      <td className="p-2.5 border-r border-[#FBCFCB] text-right font-mono text-slate-700 whitespace-nowrap">
+                      <td className="p-2.5 border-r border-[#EAE2D2] text-right font-mono text-slate-700 whitespace-nowrap">
                         ₹{row.ratePerQtl}
                       </td>
-                      <td className="p-2.5 border-r border-[#FBCFCB] text-right font-mono font-extrabold text-[#D94B5A] whitespace-nowrap">
+                      <td className="p-2.5 border-r border-[#EAE2D2] text-right font-mono font-extrabold text-[#F7AFA8] whitespace-nowrap">
                         ₹{formatIndianCurrency(row.contractValue)}
                       </td>
-                      <td className="p-2.5 border-r border-[#FBCFCB] text-center whitespace-nowrap">
+                      <td className="p-2.5 border-r border-[#EAE2D2] text-center whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
                           row.arrivalStatus === 'RECEIVED'
                             ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
@@ -366,17 +366,17 @@ export default function DashboardDrilldownModal({
                           {row.arrivalStatus}
                         </span>
                       </td>
-                      <td className="p-2.5 border-r border-[#FBCFCB] text-right font-mono whitespace-nowrap">
+                      <td className="p-2.5 border-r border-[#EAE2D2] text-right font-mono whitespace-nowrap">
                         <span className="text-emerald-700 font-bold">{row.receivedWeightMt.toFixed(2)}</span>
                         {' / '}
                         <span className={row.pendingWeightMt > 0 ? "text-amber-700 font-bold" : "text-slate-400"}>
                           {row.pendingWeightMt.toFixed(2)}
                         </span>
                       </td>
-                      <td className="p-2.5 border-r border-[#FBCFCB] text-right font-mono font-bold text-emerald-800 whitespace-nowrap">
+                      <td className="p-2.5 border-r border-[#EAE2D2] text-right font-mono font-bold text-emerald-800 whitespace-nowrap">
                         {row.paidAmount > 0 ? `₹${formatIndianCurrency(row.paidAmount)}` : '-'}
                       </td>
-                      <td className="p-2.5 border-r border-[#FBCFCB] text-right font-mono font-bold text-rose-700 whitespace-nowrap">
+                      <td className="p-2.5 border-r border-[#EAE2D2] text-right font-mono font-bold text-rose-700 whitespace-nowrap">
                         {row.remainingAmount > 0 ? `₹${formatIndianCurrency(row.remainingAmount)}` : '₹0'}
                       </td>
                       <td className="p-2.5 text-center font-mono text-[10px] text-slate-600 max-w-[120px] truncate" title={row.voucherNos.join(', ')}>
@@ -387,7 +387,7 @@ export default function DashboardDrilldownModal({
                 })
               ) : (
                 <tr>
-                  <td colSpan={14} className="p-8 text-center text-[#D94B5A] italic font-sans">
+                  <td colSpan={14} className="p-8 text-center text-[#5A6E54] italic font-sans">
                     No matching contract records found for the applied filter.
                   </td>
                 </tr>
@@ -397,28 +397,28 @@ export default function DashboardDrilldownModal({
         </div>
 
         {/* Footer & Pagination */}
-        <div className="bg-[#FDE7E6] border-t border-[#FBCFCB] p-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono text-[#D94B5A]">
+        <div className="bg-[#FAF7F0] border-t border-[#D6CAA8] p-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono text-[#5A6E54]">
           <div>
-            Showing <strong className="text-[#D94B5A]">{filteredRecords.length > 0 ? (safePage - 1) * pageSize + 1 : 0}</strong> to{' '}
-            <strong className="text-[#D94B5A]">{Math.min(safePage * pageSize, filteredRecords.length)}</strong> of{' '}
-            <strong className="text-[#D94B5A]">{filteredRecords.length}</strong> total contracts
+            Showing <strong className="text-[#F7AFA8]">{filteredRecords.length > 0 ? (safePage - 1) * pageSize + 1 : 0}</strong> to{' '}
+            <strong className="text-[#F7AFA8]">{Math.min(safePage * pageSize, filteredRecords.length)}</strong> of{' '}
+            <strong className="text-[#F7AFA8]">{filteredRecords.length}</strong> total contracts
           </div>
 
           <div className="flex items-center gap-2">
             <button
               disabled={safePage <= 1}
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              className="px-3 py-1 bg-white border border-[#FBCFCB] rounded-lg disabled:opacity-40 font-bold text-[#D94B5A] hover:bg-[#FBCFCB] transition-colors cursor-pointer"
+              className="px-3 py-1 bg-white border border-[#D6CAA8] rounded-lg disabled:opacity-40 font-bold text-[#F7AFA8] hover:bg-[#EAE2D2] transition-colors cursor-pointer"
             >
               Previous
             </button>
-            <span className="font-bold text-[#D94B5A] px-2">
+            <span className="font-bold text-[#F7AFA8] px-2">
               Page {safePage} of {totalPages}
             </span>
             <button
               disabled={safePage >= totalPages}
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              className="px-3 py-1 bg-white border border-[#FBCFCB] rounded-lg disabled:opacity-40 font-bold text-[#D94B5A] hover:bg-[#FBCFCB] transition-colors cursor-pointer"
+              className="px-3 py-1 bg-white border border-[#D6CAA8] rounded-lg disabled:opacity-40 font-bold text-[#F7AFA8] hover:bg-[#EAE2D2] transition-colors cursor-pointer"
             >
               Next
             </button>

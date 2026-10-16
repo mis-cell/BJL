@@ -831,6 +831,7 @@ if (supabase) {
          created_at TIMESTAMPTZ DEFAULT NOW()
        );`,
       `ALTER TABLE IF EXISTS user_activity_logs DISABLE ROW LEVEL SECURITY;`,
+      `DROP TABLE IF EXISTS inspection_master, inspection_details, inspection_checklist, inspection_checklist_details, mill_inspection_master, mill_inspection_detail CASCADE;`,
       `CREATE TABLE IF NOT EXISTS material_inspection (
          mr_no TEXT PRIMARY KEY,
          mr_date DATE,

@@ -2571,7 +2571,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   animate={{ scale: 1, y: 0 }}
                   exit={{ scale: 0.95, y: -10 }}
                   transition={{ type: "spring", damping: 20 }}
-                  className="bg-[#FDE7E6] border-3 border-emerald-600 shadow-[8px_8px_0_0_rgba(16,185,129,0.3)] p-6 max-w-md w-full text-center space-y-4"
+                  className="bg-[#faf8f5] border-3 border-emerald-600 shadow-[8px_8px_0_0_rgba(16,185,129,0.3)] p-6 max-w-md w-full text-center space-y-4"
                 >
                   <div className="mx-auto h-16 w-16 bg-emerald-100 rounded-full flex items-center justify-center border-2 border-emerald-500">
                     <CheckCircle2 className="h-10 w-10 text-emerald-600" />
@@ -2606,7 +2606,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           </AnimatePresence>
 
           {/* HEADER BAR */}
-          <div className="bg-[#D94B5A] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#FBCFCB] gap-4">
+          <div className="bg-[#F7AFA8] text-white px-6 py-4 rounded-xl shadow-lg flex flex-wrap items-center justify-between border border-[#FBCFCB] gap-4">
             <div className="flex items-center gap-3">
               <div className="flex flex-col">
                 <h1 className="text-base font-bold text-white tracking-wide">
@@ -2617,7 +2617,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="px-3.5 py-1.5 bg-[#D94B5A] hover:bg-[#F7AFA8] text-[#FDE7E6] border border-[#FBCFCB] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+                className="px-3.5 py-1.5 bg-[#80202C] hover:bg-[#F7AFA8] text-[#FDE7E6] border border-[#FBCFCB] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
                 title="Back to Sauda Desk (Esc)"
                 onClick={() => setViewMode("dashboard")}
               >

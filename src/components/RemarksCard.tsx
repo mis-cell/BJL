@@ -40,7 +40,7 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
             rows={4}
             value={formData.remarks ?? 'Area, Agency Grade, Grade differential can change as per market.'}
             onChange={onChange}
-            className="w-full bg-white border border-[#FBCFCB] focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 rounded-xl p-3 text-xs font-medium text-slate-800 outline-none transition-all shadow-2xs resize-none"
+            className="w-full bg-white border border-[#D5D0C5] focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 rounded-xl p-3 text-xs font-medium text-slate-800 outline-none transition-all shadow-2xs resize-none"
           />
         </div>
 
@@ -55,7 +55,7 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
               name="b_rate"
               value={formData.b_rate ?? 0}
               onChange={onChange}
-              className="bg-white border border-[#FBCFCB] focus:border-[#F7AFA8] rounded-xl px-3.5 py-2 text-xs font-bold text-[#D94B5A] text-right outline-none transition-all shadow-2xs"
+              className="bg-white border border-[#D5D0C5] focus:border-[#F7AFA8] rounded-xl px-3.5 py-2 text-xs font-bold text-[#F7AFA8] text-right outline-none transition-all shadow-2xs"
             />
           </div>
 
@@ -67,7 +67,7 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
               name="b_date"
               value={formData.b_date || ''}
               onChange={onChange}
-              className="bg-white border border-[#FBCFCB] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#F7AFA8] transition-all shadow-2xs cursor-pointer"
+              className="bg-white border border-[#D5D0C5] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#F7AFA8] transition-all shadow-2xs cursor-pointer"
             />
           </div>
 

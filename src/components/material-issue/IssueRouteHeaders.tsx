@@ -35,13 +35,13 @@ export const RouteSelectorPanel: React.FC<RouteSelectorPanelProps> = ({ onChoose
         <button 
           type="button" 
           onClick={() => onChooseRoute('mill')}
-          className="flex gap-4 items-center text-left p-5 border-2 border-[#bfe3d3] rounded-lg bg-white cursor-pointer hover:translate-y-[-2px] hover:shadow-md hover:border-[#D94B5A] transition-all"
+          className="flex gap-4 items-center text-left p-5 border-2 border-[#bfe3d3] rounded-lg bg-white cursor-pointer hover:translate-y-[-2px] hover:shadow-md hover:border-[#0b6e54] transition-all"
         >
-          <div className="w-11 h-11 rounded-lg flex items-center justify-center font-bold text-[21px] text-white bg-gradient-to-br from-[#D94B5A] to-[#159c74]">
+          <div className="w-11 h-11 rounded-lg flex items-center justify-center font-bold text-[21px] text-white bg-gradient-to-br from-[#0b6e54] to-[#159c74]">
             💰
           </div>
           <div>
-            <div className="font-extrabold text-[#D94B5A] text-[14px]">SELL (Godown to Factory)</div>
+            <div className="font-extrabold text-[#0b6e54] text-[14px]">SELL (Godown to Factory)</div>
             <div className="text-[11px] text-slate-500 mt-1 leading-tight">
               Direct sale or transfer of raw jute from Godown to Factory.
             </div>
@@ -80,7 +80,7 @@ export const RouteStatusBar: React.FC<RouteStatusBarProps> = ({ issueRoute, onCh
       <span className="font-bold text-slate-700">Issue route:</span>
       <span className={cn(
         "font-extrabold text-[11px] uppercase tracking-wider px-2.5 py-0.5 rounded text-white",
-        issueRoute === 'godown' ? "bg-[#1c4587]" : issueRoute === 'mill' ? "bg-[#D94B5A]" : "bg-[#e0972f]"
+        issueRoute === 'godown' ? "bg-[#1c4587]" : issueRoute === 'mill' ? "bg-[#0b6e54]" : "bg-[#e0972f]"
       )}>
         {issueRoute === 'godown' ? 'ISSUE TO GODOWN' : issueRoute === 'mill' ? 'SELL (GODOWN TO FACTORY)' : 'GODOWN TO FACTORY'}
       </span>
@@ -117,7 +117,7 @@ export const GodownStorageHeader: React.FC<GodownStorageHeaderProps> = ({
 }) => {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center gap-3 border-b border-[#D94B5A] bg-[#F7AFA8] px-4 py-3">
+      <div className="flex items-center gap-3 border-b border-[#103A20] bg-[#F7AFA8] px-4 py-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15">
           <Layers className="h-4 w-4 text-white" />
         </div>
@@ -152,7 +152,7 @@ export const GodownStorageHeader: React.FC<GodownStorageHeaderProps> = ({
                   issue_no: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-[#D94B5A] outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-[#F7AFA8] outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
 
@@ -353,7 +353,7 @@ export const MillSellHeader: React.FC<MillSellHeaderProps> = ({
           <Settings className="h-4 w-4 text-white" />
         </div>
         <div>
-          <h3 className="text-sm font-bold text-[#D94B5A]">
+          <h3 className="text-sm font-bold text-[#F7AFA8]">
             Sell Details — Godown to Factory Direct
           </h3>
           <p className="text-[9px] font-semibold uppercase tracking-wider text-emerald-700">
@@ -383,7 +383,7 @@ export const MillSellHeader: React.FC<MillSellHeaderProps> = ({
                   issue_no: e.target.value
                 }))
               }
-              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-[#D94B5A] outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-[#F7AFA8] outline-none transition-all focus:border-[#F7AFA8] focus:bg-white focus:ring-2 focus:ring-green-100"
             />
           </div>
 
@@ -594,7 +594,7 @@ export const MillSellHeader: React.FC<MillSellHeaderProps> = ({
                     className={cn(
                       "flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-[9px] font-black uppercase transition-all cursor-pointer",
                       isSelected
-                        ? "border-[#F7AFA8] bg-[#D94B5A] text-white shadow-sm"
+                        ? "border-[#F7AFA8] bg-[#F7AFA8] text-white shadow-sm"
                         : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:bg-emerald-50"
                     )}
                   >
@@ -705,7 +705,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="issue_no_996"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Issue No.
             </label>
@@ -720,7 +720,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
                   issue_no: e.target.value
                 }))
               }
-              className="h-8 flex-1 border-0 bg-transparent px-1 text-xs font-bold text-[#D94B5A] outline-none"
+              className="h-8 flex-1 border-0 bg-transparent px-1 text-xs font-bold text-[#F7AFA8] outline-none"
             />
           </div>
 
@@ -728,7 +728,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="issue_date_1004"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Issue Date
             </label>
@@ -752,7 +752,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="requisition_no_1014"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Requisition No.
             </label>
@@ -776,7 +776,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="requisition_date_1023"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Requisition Date
             </label>
@@ -800,7 +800,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="godown_no_source_1033"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Godown No. (Source)
             </label>
@@ -828,7 +828,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
 
           {/* Issued For */}
           <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <label className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]">
+            <label className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]">
               Issued For
             </label>
             <div className="flex-1">
@@ -848,7 +848,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
 
           {/* Batching Order */}
           <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <label className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]">
+            <label className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]">
               Batching Order
             </label>
             <div className="flex-1">
@@ -870,7 +870,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="lorry_number_1067"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Lorry Number
             </label>
@@ -894,7 +894,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="issued_by_1077"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Issued By
             </label>
@@ -918,7 +918,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           <div className="group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="received_by_1086"
-              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Received By
             </label>
@@ -940,7 +940,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
 
           {/* Company */}
           <div className="md:col-span-2 group flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <label className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]">
+            <label className="w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]">
               Company Details / Sender
             </label>
             <div className="flex-1">
@@ -967,7 +967,7 @@ export const FactoryIssueHeader: React.FC<FactoryIssueHeaderProps> = ({
           <div className="md:col-span-2 flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm transition-all focus-within:border-[#F7AFA8] focus-within:ring-2 focus-within:ring-green-100">
             <label
               htmlFor="remarks_1108"
-              className="mt-2 w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#D94B5A]"
+              className="mt-2 w-[125px] shrink-0 text-[10px] font-black uppercase tracking-wide text-[#F7AFA8]"
             >
               Remarks
             </label>

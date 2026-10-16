@@ -23,7 +23,7 @@ export const PurchaseOrderSummaryPrintModal: React.FC<PurchaseOrderSummaryPrintM
 
   return (
     <div className="print-modal-wrapper fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 overflow-y-auto print:absolute print:inset-0 print:bg-white print:p-0 print:overflow-visible">
-      <div className="print-modal-inner bg-[#FBCFCB] border-2 border-white shadow-[4px_4px_10px_rgba(0,0,0,0.35)] w-full max-w-4xl rounded-sm p-4 print:border-0 print:shadow-none print:bg-white print:p-0">
+      <div className="print-modal-inner bg-[#d4d0c8] border-2 border-white shadow-[4px_4px_10px_rgba(0,0,0,0.35)] w-full max-w-4xl rounded-sm p-4 print:border-0 print:shadow-none print:bg-white print:p-0">
         {/* Modal Controls */}
         <div className="flex justify-between items-center pb-3 border-b-2 border-gray-400 mb-4 print:hidden">
           <div className="flex items-center gap-2">

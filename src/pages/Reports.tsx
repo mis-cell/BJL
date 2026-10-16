@@ -211,7 +211,7 @@ export default function Reports({ onClose }: ReportsProps) {
       <div className="space-y-4 font-sans text-slate-800">
         
         {/* ================= HEADER BAR ================= */}
-        <div className="bg-gradient-to-r from-[#D94B5A] via-[#E85A5A] to-[#D94B5A] text-white p-4 rounded-2xl shadow-md border border-[#F06D6C] flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="bg-[#F7AFA8] text-white p-4 rounded-2xl shadow-md border border-[#F7AFA8] flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-2xl">📊</span>
@@ -223,14 +223,14 @@ export default function Reports({ onClose }: ReportsProps) {
 
           <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
             {/* Mode Switcher Toggle */}
-            <div className="flex items-center bg-[#D94B5A] p-1 rounded-xl border border-[#F06D6C] text-xs font-black shadow-inner">
+            <div className="flex items-center bg-[#F7AFA8] p-1 rounded-xl border border-[#F7AFA8] text-xs font-black">
               <button
                 type="button"
                 onClick={() => setViewMode('simple')}
                 className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
                   viewMode === 'simple'
-                    ? 'bg-gradient-to-b from-white to-[#FDE7E6] text-[#D94B5A] shadow-md font-black border border-white'
-                    : 'text-white hover:text-white hover:bg-[#F06D6C]/50'
+                    ? 'bg-[#F7AFA8] text-white shadow-md font-black border border-[#FBCFCB]'
+                    : 'text-[#FBCFCB] hover:text-white'
                 }`}
               >
                 <span>Summary</span>
@@ -240,8 +240,8 @@ export default function Reports({ onClose }: ReportsProps) {
                 onClick={() => setViewMode('management')}
                 className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
                   viewMode === 'management'
-                    ? 'bg-gradient-to-b from-white to-[#FDE7E6] text-[#D94B5A] shadow-md font-black border border-white'
-                    : 'text-white hover:text-white hover:bg-[#F06D6C]/50'
+                    ? 'bg-[#F7AFA8] text-white shadow-md font-black border border-[#FBCFCB]'
+                    : 'text-[#FBCFCB] hover:text-white'
                 }`}
               >
                 <span>Analysis</span>
@@ -252,7 +252,7 @@ export default function Reports({ onClose }: ReportsProps) {
               type="button"
               onClick={loadData}
               disabled={loading}
-              className="px-3 py-2 bg-[#F48F8B] hover:bg-[#F06D6C] text-white text-xs font-bold rounded-xl border border-[#E85A5A] transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="px-3 py-2 bg-[#F7AFA8] hover:bg-[#F7AFA8] text-white text-xs font-bold rounded-xl border border-[#FBCFCB] transition flex items-center gap-1.5 shadow-sm cursor-pointer"
               title="Reload database"
             >
               <RefreshCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -262,7 +262,7 @@ export default function Reports({ onClose }: ReportsProps) {
             <button
               type="button"
               onClick={handleExportCSV}
-              className="px-3 py-2 bg-[#FDE7E6] hover:bg-white text-[#D94B5A] text-xs font-black rounded-xl border border-[#FBCFCB] transition flex items-center gap-1.5 shadow-md cursor-pointer"
+              className="px-3 py-2 bg-[#FDE7E6] hover:bg-white text-[#F7AFA8] text-xs font-black rounded-xl border border-[#FBCFCB] transition flex items-center gap-1.5 shadow-md cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>CSV</span>
@@ -271,7 +271,7 @@ export default function Reports({ onClose }: ReportsProps) {
             <button
               type="button"
               onClick={handlePrint}
-              className="px-3 py-2 bg-[#E85A5A] hover:bg-[#F06D6C] text-white text-xs font-bold rounded-xl border border-[#F48F8B] transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+              className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl border border-white/20 transition flex items-center gap-1.5 cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print</span>
@@ -281,8 +281,8 @@ export default function Reports({ onClose }: ReportsProps) {
 
         {/* ================= VIEW MODE CONDITIONAL RENDERING ================= */}
         {loading ? (
-          <div className="bg-white rounded-3xl border border-[#FBCFCB] p-16 text-center text-slate-400 space-y-3 shadow-xs">
-            <RefreshCcw className="w-9 h-9 animate-spin text-[#D94B5A] mx-auto" />
+          <div className="bg-white rounded-3xl border border-slate-200 p-16 text-center text-slate-400 space-y-3 shadow-xs">
+            <RefreshCcw className="w-9 h-9 animate-spin text-[#F7AFA8] mx-auto" />
             <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
               Loading Records...
             </h3>
@@ -297,7 +297,7 @@ export default function Reports({ onClose }: ReportsProps) {
           /* MANAGEMENT ANALYSIS (PRIORITY 1 TO 4) */
           <div className="space-y-4">
             {/* SECTION 18: REPORT NAVIGATION STRUCTURE */}
-            <div className="flex flex-wrap items-center gap-1.5 p-2 bg-[#D94B5A] border border-[#F06D6C] rounded-2xl shadow-md">
+            <div className="flex flex-wrap items-center gap-1.5 p-2 bg-[#F7AFA8] border border-[#F7AFA8] rounded-2xl shadow-inner">
               {[
                 { id: 'dashboard' as const, label: '1. Dashboard', icon: LayoutDashboard, badge: 'Priority 1' },
                 { id: 'business_analysis' as const, label: '2. Business Analysis', icon: BarChart3, badge: 'P2' },
@@ -318,14 +318,14 @@ export default function Reports({ onClose }: ReportsProps) {
                     onClick={() => setActiveSection(tab.id)}
                     className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all duration-150 flex items-center gap-1.5 cursor-pointer ${
                       isActive
-                        ? 'bg-gradient-to-b from-white to-[#FDE7E6] text-[#D94B5A] font-black shadow-md border border-white'
-                        : 'text-white hover:bg-[#F06D6C]/50 hover:text-white'
+                        ? 'bg-[#F7AFA8] text-white font-black shadow-md border border-[#FBCFCB]'
+                        : 'text-[#FBCFCB] hover:bg-[#F7AFA8] hover:text-white'
                     }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#D94B5A]' : 'text-[#FBCFCB]'}`} />
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-[#FBCFCB]'}`} />
                     <span>{tab.label}</span>
                     <span className={`text-[8px] font-black px-1.5 py-0.2 rounded-full ${
-                      isActive ? 'bg-[#D94B5A] text-white' : 'bg-[#FBCFCB] text-[#D94B5A]'
+                      isActive ? 'bg-white text-[#F7AFA8]' : 'bg-[#F7AFA8] text-[#FBCFCB]'
                     }`}>
                       {tab.badge}
                     </span>

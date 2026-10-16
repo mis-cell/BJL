@@ -218,9 +218,9 @@ export const SystemChangeLogPage: React.FC<SystemChangeLogPageProps> = ({
   };
 
   return (
-    <div className="w-full h-full bg-[#FDE7E6] flex flex-col font-sans overflow-hidden text-slate-800">
+    <div className="w-full h-full bg-[#FAF7F0] flex flex-col font-sans overflow-hidden text-slate-800">
       {/* Header Banner */}
-      <div className="bg-[#D94B5A] text-white px-5 py-3 flex items-center justify-between shadow-md shrink-0 border-b border-[#2C4A28]">
+      <div className="bg-[#F7AFA8] text-white px-5 py-3 flex items-center justify-between shadow-md shrink-0 border-b border-[#2C4A28]">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-[#2C4A28] rounded-lg border border-emerald-600/30 shadow-inner">
             <History className="h-5 w-5 text-amber-400" />
@@ -270,8 +270,8 @@ export const SystemChangeLogPage: React.FC<SystemChangeLogPageProps> = ({
       </div>
 
       {/* Metrics Header Bar */}
-      <div className="bg-[#FDE7E6] border-b border-[#FBCFCB] px-5 py-3 grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
-        <div className="bg-white p-3 rounded-lg border border-[#FBCFCB] shadow-xs flex items-center gap-3">
+      <div className="bg-[#FAF7F0] border-b border-[#E2D9C8] px-5 py-3 grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
+        <div className="bg-white p-3 rounded-lg border border-[#E2D9C8] shadow-xs flex items-center gap-3">
           <div className="p-2 bg-emerald-50 rounded-lg text-emerald-800 border border-emerald-200 shrink-0">
             <ShieldCheck className="h-5 w-5" />
           </div>
@@ -281,7 +281,7 @@ export const SystemChangeLogPage: React.FC<SystemChangeLogPageProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-3 rounded-lg border border-[#FBCFCB] shadow-xs flex items-center gap-3">
+        <div className="bg-white p-3 rounded-lg border border-[#E2D9C8] shadow-xs flex items-center gap-3">
           <div className="p-2 bg-amber-50 rounded-lg text-amber-800 border border-amber-200 shrink-0">
             <Clock className="h-5 w-5" />
           </div>
@@ -293,7 +293,7 @@ export const SystemChangeLogPage: React.FC<SystemChangeLogPageProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-3 rounded-lg border border-[#FBCFCB] shadow-xs flex items-center gap-3">
+        <div className="bg-white p-3 rounded-lg border border-[#E2D9C8] shadow-xs flex items-center gap-3">
           <div className="p-2 bg-indigo-50 rounded-lg text-indigo-800 border border-indigo-200 shrink-0">
             <User className="h-5 w-5" />
           </div>
@@ -303,7 +303,7 @@ export const SystemChangeLogPage: React.FC<SystemChangeLogPageProps> = ({
           </div>
         </div>
 
-        <div className="bg-white p-3 rounded-lg border border-[#FBCFCB] shadow-xs flex items-center gap-3">
+        <div className="bg-white p-3 rounded-lg border border-[#E2D9C8] shadow-xs flex items-center gap-3">
           <div className="p-2 bg-slate-100 rounded-lg text-slate-700 border border-slate-300 shrink-0">
             <Layers className="h-5 w-5" />
           </div>
@@ -399,21 +399,21 @@ export const SystemChangeLogPage: React.FC<SystemChangeLogPageProps> = ({
       <div className="flex-1 p-5 overflow-auto min-h-0">
         {isLoading ? (
           <div className="h-64 flex flex-col items-center justify-center text-slate-500 gap-3">
-            <RefreshCcw className="h-8 w-8 animate-spin text-[#D94B5A]" />
+            <RefreshCcw className="h-8 w-8 animate-spin text-[#F7AFA8]" />
             <span className="text-xs font-bold font-mono uppercase tracking-wider">Loading System Change Audit Logs...</span>
           </div>
         ) : filteredLogs.length === 0 ? (
-          <div className="bg-white rounded-xl border border-[#FBCFCB] p-12 text-center shadow-xs">
+          <div className="bg-white rounded-xl border border-[#E2D9C8] p-12 text-center shadow-xs">
             <History className="h-12 w-12 text-slate-300 mx-auto mb-3" />
             <h3 className="text-sm font-extrabold uppercase text-slate-700">No Change Log Entries Found</h3>
             <p className="text-xs text-slate-500 mt-1">Try resetting search filters or checking operator activity.</p>
           </div>
         ) : viewMode === 'table' ? (
           /* Table View */
-          <div className="bg-white rounded-xl border border-[#FBCFCB] shadow-sm overflow-hidden">
+          <div className="bg-white rounded-xl border border-[#E2D9C8] shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#D94B5A] text-white font-black uppercase text-[10px] tracking-wider border-b border-[#2C4A28]">
+                <thead className="bg-[#F7AFA8] text-white font-black uppercase text-[10px] tracking-wider border-b border-[#2C4A28]">
                   <tr>
                     <th className="p-3 w-40">Timestamp</th>
                     <th className="p-3 w-36">Module / Section</th>
@@ -481,7 +481,7 @@ export const SystemChangeLogPage: React.FC<SystemChangeLogPageProps> = ({
           /* Timeline View */
           <div className="space-y-4 max-w-4xl mx-auto">
             {filteredLogs.map((log) => (
-              <div key={log.id} className="bg-white rounded-xl border border-[#FBCFCB] p-4 shadow-xs relative flex gap-4">
+              <div key={log.id} className="bg-white rounded-xl border border-[#E2D9C8] p-4 shadow-xs relative flex gap-4">
                 <div className="p-2.5 bg-emerald-100 text-emerald-900 rounded-lg h-fit border border-emerald-200 shrink-0 mt-1">
                   <Activity className="h-5 w-5" />
                 </div>
