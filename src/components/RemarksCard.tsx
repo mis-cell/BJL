@@ -12,6 +12,8 @@ interface RemarksCardProps {
   onBack?: () => void;
   onSave?: () => void;
   isLoading?: boolean;
+  isLocked?: boolean;
+  lockedMessage?: string;
 }
 
 export const RemarksCard: React.FC<RemarksCardProps> = ({
@@ -21,7 +23,9 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
   onPrint,
   onBack,
   onSave,
-  isLoading = false
+  isLoading = false,
+  isLocked = false,
+  lockedMessage
 }) => {
   return (
     <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#174C2C]/40 hover:shadow-lg transition-all overflow-hidden">
@@ -78,12 +82,16 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
 
       {/* Embedded Action Footer */}
       {(onPrint || onBack || onSave) && (
-        <FooterActions
-          onPrint={onPrint || (() => {})}
-          onBack={onBack || (() => {})}
-          onSave={onSave || (() => {})}
-          isLoading={isLoading}
-        />
+        <div className="pointer-events-auto">
+          <FooterActions
+            onPrint={onPrint || (() => {})}
+            onBack={onBack || (() => {})}
+            onSave={onSave || (() => {})}
+            isLoading={isLoading}
+            isLocked={isLocked}
+            lockedMessage={lockedMessage}
+          />
+        </div>
       )}
     </div>
   );

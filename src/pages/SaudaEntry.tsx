@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft, FileText, Lock, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Sauda } from '../types';
 import { dbModule } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
-import { enforceEditOrDeletePermission, getCurrentUserContext, isUserId10 } from '../lib/permissions';
+import { enforceEditOrDeletePermission, getCurrentUserContext, isUserId10, isUserAdmin, isSaudaApproved } from '../lib/permissions';
 import { resolveDisplayName } from '../lib/userResolver';
 import { logChange } from '../services/auditLogService';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
@@ -115,6 +115,13 @@ export default function SaudaEntry({
 
   const [forceUser010, setForceUser010] = useState<boolean | null>(null);
   const isUser010 = forceUser010 !== null ? forceUser010 : detectedIs010;
+
+  // Sauda Approval & Admin-Only Edit Policy:
+  // When a Sauda is approved by User 010 (Checker), it CANNOT be edited by any user (including User 002 / maker).
+  // ONLY Admin can edit an approved Sauda!
+  const isAdmin = isUserAdmin(userCtx);
+  const isContractApproved = isSaudaApproved(initialData);
+  const isLockedForCurrentUser = Boolean(isContractApproved && !isAdmin);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -627,6 +634,11 @@ export default function SaudaEntry({
   };
 
   const handleSave = async () => {
+    if (isLockedForCurrentUser || (isSaudaApproved(formData) && !isAdmin)) {
+      alert("🔒 Permission Denied: This Sauda contract has been approved by User 010 (Checker).\n\nPer company policy, it cannot be edited by any user. Only Admin can edit this contract.");
+      return;
+    }
+
     if ((formData.sauda_id || initialData) && !enforceEditOrDeletePermission("Edit")) {
       return;
     }
@@ -994,13 +1006,19 @@ export default function SaudaEntry({
         const allSaudas = await dbModule.fetchAll('sauda_master').catch(() => []);
         const match = allSaudas.find((s: any) => s.sauda_no === saudaPayload.sauda_no && s.financial_year === targetFYear);
         if (match) {
+          if (isSaudaApproved(match) && !isAdmin) {
+            alert(`🔒 Permission Denied: Sauda #${match.sauda_no} is approved by User 010. It cannot be overwritten or edited by any user. Only Admin can edit it.`);
+            setLoading(false);
+            return;
+          }
           saudaPayload.sauda_id = match.sauda_id;
           isEditMode = true;
         }
       }
 
       // Maker-Checker Workflow Enforcements:
-      // When a user creates a new entry or resubmits a previously rejected entry, reset status to PENDING
+      // When an Admin modifies an already approved contract, keep its approved status intact.
+      // When a maker (User 002) creates a new entry or resubmits a previously rejected entry, reset status to PENDING
       // for the Checker (User ID 010) to verify again.
       const isWasRejected = initialData && (
         String(initialData.status || '').toUpperCase() === 'REJECTED' ||
@@ -1008,7 +1026,14 @@ export default function SaudaEntry({
         Boolean(initialData.rejected_by)
       );
 
-      if (!isEditMode || isWasRejected) {
+      if (isContractApproved && isAdmin) {
+        // Admin editing approved Sauda: preserve approval status
+        saudaPayload.status = 'APPROVED';
+        saudaPayload.approval_status = 'APPROVED';
+        saudaPayload.is_checked = true;
+        saudaPayload.approved_by = initialData?.approved_by || initialData?.checked_by || 'ADMIN';
+        saudaPayload.checked_by = initialData?.checked_by || initialData?.approved_by || 'ADMIN';
+      } else if (!isEditMode || isWasRejected) {
         saudaPayload.status = 'PENDING';
         saudaPayload.approval_status = 'PENDING';
         saudaPayload.is_checked = false;
@@ -1043,6 +1068,21 @@ export default function SaudaEntry({
           new_value: 'PENDING',
           user_name: resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'User 002'),
           remarks: `Sauda #${saudaPayload.sauda_no} edited and resubmitted for verification by User 010`
+        }).catch(() => {});
+      }
+
+      if (isContractApproved && isAdmin) {
+        logChange({
+          module: 'Sauda Desk',
+          entity_name: 'Admin Contract Override',
+          record_id: String(saudaPayload.sauda_id || saudaPayload.sauda_no),
+          action: 'UPDATE',
+          field_name: 'contract',
+          field_label: 'Approved Contract Modified by Admin',
+          old_value: 'APPROVED',
+          new_value: 'APPROVED',
+          user_name: resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'ADMIN'),
+          remarks: `Approved Sauda #${saudaPayload.sauda_no} updated by System Admin`
         }).catch(() => {});
       }
 
@@ -1164,8 +1204,68 @@ export default function SaudaEntry({
           </button>
         </div>
 
+        {/* Approved Sauda Lock Banner: When Approved by User 010 and current user is NOT Admin */}
+        {isLockedForCurrentUser && (
+          <div className="bg-rose-50 border-2 border-rose-300 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-rose-100 rounded-xl border border-rose-200 text-rose-700 shrink-0 shadow-2xs">
+                <Lock className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="bg-rose-700 text-white font-black text-[11px] px-2.5 py-0.5 rounded tracking-wider uppercase shadow-2xs">
+                    LOCKED CONTRACT
+                  </span>
+                  <span className="font-extrabold text-rose-950 text-sm">
+                    Approved by User 010 ({resolveDisplayName(initialData?.approved_by || initialData?.checked_by, 'SHYAMLAHOTI')})
+                  </span>
+                  <span className="bg-rose-200/80 text-rose-900 border border-rose-300 text-[10px] font-bold px-2 py-0.5 rounded">
+                    Read Only
+                  </span>
+                </div>
+                <p className="text-xs text-rose-800 font-medium mt-1">
+                  This Sauda contract entered in Sauda Desk has been verified and approved by User 010. Per company policy, it cannot be edited by User 002 or any other user. <strong className="font-extrabold text-rose-950">Only Admin can edit this contract.</strong>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-4 py-2 bg-rose-700 hover:bg-rose-800 active:bg-rose-900 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+              >
+                Back to Register
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Admin Override Banner: When Approved by User 010 and current user IS Admin */}
+        {isContractApproved && isAdmin && (
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-xs animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 rounded-lg border border-amber-300 text-amber-800 shrink-0 shadow-2xs">
+                <ShieldCheck className="w-5 h-5 text-amber-700" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="bg-amber-500 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded tracking-wider uppercase shadow-2xs">
+                    ADMIN EDIT OVERRIDE
+                  </span>
+                  <span className="font-bold text-amber-950 text-xs">
+                    Approved Contract (Approved by {resolveDisplayName(initialData?.approved_by || initialData?.checked_by, 'SHYAMLAHOTI')})
+                  </span>
+                </div>
+                <p className="text-[11px] text-amber-800 font-medium mt-0.5">
+                  You are editing an approved Sauda contract as System Admin. All modifications will be updated directly in the master database.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 2. Main Form Content */}
-        <main ref={formContainerRef} className="flex-1 space-y-5 w-full min-w-0">
+        <main ref={formContainerRef} className={`flex-1 space-y-5 w-full min-w-0 ${isLockedForCurrentUser ? 'pointer-events-none opacity-85 select-none' : ''}`}>
           {/* Section 1: Basic Details */}
           <div id="basic-details" className="scroll-mt-14">
             <BasicDetailsCard
@@ -1223,6 +1323,8 @@ export default function SaudaEntry({
               onBack={onCancel}
               onSave={handleSave}
               isLoading={loading}
+              isLocked={isLockedForCurrentUser}
+              lockedMessage="🔒 Locked: This Sauda contract was approved by User 010. Only Admin can edit."
             />
           </div>
         </main>

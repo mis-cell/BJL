@@ -31,7 +31,8 @@ import {
   Scale,
   IndianRupee,
   Eye,
-  History
+  History,
+  Lock
 } from 'lucide-react';
 import { cn, sanitizeCsvData, getApiUrl, cleanSaudaNo } from '../lib/utils';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
@@ -41,7 +42,7 @@ import { UniversalAuditLogModal } from '../components/UniversalAuditLogModal';
 import { dbModule, flushOfflineQueue } from '../services/dbModule';
 import { Sauda, SaudaQualityDetail } from '../types';
 import { supabase } from '../lib/supabase';
-import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isUserId10, isUserId2, isUserAdmin, isL5OrAdmin, getCurrentUserContext } from '../lib/permissions';
+import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isUserId10, isUserId2, isUserAdmin, isL5OrAdmin, getCurrentUserContext, isSaudaApproved, canEditSaudaContract, canDeleteSaudaContract } from '../lib/permissions';
 import { initUserMap, resolveDisplayName } from '../lib/userResolver';
 import { logChange } from '../services/auditLogService';
 import { PaginationControls } from '../components/PaginationControls';
@@ -1017,6 +1018,12 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   }, [isActive]);
 
   const handleDelete = async (id: string) => {
+    const target = saudaList.find(s => s.sauda_id === id || (s as any).id === id);
+    if (target && isCheckedSauda(target) && !isUserAdmin()) {
+      alert(`🔒 Permission Denied: Sauda #${target.sauda_no} has been approved by User 010 (Checker). It cannot be deleted by any user. Only Admin can delete approved contracts.`);
+      return;
+    }
+
     if (!enforceEditOrDeletePermission("Delete")) {
       return;
     }
@@ -1037,6 +1044,12 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   };
 
   const handleEdit = async (sauda: Sauda) => {
+    // If Sauda is approved by user 010 (checked), only Admin can edit it!
+    if (isCheckedSauda(sauda) && !isUserAdmin()) {
+      alert(`🔒 Permission Denied: Sauda #${sauda.sauda_no} has been approved by User 010 (Checker).\n\nIt cannot be edited by any user. Only Admin can edit this contract.`);
+      return;
+    }
+
     if (!enforceEditOrDeletePermission("Edit")) {
       return;
     }
@@ -1698,7 +1711,13 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                     <tr 
                       key={entry.sauda_id} 
                       onClick={() => setSelectedSaudaId(entry.sauda_id!)}
-                      onDoubleClick={() => { if (canEditOrDelete()) handleEdit(entry); }}
+                      onDoubleClick={() => {
+                        if (isChecked && !isUserAdmin()) {
+                          alert(`🔒 Permission Denied: Sauda #${entry.sauda_no} is approved by User 010 (Checker).\n\nIt cannot be edited by any user. Only Admin can edit this contract.`);
+                          return;
+                        }
+                        if (canEditOrDelete()) handleEdit(entry);
+                      }}
                       className={cn(
                         "h-10 cursor-pointer transition-colors text-xs font-medium", 
                         isSelected 
@@ -1882,19 +1901,61 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                                     onClick={(e) => { e.stopPropagation(); setOpenActionDropdownId(null); }} 
                                   />
                                   <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-300 rounded-xl shadow-xl z-30 py-1 font-sans text-xs divide-y divide-slate-100 animate-in fade-in duration-100 text-left">
-                                    {canEditOrDelete() && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setOpenActionDropdownId(null);
-                                          handleEdit(entry);
-                                        }}
-                                        className="w-full px-3 py-1.5 text-left text-amber-800 hover:bg-amber-50 font-bold flex items-center gap-2 cursor-pointer"
-                                        title={isRejected ? "Review, Edit and Resubmit Sauda" : "Edit Sauda"}
-                                      >
-                                        <Edit className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                        <span>{isRejected ? "Edit & Resubmit" : "Edit"}</span>
-                                      </button>
+                                    {/* Edit Button: If approved, only Admin can edit; otherwise normal permissions apply */}
+                                    {isChecked ? (
+                                      isUserAdmin() ? (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenActionDropdownId(null);
+                                            handleEdit(entry);
+                                          }}
+                                          className="w-full px-3 py-1.5 text-left text-amber-800 hover:bg-amber-50 font-bold flex items-center justify-between gap-2 cursor-pointer"
+                                          title="Admin Edit Approved Sauda"
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <Edit className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                            <span>Edit (Admin)</span>
+                                          </div>
+                                          <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.2 rounded">
+                                            Admin
+                                          </span>
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenActionDropdownId(null);
+                                            alert(`🔒 Permission Denied: Sauda #${entry.sauda_no} is approved by User 010 (Checker).\n\nIt cannot be edited by any user. Only Admin can edit this contract.`);
+                                          }}
+                                          className="w-full px-3 py-1.5 text-left text-slate-400 bg-slate-50/80 font-medium flex items-center justify-between gap-2 cursor-not-allowed hover:bg-slate-100 transition-colors"
+                                          title="Locked: Approved by User 010. Only Admin can edit."
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                            <span className="text-slate-500">Edit</span>
+                                          </div>
+                                          <span className="text-[9px] bg-slate-200 text-slate-700 font-bold px-1.5 py-0.2 rounded flex items-center gap-0.5">
+                                            <Lock className="w-2.5 h-2.5" /> Locked
+                                          </span>
+                                        </button>
+                                      )
+                                    ) : (
+                                      canEditOrDelete() && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenActionDropdownId(null);
+                                            handleEdit(entry);
+                                          }}
+                                          className="w-full px-3 py-1.5 text-left text-amber-800 hover:bg-amber-50 font-bold flex items-center gap-2 cursor-pointer"
+                                          title={isRejected ? "Review, Edit and Resubmit Sauda" : "Edit Sauda"}
+                                        >
+                                          <Edit className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                          <span>{isRejected ? "Edit & Resubmit" : "Edit"}</span>
+                                        </button>
+                                      )
                                     )}
 
                                     <button
@@ -1911,18 +1972,55 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                                       <span>Audit History</span>
                                     </button>
 
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setOpenActionDropdownId(null);
-                                        handleDelete(entry.sauda_id!);
-                                      }}
-                                      className="w-full px-3 py-1.5 text-left text-rose-700 hover:bg-rose-50 font-bold flex items-center gap-2 cursor-pointer"
-                                      title="Delete Sauda"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                                      <span>Delete</span>
-                                    </button>
+                                    {/* Delete Button: If approved, only Admin can delete */}
+                                    {isChecked ? (
+                                      isUserAdmin() ? (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenActionDropdownId(null);
+                                            handleDelete(entry.sauda_id!);
+                                          }}
+                                          className="w-full px-3 py-1.5 text-left text-rose-700 hover:bg-rose-50 font-bold flex items-center gap-2 cursor-pointer"
+                                          title="Admin Delete Sauda"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                                          <span>Delete (Admin)</span>
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenActionDropdownId(null);
+                                            alert(`🔒 Permission Denied: Sauda #${entry.sauda_no} is approved by User 010 (Checker).\n\nIt cannot be deleted by any user. Only Admin can delete approved contracts.`);
+                                          }}
+                                          className="w-full px-3 py-1.5 text-left text-slate-400 bg-slate-50/80 font-medium flex items-center justify-between gap-2 cursor-not-allowed hover:bg-slate-100 transition-colors"
+                                          title="Locked: Approved by User 010. Only Admin can delete."
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <Trash2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                            <span className="text-slate-400">Delete</span>
+                                          </div>
+                                          <span className="text-[9px] bg-slate-200 text-slate-700 font-bold px-1.5 py-0.2 rounded">
+                                            Locked
+                                          </span>
+                                        </button>
+                                      )
+                                    ) : (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setOpenActionDropdownId(null);
+                                          handleDelete(entry.sauda_id!);
+                                        }}
+                                        className="w-full px-3 py-1.5 text-left text-rose-700 hover:bg-rose-50 font-bold flex items-center gap-2 cursor-pointer"
+                                        title="Delete Sauda"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                                        <span>Delete</span>
+                                      </button>
+                                    )}
 
                                     <button
                                       onClick={(e) => {

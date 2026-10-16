@@ -860,6 +860,52 @@ export function canViewCompletedData(): boolean {
 }
 
 /**
+ * Checks whether a Sauda contract is marked as approved / checked (e.g. approved by User 010).
+ */
+export function isSaudaApproved(sauda: any): boolean {
+  if (!sauda) return false;
+  const status = String(sauda.status || '').toUpperCase();
+  const approvalStatus = String(sauda.approval_status || '').toUpperCase();
+  return Boolean(
+    sauda.is_checked ||
+    status === 'APPROVED' ||
+    approvalStatus === 'APPROVED' ||
+    status === 'CHECKED' ||
+    approvalStatus === 'CHECKED' ||
+    Boolean(sauda.approved_by) ||
+    Boolean(sauda.checked_by)
+  );
+}
+
+/**
+ * Sauda Contract Edit Policy:
+ * In Sauda Desk, if a user (e.g. User 002) enters any Sauda and that Sauda is approved by User 010 (Checker),
+ * then it CANNOT be edited by any user; ONLY ADMIN can edit it.
+ * If the contract is not approved (e.g. pending or rejected), maker / editor can edit & resubmit.
+ */
+export function canEditSaudaContract(sauda: any, roleOrContext?: any): boolean {
+  if (!sauda) return true;
+  if (!isSaudaApproved(sauda)) {
+    return canEditOrDelete(roleOrContext);
+  }
+  // Approved contract: strictly ONLY Admin can edit!
+  return isUserAdmin(roleOrContext);
+}
+
+/**
+ * Sauda Contract Delete Policy:
+ * If approved by User 010, only Admin can delete.
+ */
+export function canDeleteSaudaContract(sauda: any, roleOrContext?: any): boolean {
+  if (!sauda) return true;
+  if (!isSaudaApproved(sauda)) {
+    return canEditOrDelete(roleOrContext);
+  }
+  // Approved contract: strictly ONLY Admin can delete!
+  return isUserAdmin(roleOrContext);
+}
+
+/**
  * Strict Independent Module Permission Checker (canAccess)
  * 
  * Rules:
