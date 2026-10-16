@@ -65,7 +65,7 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
               <th className="p-1 border border-gray-400 w-24" rowSpan={2}>Netto (M.T)</th>
               <th className="p-1 border border-gray-400 w-32" colSpan={2}>Quantity</th>
               <th className="p-1 border border-gray-400 w-36" rowSpan={2}>Remarks</th>
-              <th className="p-1 border border-gray-400 w-12 text-center" rowSpan={2}>Action</th>
+              <th className="p-1 border border-gray-400 w-20 text-center" rowSpan={2}>Action</th>
             </tr>
             <tr className="bg-slate-200 text-black font-extrabold text-[8px] text-center border-b border-gray-400">
               <th className="p-0.5 border border-gray-400 w-16">Code</th>
@@ -261,14 +261,15 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
                 </td>
 
                 {/* Individual Row Delete Button */}
-                <td className="p-0.5 border border-gray-300 text-center w-12 bg-slate-50/50">
+                <td className="p-0.5 border border-gray-300 text-center w-20 bg-slate-50/50">
                   <button
                     type="button"
                     onClick={() => onDeleteRowAt ? onDeleteRowAt(idx) : onDeleteRow()}
-                    className="p-1 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded transition-all cursor-pointer border border-rose-200 shadow-2xs active:scale-95 inline-flex items-center justify-center"
+                    className="px-1.5 py-0.5 bg-rose-600 hover:bg-rose-700 text-white text-[9.5px] font-bold rounded transition-all cursor-pointer border border-rose-700 shadow-2xs active:scale-95 inline-flex items-center gap-1 justify-center"
                     title={`Delete Row ${detail.srl_no}`}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3 h-3" />
+                    <span>Delete</span>
                   </button>
                 </td>
               </tr>
