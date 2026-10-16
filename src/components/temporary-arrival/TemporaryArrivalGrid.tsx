@@ -41,13 +41,6 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
           >
             + Add Row
           </button>
-          <button
-            type="button"
-            onClick={onDeleteRow}
-            className="bg-rose-700 hover:bg-rose-800 text-white font-bold px-2 py-0.5 text-[10px] rounded flex items-center gap-1 cursor-pointer active:scale-95 shadow-xs"
-          >
-            - Delete Row
-          </button>
         </div>
       </div>
 
