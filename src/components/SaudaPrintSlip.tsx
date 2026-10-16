@@ -271,7 +271,7 @@ export default function SaudaPrintSlip({ sauda }: Props) {
              </div>
           </div>
           <div className="flex justify-between items-center text-[9px] font-mono text-neutral-600 pt-1">
-             <div>BALLY JUTE CO. LTD. • AUTHORIZED COMPUTER GENERATED SYSTEM CONTRACT</div>
+             <div>BALLY JUTE COMPANY LIMITED • AUTHORIZED COMPUTER GENERATED SYSTEM CONTRACT</div>
              <div>Page 1 of 1</div>
           </div>
        </div>

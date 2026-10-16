@@ -182,8 +182,8 @@ export function generateSaudaPdfBase64(s: any): string {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(85, 85, 85);
-    doc.text('Prepared By: Bally Jute PO Desk', 15, finalY + 30);
-    doc.text('Authorized Signature: Bally Jute Jute Division', 120, finalY + 30);
+    doc.text('Prepared By: Bally Jute Company Limited PO Desk', 15, finalY + 30);
+    doc.text('Authorized Signature: Bally Jute Company Limited Jute Division', 120, finalY + 30);
 
     const outputString = doc.output('datauristring');
     return outputString.split(',')[1];

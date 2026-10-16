@@ -417,7 +417,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
               {/* Company Info Left */}
               <div className="mt-0.5">
                 <h2 className="font-black text-lg sm:text-xl text-[#d60000] tracking-tight uppercase leading-none">
-                  BALLY JUTE COMPANY LTD.
+                  BALLY JUTE COMPANY LIMITED
                 </h2>
                 <p className="text-[12px] font-bold text-[#d60000] mt-0.5">
                   5, Sree Charan Sarani, Bally, West Bengal.
@@ -691,7 +691,7 @@ export default function InspectionPrintSlip({ master, details = [], copyType = '
               {/* Right Side: Company Signatory Box */}
               <div className="col-span-4 flex flex-col justify-between items-center text-center pl-2">
                 <p className="font-black text-[11.5px] uppercase tracking-wide">
-                  FOR, BALLY JUTE COMPANY LTD.
+                  FOR, BALLY JUTE COMPANY LIMITED
                 </p>
                 
                 <div className="w-full pt-8">

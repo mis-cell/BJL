@@ -28,7 +28,7 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
           {/* Desktop Background Image */}
           <img
             src={bgSrc}
-            alt="Bally Jute Limited Background"
+            alt="Bally Jute Company Limited Background"
             className="absolute inset-0 w-full h-full object-fill pointer-events-none z-0"
             onError={() => {
               if (bgSrc === CLOUDINARY_BG_URL) {
@@ -44,7 +44,7 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
 
               <div className="text-center mb-3">
                 <h2 className="text-lg sm:text-xl font-bold text-[#1E331B] tracking-tight">
-                  Bally Jute Login
+                  Bally Jute Company Limited Login
                 </h2>
 
                 <p className="text-[10px] sm:text-[11px] text-[#5A6855] font-medium mt-0.5">
@@ -184,7 +184,7 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
             <div className="text-center mb-6">
 
               <h2 className="text-2xl font-bold text-[#1E331B] tracking-tight">
-                Bally Jute Login
+                Bally Jute Company Limited Login
               </h2>
 
               <p className="text-xs text-[#5A6855] font-medium mt-1">

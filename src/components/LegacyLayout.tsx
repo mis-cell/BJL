@@ -428,7 +428,7 @@ export default function LegacyLayout({
 
             <div className="min-w-0 flex-1">
               <h1 className="font-serif text-sm sm:text-2xl font-black text-white tracking-tight leading-none group-hover:text-amber-300 transition-colors truncate">
-                Bally Jute Limited
+                Bally Jute Company Limited
               </h1>
               <p className="text-[8px] sm:text-[9.5px] font-mono text-emerald-200 tracking-[0.15em] sm:tracking-[0.25em] uppercase font-bold mt-0.5 truncate">
                 ESTD. 1979 • RAW JUTE MANAGEMENT ERP

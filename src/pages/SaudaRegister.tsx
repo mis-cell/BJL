@@ -1440,7 +1440,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const bookTotalValue = filteredSaudas.reduce((acc, s) => acc + (Number(s.b_rate || 0) * Number(s.total_wt_in_ton || 0)), 0);
 
   return (
-    <LegacyLayout title="Sauda Desk" subtitle="Bally Jute Limited ERP Console" onClose={onClose}>
+    <LegacyLayout title="Sauda Desk" subtitle="Bally Jute Company Limited ERP Console" onClose={onClose}>
       <div className="space-y-4 relative pb-10 font-sans">
         {/* 1. Four Modern Enterprise KPI Cards (Light & Colorful) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

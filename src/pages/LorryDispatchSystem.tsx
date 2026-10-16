@@ -957,7 +957,7 @@ export default function LorryDispatchSystem({
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
-    doc.text("BALLY JUTE LIMITED", 38, 8, { align: "center" });
+    doc.text("BALLY JUTE COMPANY LIMITED", 38, 8, { align: "center" });
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
@@ -1057,7 +1057,7 @@ export default function LorryDispatchSystem({
 
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("BALLY JUTE LIMITED - DISPATCH & WEIGHMENT SHIFT LEDGER", 14, 15);
+    doc.text("BALLY JUTE COMPANY LIMITED - DISPATCH & WEIGHMENT SHIFT LEDGER", 14, 15);
 
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
@@ -1987,7 +1987,7 @@ export default function LorryDispatchSystem({
             {/* Printed Ticket Card */}
             <div className="bg-[#FAF7F0] text-[#1E331B] p-4 rounded-xl text-xs font-mono space-y-2 border border-[#C5BA9E] shadow-xs">
               <div className="text-center border-b border-[#C5BA9E] pb-2">
-                <p className="font-black text-sm uppercase">BALLY JUTE LIMITED</p>
+                <p className="font-black text-sm uppercase">BALLY JUTE COMPANY LIMITED</p>
                 <p className="text-[9px] text-[#5A6E54]">Lorry Weighment & Dispatch Slip</p>
               </div>
 

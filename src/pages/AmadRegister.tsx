@@ -90,7 +90,7 @@ export const calculateNetWeightVal = (
   return netWeight.toFixed(3);
 };
 
-// Vector Illustrations matching Bally Jute Limited branding
+// Vector Illustrations matching Bally Jute Company Limited branding
 const FactorySketchIllustration = () => (
   <svg className="w-32 h-20 opacity-80" viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg">
     {/* Background hills */}
