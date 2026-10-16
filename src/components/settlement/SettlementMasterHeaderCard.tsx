@@ -340,7 +340,7 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               <label htmlFor="actual_apmc_fees_header_card" className="text-slate-500 text-[8px] uppercase font-bold">
                 Actual APMC Fees (1%)
               </label>
-              <span className="text-[7.5px] font-black bg-[#0f172a] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
+              <span className="text-[7.5px] font-black bg-[#520F18] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
               <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-72 bg-slate-900 text-white p-2.5 text-[8.5px] rounded border border-slate-700 shadow-xl leading-normal font-normal normal-case">
                 <p className="text-yellow-300 font-bold">Actual APMC Fees (1%) Formula</p>
                 <p className="mt-0.5 text-slate-200 font-mono text-[8px]">1% × (Material Value − Delivery Claim − Deduction Amount − Ded Claim Total − Excess/Short)</p>

@@ -211,40 +211,37 @@ export default function Reports({ onClose }: ReportsProps) {
       <div className="space-y-4 font-sans text-slate-800">
         
         {/* ================= HEADER BAR ================= */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-green-950 text-white p-4 rounded-2xl shadow-md border border-emerald-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="bg-[#9E2B38] text-white p-4 rounded-2xl shadow-md border border-[#7A1C27] flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-2xl">📊</span>
-              <h2 className="text-lg font-black uppercase tracking-wider text-yellow-300">
-                Report
+              <h2 className="text-lg font-black uppercase tracking-wider text-white">
+                REPORT
               </h2>
             </div>
-            {/* {viewMode === 'simple' && (
-              <p className="text-xs text-emerald-100/90 mt-1">
-                Executive Procurement Summary — Total Deals, Arrival Progress, and Payment Status
-              </p>
-            )} */}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
             {/* Mode Switcher Toggle */}
-            <div className="flex items-center bg-black/40 p-1 rounded-xl border border-white/10 text-xs font-black">
+            <div className="flex items-center bg-[#520F18] p-1 rounded-xl border border-[#7A1C27] text-xs font-black">
               <button
+                type="button"
                 onClick={() => setViewMode('simple')}
                 className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
                   viewMode === 'simple'
-                    ? 'bg-yellow-400 text-slate-950 shadow-md font-black'
-                    : 'text-emerald-100 hover:text-white'
+                    ? 'bg-[#D94B5A] text-white shadow-md font-black border border-[#F06D6C]'
+                    : 'text-[#FBCFCB] hover:text-white'
                 }`}
               >
                 <span>Summary</span>
               </button>
               <button
+                type="button"
                 onClick={() => setViewMode('management')}
                 className={`px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
                   viewMode === 'management'
-                    ? 'bg-yellow-400 text-slate-950 shadow-md font-black'
-                    : 'text-emerald-100 hover:text-white'
+                    ? 'bg-[#D94B5A] text-white shadow-md font-black border border-[#F06D6C]'
+                    : 'text-[#FBCFCB] hover:text-white'
                 }`}
               >
                 <span>Analysis</span>
@@ -252,9 +249,10 @@ export default function Reports({ onClose }: ReportsProps) {
             </div>
 
             <button
+              type="button"
               onClick={loadData}
               disabled={loading}
-              className="px-3 py-2 bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl border border-emerald-600 transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="px-3 py-2 bg-[#D94B5A] hover:bg-[#E85A5A] text-white text-xs font-bold rounded-xl border border-[#F06D6C] transition flex items-center gap-1.5 shadow-sm cursor-pointer"
               title="Reload database"
             >
               <RefreshCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -262,14 +260,16 @@ export default function Reports({ onClose }: ReportsProps) {
             </button>
 
             <button
+              type="button"
               onClick={handleExportCSV}
-              className="px-3 py-2 bg-yellow-400 hover:bg-yellow-300 text-emerald-950 text-xs font-black rounded-xl border border-yellow-200 transition flex items-center gap-1.5 shadow-md cursor-pointer"
+              className="px-3 py-2 bg-[#FDE7E6] hover:bg-white text-[#9E2B38] text-xs font-black rounded-xl border border-[#FBCFCB] transition flex items-center gap-1.5 shadow-md cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>CSV</span>
             </button>
 
             <button
+              type="button"
               onClick={handlePrint}
               className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl border border-white/20 transition flex items-center gap-1.5 cursor-pointer"
             >
@@ -282,13 +282,10 @@ export default function Reports({ onClose }: ReportsProps) {
         {/* ================= VIEW MODE CONDITIONAL RENDERING ================= */}
         {loading ? (
           <div className="bg-white rounded-3xl border border-slate-200 p-16 text-center text-slate-400 space-y-3 shadow-xs">
-            <RefreshCcw className="w-9 h-9 animate-spin text-emerald-600 mx-auto" />
+            <RefreshCcw className="w-9 h-9 animate-spin text-[#D94B5A] mx-auto" />
             <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
               Loading Records...
             </h3>
-            {/* <span className="text-xs text-slate-500 block">
-              sauda_master, purchase_master, final_arrival, material_inspection, payment_master
-            </span> */}
           </div>
         ) : viewMode === 'simple' ? (
           /* SIMPLE VIEW FOR UNDER-LEVEL USER */
@@ -300,7 +297,7 @@ export default function Reports({ onClose }: ReportsProps) {
           /* MANAGEMENT ANALYSIS (PRIORITY 1 TO 4) */
           <div className="space-y-4">
             {/* SECTION 18: REPORT NAVIGATION STRUCTURE */}
-            <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-inner">
+            <div className="flex flex-wrap items-center gap-1.5 p-2 bg-[#520F18] border border-[#7A1C27] rounded-2xl shadow-inner">
               {[
                 { id: 'dashboard' as const, label: '1. Dashboard', icon: LayoutDashboard, badge: 'Priority 1' },
                 { id: 'business_analysis' as const, label: '2. Business Analysis', icon: BarChart3, badge: 'P2' },
@@ -317,17 +314,18 @@ export default function Reports({ onClose }: ReportsProps) {
                 return (
                   <button
                     key={tab.id}
+                    type="button"
                     onClick={() => setActiveSection(tab.id)}
                     className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all duration-150 flex items-center gap-1.5 cursor-pointer ${
                       isActive
-                        ? 'bg-yellow-400 text-slate-950 font-black shadow-md scale-[1.02]'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                        ? 'bg-[#D94B5A] text-white font-black shadow-md border border-[#F06D6C]'
+                        : 'text-[#FBCFCB] hover:bg-[#7A1C27] hover:text-white'
                     }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-slate-950' : 'text-slate-400'}`} />
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-[#FBCFCB]'}`} />
                     <span>{tab.label}</span>
                     <span className={`text-[8px] font-black px-1.5 py-0.2 rounded-full ${
-                      isActive ? 'bg-slate-950 text-yellow-300' : 'bg-slate-800 text-slate-400'
+                      isActive ? 'bg-white text-[#9E2B38]' : 'bg-[#7A1C27] text-[#FBCFCB]'
                     }`}>
                       {tab.badge}
                     </span>

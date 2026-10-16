@@ -415,7 +415,7 @@ export const BrokerPercentageReport: React.FC<BrokerPercentageReportProps> = ({ 
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: '#334155', fontWeight: 600 }} width={80} />
                 <Tooltip 
                   formatter={(val: any, name: string) => [`${Number(val).toFixed(2)} MT`, name === 'deliveredMT' ? 'Delivered' : 'Pending']}
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
+                  contentStyle={{ backgroundColor: '#520F18', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
                 />
                 <Legend verticalAlign="top" height={24} formatter={v => <span className="text-[10px] font-bold text-slate-600">{v === 'deliveredMT' ? 'Delivered MT' : 'Pending MT'}</span>} />
                 <Bar dataKey="deliveredMT" fill="#059669" stackId="a" radius={[0, 0, 0, 0]} />
@@ -444,7 +444,7 @@ export const BrokerPercentageReport: React.FC<BrokerPercentageReportProps> = ({ 
                 <YAxis tick={{ fontSize: 9, fill: '#64748b' }} allowDecimals={false} />
                 <Tooltip 
                   formatter={(val: any, name: string) => [`${val} Contracts`, name === 'completed' ? 'Complete (PO/SCP)' : 'Active Pending']}
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
+                  contentStyle={{ backgroundColor: '#520F18', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
                 />
                 <Legend verticalAlign="top" height={24} formatter={v => <span className="text-[10px] font-bold text-slate-600">{v === 'completed' ? 'Complete Saudas' : 'Pending Saudas'}</span>} />
                 <Bar dataKey="completed" fill="#059669" radius={[4, 4, 0, 0]} />
@@ -483,7 +483,7 @@ export const BrokerPercentageReport: React.FC<BrokerPercentageReportProps> = ({ 
                 </Pie>
                 <Tooltip 
                   formatter={(val: any) => [`₹${Number(val).toLocaleString()}`, 'Amount']}
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
+                  contentStyle={{ backgroundColor: '#520F18', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
                 />
                 <Legend verticalAlign="bottom" height={28} formatter={v => <span className="text-[9.5px] text-slate-700 font-bold">{v}</span>} />
               </PieChart>

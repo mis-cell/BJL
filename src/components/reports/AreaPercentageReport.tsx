@@ -179,7 +179,7 @@ export const AreaPercentageReport: React.FC<AreaPercentageReportProps> = ({ area
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: '#334155', fontWeight: 600 }} width={90} />
                 <Tooltip 
                   formatter={(val: any) => [`${Number(val).toFixed(1)}%`, 'Regional Share']}
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
+                  contentStyle={{ backgroundColor: '#520F18', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
                 />
                 <Bar dataKey="sharePct" name="Share %" fill="#0284c7" radius={[0, 4, 4, 0]} />
               </BarChart>

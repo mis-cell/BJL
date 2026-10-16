@@ -59,7 +59,7 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
           <div className="flex flex-col">
             <div className="group relative flex items-center gap-1 mb-0.5">
               <label className="text-[9px] uppercase font-bold text-slate-600">Rate / M.T</label>
-              <span className="text-[7.5px] font-black bg-[#0f172a] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
+              <span className="text-[7.5px] font-black bg-[#520F18] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
               <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-48 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
                 DB Reference: <code className="text-yellow-400 font-mono">mr_settlement_master.summary_rate_qtel</code>
                 <p className="mt-1">Format: Numeric dec. Jute price per 1000 kg (Metric Ton) used to compute the value of the material received.</p>
@@ -128,7 +128,7 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
           <div className="flex flex-col">
             <div className="group relative flex items-center gap-1 mb-0.5">
               <label className="text-[9px] uppercase font-bold text-[#991b1b]">Moisture (%)</label>
-              <span className="text-[7.5px] font-black bg-[#0f172a] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
+              <span className="text-[7.5px] font-black bg-[#520F18] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
               <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-52 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
                 <p className="text-yellow-300 font-bold">Moisture Sensor Average (%)</p>
                 <p>Synced directly from mill inspection gate-pass records for this M.R.</p>
@@ -183,7 +183,7 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
           <div className="flex flex-col col-span-2">
             <div className="group relative flex items-center gap-1 mb-0.5">
               <label htmlFor="summary_mat_val_input" className="text-[9px] uppercase font-bold text-slate-600">Mat. Value</label>
-              <span className="text-[7.5px] font-black bg-[#0f172a] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
+              <span className="text-[7.5px] font-black bg-[#520F18] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
               <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-64 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
                 <p className="text-yellow-300 font-bold">Material Value</p>
                 <p className="mt-0.5 text-slate-300">Directly calculated from Grand Total (Gross Column Values)</p>
@@ -329,7 +329,7 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
           <div className="flex flex-col">
             <div className="group relative flex items-center gap-1 mb-0.5">
               <label className="text-[9px] font-bold text-slate-600">Premium Amt (+)</label>
-              <span className="text-[7.5px] font-black bg-[#0f172a] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
+              <span className="text-[7.5px] font-black bg-[#520F18] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
               <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-56 bg-slate-900 text-white p-2 text-[8px] rounded border border-slate-700 shadow-md leading-normal font-normal normal-case">
                 <p className="text-yellow-300 font-bold">Total Premium Amount</p>
                 <p>Formula: Premium Rate × Premium WT (Qtl)</p>
@@ -381,7 +381,7 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
             <div className="group relative flex items-center justify-between gap-1 mb-0.5">
               <div className="flex items-center gap-1">
                 <label htmlFor="ex_short_input" className="text-[9px] font-bold text-[#991b1b]">Ex/Short (-)</label>
-                <span className="text-[7.5px] font-black bg-[#0f172a] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
+                <span className="text-[7.5px] font-black bg-[#520F18] text-white rounded-full w-3 h-3 inline-flex items-center justify-center font-serif cursor-help">i</span>
                 <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-72 bg-slate-900 text-white p-2.5 text-[8.5px] rounded-lg border border-slate-700 shadow-xl leading-normal font-normal normal-case">
                   <p className="text-amber-300 font-bold text-[9px]">Sauda Checkpoint Short/Excess Weight Deduction</p>
                   <p>Table: <code className="text-cyan-300">sauda_check_point_deductions</code></p>

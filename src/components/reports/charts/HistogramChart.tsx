@@ -48,7 +48,7 @@ export const HistogramChart: React.FC<HistogramChartProps> = ({
                 const p = item.payload;
                 return [`${val} occurrences (${p.pct}%)`, metricLabel];
               }}
-              contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
+              contentStyle={{ backgroundColor: '#520F18', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
             />
             <Bar dataKey="count" name={metricLabel} radius={[4, 4, 0, 0]}>
               {bins.map((entry, index) => {

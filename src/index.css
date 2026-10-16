@@ -80,6 +80,16 @@
   --color-blue-800: #9E2B38;
   --color-blue-900: #7A1C27;
   --color-blue-950: #520F18;
+
+  /* Map dark slate headers and active tabs to Rose/Crimson theme */
+  --color-slate-900: #7A1C27;
+  --color-slate-950: #520F18;
+
+  /* Map yellow and amber accent buttons to Rose/Coral theme */
+  --color-yellow-300: #FBCFCB;
+  --color-yellow-400: #D94B5A;
+  --color-amber-300: #FBCFCB;
+  --color-amber-400: #D94B5A;
 }
 
 @layer base {

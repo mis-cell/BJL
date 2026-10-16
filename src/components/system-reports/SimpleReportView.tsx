@@ -649,10 +649,8 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
     <div className="space-y-4 font-sans text-slate-800">
 
       {/* ================= MULTI-DIMENSIONAL ANALYSIS NAVIGATION TABS ================= */}
-      <div className="bg-slate-900 p-2 rounded-2xl border border-slate-800 flex items-center gap-1.5 flex-wrap text-xs shadow-inner">
+      <div className="bg-[#520F18] p-2 rounded-2xl border border-[#7A1C27] flex items-center gap-1.5 flex-wrap text-xs shadow-inner">
         {[
-          /* { id: 'OVERVIEW' as const, label: 'Overview & Charts', icon: BarChart3 }, */
-          /* { id: 'ALL_DEALS' as const, label: 'All Transactions', icon: FileText, count: filteredList.length }, */
           { id: 'BROKER' as const, label: 'Broker Wise', icon: Users, count: brokerData.filter(b => b.dealCount > 0).length },
           { id: 'AGENCY' as const, label: 'Agency Wise', icon: Building2, count: agencyData.filter(a => a.dealCount > 0).length },
           { id: 'AREA' as const, label: 'Area Wise', icon: Package, count: areaData.filter(a => a.dealCount > 0).length },
@@ -667,19 +665,20 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
           const isActive = activeTab === tab.id;
           return (
             <button
+              type="button"
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
                 isActive
-                  ? 'bg-yellow-400 text-slate-950 font-black shadow-md'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-[#D94B5A] text-white font-black shadow-md border border-[#F06D6C]'
+                  : 'text-[#FBCFCB] hover:bg-[#7A1C27] hover:text-white'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
               <span>{tab.label}</span>
               {tab.count !== undefined && (
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
-                  isActive ? 'bg-slate-950 text-yellow-400' : 'bg-slate-800 text-slate-400'
+                  isActive ? 'bg-white text-[#9E2B38]' : 'bg-[#7A1C27] text-[#FBCFCB]'
                 }`}>
                   {tab.count}
                 </span>
@@ -706,9 +705,10 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
 
     return (
       <button
+        type="button"
         key={item.id}
         onClick={() => setSubAnalysisMode(item.id)}
-        className={` group relative flex flex-1 min-w-[220px] items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/50 ${ isActive ? 'border-[#D94B5A] bg-gradient-to-br from-[#1E5A32] to-[#123D25] text-white shadow-md' : 'border-[#E2E9DF] bg-white text-[#334536] hover:border-[#B7CDB5] hover:bg-[#F4F8F1] hover:shadow-sm' } `}
+        className={` group relative flex flex-1 min-w-[220px] items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-[#D94B5A]/50 ${ isActive ? 'border-[#F06D6C] bg-[#9E2B38] text-white shadow-md' : 'border-[#FBCFCB] bg-white text-slate-800 hover:border-[#F7AFA8] hover:bg-[#FDE7E6]/40 hover:shadow-sm' } `}
       >
         <span
           className={`
@@ -717,7 +717,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             ${
               isActive
                 ? 'bg-white/15 shadow-inner'
-                : 'bg-[#EEF4EA] group-hover:bg-[#E3EEDF]'
+                : 'bg-[#FDE7E6] group-hover:bg-[#FBCFCB]'
             }
           `}
         >
@@ -730,7 +730,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
           </span>
           <span
             className={`whitespace-nowrap text-[10px] font-medium ${
-              isActive ? 'text-green-100' : 'text-slate-500'
+              isActive ? 'text-[#FBCFCB]' : 'text-slate-500'
             }`}
           >
             {item.sub}
@@ -738,7 +738,7 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
         </span>
 
         {isActive && (
-          <span className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-[#D4AF37]" />
+          <span className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-[#D94B5A]" />
         )}
       </button>
     );
@@ -1821,43 +1821,44 @@ export const SimpleReportView: React.FC<SimpleReportViewProps> = ({
             )}
 
             <button
+              type="button"
               onClick={handleExportCSV}
-              className="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow transition cursor-pointer"
+              className="px-3 py-1.5 bg-[#D94B5A] hover:bg-[#E85A5A] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow transition cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export CSV</span>
             </button>
           </div>
         </div>
-        <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+        <div className="overflow-x-auto border border-[#FBCFCB] rounded-2xl">
           <table className="w-full text-xs text-left border-collapse">
             <thead>
-              <tr className="bg-slate-900 text-white font-black uppercase text-[10px] tracking-wider border-b border-slate-800 select-none">
-                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('date')}>
+              <tr className="bg-[#9E2B38] text-white font-black uppercase text-[10px] tracking-wider border-b border-[#7A1C27] select-none">
+                <th className="p-3 cursor-pointer hover:bg-[#7A1C27] transition" onClick={() => handleSort('date')}>
                   <div className="flex items-center gap-1.5">
                     <span>Date</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    <ArrowUpDown className="w-3 h-3 text-[#FBCFCB]" />
                   </div>
                 </th>
-                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('saudaNo')}>
+                <th className="p-3 cursor-pointer hover:bg-[#7A1C27] transition" onClick={() => handleSort('saudaNo')}>
                   <div className="flex items-center gap-1.5">
                     <span>Sauda / PO No.</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    <ArrowUpDown className="w-3 h-3 text-[#FBCFCB]" />
                   </div>
                 </th>
-                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('supplier')}>
+                <th className="p-3 cursor-pointer hover:bg-[#7A1C27] transition" onClick={() => handleSort('supplier')}>
                   <div className="flex items-center gap-1.5">
                     <span>Party / Supplier</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    <ArrowUpDown className="w-3 h-3 text-[#FBCFCB]" />
                   </div>
                 </th>
-                <th className="p-3 cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('broker')}>
+                <th className="p-3 cursor-pointer hover:bg-[#7A1C27] transition" onClick={() => handleSort('broker')}>
                   <div className="flex items-center gap-1.5">
                     <span>Broker</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    <ArrowUpDown className="w-3 h-3 text-[#FBCFCB]" />
                   </div>
                 </th>
-                <th className="p-3 text-right cursor-pointer hover:bg-slate-800 transition" onClick={() => handleSort('quantityMT')}>
+                <th className="p-3 text-right cursor-pointer hover:bg-[#7A1C27] transition" onClick={() => handleSort('quantityMT')}>
                   <div className="flex items-center justify-end gap-1.5">
                     <span>Weight (MT)</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />

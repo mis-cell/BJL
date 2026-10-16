@@ -50,7 +50,7 @@ export const DivergingBarChart: React.FC<DivergingBarChartProps> = ({
             <YAxis tick={{ fontSize: 9, fill: '#64748b' }} tickFormatter={(v) => `${v > 0 ? '+' : ''}${v}${unit}`} />
             <Tooltip
               formatter={(val: any) => [`${Number(val) > 0 ? '+' : ''}${Number(val).toFixed(2)}${unit}`, 'Variance']}
-              contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
+              contentStyle={{ backgroundColor: '#520F18', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
             />
             <ReferenceLine y={0} stroke="#475569" strokeWidth={1.5} />
             <Bar dataKey="variancePct" name="Variance %" radius={[4, 4, 0, 0]}>

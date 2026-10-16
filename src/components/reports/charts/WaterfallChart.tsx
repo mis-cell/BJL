@@ -94,7 +94,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                   payload.isTotal ? 'Net Balance' : (payload.displayVal < 0 ? 'Deduction / Loss' : 'Addition')
                 ];
               }}
-              contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
+              contentStyle={{ backgroundColor: '#520F18', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }}
             />
             {/* Invisible baseline stack */}
             <Bar dataKey="base" stackId="waterfall" fill="transparent" />

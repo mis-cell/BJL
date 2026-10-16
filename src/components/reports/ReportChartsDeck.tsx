@@ -216,7 +216,7 @@ export const ReportChartsDeck: React.FC<ReportChartsDeckProps> = ({ reportData }
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="month" tick={{ fontSize: 9, fill: '#64748b' }} />
                 <YAxis tick={{ fontSize: 9, fill: '#64748b' }} />
-                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }} />
+                <Tooltip contentStyle={{ backgroundColor: '#520F18', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: '11px', fontFamily: 'monospace' }} />
                 <Legend verticalAlign="bottom" height={24} formatter={(val) => <span className="text-[10px] text-slate-600 font-bold">{val}</span>} />
                 <Line type="monotone" dataKey="contractedMT" name="Contracted (MT)" stroke="#475569" strokeWidth={2} dot={{ r: 3 }} />
                 <Line type="monotone" dataKey="deliveredMT" name="Delivered (MT)" stroke="#059669" strokeWidth={2.5} dot={{ r: 4, fill: '#059669' }} />
