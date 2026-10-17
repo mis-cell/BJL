@@ -91,7 +91,6 @@ export function usePurchaseOrderSorting({
       if (isCancelled) return false;
 
       const canSeeCompleted = canViewCompletedData();
-      const pendingStr = String(p.pending ?? '').trim().toLowerCase();
       const statusStr = String(p.status ?? '').trim().toLowerCase();
       const receivedWt = parseFloat(p.received_weight_mt) || 0;
       const contractWt = parseFloat(p.total_contract_mt) || 0;
@@ -99,9 +98,9 @@ export function usePurchaseOrderSorting({
       const tol = p.weight_tolerance || calculateWeightTolerance(contractWt, receivedWt, unit);
       const contractLorries = p.contract_lorries || p.total_no_of_lorries || 1;
       const receivedLorries = p.received_lorries || 0;
-      const isClosed = Boolean(p.is_closed || p.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
-      const isCompleted = p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted || isClosed;
-      const computedStatus = isCompleted ? 'completed' : (tol.status === 'mismatch' ? 'mismatch' : (receivedWt > 0 ? 'partial' : 'pending'));
+      const isClosed = !p.is_reopened && Boolean(p.is_closed || statusStr === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
+      const isCompleted = !p.is_reopened && (statusStr === 'completed' || statusStr === 'settled' || isClosed);
+      const computedStatus = isCompleted ? 'completed' : (tol.status === 'mismatch' ? 'mismatch' : 'pending');
 
       if (!canSeeCompleted && computedStatus === 'completed') {
         return false;
@@ -109,9 +108,9 @@ export function usePurchaseOrderSorting({
 
       if (statusFilter !== 'all') {
         if (statusFilter === 'pending') {
-          if (computedStatus !== 'pending') return false;
+          if (isCompleted) return false;
         } else if (statusFilter === 'completed') {
-          if (computedStatus !== 'completed') return false;
+          if (!isCompleted) return false;
         } else if (statusFilter === 'short') {
           if (!tol.isUnderDelivery || tol.isAcceptable) return false;
         } else if (statusFilter === 'excess') {
@@ -156,12 +155,11 @@ export function usePurchaseOrderSorting({
             const rcvd = Number(item.received_weight_mt || 0);
             const unit = item.purchase_unit_name || item.unit_type || item.unit || 'BALES';
             const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
-            const pendingStr = String(item.pending ?? '').trim().toLowerCase();
             const statusStr = String(item.status ?? '').trim().toLowerCase();
             const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
             const receivedLorries = item.received_lorries || 0;
-            const isClosed = Boolean(item.is_closed || item.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
-            const isCompletedPo = item.pending === false || pendingStr === 'no' || pendingStr === 'false' || item.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted || isClosed;
+            const isClosed = !item.is_reopened && Boolean(item.is_closed || statusStr === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
+            const isCompletedPo = !item.is_reopened && (statusStr === 'completed' || statusStr === 'settled' || isClosed);
 
             if (contract > 0 && rcvd > 0 && rcvd < 5.0) return 5;
             if (isCompletedPo) return 2;
@@ -183,8 +181,14 @@ export function usePurchaseOrderSorting({
           break;
         }
         case 'closed_open': {
-          const isClosedA = a.is_closed || a.status === 'closed' ? 1 : 0;
-          const isClosedB = b.is_closed || b.status === 'closed' ? 1 : 0;
+          const contractLorriesA = a.contract_lorries || a.total_no_of_lorries || 1;
+          const receivedLorriesA = a.received_lorries || 0;
+          const isClosedA = !a.is_reopened && Boolean(a.is_closed || a.status === 'closed' || (contractLorriesA > 0 && receivedLorriesA >= contractLorriesA)) ? 1 : 0;
+
+          const contractLorriesB = b.contract_lorries || b.total_no_of_lorries || 1;
+          const receivedLorriesB = b.received_lorries || 0;
+          const isClosedB = !b.is_reopened && Boolean(b.is_closed || b.status === 'closed' || (contractLorriesB > 0 && receivedLorriesB >= contractLorriesB)) ? 1 : 0;
+
           comparison = isClosedA - isClosedB;
           break;
         }
@@ -264,7 +268,6 @@ export function usePurchaseOrderSorting({
       if (isCancelled) return false;
 
       const canSeeCompleted = canViewCompletedData();
-      const pendingStr = String(p.pending ?? '').trim().toLowerCase();
       const statusStr = String(p.status ?? '').trim().toLowerCase();
       const receivedWt = parseFloat(p.received_weight_mt) || 0;
       const contractWt = parseFloat(p.total_contract_mt) || 0;
@@ -272,9 +275,9 @@ export function usePurchaseOrderSorting({
       const tol = p.weight_tolerance || calculateWeightTolerance(contractWt, receivedWt, unit);
       const contractLorries = p.contract_lorries || p.total_no_of_lorries || 1;
       const receivedLorries = p.received_lorries || 0;
-      const isClosed = Boolean(p.is_closed || p.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
-      const isCompleted = p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted || isClosed;
-      const computedStatus = isCompleted ? 'completed' : (tol.status === 'mismatch' ? 'mismatch' : (receivedWt > 0 ? 'partial' : 'pending'));
+      const isClosed = !p.is_reopened && Boolean(p.is_closed || statusStr === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
+      const isCompleted = !p.is_reopened && (statusStr === 'completed' || statusStr === 'settled' || isClosed);
+      const computedStatus = isCompleted ? 'completed' : (tol.status === 'mismatch' ? 'mismatch' : 'pending');
       if (!canSeeCompleted && computedStatus === 'completed') {
         return false;
       }
@@ -307,16 +310,11 @@ export function usePurchaseOrderSorting({
 
   const totalCompletedPos = useMemo(() => {
     return scopedPos.filter(p => {
-      const pendingStr = String(p.pending ?? '').trim().toLowerCase();
       const statusStr = String(p.status ?? '').trim().toLowerCase();
-      const receivedWt = parseFloat(p.received_weight_mt) || 0;
-      const contractWt = parseFloat(p.total_contract_mt) || 0;
-      const unit = p.purchase_unit_name || p.unit_type || p.unit || 'BALES';
-      const tol = p.weight_tolerance || calculateWeightTolerance(contractWt, receivedWt, unit);
       const contractLorries = p.contract_lorries || p.total_no_of_lorries || 1;
       const receivedLorries = p.received_lorries || 0;
-      const isClosed = Boolean(p.is_closed || p.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
-      return p.pending === false || pendingStr === 'no' || pendingStr === 'false' || p.pending === 0 || statusStr === 'completed' || statusStr === 'settled' || tol.isCompleted || isClosed;
+      const isClosed = !p.is_reopened && Boolean(p.is_closed || statusStr === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
+      return !p.is_reopened && (statusStr === 'completed' || statusStr === 'settled' || isClosed);
     }).length;
   }, [scopedPos]);
 

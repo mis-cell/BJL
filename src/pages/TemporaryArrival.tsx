@@ -204,6 +204,78 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         }
       });
 
+      const cleanVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
+      const NON_PO_TOKENS = new Set([
+        '', '20262027', '20252026', '202627', '202526', 'normal', 'special',
+        'pending', 'temp', 'final', 'finalpo', 'direct', 'no', 'yes', 'mr', 'bales', 'loose'
+      ]);
+
+      const extractCanonicalPoSerial = (raw: any): string => {
+        const str = String(raw || '').trim().toUpperCase();
+        if (!str) return '';
+        const isPtf = str.includes('PTF');
+        const withoutPrefix = str
+          .replace(/^BJCL\//i, '')
+          .replace(/^BJC\//i, '')
+          .replace(/^BJC/i, '')
+          .replace(/^PO[-/]/i, '')
+          .replace(/^PTF[-/]/i, '')
+          .replace(/\(PTF\)/gi, '');
+        const withoutYear = withoutPrefix
+          .replace(/20\d{2}-20\d{2}/g, '')
+          .replace(/20\d{2}\/20\d{2}/g, '')
+          .replace(/20\d{2}20\d{2}/g, '')
+          .replace(/\/\d{2}-\d{2}$/g, '')
+          .replace(/^\d{2}-\d{2}\//g, '')
+          .replace(/[^0-9A-Z]/g, '');
+        if (!withoutYear) return '';
+        const strippedZeros = withoutYear.replace(/^0+/, '') || '0';
+        return isPtf ? `PTF_${strippedZeros}` : strippedZeros;
+      };
+
+      const isSamePoIdentifier = (a: any, b: any): boolean => {
+        const rawA = String(a || '').trim().toUpperCase();
+        const rawB = String(b || '').trim().toUpperCase();
+        if (!rawA || !rawB) return false;
+        const cleanA = cleanVal(rawA);
+        const cleanB = cleanVal(rawB);
+        if (NON_PO_TOKENS.has(cleanA) || NON_PO_TOKENS.has(cleanB)) return false;
+        if (rawA === rawB || cleanA === cleanB) return true;
+        const serialA = extractCanonicalPoSerial(rawA);
+        const serialB = extractCanonicalPoSerial(rawB);
+        if (serialA && serialB && !NON_PO_TOKENS.has(serialA.toLowerCase()) && serialA === serialB) {
+          return true;
+        }
+        return false;
+      };
+
+      const matchPoRecord = (po: any, rec: any): boolean => {
+        if (!po || !rec) return false;
+        const pCandidates = [
+          po.po_no,
+          po.contract_po_no,
+          po.ptf_no,
+          po.sauda_no,
+          po.contract_no
+        ].filter(Boolean);
+
+        const rCandidates = [
+          rec.po_no,
+          rec.mill_po_no,
+          rec.contract_po_no,
+          rec.sauda_no,
+          rec.contract_no,
+          rec.ptf_no
+        ].filter(Boolean);
+
+        for (const pk of pCandidates) {
+          for (const rk of rCandidates) {
+            if (isSamePoIdentifier(pk, rk)) return true;
+          }
+        }
+        return false;
+      };
+
       const uniquePos = Array.from(uniqueMap.values());
       const nextClosedMap = new Map<string, { po_no: string; sauda_no?: string; contractLorries: number; receivedLorries: number; isClosed: boolean }>();
 
@@ -211,58 +283,70 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         .filter((po: any) => {
           if (!po.po_no) return false;
           const poKey = String(po.po_no).trim().toUpperCase();
-          const saudaKey = String(po.sauda_no || '').trim().toUpperCase();
-          const isCancelled = po.status === 'cancelled' || 
+          const saudaKey = String(po.sauda_no || po.contract_po_no || '').trim().toUpperCase();
+          const statusLower = String(po.status || '').trim().toLowerCase();
+
+          const isCancelled = statusLower === 'cancelled' || 
                               po.is_cancelled === true || 
                               localStorage.getItem(`sauda_cancelled_${poKey}`) === 'true' ||
                               (saudaKey && localStorage.getItem(`sauda_cancelled_${saudaKey}`) === 'true');
           if (isCancelled) return false;
+
           const isCurrentMatch = initialData && initialData.po_no && (
-            String(initialData.po_no).trim().toUpperCase() === poKey ||
-            (saudaKey && String(initialData.po_no).trim().toUpperCase() === saudaKey)
+            isSamePoIdentifier(initialData.po_no, po.po_no) ||
+            (saudaKey && isSamePoIdentifier(initialData.po_no, saudaKey))
           );
 
-          // 1. Check if explicitly reopened by Level 4 or Admin
-          const isExplicitReopened = po.is_reopened === true || 
+          let parsedOpenRemarks = po.open_remarks;
+          if (typeof parsedOpenRemarks === 'string') {
+            try { parsedOpenRemarks = JSON.parse(parsedOpenRemarks); } catch (e) { parsedOpenRemarks = null; }
+          }
+          if (!parsedOpenRemarks) {
+            try {
+              const localRemarks = localStorage.getItem(`sauda_open_remarks_${poKey}`) || (saudaKey ? localStorage.getItem(`sauda_open_remarks_${saudaKey}`) : null);
+              if (localRemarks) parsedOpenRemarks = JSON.parse(localRemarks);
+            } catch (e) {}
+          }
+
+          const isForceClosedLocal = localStorage.getItem(`sauda_closed_${poKey}`) === 'true' ||
+                                     (saudaKey ? localStorage.getItem(`sauda_closed_${saudaKey}`) === 'true' : false);
+          const isReopenedLocal = localStorage.getItem(`sauda_reopened_${poKey}`) === 'true' ||
+                                  (saudaKey ? localStorage.getItem(`sauda_reopened_${saudaKey}`) === 'true' : false);
+
+          // 1. Check if explicitly reopened by Level 4 or Admin (identical to Sauda Check Point)
+          const isExplicitReopened = !isCancelled && !isForceClosedLocal && statusLower !== 'closed' && (
+                                     po.is_reopened === true || 
                                      po.reopened === true || 
-                                     localStorage.getItem(`sauda_reopened_${poKey}`) === 'true' ||
-                                     (saudaKey && localStorage.getItem(`sauda_reopened_${saudaKey}`) === 'true');
+                                     statusLower === 'open' ||
+                                     Boolean(parsedOpenRemarks && typeof parsedOpenRemarks === 'object' && Object.keys(parsedOpenRemarks).length > 0) ||
+                                     isReopenedLocal
+          );
 
           // 2. Check if explicitly closed
-          const isExplicitClosed = po.is_closed === true || 
+          const isExplicitClosed = !isExplicitReopened && (
+                                   po.is_closed === true || 
                                    po.sauda_closed === true || 
-                                   po.status === 'closed' || 
-                                   localStorage.getItem(`sauda_closed_${poKey}`) === 'true' ||
-                                   (saudaKey && localStorage.getItem(`sauda_closed_${saudaKey}`) === 'true');
+                                   statusLower === 'closed' || 
+                                   isForceClosedLocal
+          );
 
           // 3. Contract lorries
           const contractLorries = Math.max(1, parseInt(po.total_lorries || po.total_no_of_lorries || po.no_of_lorries || po.lorries || 1, 10) || 1);
 
-          // 4. Calculate received lorries from both temporary material received and final arrival
-          const amadMatches = amadList.filter((a: any) => {
-            const aPo = String(a.po_no || a.ptf_no || '').trim().toUpperCase();
-            const aSauda = String(a.sauda_no || '').trim().toUpperCase();
-            return (aPo && (aPo === poKey || (saudaKey && aPo === saudaKey))) ||
-                   (aSauda && (aSauda === poKey || (saudaKey && aSauda === saudaKey)));
-          });
+          // 4. Calculate received lorries from both temporary material received and final arrival (identical to Sauda Check Point)
+          const faMatches = (faList || []).filter((f: any) => matchPoRecord(po, f));
+          const amadMatches = amadList.filter((a: any) => matchPoRecord(po, a));
 
-          const faMatches = (faList || []).filter((f: any) => {
-            const fPo = String(f.po_no || f.ptf_no || '').trim().toUpperCase();
-            const fSauda = String(f.sauda_no || '').trim().toUpperCase();
-            return (fPo && (fPo === poKey || (saudaKey && fPo === saudaKey))) ||
-                   (fSauda && (fSauda === poKey || (saudaKey && fSauda === saudaKey)));
-          });
+          const unpromotedAmad = amadMatches.filter((ar: any) =>
+            !faMatches.some((f: any) =>
+              (f.temporary_arrival_no && (ar.temporary_arrival_no || ar.amad_no) && String(f.temporary_arrival_no).trim().toUpperCase() === String(ar.temporary_arrival_no || ar.amad_no).trim().toUpperCase()) ||
+              (f.arrival_no && (ar.temporary_arrival_no || ar.amad_no) && String(f.arrival_no).trim().toUpperCase() === String(ar.temporary_arrival_no || ar.amad_no).trim().toUpperCase()) ||
+              (f.mr_no && (ar.temporary_arrival_no || ar.amad_no) && String(f.mr_no).trim().toUpperCase() === String(ar.temporary_arrival_no || ar.amad_no).trim().toUpperCase()) ||
+              (f.lorry_number && ar.lorry_number && String(f.lorry_number).trim().toUpperCase() === String(ar.lorry_number).trim().toUpperCase())
+            )
+          );
 
-          const distinctArrivalKeys = new Set<string>();
-          amadMatches.forEach((ar: any) => {
-            const k = ar.temporary_arrival_no || ar.amad_id || ar.lorry_number || ar.amad_no;
-            if (k) distinctArrivalKeys.add(String(k).trim().toUpperCase());
-          });
-          faMatches.forEach((fa: any) => {
-            const k = fa.temporary_arrival_no || fa.arrival_no || fa.lorry_number || fa.mr_no;
-            if (k) distinctArrivalKeys.add(String(k).trim().toUpperCase());
-          });
-          const receivedLorries = Math.max(amadMatches.length, distinctArrivalKeys.size);
+          const receivedLorries = Math.max(amadMatches.length, faMatches.length + unpromotedAmad.length);
 
           const tempWeightOf = (ar: any) => {
             if (ar.challan_material_weight && Number(ar.challan_material_weight) > 0) return Number(ar.challan_material_weight);
@@ -278,35 +362,20 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
             return 0;
           };
 
-          const matchingFinalArrivalNos = new Set(
-            faMatches.map((f: any) => String(f.temporary_arrival_no || f.amad_no || '').trim().toUpperCase()).filter(Boolean)
-          );
-          const matchingFinalLorries = new Set(
-            faMatches.map((f: any) => String(f.lorry_number || '').trim().toUpperCase()).filter(Boolean)
-          );
-
-          const unpromotedAmad = amadMatches.filter((a: any) => {
-            const aNo = String(a.temporary_arrival_no || a.amad_no || '').trim().toUpperCase();
-            const aLorry = String(a.lorry_number || '').trim().toUpperCase();
-            return (!aNo || !matchingFinalArrivalNos.has(aNo)) && (!aLorry || !matchingFinalLorries.has(aLorry));
-          });
-
           const totalReceivedMt = faMatches.reduce((sum: number, f: any) => sum + finalWeightOf(f), 0) +
                                   unpromotedAmad.reduce((sum: number, a: any) => sum + tempWeightOf(a), 0);
 
           const contractWeight = parseFloat(po.total_contract_mt) || 0;
-          const remainingWeight = contractWeight - totalReceivedMt;
 
-          // Sauda is considered closed if all contracted lorries have arrived, or if remaining weight <= 8 MT,
+          // Identical to Sauda Check Point: Sauda is considered closed if all contracted lorries have arrived or explicitly closed,
           // UNLESS explicitly reopened by Admin or Level 4 user.
           const isLorryClosed = contractLorries > 0 && receivedLorries >= contractLorries;
-          const isWeightClosed = contractWeight > 0 && totalReceivedMt >= 5.0 && (remainingWeight <= 8.25 || totalReceivedMt >= contractWeight - 8.25);
-          const isClosed = !isExplicitReopened && (isExplicitClosed || isLorryClosed || isWeightClosed);
+          const isClosed = !isExplicitReopened && (isExplicitClosed || isLorryClosed);
 
           if (isClosed) {
             const closedEntry = {
               po_no: String(po.po_no).trim(),
-              sauda_no: po.sauda_no ? String(po.sauda_no).trim() : undefined,
+              sauda_no: (po.sauda_no || po.contract_po_no) ? String(po.sauda_no || po.contract_po_no).trim() : undefined,
               contractLorries,
               receivedLorries,
               contractWeight,
@@ -317,9 +386,6 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
             if (saudaKey) nextClosedMap.set(saudaKey, closedEntry);
           }
 
-          // Strict User Requirement:
-          // "here Sauda Closed Means In Temporary Arrival Section That Sauda number Is Not shown
-          // When It reopen By Level 4 user or admin Then opnly In Temporary Arrival That Sauda or P.O number Show ."
           if (isClosed && !isCurrentMatch) {
             return false;
           }
@@ -328,35 +394,46 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         })
         .map((po: any) => {
           const poKey = String(po.po_no).trim().toUpperCase();
-          const saudaKey = String(po.sauda_no || '').trim().toUpperCase();
-          const isExplicitReopened = po.is_reopened === true || 
+          const saudaKey = String(po.sauda_no || po.contract_po_no || '').trim().toUpperCase();
+          const statusLower = String(po.status || '').trim().toLowerCase();
+
+          let parsedOpenRemarks = po.open_remarks;
+          if (typeof parsedOpenRemarks === 'string') {
+            try { parsedOpenRemarks = JSON.parse(parsedOpenRemarks); } catch (e) { parsedOpenRemarks = null; }
+          }
+          if (!parsedOpenRemarks) {
+            try {
+              const localRemarks = localStorage.getItem(`sauda_open_remarks_${poKey}`) || (saudaKey ? localStorage.getItem(`sauda_open_remarks_${saudaKey}`) : null);
+              if (localRemarks) parsedOpenRemarks = JSON.parse(localRemarks);
+            } catch (e) {}
+          }
+
+          const isForceClosedLocal = localStorage.getItem(`sauda_closed_${poKey}`) === 'true' ||
+                                     (saudaKey ? localStorage.getItem(`sauda_closed_${saudaKey}`) === 'true' : false);
+          const isReopenedLocal = localStorage.getItem(`sauda_reopened_${poKey}`) === 'true' ||
+                                  (saudaKey ? localStorage.getItem(`sauda_reopened_${saudaKey}`) === 'true' : false);
+
+          const isExplicitReopened = !isForceClosedLocal && statusLower !== 'closed' && (
+                                     po.is_reopened === true || 
                                      po.reopened === true || 
-                                     localStorage.getItem(`sauda_reopened_${poKey}`) === 'true' ||
-                                     (saudaKey && localStorage.getItem(`sauda_reopened_${saudaKey}`) === 'true');
+                                     statusLower === 'open' ||
+                                     Boolean(parsedOpenRemarks && typeof parsedOpenRemarks === 'object' && Object.keys(parsedOpenRemarks).length > 0) ||
+                                     isReopenedLocal
+          );
+
           const contractLorries = Math.max(1, parseInt(po.total_lorries || po.total_no_of_lorries || po.no_of_lorries || po.lorries || 1, 10) || 1);
 
-          const amadMatches = amadList.filter((a: any) => {
-            const aPo = String(a.po_no || a.ptf_no || '').trim().toUpperCase();
-            const aSauda = String(a.sauda_no || '').trim().toUpperCase();
-            return (aPo && (aPo === poKey || (saudaKey && aPo === saudaKey))) ||
-                   (aSauda && (aSauda === poKey || (saudaKey && aSauda === saudaKey)));
-          });
-          const faMatches = (faList || []).filter((f: any) => {
-            const fPo = String(f.po_no || f.ptf_no || '').trim().toUpperCase();
-            const fSauda = String(f.sauda_no || '').trim().toUpperCase();
-            return (fPo && (fPo === poKey || (saudaKey && fPo === saudaKey))) ||
-                   (fSauda && (fSauda === poKey || (saudaKey && fSauda === saudaKey)));
-          });
-          const distinctArrivalKeys = new Set<string>();
-          amadMatches.forEach((ar: any) => {
-            const k = ar.temporary_arrival_no || ar.amad_id || ar.lorry_number || ar.amad_no;
-            if (k) distinctArrivalKeys.add(String(k).trim().toUpperCase());
-          });
-          faMatches.forEach((fa: any) => {
-            const k = fa.temporary_arrival_no || fa.arrival_no || fa.lorry_number || fa.mr_no;
-            if (k) distinctArrivalKeys.add(String(k).trim().toUpperCase());
-          });
-          const receivedLorries = Math.max(amadMatches.length, distinctArrivalKeys.size);
+          const faMatches = (faList || []).filter((f: any) => matchPoRecord(po, f));
+          const amadMatches = amadList.filter((a: any) => matchPoRecord(po, a));
+          const unpromotedAmad = amadMatches.filter((ar: any) =>
+            !faMatches.some((f: any) =>
+              (f.temporary_arrival_no && (ar.temporary_arrival_no || ar.amad_no) && String(f.temporary_arrival_no).trim().toUpperCase() === String(ar.temporary_arrival_no || ar.amad_no).trim().toUpperCase()) ||
+              (f.arrival_no && (ar.temporary_arrival_no || ar.amad_no) && String(f.arrival_no).trim().toUpperCase() === String(ar.temporary_arrival_no || ar.amad_no).trim().toUpperCase()) ||
+              (f.mr_no && (ar.temporary_arrival_no || ar.amad_no) && String(f.mr_no).trim().toUpperCase() === String(ar.temporary_arrival_no || ar.amad_no).trim().toUpperCase()) ||
+              (f.lorry_number && ar.lorry_number && String(f.lorry_number).trim().toUpperCase() === String(ar.lorry_number).trim().toUpperCase())
+            )
+          );
+          const receivedLorries = Math.max(amadMatches.length, faMatches.length + unpromotedAmad.length);
 
           return {
             ...po,
@@ -939,14 +1016,26 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
     // Guard: Prohibit creating new temporary arrivals against cancelled or closed saudas
     const cleanEnteredPo = String(formData.po_no || '').trim().toUpperCase();
-    const isCancelledLocal = localStorage.getItem(`sauda_cancelled_${cleanEnteredPo}`) === 'true';
-    const isExplicitReopened = localStorage.getItem(`sauda_reopened_${cleanEnteredPo}`) === 'true';
-    const isExplicitClosedLocal = localStorage.getItem(`sauda_closed_${cleanEnteredPo}`) === 'true';
     const poObj = purchaseOrders.find((p: any) => String(p.po_no || '').trim().toUpperCase() === cleanEnteredPo);
-    const isPoObjCancelled = poObj && (poObj.status === 'cancelled' || poObj.is_cancelled === true);
-    const isPoObjClosed = poObj && (poObj.is_closed === true || poObj.status === 'closed');
+    const saudaKey = String(poObj?.sauda_no || poObj?.contract_po_no || '').trim().toUpperCase();
+    const isCancelledLocal = localStorage.getItem(`sauda_cancelled_${cleanEnteredPo}`) === 'true' ||
+                             (saudaKey ? localStorage.getItem(`sauda_cancelled_${saudaKey}`) === 'true' : false);
+    const isForceClosedLocal = localStorage.getItem(`sauda_closed_${cleanEnteredPo}`) === 'true' ||
+                               (saudaKey ? localStorage.getItem(`sauda_closed_${saudaKey}`) === 'true' : false);
+    const isReopenedLocal = localStorage.getItem(`sauda_reopened_${cleanEnteredPo}`) === 'true' ||
+                            (saudaKey ? localStorage.getItem(`sauda_reopened_${saudaKey}`) === 'true' : false);
+    const poStatusLower = String(poObj?.status || '').trim().toLowerCase();
+    const isExplicitReopened = !isCancelledLocal && !isForceClosedLocal && poStatusLower !== 'closed' && (
+      poObj?.is_reopened === true ||
+      poObj?.reopened === true ||
+      poStatusLower === 'open' ||
+      Boolean(poObj?.open_remarks) ||
+      isReopenedLocal
+    );
+    const isPoObjCancelled = poObj && (poStatusLower === 'cancelled' || poObj.is_cancelled === true);
+    const isPoObjClosed = poObj && !isExplicitReopened && (poObj.is_closed === true || poStatusLower === 'closed');
     const isPoCancelled = isCancelledLocal || isPoObjCancelled;
-    const isPoClosed = !isExplicitReopened && (closedSaudaMap.has(cleanEnteredPo) || isExplicitClosedLocal || isPoObjClosed);
+    const isPoClosed = !isExplicitReopened && (closedSaudaMap.has(cleanEnteredPo) || isForceClosedLocal || isPoObjClosed);
 
     if (!initialData && cleanEnteredPo && (isPoCancelled || isPoClosed)) {
       if (isPoCancelled) {
@@ -1255,9 +1344,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
             }
 
             if (supabase) {
-              const cleanDigits = currentPoNo.replace(/[^0-9]/g, '');
-              if (cleanDigits) {
-                Promise.resolve(supabase.from('sauda_master').update({ status: newStatus }).ilike('sauda_no', `%${cleanDigits}%`)).catch(() => {});
+              const exactSaudaRef = String(matchedPo.sauda_no || matchedPo.contract_po_no || currentPoNo).trim();
+              if (exactSaudaRef) {
+                Promise.resolve(supabase.from('sauda_master').update({ status: newStatus }).or(`sauda_no.eq.${exactSaudaRef},session.eq.${currentPoNo}`)).catch(() => {});
               }
             }
           }

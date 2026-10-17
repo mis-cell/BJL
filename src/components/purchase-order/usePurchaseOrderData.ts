@@ -364,30 +364,72 @@ export function usePurchaseOrderData({
       };
       const cleanVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
 
+      const NON_PO_TOKENS = new Set([
+        '', '20262027', '20252026', '202627', '202526', 'normal', 'special',
+        'pending', 'temp', 'final', 'finalpo', 'direct', 'no', 'yes', 'mr', 'bales', 'loose'
+      ]);
+
+      const extractCanonicalPoSerial = (raw: any): string => {
+        const str = String(raw || '').trim().toUpperCase();
+        if (!str) return '';
+        const isPtf = str.includes('PTF');
+        const withoutPrefix = str
+          .replace(/^BJCL\//i, '')
+          .replace(/^BJC\//i, '')
+          .replace(/^BJC/i, '')
+          .replace(/^PO[-/]/i, '')
+          .replace(/^PTF[-/]/i, '')
+          .replace(/\(PTF\)/gi, '');
+        const withoutYear = withoutPrefix
+          .replace(/20\d{2}-20\d{2}/g, '')
+          .replace(/20\d{2}\/20\d{2}/g, '')
+          .replace(/20\d{2}20\d{2}/g, '')
+          .replace(/\/\d{2}-\d{2}$/g, '')
+          .replace(/^\d{2}-\d{2}\//g, '')
+          .replace(/[^0-9A-Z]/g, '');
+        if (!withoutYear) return '';
+        const strippedZeros = withoutYear.replace(/^0+/, '') || '0';
+        return isPtf ? `PTF_${strippedZeros}` : strippedZeros;
+      };
+
+      const isSamePoIdentifier = (a: any, b: any): boolean => {
+        const rawA = String(a || '').trim().toUpperCase();
+        const rawB = String(b || '').trim().toUpperCase();
+        if (!rawA || !rawB) return false;
+        const cleanA = cleanVal(rawA);
+        const cleanB = cleanVal(rawB);
+        if (NON_PO_TOKENS.has(cleanA) || NON_PO_TOKENS.has(cleanB)) return false;
+        if (rawA === rawB || cleanA === cleanB) return true;
+        const serialA = extractCanonicalPoSerial(rawA);
+        const serialB = extractCanonicalPoSerial(rawB);
+        if (serialA && serialB && !NON_PO_TOKENS.has(serialA.toLowerCase()) && serialA === serialB) {
+          return true;
+        }
+        return false;
+      };
+
       const matchPoRecord = (po: any, rec: any) => {
         if (!po || !rec) return false;
-        const pKeys = [
-          cleanVal(po.po_no),
-          cleanVal(po.contract_po_no),
-          cleanVal(po.ptf_no),
-          cleanVal(po.sauda_no),
-          cleanVal(po.contract_no)
+        const pCandidates = [
+          po.po_no,
+          po.contract_po_no,
+          po.ptf_no,
+          po.sauda_no,
+          po.contract_no
         ].filter(Boolean);
 
-        const rKeys = [
-          cleanVal(rec.po_no),
-          cleanVal(rec.mill_po_no),
-          cleanVal(rec.contract_po_no),
-          cleanVal(rec.sauda_no || rec.contract_no),
-          cleanVal(rec.ptf_no),
-          cleanVal(rec.temporary_arrival_no || rec.arrival_no || rec.amad_no),
-          cleanVal(rec.final_arrival_no || rec.mr_no)
+        const rCandidates = [
+          rec.po_no,
+          rec.mill_po_no,
+          rec.contract_po_no,
+          rec.sauda_no,
+          rec.contract_no,
+          rec.ptf_no
         ].filter(Boolean);
 
-        for (const pk of pKeys) {
-          for (const rk of rKeys) {
-            if (pk === rk) return true;
-            if (pk.length >= 6 && rk.length >= 6 && (pk.includes(rk) || rk.includes(pk))) return true;
+        for (const pk of pCandidates) {
+          for (const rk of rCandidates) {
+            if (isSamePoIdentifier(pk, rk)) return true;
           }
         }
         return false;
@@ -401,8 +443,9 @@ export function usePurchaseOrderData({
         const matchingTemp = (arrivals || []).filter((ar: any) =>
           (matchPoRecord(p, ar) || exactPo(p.po_no, ar.po_no) || exactPo(p.contract_po_no, ar.po_no)) &&
           !matchingFinal.some(f => 
-            (f.temporary_arrival_no && ar.temporary_arrival_no && f.temporary_arrival_no === ar.temporary_arrival_no) ||
-            (f.mr_no && ar.amad_no && f.mr_no === ar.amad_no) ||
+            (f.temporary_arrival_no && (ar.temporary_arrival_no || ar.amad_no) && String(f.temporary_arrival_no).trim().toUpperCase() === String(ar.temporary_arrival_no || ar.amad_no).trim().toUpperCase()) ||
+            (f.arrival_no && (ar.temporary_arrival_no || ar.amad_no) && String(f.arrival_no).trim().toUpperCase() === String(ar.temporary_arrival_no || ar.amad_no).trim().toUpperCase()) ||
+            (f.mr_no && (ar.temporary_arrival_no || ar.amad_no) && String(f.mr_no).trim().toUpperCase() === String(ar.temporary_arrival_no || ar.amad_no).trim().toUpperCase()) ||
             (f.lorry_number && ar.lorry_number && String(f.lorry_number).trim().toUpperCase() === String(ar.lorry_number).trim().toUpperCase())
           )
         );
@@ -486,24 +529,15 @@ export function usePurchaseOrderData({
         const matchingTempArrivals = (arrivals || []).filter((ar: any) =>
           matchPoRecord(p, ar) || exactPo(p.po_no, ar.po_no) || exactPo(p.contract_po_no, ar.po_no)
         );
-        const distinctArrivalKeys = new Set<string>();
-        matchingTempArrivals.forEach((ar: any) => {
-          const k = ar.temporary_arrival_no || ar.amad_id || ar.lorry_number || ar.amad_no;
-          if (k) distinctArrivalKeys.add(String(k).trim().toUpperCase());
-        });
-        matchingFinal.forEach((fa: any) => {
-          const k = fa.temporary_arrival_no || fa.arrival_no || fa.lorry_number || fa.mr_no;
-          if (k) distinctArrivalKeys.add(String(k).trim().toUpperCase());
-        });
-
-        const receivedLorries = Math.max(matchingTempArrivals.length, distinctArrivalKeys.size);
+        // Count unique lorries across Final Arrival and unpromoted Temporary Arrivals so a promoted lorry is never counted twice
+        const receivedLorries = Math.max(matchingTempArrivals.length, matchingFinal.length + matchingTemp.length);
         const contractLorries = Math.max(1, parseInt(p.total_lorries || p.total_no_of_lorries || p.no_of_lorries || p.lorries || 1, 10) || 1);
 
         const cleanPoKey = String(p.po_no || '').trim().toUpperCase();
         const cleanSaudaKey = String(p.sauda_no || p.contract_po_no || '').trim().toUpperCase();
         let parsedOpenRemarks = p.open_remarks;
         if (typeof parsedOpenRemarks === 'string') {
-          try { parsedOpenRemarks = JSON.parse(parsedOpenRemarks); } catch(e) {}
+          try { parsedOpenRemarks = JSON.parse(parsedOpenRemarks); } catch(e) { parsedOpenRemarks = null; }
         }
         if (!parsedOpenRemarks) {
           try {
@@ -518,24 +552,30 @@ export function usePurchaseOrderData({
           if (rawDates) cachedDeliveryDates = JSON.parse(rawDates);
         } catch (_e) {}
 
-        const isCancelledLocal = localStorage.getItem(`sauda_cancelled_${cleanPoKey}`) === 'true' ||
+        const statusLower = String(p.status || '').trim().toLowerCase();
+        const isCancelledLocal = statusLower === 'cancelled' ||
+                                 p.is_cancelled === true ||
+                                 localStorage.getItem(`sauda_cancelled_${cleanPoKey}`) === 'true' ||
                                  (cleanSaudaKey ? localStorage.getItem(`sauda_cancelled_${cleanSaudaKey}`) === 'true' : false);
 
-        const isExplicitReopened = !isCancelledLocal && (
+        const isForceClosedLocal = localStorage.getItem(`sauda_closed_${cleanPoKey}`) === 'true' ||
+                                   (cleanSaudaKey ? localStorage.getItem(`sauda_closed_${cleanSaudaKey}`) === 'true' : false);
+        const isReopenedLocal = localStorage.getItem(`sauda_reopened_${cleanPoKey}`) === 'true' ||
+                                (cleanSaudaKey ? localStorage.getItem(`sauda_reopened_${cleanSaudaKey}`) === 'true' : false);
+
+        const isExplicitReopened = !isCancelledLocal && !isForceClosedLocal && statusLower !== 'closed' && (
                                    p.is_reopened === true || 
                                    p.reopened === true || 
-                                   p.status === 'open' ||
-                                   Boolean(parsedOpenRemarks) ||
-                                   localStorage.getItem(`sauda_reopened_${cleanPoKey}`) === 'true' ||
-                                   (cleanSaudaKey ? localStorage.getItem(`sauda_reopened_${cleanSaudaKey}`) === 'true' : false)
+                                   statusLower === 'open' ||
+                                   Boolean(parsedOpenRemarks && typeof parsedOpenRemarks === 'object' && Object.keys(parsedOpenRemarks).length > 0) ||
+                                   isReopenedLocal
         );
 
         const isExplicitClosed = !isExplicitReopened && (
                                  p.is_closed === true || 
                                  p.sauda_closed === true || 
-                                 p.status === 'closed' || 
-                                 localStorage.getItem(`sauda_closed_${cleanPoKey}`) === 'true' ||
-                                 (cleanSaudaKey ? localStorage.getItem(`sauda_closed_${cleanSaudaKey}`) === 'true' : false)
+                                 statusLower === 'closed' || 
+                                 isForceClosedLocal
         );
 
         const isLorryClosed = contractLorries > 0 && receivedLorries >= contractLorries;

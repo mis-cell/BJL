@@ -630,16 +630,19 @@ export function usePurchaseOrderOperations({
       localStorage.setItem(`sauda_cancelled_${cleanPo}`, 'true');
       localStorage.setItem(`sauda_closed_${cleanPo}`, 'true');
       localStorage.removeItem(`sauda_reopened_${cleanPo}`);
+      localStorage.removeItem(`sauda_open_remarks_${cleanPo}`);
       if (cleanSauda) {
         localStorage.setItem(`sauda_cancelled_${cleanSauda}`, 'true');
         localStorage.setItem(`sauda_closed_${cleanSauda}`, 'true');
         localStorage.removeItem(`sauda_reopened_${cleanSauda}`);
+        localStorage.removeItem(`sauda_open_remarks_${cleanSauda}`);
       }
 
-      await dbModule.update('sauda_check_point', 'po_no', item.po_no, { status: 'cancelled', pending: false, is_closed: true, is_reopened: false }).catch(() => {});
-      await dbModule.update('purchase_master', 'po_no', item.po_no, { status: 'cancelled', pending: false, is_closed: true, is_reopened: false }).catch(() => {});
+      const cancelDbPayload = { status: 'cancelled', pending: false, is_closed: true, is_reopened: false, open_remarks: null };
+      await dbModule.update('sauda_check_point', 'po_no', item.po_no, cancelDbPayload).catch(() => {});
+      await dbModule.update('purchase_master', 'po_no', item.po_no, cancelDbPayload).catch(() => {});
       if (item.sauda_no || item.po_no) {
-        await dbModule.update('sauda_master', 'sauda_no', item.sauda_no || item.po_no, { status: 'cancelled', is_closed: true, is_reopened: false }).catch(() => {});
+        await dbModule.update('sauda_master', 'sauda_no', item.sauda_no || item.po_no, { status: 'cancelled', is_closed: true, is_reopened: false, open_remarks: null }).catch(() => {});
       }
 
       window.dispatchEvent(new Event('storage'));
@@ -730,6 +733,7 @@ export function usePurchaseOrderOperations({
         is_reopened: false,
         pending: false,
         status: 'closed',
+        open_remarks: null,
         close_remarks: closeRemarksPayload
       };
 

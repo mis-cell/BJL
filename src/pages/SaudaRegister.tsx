@@ -1230,13 +1230,26 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     const clean2 = p2.replace(/[^a-z0-9]/g, '');
     if (clean1 && clean1 === clean2) return true;
 
-    if (clean1.length > 5 && clean2.length > 5 && (clean1.includes(clean2) || clean2.includes(clean1))) {
-      return true;
-    }
+    const getCoreDigits = (str: string) => {
+      const withoutPrefix = str
+        .replace(/^bjcl\//i, '')
+        .replace(/^bjc\//i, '')
+        .replace(/^bjc/i, '')
+        .replace(/^po[-/]/i, '')
+        .replace(/^ptf[-/]/i, '');
+      const withoutYear = withoutPrefix
+        .replace(/20\d{2}-20\d{2}/g, '')
+        .replace(/20\d{2}\/20\d{2}/g, '')
+        .replace(/20\d{2}20\d{2}/g, '')
+        .replace(/\/\d{2}-\d{2}$/g, '')
+        .replace(/^\d{2}-\d{2}\//g, '')
+        .replace(/[^0-9]/g, '');
+      return withoutYear.replace(/^0+/, '');
+    };
 
-    const num1 = p1.replace(/[^0-9]/g, '');
-    const num2 = p2.replace(/[^0-9]/g, '');
-    if (num1.length >= 4 && num2.length >= 4 && (num1.includes(num2) || num2.includes(num1))) {
+    const d1 = getCoreDigits(p1);
+    const d2 = getCoreDigits(p2);
+    if (d1 && d2 && d1.length >= 2 && d1 === d2) {
       return true;
     }
     return false;

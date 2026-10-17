@@ -15,10 +15,10 @@ if (supabase) {
   Promise.resolve().then(async () => {
     try {
       if (typeof window !== 'undefined') {
-        const isSynced = localStorage.getItem('bjl_schema_synced_v4') || sessionStorage.getItem('bjl_schema_synced_v4');
+        const isSynced = localStorage.getItem('bjl_schema_synced_v5') || sessionStorage.getItem('bjl_schema_synced_v5');
         if (isSynced) return;
-        localStorage.setItem('bjl_schema_synced_v4', '1');
-        sessionStorage.setItem('bjl_schema_synced_v4', '1');
+        localStorage.setItem('bjl_schema_synced_v5', '1');
+        sessionStorage.setItem('bjl_schema_synced_v5', '1');
       }
       await supabase.rpc('exec_sql', {
         query: `
@@ -1678,7 +1678,14 @@ if (supabase) {
        );`,
       `ALTER TABLE IF EXISTS sauda_check_point DISABLE ROW LEVEL SECURITY;`,
       `ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS open_remarks JSONB;`,
+      `ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS close_remarks JSONB;`,
+      `ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS is_closed BOOLEAN DEFAULT FALSE;`,
+      `ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS is_reopened BOOLEAN DEFAULT FALSE;`,
+      `ALTER TABLE IF EXISTS sauda_check_point ADD COLUMN IF NOT EXISTS sauda_no TEXT;`,
       `ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS open_remarks JSONB;`,
+      `ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS close_remarks JSONB;`,
+      `ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS is_closed BOOLEAN DEFAULT FALSE;`,
+      `ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS is_reopened BOOLEAN DEFAULT FALSE;`,
       `ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS created_by TEXT;`,
       `ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approved_by TEXT;`,
       `ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;`,
@@ -1689,6 +1696,10 @@ if (supabase) {
       `ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS approval_status TEXT DEFAULT 'pending';`,
       `ALTER TABLE IF EXISTS sauda_master ADD COLUMN IF NOT EXISTS is_checked BOOLEAN DEFAULT FALSE;`,
       `ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS open_remarks JSONB;`,
+      `ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS close_remarks JSONB;`,
+      `ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS is_closed BOOLEAN DEFAULT FALSE;`,
+      `ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS is_reopened BOOLEAN DEFAULT FALSE;`,
+      `ALTER TABLE IF EXISTS purchase_master ADD COLUMN IF NOT EXISTS sauda_no TEXT;`,
       `CREATE TABLE IF NOT EXISTS sauda_check_point_details (
           item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           po_no TEXT REFERENCES sauda_check_point(po_no) ON DELETE CASCADE,
