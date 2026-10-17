@@ -148,9 +148,7 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
                     href="#forgot"
                     onClick={(e) => {
                       e.preventDefault();
-                      alert(
-                        "Bally Jute Mill Operator Credentials:\nID: ADMIN\nPassword: Admin@1234"
-                      );
+                      setError("Please contact the System Administrator (L5) to reset your operator credentials.");
                     }}
                     className="text-[10px] sm:text-[11px] text-[#404040] hover:text-[#D94B5A] font-medium transition-colors"
                   >

@@ -1047,20 +1047,64 @@ export default function SaudaEntry({
         saudaPayload.created_by = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Rahul');
       }
 
-      if (saudaPayload.sauda_id) {
-        if (supabase) {
-          await supabase.from('sauda_master').update(saudaPayload).eq('sauda_id', saudaPayload.sauda_id);
-        }
-        inserted = await dbModule.update('sauda_master', 'sauda_id', saudaPayload.sauda_id, saudaPayload);
-      } else {
-        if (supabase) {
-          const { data: supData, error } = await supabase.from('sauda_master').insert(saudaPayload).select().maybeSingle();
-          if (!error && supData) {
-            inserted = supData;
+      saudaPayload.financial_year = isEditMode
+        ? (initialData?.financial_year || saudaPayload.financial_year || '2026-2027')
+        : (saudaPayload.financial_year || '2026-2027');
+
+      const sqlVal = (v: any) => {
+        if (v === null || v === undefined) return 'NULL';
+        if (typeof v === 'number') return isFinite(v) ? String(v) : '0';
+        if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+        if (typeof v === 'object') return `'${JSON.stringify(v).replace(/'/g, "''")}'::jsonb`;
+        return `'${String(v).replace(/'/g, "''")}'`;
+      };
+
+      const targetSaudaId = saudaPayload.sauda_id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `sauda-${Date.now()}`);
+      saudaPayload.sauda_id = targetSaudaId;
+
+      try {
+        const txQueries: string[] = [];
+        const masterCols = Object.keys(saudaPayload);
+        const masterVals = masterCols.map(k => sqlVal(saudaPayload[k]));
+        const updateSet = masterCols.filter(k => k !== 'sauda_id').map(k => `${k} = EXCLUDED.${k}`).join(', ');
+        txQueries.push(
+          `INSERT INTO sauda_master (${masterCols.join(', ')}) VALUES (${masterVals.join(', ')}) ON CONFLICT (sauda_id) DO UPDATE SET ${updateSet};`
+        );
+        txQueries.push(`DELETE FROM sauda_quality_details WHERE sauda_id = ${sqlVal(targetSaudaId)};`);
+
+        for (const comb of flatCombinations) {
+          if (comb.quality || comb.agency || comb.marka || comb.rs > 0) {
+            txQueries.push(
+              `INSERT INTO sauda_quality_details (sauda_id, sauda_no, financial_year, quality, qty, agency, marka, rs) VALUES (${sqlVal(targetSaudaId)}, ${sqlVal(saudaPayload.sauda_no)}, ${sqlVal(saudaPayload.financial_year)}, ${sqlVal(String(comb.quality || '').trim())}, ${sqlVal(toNumericOrNull(comb.qty) ?? 0)}, ${sqlVal(String(comb.agency || '').trim())}, ${sqlVal(String(comb.marka || '').trim())}, ${sqlVal(toNumericOrNull(comb.rs) ?? 0)});`
+            );
           }
         }
-        if (!inserted) {
+        await dbModule.executeTransaction(txQueries);
+        inserted = { ...saudaPayload };
+      } catch (_txErr) {
+        if (isEditMode) {
+          inserted = await dbModule.update('sauda_master', 'sauda_id', saudaPayload.sauda_id, saudaPayload);
+        } else {
           inserted = await dbModule.insert('sauda_master', saudaPayload);
+        }
+        if (inserted && flatCombinations.length > 0) {
+          if (isEditMode) {
+            await dbModule.delete('sauda_quality_details', 'sauda_id', inserted.sauda_id);
+          }
+          for (const comb of flatCombinations) {
+            if (comb.quality || comb.agency || comb.marka || comb.rs > 0) {
+              await dbModule.insert('sauda_quality_details', {
+                sauda_id: inserted.sauda_id,
+                sauda_no: inserted.sauda_no || saudaData.sauda_no,
+                financial_year: inserted.financial_year || saudaPayload.financial_year,
+                quality: String(comb.quality || '').trim(),
+                qty: toNumericOrNull(comb.qty) ?? 0,
+                agency: String(comb.agency || '').trim(),
+                marka: String(comb.marka || '').trim(),
+                rs: toNumericOrNull(comb.rs) ?? 0
+              });
+            }
+          }
         }
       }
 
@@ -1092,31 +1136,6 @@ export default function SaudaEntry({
           user_name: resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'ADMIN'),
           remarks: `Approved Sauda #${saudaPayload.sauda_no} updated by System Admin`
         }).catch(() => {});
-      }
-
-      if (inserted && flatCombinations.length > 0) {
-        if (isEditMode) {
-          await dbModule.delete('sauda_quality_details', 'sauda_id', inserted.sauda_id);
-        }
-
-        for (const comb of flatCombinations) {
-          if (comb.quality || comb.agency || comb.marka || comb.rs > 0) {
-            try {
-              await dbModule.insert('sauda_quality_details', {
-                sauda_id: inserted.sauda_id,
-                sauda_no: inserted.sauda_no || saudaData.sauda_no,
-                financial_year: inserted.financial_year || saudaData.financial_year || '2026-2027',
-                quality: String(comb.quality || '').trim(),
-                qty: toNumericOrNull(comb.qty) ?? 0,
-                agency: String(comb.agency || '').trim(),
-                marka: String(comb.marka || '').trim(),
-                rs: toNumericOrNull(comb.rs) ?? 0
-              });
-            } catch (e) {
-              console.error("Failed to insert combination:", e);
-            }
-          }
-        }
       }
 
       alert("Sauda Contract saved successfully!");

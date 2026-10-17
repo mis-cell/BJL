@@ -1501,73 +1501,48 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
 
   const deleteInspectionPermanently = async (target: any) => {
     if (!target) return;
-    const mrNo = target.mr_no || masterData.mr_no;
-    const poNo = target.po_no || target.mill_po_no || masterData.po_no;
-    const arrNo = target.arrival_no || target.temporary_arrival_no || masterData.arrival_no;
-    const inspNo = (target as any).inspection_no || (masterData as any).inspection_no;
+    const mrNo = String(target.mr_no || masterData.mr_no || "").trim();
+    const arrNo = String(target.arrival_no || target.temporary_arrival_no || masterData.arrival_no || "").trim();
+    const inspNo = String((target as any).inspection_no || (masterData as any).inspection_no || "").trim();
     const recordId = target.id;
 
-    if (!mrNo && !poNo && !recordId) {
-      throw new Error("No record identifier found to delete.");
+    if (!mrNo && !recordId) {
+      throw new Error("Cannot delete inspection without an explicit MR number or record ID.");
     }
 
-    if (supabase) {
-      const detailDeletes: PromiseLike<any>[] = [];
-      if (mrNo) {
-        detailDeletes.push(
-          supabase.from("inspection_checklist_details").delete().eq("mr_no", mrNo),
-          supabase.from("inspection_details").delete().eq("mr_no", mrNo),
-          supabase.from("mill_inspection_detail").delete().eq("mr_no", mrNo),
-          supabase.from("material_inspection_details").delete().eq("mr_no", mrNo)
-        );
-      }
-      if (poNo) {
-        detailDeletes.push(
-          supabase.from("inspection_checklist_details").delete().eq("po_no", poNo),
-          supabase.from("inspection_details").delete().eq("po_no", poNo),
-          supabase.from("mill_inspection_detail").delete().eq("po_no", poNo),
-          supabase.from("material_inspection_details").delete().eq("po_no", poNo)
-        );
-      }
-      await Promise.all(detailDeletes.map(p => Promise.resolve(p).catch(() => ({}))));
+    const esc = (v: any) => `'${String(v ?? "").replace(/'/g, "''")}'`;
+    const txStatements: string[] = [];
 
-      const masterDeletes: PromiseLike<any>[] = [];
-      if (mrNo) {
-        masterDeletes.push(
-          supabase.from("inspection_checklist").delete().eq("mr_no", mrNo),
-          supabase.from("inspection_master").delete().eq("mr_no", mrNo),
-          supabase.from("mill_inspection_master").delete().eq("mr_no", mrNo),
-          supabase.from("material_inspection").delete().eq("mr_no", mrNo),
-          supabase.from("mill_inspection_print_logs").delete().eq("mr_no", mrNo)
-        );
-      }
-      if (recordId) {
-        masterDeletes.push(
-          supabase.from("inspection_checklist").delete().eq("id", recordId),
-          supabase.from("inspection_master").delete().eq("id", recordId),
-          supabase.from("mill_inspection_master").delete().eq("id", recordId),
-          supabase.from("material_inspection").delete().eq("id", recordId)
-        );
-      }
-      if (poNo) {
-        masterDeletes.push(
-          supabase.from("inspection_checklist").delete().eq("po_no", poNo),
-          supabase.from("inspection_master").delete().eq("po_no", poNo),
-          supabase.from("mill_inspection_master").delete().eq("po_no", poNo),
-          supabase.from("material_inspection").delete().eq("po_no", poNo)
-        );
-      }
-      await Promise.all(masterDeletes.map(p => Promise.resolve(p).catch(() => ({}))));
+    if (mrNo) {
+      txStatements.push(
+        `DELETE FROM inspection_checklist_details WHERE mr_no = ${esc(mrNo)};`,
+        `DELETE FROM inspection_details WHERE mr_no = ${esc(mrNo)};`,
+        `DELETE FROM mill_inspection_detail WHERE mr_no = ${esc(mrNo)};`,
+        `DELETE FROM material_inspection_details WHERE mr_no = ${esc(mrNo)};`,
+        `DELETE FROM inspection_checklist WHERE mr_no = ${esc(mrNo)};`,
+        `DELETE FROM inspection_master WHERE mr_no = ${esc(mrNo)};`,
+        `DELETE FROM mill_inspection_master WHERE mr_no = ${esc(mrNo)};`,
+        `DELETE FROM material_inspection WHERE mr_no = ${esc(mrNo)};`,
+        `DELETE FROM mill_inspection_print_logs WHERE mr_no = ${esc(mrNo)};`
+      );
+    } else if (recordId) {
+      txStatements.push(
+        `DELETE FROM inspection_checklist WHERE id = ${esc(recordId)};`,
+        `DELETE FROM inspection_master WHERE id = ${esc(recordId)};`,
+        `DELETE FROM mill_inspection_master WHERE id = ${esc(recordId)};`,
+        `DELETE FROM material_inspection WHERE id = ${esc(recordId)};`
+      );
     }
+
+    await dbModule.executeTransaction(txStatements);
 
     try {
       const isTarget = (r: any) => {
         if (!r) return false;
         if (mrNo && (r.mr_no === mrNo || r.id === mrNo)) return true;
         if (recordId && r.id === recordId) return true;
-        if (poNo && (r.po_no === poNo || r.mill_po_no === poNo)) return true;
-        if (arrNo && (r.arrival_no === arrNo || r.temporary_arrival_no === arrNo)) return true;
-        if (inspNo && r.inspection_no === inspNo) return true;
+        if (arrNo && !mrNo && (r.arrival_no === arrNo || r.temporary_arrival_no === arrNo)) return true;
+        if (inspNo && !mrNo && r.inspection_no === inspNo) return true;
         return false;
       };
 
@@ -1595,7 +1570,6 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
     setSavedInspections(prev => prev.filter(r => {
       if (mrNo && r.mr_no === mrNo) return false;
       if (recordId && r.id === recordId) return false;
-      if (poNo && (r.po_no === poNo || r.mill_po_no === poNo)) return false;
       return true;
     }));
 
@@ -1730,12 +1704,7 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
         }
       }
 
-      await supabase.from("material_inspection").upsert(masterPayload);
-
-      await supabase.from("inspection_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
-      await supabase.from("inspection_checklist_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
-      await supabase.from("mill_inspection_detail").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
-      await supabase.from("material_inspection_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
+      // Master + Detail save will be executed atomically below after building validRowsToWrite
 
       const colKeys = ['1st', '2nd', '3rd', '4th'];
       const validRowsToWrite = detailsList
@@ -1866,11 +1835,45 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
           };
         });
 
-      if (validRowsToWrite.length > 0) {
-        await supabase.from("inspection_details").insert(validRowsToWrite).then(() => {}, () => {});
-        await supabase.from("inspection_checklist_details").insert(validRowsToWrite).then(() => {}, () => {});
-        await supabase.from("mill_inspection_detail").insert(validRowsToWrite).then(() => {}, () => {});
-        await supabase.from("material_inspection_details").insert(validRowsToWrite).then(() => {}, () => {});
+      const sqlVal = (v: any) => {
+        if (v === null || v === undefined) return 'NULL';
+        if (typeof v === 'number') return isFinite(v) ? String(v) : '0';
+        if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+        if (typeof v === 'object') return `'${JSON.stringify(v).replace(/'/g, "''")}'::jsonb`;
+        return `'${String(v).replace(/'/g, "''")}'`;
+      };
+
+      try {
+        const mCols = Object.keys(masterPayload);
+        const mVals = mCols.map(k => sqlVal(masterPayload[k]));
+        const mUpdate = mCols.filter(k => k !== 'mr_no').map(k => `${k} = EXCLUDED.${k}`).join(', ');
+        const txQueries: string[] = [
+          `INSERT INTO material_inspection (${mCols.join(', ')}) VALUES (${mVals.join(', ')}) ON CONFLICT (mr_no) DO UPDATE SET ${mUpdate};`,
+          `DELETE FROM inspection_details WHERE mr_no = ${sqlVal(masterData.mr_no)};`,
+          `DELETE FROM inspection_checklist_details WHERE mr_no = ${sqlVal(masterData.mr_no)};`,
+          `DELETE FROM mill_inspection_detail WHERE mr_no = ${sqlVal(masterData.mr_no)};`,
+          `DELETE FROM material_inspection_details WHERE mr_no = ${sqlVal(masterData.mr_no)};`
+        ];
+        for (const r of validRowsToWrite) {
+          const dCols = Object.keys(r);
+          const dVals = dCols.map(k => sqlVal((r as any)[k]));
+          txQueries.push(`INSERT INTO material_inspection_details (${dCols.join(', ')}) VALUES (${dVals.join(', ')});`);
+          txQueries.push(`INSERT INTO mill_inspection_detail (${dCols.join(', ')}) VALUES (${dVals.join(', ')});`);
+        }
+        await dbModule.executeTransaction(txQueries);
+      } catch (_txErr) {
+        const { error: mErr } = await supabase.from("material_inspection").upsert(masterPayload);
+        if (mErr) throw mErr;
+        await supabase.from("inspection_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
+        await supabase.from("inspection_checklist_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
+        await supabase.from("mill_inspection_detail").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
+        await supabase.from("material_inspection_details").delete().eq("mr_no", masterData.mr_no).then(() => {}, () => {});
+        if (validRowsToWrite.length > 0) {
+          await supabase.from("inspection_details").insert(validRowsToWrite).then(() => {}, () => {});
+          await supabase.from("inspection_checklist_details").insert(validRowsToWrite).then(() => {}, () => {});
+          await supabase.from("mill_inspection_detail").insert(validRowsToWrite).then(() => {}, () => {});
+          await supabase.from("material_inspection_details").insert(validRowsToWrite).then(() => {}, () => {});
+        }
       }
 
       try {

@@ -327,29 +327,50 @@ export default function MaterialIssue({
         masterPayload.department = formData.issued_for || 'BATCHING';
       }
 
-      if (isEditMode && originalIssueNo) {
-        await dbModule.update('mill_issue_master', 'issue_no', originalIssueNo, masterPayload);
-        await dbModule.delete('mill_issue_detail', 'issue_no', originalIssueNo);
+      const sqlVal = (v: any) => {
+        if (v === null || v === undefined) return 'NULL';
+        if (typeof v === 'number') return isFinite(v) ? String(v) : '0';
+        return `'${String(v).replace(/'/g, "''")}'`;
+      };
 
-        for (const it of items) {
-          await dbModule.insert('mill_issue_detail', {
-            issue_no: formData.issue_no,
-            srl: Number(it.srl),
-            crop: it.crop || '2025-26',
-            grade_name: it.grade_name || '',
-            marka: it.marka || '',
-            qty: Number(it.qty || 0),
-            weight_kgs: Number(it.weight_kgs || 0),
-            area: it.area || '',
-            agency: it.agency || '',
-            code: it.code || '',
-            batch_name: it.batch_name || '',
-            unit: it.unit || 'BALES',
-            place: it.place || '',
-            itg_no: it.itg_no || '',
-            rate: Number(it.rate || 0),
-            location_dest: it.location_dest || ''
-          });
+      if (isEditMode && originalIssueNo) {
+        try {
+          const masterCols = Object.keys(masterPayload);
+          const updateSet = masterCols.map(k => `${k} = ${sqlVal(masterPayload[k])}`).join(', ');
+          const txQueries: string[] = [
+            `UPDATE mill_issue_master SET ${updateSet} WHERE issue_no = ${sqlVal(originalIssueNo)};`,
+            `DELETE FROM mill_issue_detail WHERE issue_no = ${sqlVal(originalIssueNo)};`
+          ];
+          for (const it of items) {
+            txQueries.push(
+              `INSERT INTO mill_issue_detail (issue_no, srl, crop, grade_name, marka, qty, weight_kgs, area, agency, code, batch_name, unit, place, itg_no, rate, location_dest) VALUES (${sqlVal(formData.issue_no)}, ${Number(it.srl) || 1}, ${sqlVal(it.crop || '2025-26')}, ${sqlVal(it.grade_name || '')}, ${sqlVal(it.marka || '')}, ${Number(it.qty || 0)}, ${Number(it.weight_kgs || 0)}, ${sqlVal(it.area || '')}, ${sqlVal(it.agency || '')}, ${sqlVal(it.code || '')}, ${sqlVal(it.batch_name || '')}, ${sqlVal(it.unit || 'BALES')}, ${sqlVal(it.place || '')}, ${sqlVal(it.itg_no || '')}, ${Number(it.rate || 0)}, ${sqlVal(it.location_dest || '')});`
+            );
+          }
+          await dbModule.executeTransaction(txQueries);
+        } catch (_txErr) {
+          await dbModule.update('mill_issue_master', 'issue_no', originalIssueNo, masterPayload);
+          await dbModule.delete('mill_issue_detail', 'issue_no', originalIssueNo);
+
+          for (const it of items) {
+            await dbModule.insert('mill_issue_detail', {
+              issue_no: formData.issue_no,
+              srl: Number(it.srl),
+              crop: it.crop || '2025-26',
+              grade_name: it.grade_name || '',
+              marka: it.marka || '',
+              qty: Number(it.qty || 0),
+              weight_kgs: Number(it.weight_kgs || 0),
+              area: it.area || '',
+              agency: it.agency || '',
+              code: it.code || '',
+              batch_name: it.batch_name || '',
+              unit: it.unit || 'BALES',
+              place: it.place || '',
+              itg_no: it.itg_no || '',
+              rate: Number(it.rate || 0),
+              location_dest: it.location_dest || ''
+            });
+          }
         }
 
         setIsEditMode(true);
@@ -371,27 +392,41 @@ export default function MaterialIssue({
           return;
         }
 
-        await dbModule.insert('mill_issue_master', masterPayload);
+        try {
+          const masterCols = Object.keys(masterPayload);
+          const masterVals = masterCols.map(k => sqlVal(masterPayload[k]));
+          const txQueries: string[] = [
+            `INSERT INTO mill_issue_master (${masterCols.join(', ')}) VALUES (${masterVals.join(', ')});`
+          ];
+          for (const it of items) {
+            txQueries.push(
+              `INSERT INTO mill_issue_detail (issue_no, srl, crop, grade_name, marka, qty, weight_kgs, area, agency, code, batch_name, unit, place, itg_no, rate, location_dest) VALUES (${sqlVal(formData.issue_no)}, ${Number(it.srl) || 1}, ${sqlVal(it.crop || '2025-26')}, ${sqlVal(it.grade_name || '')}, ${sqlVal(it.marka || '')}, ${Number(it.qty || 0)}, ${Number(it.weight_kgs || 0)}, ${sqlVal(it.area || '')}, ${sqlVal(it.agency || '')}, ${sqlVal(it.code || '')}, ${sqlVal(it.batch_name || '')}, ${sqlVal(it.unit || 'BALES')}, ${sqlVal(it.place || '')}, ${sqlVal(it.itg_no || '')}, ${Number(it.rate || 0)}, ${sqlVal(it.location_dest || '')});`
+            );
+          }
+          await dbModule.executeTransaction(txQueries);
+        } catch (_txErr) {
+          await dbModule.insert('mill_issue_master', masterPayload);
 
-        for (const it of items) {
-          await dbModule.insert('mill_issue_detail', {
-            issue_no: formData.issue_no,
-            srl: Number(it.srl),
-            crop: it.crop || '2025-26',
-            grade_name: it.grade_name || '',
-            marka: it.marka || '',
-            qty: Number(it.qty || 0),
-            weight_kgs: Number(it.weight_kgs || 0),
-            area: it.area || '',
-            agency: it.agency || '',
-            code: it.code || '',
-            batch_name: it.batch_name || '',
-            unit: it.unit || 'BALES',
-            place: it.place || '',
-            itg_no: it.itg_no || '',
-            rate: Number(it.rate || 0),
-            location_dest: it.location_dest || ''
-          });
+          for (const it of items) {
+            await dbModule.insert('mill_issue_detail', {
+              issue_no: formData.issue_no,
+              srl: Number(it.srl),
+              crop: it.crop || '2025-26',
+              grade_name: it.grade_name || '',
+              marka: it.marka || '',
+              qty: Number(it.qty || 0),
+              weight_kgs: Number(it.weight_kgs || 0),
+              area: it.area || '',
+              agency: it.agency || '',
+              code: it.code || '',
+              batch_name: it.batch_name || '',
+              unit: it.unit || 'BALES',
+              place: it.place || '',
+              itg_no: it.itg_no || '',
+              rate: Number(it.rate || 0),
+              location_dest: it.location_dest || ''
+            });
+          }
         }
 
         setIsEditMode(true);
@@ -559,8 +594,16 @@ export default function MaterialIssue({
 
     setLoading(true);
     try {
-      await dbModule.delete('mill_issue_master', 'issue_no', issueNo);
-      await dbModule.delete('mill_issue_detail', 'issue_no', issueNo);
+      const esc = (v: string) => `'${v.replace(/'/g, "''")}'`;
+      try {
+        await dbModule.executeTransaction([
+          `DELETE FROM mill_issue_detail WHERE issue_no = ${esc(issueNo)};`,
+          `DELETE FROM mill_issue_master WHERE issue_no = ${esc(issueNo)};`
+        ]);
+      } catch (_txErr) {
+        await dbModule.delete('mill_issue_detail', 'issue_no', issueNo);
+        await dbModule.delete('mill_issue_master', 'issue_no', issueNo);
+      }
       showToast(`Voucher "${issueNo}" deleted successfully.`);
       await fetchRecords();
       if (selectedRecordId === issueNo) setSelectedRecordId(null);

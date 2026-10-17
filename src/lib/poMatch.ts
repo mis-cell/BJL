@@ -405,7 +405,7 @@ export function compareSaudaTempArrival(
   const validArrivalAreas = normArrivalAreas.filter(Boolean);
 
   if (validSaudaAreas.length > 0 && validArrivalAreas.length > 0) {
-    const areaMatch = validArrivalAreas.some(aa => validSaudaAreas.some(sa => sa === aa || sa.includes(aa) || aa.includes(sa)));
+    const areaMatch = validArrivalAreas.some(aa => validSaudaAreas.some(sa => sa === aa));
     if (!areaMatch) {
       const saudaDisplay = Array.from(new Set(validSaudaAreas)).join(', ');
       const arrivalDisplay = Array.from(new Set(validArrivalAreas)).join(', ');

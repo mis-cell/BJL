@@ -128,14 +128,12 @@ export function calculateSattaDeduction(
   let settPct = 0;
   if (customSettPct !== undefined && !isNaN(customSettPct)) {
     settPct = customSettPct;
-  } else if (col.sett_pct !== undefined && col.sett_pct !== null && col.sett_pct !== "" && !isNaN(Number(col.sett_pct)) && Number(col.sett_pct) > 0) {
+  } else if (col.sett_pct !== undefined && col.sett_pct !== null && String(col.sett_pct).trim() !== "" && !isNaN(Number(col.sett_pct)) && Number(col.sett_pct) >= 0) {
     settPct = Number(col.sett_pct);
   } else if (col.gd_claim !== undefined && col.gd_claim !== null && !isNaN(Number(col.gd_claim)) && Number(col.gd_claim) > 0) {
     settPct = Number(col.gd_claim);
   } else if (col.gd_sett !== undefined && col.gd_sett !== null && !isNaN(Number(col.gd_sett)) && Number(col.gd_sett) > 0) {
     settPct = Number(col.gd_sett);
-  } else if (col.sett_pct !== undefined && col.sett_pct !== null && !isNaN(Number(col.sett_pct))) {
-    settPct = Number(col.sett_pct);
   }
 
   // Determine target downgraded grade (e.g. TD5 down to TD6, TD6 down to TD7)

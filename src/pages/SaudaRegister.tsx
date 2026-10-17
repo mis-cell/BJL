@@ -39,7 +39,7 @@ import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/Legacy
 import SaudaEntry from './SaudaEntry';
 import SaudaPrintSlip from '../components/SaudaPrintSlip';
 import { UniversalAuditLogModal } from '../components/UniversalAuditLogModal';
-import { dbModule, flushOfflineQueue } from '../services/dbModule';
+import { dbModule } from '../services/dbModule';
 import { Sauda, SaudaQualityDetail } from '../types';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isUserId10, isUserId2, isUserAdmin, isL5OrAdmin, getCurrentUserContext, isSaudaApproved, canEditSaudaContract, canDeleteSaudaContract } from '../lib/permissions';
@@ -910,7 +910,6 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const fetchSaudas = async () => {
     setIsRefreshing(true);
     try {
-      if (navigator.onLine) await flushOfflineQueue().catch(() => {});
       const [saudasData, posData, arrivalsData, scpData] = await Promise.all([
         dbModule.fetchAll('sauda_master', 'created_at', false).catch(async () => {
           return await dbModule.fetchAll('sauda_master').catch(async () => {

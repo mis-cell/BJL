@@ -130,7 +130,7 @@ export const generatePoPdf = (po: any): jsPDF => {
     doc.setFont('helvetica', isFirst ? 'bold' : 'normal');
     if (isFirst) {
       doc.text(`${po.total_no_of_lorries || '1'}`, 17, currentY + 5);
-      doc.text(`${item.crop || '2025-26'}`, 32, currentY + 5);
+      doc.text(`${item.crop || po.financial_year || '2026-27'}`, 32, currentY + 5);
       doc.text(`${(item.agency_name || po.area || '').toUpperCase()}`, 52, currentY + 5);
       doc.text(`${(item.marka_name || 'NO MARK').toUpperCase()}`, 87, currentY + 5);
     }
@@ -156,16 +156,23 @@ export const generatePoPdf = (po: any): jsPDF => {
   doc.setFontSize(9.5);
   doc.text("UNIT PARAMETERS", 18, currentY + 5);
   
+  const totalContractMtNum = Number(po.total_contract_mt || 0);
+  const totalLorriesNum = Math.max(1, Number(po.total_no_of_lorries) || 1);
+  const resolvedWtPerLorry =
+    po.weight_per_lorry !== undefined && po.weight_per_lorry !== null && Number(po.weight_per_lorry) > 0
+      ? Number(po.weight_per_lorry)
+      : (totalContractMtNum > 0 ? totalContractMtNum / totalLorriesNum : 0);
+
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.text(`Unit: ${po.purchase_unit_name || 'BALES'}`, 18, currentY + 10);
   doc.text(`${po.purchase_unit_name || 'BALES'} / Lorry: ${po.units_per_lorry || '0'}`, 60, currentY + 10);
   doc.text(`Total ${po.purchase_unit_name || 'BALES'}: ${po.total_units || '0'}`, 110, currentY + 10);
-  doc.text(`Weight/Lorry: ${Number(po.weight_per_lorry || '10.000').toFixed(3)} m.T`, 155, currentY + 10);
+  doc.text(`Weight/Lorry: ${resolvedWtPerLorry.toFixed(3)} m.T`, 155, currentY + 10);
 
   doc.text(`Area: ${po.area || 'N/A'}`, 18, currentY + 15);
-  doc.text(`Total Lorries: ${po.total_no_of_lorries || '1'} (${numberToWords(Number(po.total_no_of_lorries) || 1)})`, 60, currentY + 15);
-  doc.text(`Total Contract Wt: ${Number(po.total_contract_mt || '0').toFixed(3)} m.T`, 155, currentY + 15);
+  doc.text(`Total Lorries: ${po.total_no_of_lorries || '1'} (${numberToWords(totalLorriesNum)})`, 60, currentY + 15);
+  doc.text(`Total Contract Wt: ${totalContractMtNum.toFixed(3)} m.T`, 155, currentY + 15);
 
   // Delivery & Penalties Block
   currentY += 21;

@@ -22,7 +22,7 @@ export const getColQtyQtl = (col?: PaymentDetailColumn): number => {
 // Sett (%) - Populated from Inspection Details Grade Down % Claim (gd_claim), Mill Sett -> Gr. Down percentage (gd_sett), or user edited sett_pct
 export const getColSettPct = (col?: PaymentDetailColumn): number => {
   if (!col) return 0;
-  if (col.sett_pct !== undefined && col.sett_pct !== null && !isNaN(Number(col.sett_pct)) && Number(col.sett_pct) > 0) {
+  if (col.sett_pct !== undefined && col.sett_pct !== null && String(col.sett_pct).trim() !== '' && !isNaN(Number(col.sett_pct)) && Number(col.sett_pct) >= 0) {
     return Number(col.sett_pct);
   }
   if (col.gd_claim !== undefined && col.gd_claim !== null && !isNaN(Number(col.gd_claim)) && Number(col.gd_claim) > 0) {
@@ -30,9 +30,6 @@ export const getColSettPct = (col?: PaymentDetailColumn): number => {
   }
   if (col.gd_sett !== undefined && col.gd_sett !== null && !isNaN(Number(col.gd_sett)) && Number(col.gd_sett) > 0) {
     return Number(col.gd_sett);
-  }
-  if (col.sett_pct !== undefined && col.sett_pct !== null && !isNaN(Number(col.sett_pct))) {
-    return Number(col.sett_pct);
   }
   return 0;
 };

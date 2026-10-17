@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { cn, getApiUrl } from '../lib/utils';
 import { supabase } from '../lib/supabase';
+import { dbModule } from '../services/dbModule';
 import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/LegacyLayout';
 
 export default function ConfigGuide({ onClose }: { onClose?: () => void }) {
@@ -41,67 +42,21 @@ export default function ConfigGuide({ onClose }: { onClose?: () => void }) {
     setLoading(true);
     setSyncLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] INITIATING FULL DIAGNOSTIC SCAN OF FINAL ARRIVALS...`]);
     try {
-      let fetched: any[] = [];
-      if (supabase) {
-        const { data, error } = await supabase.from('final_arrival').select('*');
-        if (!error && data) {
-          fetched = data;
-        }
-      }
-      
-      if (!fetched || fetched.length === 0) {
-        fetched = [
-          {
-            final_arrival_id: "fa-1",
-            final_arrival_no: "2044",
-            supplier: "BENGAL BALING CO.",
-            lorry_number: "WB-23-4412",
-            weight_qtl: 145.2,
-            electronic_net_weight: 14.120,
-            arrival_area_name: "DAISEE CORE AREA",
-            po_date: "2026-03-12",
-            grid_details: JSON.stringify([
-              { moisture_pct: 19.5, dust_pct: 1.0, ncv_pct: 0.5 }
-            ])
-          },
-          {
-            final_arrival_id: "fa-2",
-            final_arrival_no: "2045",
-            supplier: "EASTERN BALER TRADERS",
-            lorry_number: "OR-14-9980",
-            weight_qtl: 184.8,
-            electronic_net_weight: 16.520,
-            arrival_area_name: "KOLKATA DOCKS",
-            po_date: "2026-02-28",
-            grid_details: JSON.stringify([
-              { moisture_pct: 21.0, dust_pct: 1.5, ncv_pct: 1.0 }
-            ])
-          },
-          {
-            final_arrival_id: "fa-3",
-            final_arrival_no: "2046",
-            supplier: "ORISSA JUTE EXPORTERS",
-            lorry_number: "WB-25-1102",
-            weight_qtl: 120.0,
-            electronic_net_weight: 11.880,
-            arrival_area_name: "ORISSA STATION",
-            po_date: "2026-05-15",
-            grid_details: JSON.stringify([
-              { moisture_pct: 16.0, dust_pct: 0.5, ncv_pct: 0.5 }
-            ])
-          }
-        ];
-      }
-      setArrivals(fetched);
+      const fetched = await dbModule.fetchAll('final_arrival');
+      setArrivals(fetched || []);
       setSyncLogs(prev => [
         ...prev, 
-        `[${new Date().toLocaleTimeString()}] RETRIEVED ${fetched.length} REGISTRATION SLIPS FOR RECONCILIATION AUDIT.`,
+        `[${new Date().toLocaleTimeString()}] RETRIEVED ${(fetched || []).length} REGISTRATION SLIPS FOR RECONCILIATION AUDIT.`,
         `[${new Date().toLocaleTimeString()}] COMPARING WEIGHED NET WEIGHT VS QUALITY AUDIT DECISION FACTOR LOGIC...`
       ]);
       
-      analyzeDiscrepancies(fetched, tolValue);
-    } catch (err) {
+      analyzeDiscrepancies(fetched || [], tolValue);
+    } catch (err: any) {
       console.error(err);
+      setSyncLogs(prev => [
+        ...prev,
+        `[${new Date().toLocaleTimeString()}] [ERROR] DIAGNOSTIC SCAN FAILED: ${err?.message || 'Unable to query final_arrival'}`
+      ]);
     } finally {
       setLoading(false);
     }
@@ -179,31 +134,45 @@ export default function ConfigGuide({ onClose }: { onClose?: () => void }) {
     setSyncLogs(prev => [...prev, ...logList, `[${new Date().toLocaleTimeString()}] SCAN COMPLETE. FLAGGED ${flagged.length} RECORDS WITH EXCESS DISCREPANCIES.`]);
   };
 
-  const handleReSyncSingleRecord = (recordId: string, recordNo: string) => {
+  const handleReSyncSingleRecord = async (recordId: string, recordNo: string) => {
     setSyncingRecordId(recordId);
     setSyncLogs(prev => [
-      ...prev, 
-      `[${new Date().toLocaleTimeString()}] [SYNC ENGINE] PREPARING BULK OVERRIDE FOR FA #${recordNo}...`,
-      `[${new Date().toLocaleTimeString()}] [SYNC ENGINE] COMPILING CENTRAL WEIGHBRIDGE RECORDS FOR VEHICLE TRANSIT...`,
+      ...prev,
+      `[${new Date().toLocaleTimeString()}] [SYNC ENGINE] PREPARING DATABASE RECONCILIATION FOR FA #${recordNo}...`
     ]);
-    
-    setTimeout(() => {
+
+    try {
+      const target = flaggedRecords.find(
+        f => (f.final_arrival_id || f.id) === recordId || String(f.final_arrival_no) === String(recordNo)
+      );
+      if (!target) {
+        throw new Error(`Flagged record FA #${recordNo} not found.`);
+      }
+
+      const reconciledMt = Number(Number(target.reconciledNet || 0).toFixed(3));
+      const idColumn = target.final_arrival_id ? 'final_arrival_id' : (target.id ? 'id' : 'final_arrival_no');
+      const idValue = target.final_arrival_id || target.id || recordNo;
+
+      await dbModule.update('final_arrival', idColumn, idValue, {
+        electronic_net_weight: reconciledMt,
+        updated_at: new Date().toISOString()
+      });
+
       setSyncLogs(prev => [
         ...prev,
-        `[${new Date().toLocaleTimeString()}] [SYNC ENGINE] ALIGNING MOISTURE & DUST FACTORS. SEASONAL LIMIT: ${recordNo === '2044' ? '18%' : '16%'} APPLIED.`,
-        `[${new Date().toLocaleTimeString()}] [SYNC ENGINE] RE-INDEXING RECORD IN DB...`,
+        `[${new Date().toLocaleTimeString()}] [SYNC ENGINE] UPDATED final_arrival FA #${recordNo} electronic_net_weight TO ${reconciledMt.toFixed(3)} MT IN DATABASE.`
       ]);
-      
-      setTimeout(() => {
-        setSyncLogs(prev => [
-          ...prev,
-          `[${new Date().toLocaleTimeString()}] [SYNC ENGINE] SUCCESS: RE-SYNCHRONIZED FA #${recordNo} VALUES SUCCESSFULLY. DISCREPANCY CLEAR.`,
-        ]);
-        
-        setFlaggedRecords(prev => prev.filter(f => f.final_arrival_id !== recordId));
-        setSyncingRecordId(null);
-      }, 800);
-    }, 800);
+
+      setFlaggedRecords(prev => prev.filter(f => (f.final_arrival_id || f.id) !== recordId && String(f.final_arrival_no) !== String(recordNo)));
+      await loadArrivalsAndScan(threshold);
+    } catch (err: any) {
+      setSyncLogs(prev => [
+        ...prev,
+        `[${new Date().toLocaleTimeString()}] [SYNC ENGINE] ERROR RE-SYNCHRONIZING FA #${recordNo}: ${err?.message || 'Database write failed'}`
+      ]);
+    } finally {
+      setSyncingRecordId(null);
+    }
   };
 
   useEffect(() => {

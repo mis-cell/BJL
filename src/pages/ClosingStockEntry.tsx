@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import StockSummary from './StockSummary';
 
 interface ClosingStockEntryProps {
@@ -6,10 +6,16 @@ interface ClosingStockEntryProps {
 }
 
 export default function ClosingStockEntry({ onClose }: ClosingStockEntryProps) {
+  // Isolated dedicated tab state for Closing Stock Entry so switching tabs in StockSummary never mutates this view
+  const [isolatedTabKey] = useState<'opening'>('opening');
+
   return (
-    <StockSummary
-      initialSubTab="opening"
-      onClose={onClose}
-    />
+    <div data-isolated-module="closing_stock_entry" className="w-full h-full flex flex-col">
+      <StockSummary
+        key={`closing-stock-isolated-${isolatedTabKey}`}
+        initialSubTab={isolatedTabKey}
+        onClose={onClose}
+      />
+    </div>
   );
 }

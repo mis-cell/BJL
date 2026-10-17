@@ -1137,23 +1137,13 @@ export function usePurchaseOrderFormLogic({
       );
       const isPendingVal = isReopenedPo ? true : (isWeightCompleted ? false : (formData.pending === 'Yes'));
 
-      // Persist delivery dates in localStorage for instant and guaranteed reload persistence
-      const deliveryCachePayload = {
-        delivery_from: formData.delivery_from || null,
-        delivery_to: formData.delivery_to || null,
-        shipment_date: formData.delivery_to || formData.delivery_from || null,
-        grace_days: parseInt(formData.grace_days) || 0,
-        shipment_days: parseInt(formData.grace_days) || 0,
-        delivery_penalty: parseFloat(formData.delivery_penalty) || 0,
-        updated_at: new Date().toISOString()
-      };
-      localStorage.setItem(`sauda_delivery_dates_${cleanPoKey}`, JSON.stringify(deliveryCachePayload));
-      if (formData.contract_po_no) {
-        localStorage.setItem(`sauda_delivery_dates_${String(formData.contract_po_no).trim().toUpperCase()}`, JSON.stringify(deliveryCachePayload));
-      }
+      const preservedFinancialYear =
+        existingPoInList?.financial_year ||
+        selectedYear ||
+        '2026-2027';
 
       const payload: Record<string, any> = {
-        financial_year: '2026-2027',
+        financial_year: preservedFinancialYear,
         purchase_order: formData.purchase_order,
         po_type: formData.po_type,
         status: isReopenedPo ? 'open' : (isTempPo ? 'temp' : 'final'),
@@ -1209,10 +1199,31 @@ export function usePurchaseOrderFormLogic({
         }
       }
 
-      // 1. Single efficient upsert into master table (with automatic column-stripping and conflict fallback)
+      // 1. Strict row-verified upsert into master table
       await dbModule.upsert(MASTER_TABLE, payload, 'po_no');
 
-      // Also sync delivery dates across linked tables if editing an existing PO
+      // 2. Transactional / row-verified detail save
+      await poService.savePoDetails(DETAIL_TABLE, finalPoNo, formData.items, {
+        gradeList,
+        agencyList,
+        markaList
+      });
+
+      // 3. Only after authoritative DB header + detail writes succeed, update localStorage cache & sync linked tables
+      const deliveryCachePayload = {
+        delivery_from: formData.delivery_from || null,
+        delivery_to: formData.delivery_to || null,
+        shipment_date: formData.delivery_to || formData.delivery_from || null,
+        grace_days: parseInt(formData.grace_days) || 0,
+        shipment_days: parseInt(formData.grace_days) || 0,
+        delivery_penalty: parseFloat(formData.delivery_penalty) || 0,
+        updated_at: new Date().toISOString()
+      };
+      localStorage.setItem(`sauda_delivery_dates_${cleanPoKey}`, JSON.stringify(deliveryCachePayload));
+      if (formData.contract_po_no) {
+        localStorage.setItem(`sauda_delivery_dates_${String(formData.contract_po_no).trim().toUpperCase()}`, JSON.stringify(deliveryCachePayload));
+      }
+
       if (existingPoInList) {
         const syncDatePayload = {
           delivery_from: formData.delivery_from || null,
@@ -1227,13 +1238,6 @@ export function usePurchaseOrderFormLogic({
           await dbModule.update('sauda_check_point', 'po_no', finalPoNo, syncDatePayload).catch(() => {});
         }
       }
-
-      // 2. Batch persist details
-      await poService.savePoDetails(DETAIL_TABLE, finalPoNo, formData.items, {
-        gradeList,
-        agencyList,
-        markaList
-      });
 
       // 3. If newly saved in Sauda Check Point (isTempPo and not already in poList), clean up the source Sauda in parallel
       if (isTempPo && !existingPoInList && (formData.no || formData.contract_po_no || finalPoNo)) {

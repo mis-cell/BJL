@@ -150,59 +150,10 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
   const [s3Success, setS3Success] = useState<string>("");
   const [s3Saving, setS3Saving] = useState(false);
 
-  // Load Initial Data
+  // Load Initial Data (DDL managed via migrations/20261017_safe_repairs.sql)
   const loadData = async () => {
     setLoading(true);
     try {
-      if (supabase) {
-        try {
-          await supabase.rpc("exec_sql", {
-            query: `
-              CREATE TABLE IF NOT EXISTS lorry_weighments (
-                  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                  ticket_number TEXT UNIQUE NOT NULL,
-                  date DATE NOT NULL,
-                  lorry_number TEXT NOT NULL,
-                  party_name TEXT,
-                  driver_number TEXT,
-                  driver_name TEXT,
-                  stage1_gross_weight NUMERIC(15,3),
-                  stage1_tare_weight NUMERIC(15,3),
-                  stage1_net_weight NUMERIC(15,3),
-                  grade TEXT,
-                  grade_details JSONB,
-                  unit TEXT,
-                  mokam TEXT,
-                  marka TEXT,
-                  stage1_completed BOOLEAN DEFAULT FALSE,
-                  stage1_date TIMESTAMP WITH TIME ZONE,
-                  stage2_gross_weight NUMERIC(15,3),
-                  stage2_tare_weight NUMERIC(15,3),
-                  stage2_net_weight NUMERIC(15,3),
-                  stage2_completed BOOLEAN DEFAULT FALSE,
-                  stage2_date TIMESTAMP WITH TIME ZONE,
-                  stage3_gross_weight NUMERIC(15,3),
-                  stage3_tare_weight NUMERIC(15,3),
-                  stage3_net_weight NUMERIC(15,3),
-                  stage3_completed BOOLEAN DEFAULT FALSE,
-                  stage3_date TIMESTAMP WITH TIME ZONE,
-                  final_weight NUMERIC(15,3),
-                  final_weight_date TIMESTAMP WITH TIME ZONE,
-                  status TEXT DEFAULT 'IN',
-                  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-              );
-              ALTER TABLE lorry_weighments ADD COLUMN IF NOT EXISTS grade TEXT;
-              ALTER TABLE lorry_weighments ADD COLUMN IF NOT EXISTS grade_details JSONB;
-              ALTER TABLE lorry_weighments ADD COLUMN IF NOT EXISTS unit TEXT;
-              ALTER TABLE lorry_weighments ADD COLUMN IF NOT EXISTS mokam TEXT;
-              ALTER TABLE lorry_weighments ADD COLUMN IF NOT EXISTS marka TEXT;
-              ALTER TABLE lorry_weighments ADD COLUMN IF NOT EXISTS driver_number TEXT;
-              ALTER TABLE lorry_weighments ADD COLUMN IF NOT EXISTS driver_name TEXT;
-              NOTIFY pgrst, 'reload schema';
-            `
-          });
-        } catch {}
-      }
 
       // Fetch Master Data
       let uData: any[] = [];
@@ -428,37 +379,28 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
     try {
       const gradeSummaryString = s1Grades.map((g) => `${g.grade_name} (${g.quantity} KG)`).join(", ");
 
+      const nowIso = new Date().toISOString();
       const newRecord = {
-        id: String(Date.now()),
-        ticketnumber: s1TicketNo,
+        ticket_number: s1TicketNo,
         date: s1Date,
-        lorrynumber: trimmedLorry,
-        partyname: s1PartyName || null,
-        stage1grossweight: gross,
-        stage1tareweight: tare,
-        stage1netweight: gross - tare,
-        stage1completed: true,
-        stage1timestamp: Date.now(),
+        lorry_number: trimmedLorry,
+        party_name: s1PartyName || null,
+        stage1_gross_weight: gross,
+        stage1_tare_weight: tare,
+        stage1_net_weight: gross - tare,
+        stage1_completed: true,
+        stage1_date: nowIso,
         grade: gradeSummaryString || null,
-        gradeDetails: s1Grades.length > 0 ? s1Grades : null,
         grade_details: s1Grades.length > 0 ? s1Grades : null,
         unit: s1Unit || null,
         mokam: s1Mokam || null,
         marka: s1Marka || null,
-        stage2completed: false,
-        stage3completed: false,
-        isout: false,
-        createdat: Date.now(),
-        updatedat: Date.now(),
-        issynced: true
+        stage2_completed: false,
+        stage3_completed: false,
+        status: "IN",
       };
 
-      if (supabase) {
-        const { error } = await supabase.from("lorry_weighments").insert([newRecord]);
-        if (error) throw error;
-      } else {
-        await dbModule.insert("lorry_weighments", newRecord);
-      }
+      await dbModule.insert("lorry_weighments", newRecord);
 
       setS1Success(`Stage 1 (Party Weighment) successfully saved! Ticket: ${s1TicketNo}`);
       
@@ -517,21 +459,14 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
     setS2Saving(true);
     try {
       const updatePayload = {
-        stage2grossweight: gross,
-        stage2tareweight: tare,
-        stage2netweight: gross - tare,
-        stage2completed: true,
-        stage2timestamp: Date.now(),
-        updatedat: Date.now()
+        stage2_gross_weight: gross,
+        stage2_tare_weight: tare,
+        stage2_net_weight: gross - tare,
+        stage2_completed: true,
+        stage2_date: new Date().toISOString(),
       };
 
-      if (supabase) {
-        const { error } = await supabase
-          .from("lorry_weighments")
-          .update(updatePayload)
-          .eq("id", selectedS2Record.id);
-        if (error) throw error;
-      }
+      await dbModule.update("lorry_weighments", "id", selectedS2Record.id, updatePayload);
 
       setS2Success(`Stage 2 (Mill Scale Weighment) successfully recorded for Lorry [${selectedS2Record.lorry_number}]!`);
       setS2SelectedId("");
@@ -588,25 +523,19 @@ export default function WeightBridge({ allowedModules = [], onNavigate }: Weight
 
     setS3Saving(true);
     try {
+      const nowIso = new Date().toISOString();
       const updatePayload = {
-        stage3grossweight: gross,
-        stage3tareweight: tare,
-        stage3netweight: s3Net,
-        stage3completed: true,
-        stage3timestamp: Date.now(),
-        finalweight: finalLowestWeight,
-        finalweightdate: new Date().toISOString(),
-        isout: true,
-        updatedat: Date.now()
+        stage3_gross_weight: gross,
+        stage3_tare_weight: tare,
+        stage3_net_weight: s3Net,
+        stage3_completed: true,
+        stage3_date: nowIso,
+        final_weight: finalLowestWeight,
+        final_weight_date: nowIso,
+        status: "OUT",
       };
 
-      if (supabase) {
-        const { error } = await supabase
-          .from("lorry_weighments")
-          .update(updatePayload)
-          .eq("id", selectedS3Record.id);
-        if (error) throw error;
-      }
+      await dbModule.update("lorry_weighments", "id", selectedS3Record.id, updatePayload);
 
       setS3Success(
         `Stage 3 Electronic Scale Completed! Lorry [${selectedS3Record.lorry_number}] marked OUT. Final Weight: ${finalLowestWeight.toFixed(2)} KG.`

@@ -166,53 +166,66 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       setPaymentList(payments);
 
       const cleanStr = (s: string) => (s || '').replace(/#/g, '').replace(/[\s\-\/]/g, '').trim().toLowerCase();
+      const extractCoreMrToken = (s: string) => {
+        const raw = String(s || '').replace(/#/g, '').trim().toUpperCase();
+        const withoutPrefix = raw.replace(/^(MR|AMAD|TEMP|FA|BJCL)[-\/\s]*/i, '').replace(/^20\d{2}-20\d{2}\//, '');
+        const digits = withoutPrefix.replace(/[^0-9]/g, '').replace(/^0+/, '');
+        return digits || cleanStr(s);
+      };
+      const exactMrMatch = (a: string, b: string) => {
+        const ca = cleanStr(a);
+        const cb = cleanStr(b);
+        if (!ca || !cb) return false;
+        if (ca === cb) return true;
+        const da = extractCoreMrToken(a);
+        const db = extractCoreMrToken(b);
+        return Boolean(da && db && da === db);
+      };
+      const exactPoMatch = (a: string, b: string) => {
+        const ca = cleanStr(a);
+        const cb = cleanStr(b);
+        if (!ca || !cb) return false;
+        return ca === cb;
+      };
+
       const targetMrClean = cleanStr(mrNo);
       const targetPoClean = cleanStr(poNo);
       const targetPoRaw = (poNo || '').replace(/#/g, '').trim().toLowerCase();
 
-      // Collect voucher numbers linked via payment_details table matching target MR
+      // Collect voucher numbers linked via payment_details table matching target MR strictly
       const vouchersFromDetails = new Set<string>();
       const matchedDetailsList: any[] = [];
       if (targetMrClean) {
         details.forEach((d: any) => {
-          const dMr = cleanStr(d.mr_no);
-          if (dMr && (dMr === targetMrClean || dMr.includes(targetMrClean) || targetMrClean.includes(dMr))) {
+          if (exactMrMatch(d.mr_no, mrNo)) {
             if (d.voucher_no) vouchersFromDetails.add(d.voucher_no);
             matchedDetailsList.push(d);
           }
         });
       }
 
-      // Priority 1: Match payments specifically linked to this MR
+      // Priority 1: Match payments specifically linked to this MR (exact token match only)
       let matchingPayments: any[] = [];
       if (targetMrClean) {
         matchingPayments = payments.filter((p: any) => {
-          const pMrClean = cleanStr(p.mr_no);
-          const pArrivalClean = cleanStr(p.arrival_no);
-          const pBillClean = cleanStr(p.payable_bill_no);
-          const pRefClean = cleanStr(p.reference_no);
-          const pRemarksClean = cleanStr(p.remarks);
           const isVoucherMatch = Boolean(p.voucher_no && vouchersFromDetails.has(p.voucher_no));
-
           return (
             isVoucherMatch ||
-            (pMrClean && (pMrClean === targetMrClean || pMrClean.includes(targetMrClean) || targetMrClean.includes(pMrClean))) ||
-            (pArrivalClean && (pArrivalClean === targetMrClean || pArrivalClean.includes(targetMrClean) || targetMrClean.includes(pArrivalClean))) ||
-            (pBillClean && (pBillClean === targetMrClean || pBillClean.includes(targetMrClean) || targetMrClean.includes(pBillClean))) ||
-            (pRefClean && pRefClean.includes(targetMrClean)) ||
-            (pRemarksClean && pRemarksClean.includes(targetMrClean))
+            exactMrMatch(p.mr_no, mrNo) ||
+            exactMrMatch(p.arrival_no, mrNo) ||
+            exactMrMatch(p.payable_bill_no, mrNo) ||
+            exactMrMatch(p.reference_no, mrNo)
           );
         });
       }
 
-      // Priority 2: Fallback to PO-matched payments if no MR-specific payments found
+      // Priority 2: Fallback to exact PO-matched payments if no MR-specific payments found
       if (matchingPayments.length === 0 && (targetPoClean || targetPoRaw)) {
         matchingPayments = payments.filter((p: any) => {
-          const pPoClean = cleanStr(p.po_no);
           const pPoRaw = (p.po_no || '').replace(/#/g, '').trim().toLowerCase();
           return (
-            (targetPoRaw && (pPoRaw === targetPoRaw || pPoRaw.includes(targetPoRaw) || targetPoRaw.includes(pPoRaw))) ||
-            (targetPoClean && (pPoClean === targetPoClean || pPoClean.includes(targetPoClean) || targetPoClean.includes(pPoClean)))
+            (targetPoRaw && pPoRaw === targetPoRaw) ||
+            exactPoMatch(p.po_no, poNo)
           );
         });
       }

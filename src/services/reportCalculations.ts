@@ -827,9 +827,15 @@ export function compileReportData(
     if (!mrByPO[cleanKey]) {
       mrByPO[cleanKey] = { finalMT: 0, tempMT: 0, finalMRs: [], tempMRs: [], lastDate: '', arrivals: [] };
     }
+    const mrUniqueId = String(mrObj.id || mrObj.final_arrival_id || mrObj.mr_no || mrObj.final_arrival_no || mrObj.amad_no || '');
+    if (mrUniqueId && mrByPO[cleanKey].arrivals.some((a: any) => String(a.id || a.final_arrival_id || a.mr_no || a.final_arrival_no || a.amad_no || '') === mrUniqueId)) {
+      return;
+    }
     mrByPO[cleanKey].finalMT += wtMT;
     const mrNum = mrObj.mr_no || mrObj.final_arrival_no || mrObj.amad_no;
-    if (mrNum) mrByPO[cleanKey].finalMRs.push(mrNum);
+    if (mrNum && !mrByPO[cleanKey].finalMRs.includes(mrNum)) {
+      mrByPO[cleanKey].finalMRs.push(mrNum);
+    }
     const d = mrObj.date || mrObj.final_arrival_date || '';
     if (d && (!mrByPO[cleanKey].lastDate || d > mrByPO[cleanKey].lastDate)) {
       mrByPO[cleanKey].lastDate = d;
@@ -853,18 +859,17 @@ export function compileReportData(
 
     allMatchedArrivals.push({ ...mr, calculatedMT: finalWt });
 
-    // Index under all recognizable contract keys
+    // Index under deduplicated contract keys so overlapping aliases (e.g. cleanDigits === contractNum) never double-count
     const rawPo = String(mr.po_no || '').trim().toUpperCase();
     const rawId = String(mr.po_id || '').trim().toUpperCase();
     const rawAmad = String(mr.amad_no || mr.mr_no || mr.final_arrival_no || '').trim().toUpperCase();
     const cleanDigits = getCleanDigits(rawPo);
     const contractNum = extractContractNumber(rawPo);
 
-    if (rawPo) addToMrBucket(rawPo, finalWt, mr);
-    if (rawId) addToMrBucket(rawId, finalWt, mr);
-    if (rawAmad) addToMrBucket(rawAmad, finalWt, mr);
-    if (cleanDigits) addToMrBucket(cleanDigits, finalWt, mr);
-    if (contractNum) addToMrBucket(contractNum, finalWt, mr);
+    const uniqueKeys = new Set<string>(
+      [rawPo, rawId, rawAmad, cleanDigits, contractNum].filter(Boolean)
+    );
+    uniqueKeys.forEach(k => addToMrBucket(k, finalWt, mr));
   });
 
   // Pre-index Material Payments by PO Number, Sauda Number & Broker Name
@@ -1187,6 +1192,11 @@ export function compileReportData(
       stageColor = 'red';
     }
 
+    const contractPaidAmount = paymentsByPO[sNo.toUpperCase()] || paymentsBySauda[sNo.toUpperCase()] || paymentsByPO[sId] || paymentsBySauda[sId] || 0;
+    const contractDeliveredVal = deliveredWt * 10 * rate;
+    const contractPaymentPct = calcHelpers.calcPaymentPct(contractPaidAmount, contractDeliveredVal);
+    const contractSettlementPct = contractDeliveredVal > 0 ? Math.min(100, calcHelpers.safeRound((contractPaidAmount / contractDeliveredVal) * 100, 2)) : 0;
+
     fullPipelineAuditRecords.push({
       saudaNo: sNo,
       poNo: s.po_no || `PO-${sNo}`,
@@ -1198,12 +1208,12 @@ export function compileReportData(
       contractedMT: calcHelpers.safeRound(contractedWt, 3),
       tempReceivedMT: matchingReceipt.tempMT > 0 ? calcHelpers.safeRound(matchingReceipt.tempMT, 3) : calcHelpers.safeRound(deliveredWt, 3),
       finalReceivedMT: matchingReceipt.finalMT > 0 ? calcHelpers.safeRound(matchingReceipt.finalMT, 3) : calcHelpers.safeRound(deliveredWt, 3),
-      settledMT: delivPct >= 95 ? calcHelpers.safeRound(deliveredWt, 3) : 0,
-      paidAmount: delivPct >= 95 ? calcHelpers.safeRound(deliveredWt * 10 * (rate || 6500), 2) : 0,
+      settledMT: contractPaidAmount > 0 ? calcHelpers.safeRound(deliveredWt, 3) : 0,
+      paidAmount: calcHelpers.safeRound(contractPaidAmount, 2),
       deliveryPct: delivPct,
-      finalMRCompletionPct: matchingReceipt.finalMT > 0 ? 100 : (delivPct > 0 ? 75 : 0),
-      settlementPct: delivPct >= 95 ? 100 : 0,
-      paymentPct: delivPct >= 95 ? 90 : 0,
+      finalMRCompletionPct: calcHelpers.calcDeliveredPct(matchingReceipt.finalMT || deliveredWt, contractedWt),
+      settlementPct: contractSettlementPct,
+      paymentPct: contractPaymentPct,
       weightVarianceMT: variance,
       weightVariancePct: variancePct,
       currentStage,
@@ -1498,12 +1508,10 @@ export function compileReportData(
     const delayedPct = calcHelpers.calcDelayedPct(b.delayedDeliveredMT, b.deliveredMT);
     const avgContractRate = b.countContractRate > 0 ? calcHelpers.safeRound(b.sumContractRate / b.countContractRate) : 0;
     
-    // Brokerage
+    // Brokerage (strictly from recorded brokerage payments)
     const totalBrokeragePayable = calcHelpers.safeRound(b.deliveredMT * b.brokerageRate, 2);
     const brokerPaymentRecord = paymentsByBroker[b.broker] || { materialPaid: 0, brokeragePaid: 0, totalPaid: 0 };
-    const brokeragePaid = brokerPaymentRecord.brokeragePaid > 0 
-      ? brokerPaymentRecord.brokeragePaid 
-      : (delivPct >= 95 ? totalBrokeragePayable : calcHelpers.safeRound(totalBrokeragePayable * (delivPct / 100), 2));
+    const brokeragePaid = calcHelpers.safeRound(brokerPaymentRecord.brokeragePaid, 2);
     const brokeragePending = calcHelpers.safeRound(Math.max(0, totalBrokeragePayable - brokeragePaid), 2);
     const brokeragePaymentPct = calcHelpers.calcPaymentPct(brokeragePaid, totalBrokeragePayable);
 
@@ -1896,18 +1904,18 @@ export function compileReportData(
     activePendingMT = saudaPendingMT + ptfPendingMT;
   }
 
-  // Quality Acceptance and Bill Passing
+  // Quality Acceptance and Bill Passing (computed strictly from actual database records, never hardcoded counts)
   const inspectedLots = inspectionList || [];
-  const inspectedCount = inspectedLots.length || 605;
+  const inspectedCount = inspectedLots.length;
   const passedInspections = inspectedLots.filter(i => {
     const s = String(i.status || i.qc_status || i.inspection_status || '').toLowerCase();
     return !s.includes('reject') && !s.includes('fail');
-  }).length || inspectedCount;
-  const acceptanceRatePct = inspectedCount > 0 ? calcHelpers.safeRound((passedInspections / inspectedCount) * 100, 1) : 100.0;
+  }).length;
+  const acceptanceRatePct = inspectedCount > 0 ? calcHelpers.safeRound((passedInspections / inspectedCount) * 100, 1) : 0;
 
-  const totalBillInvoices = mrList.length || 632;
-  const passedBillInvoices = mrList.filter(m => m.status !== 'rejected').length || 615;
-  const billPassingRatePct = totalBillInvoices > 0 ? calcHelpers.safeRound((passedBillInvoices / totalBillInvoices) * 100, 1) : 97.4;
+  const totalBillInvoices = mrList.length;
+  const passedBillInvoices = mrList.filter(m => String(m.status || '').toLowerCase() !== 'rejected').length;
+  const billPassingRatePct = totalBillInvoices > 0 ? calcHelpers.safeRound((passedBillInvoices / totalBillInvoices) * 100, 1) : 0;
 
   // Overall KPIs Calculation
   const overallDeliveredPct = calcHelpers.calcDeliveredPct(activeDeliveredMT, activeContractedMT);
@@ -1928,12 +1936,10 @@ export function compileReportData(
   const avgContractRate = countContractRates > 0 ? calcHelpers.safeRound(sumContractRates / countContractRates) : 0;
   const avgDispatchRate = countDispatchRates > 0 ? calcHelpers.safeRound(sumDispatchRates / countDispatchRates) : avgContractRate;
 
-  // Financial summary
+  // Financial summary (strictly from recorded payments, no fake 90%/60% multipliers)
   const brokeragePayableTotal = calcHelpers.safeRound(activeDeliveredMT * 25, 2);
   const settlementAmountTotal = calcHelpers.safeRound(sumDispatchedValue, 2);
-  const finalPaymentTotal = totalLivePaymentsPaid > 0 
-    ? calcHelpers.safeRound(totalLivePaymentsPaid, 2) 
-    : calcHelpers.safeRound(settlementAmountTotal * (overallDeliveredPct >= 90 ? 0.90 : 0.60), 2);
+  const finalPaymentTotal = calcHelpers.safeRound(totalLivePaymentsPaid, 2);
   const outstandingAmountTotal = calcHelpers.safeRound(Math.max(0, settlementAmountTotal - finalPaymentTotal), 2);
   const paymentCompletionPct = calcHelpers.calcPaymentPct(finalPaymentTotal, settlementAmountTotal);
 
@@ -2452,7 +2458,7 @@ export function compileReportData(
       avgDispatchRate,
       totalContractValue: calcHelpers.safeRound(sumContractValue, 2),
       totalDispatchedValue: calcHelpers.safeRound(sumDispatchedValue, 2),
-      settlementCompletionPct: overallDeliveredPct >= 90 ? 95.0 : 80.0,
+      settlementCompletionPct: paymentCompletionPct,
       paymentCompletionPct,
       // Separate explicit breakdowns
       totalSaudaContracts: totalSaudaContractsCount,
@@ -2486,11 +2492,11 @@ export function compileReportData(
       mrReceivedMT: calcHelpers.safeRound(totalPOReceivedMT, 3),
       poReceivedPct: calcHelpers.calcDeliveredPct(totalPOReceivedMT, totalPOContractedMT),
       poPendingPct: calcHelpers.calcPendingPct(Math.max(0, totalPOContractedMT - totalPOReceivedMT), totalPOContractedMT),
-      tempMRPct: 100.0,
-      finalMRPct: 92.5,
-      clubbingCompletionPct: 88.0,
-      settlementCompletionPct: 90.0,
-      paymentCompletionPct: 85.0,
+      tempMRPct: calcHelpers.calcDeliveredPct(tempMRList.length, Math.max(1, filteredPOs.length)),
+      finalMRPct: calcHelpers.calcDeliveredPct(totalPOReceivedMT, totalPOContractedMT),
+      clubbingCompletionPct: calcHelpers.calcCompletedContractPct(completedPOCount, totalPOCount),
+      settlementCompletionPct: paymentCompletionPct,
+      paymentCompletionPct,
       rows: poEngineRows
     },
     deliveryCompliance,
@@ -2500,9 +2506,17 @@ export function compileReportData(
       pendingProcurementValue: calcHelpers.safeRound(Math.max(0, sumContractValue - sumDispatchedValue), 2),
       brokeragePayable: brokeragePayableTotal,
       settlementAmount: settlementAmountTotal,
-      deductionAmount: calcHelpers.safeRound(sumDispatchedValue * 0.015, 2),
-      excessShortAdjustment: calcHelpers.safeRound(totalExcessMT * 10 * (avgContractRate || 6500), 2),
-      advancePayment: calcHelpers.safeRound(sumDispatchedValue * 0.2, 2),
+      deductionAmount: calcHelpers.safeRound(
+        inspectionList.reduce((acc, i) => acc + (Number(i.deduction_amount) || 0), 0),
+        2
+      ),
+      excessShortAdjustment: calcHelpers.safeRound(totalExcessMT * 10 * avgContractRate, 2),
+      advancePayment: calcHelpers.safeRound(
+        paymentList
+          .filter(p => String(p.advance_payment_done || p.payment_mode || '').toLowerCase().includes('adv') || String(p.voucher_no || '').toUpperCase().startsWith('ADV'))
+          .reduce((acc, p) => acc + (Number(p.paid_amount || p.amount_paid || 0)), 0),
+        2
+      ),
       finalPayment: finalPaymentTotal,
       outstandingAmount: outstandingAmountTotal,
       paymentCompletionPct,

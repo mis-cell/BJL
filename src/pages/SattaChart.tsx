@@ -239,81 +239,12 @@ export default function SattaChart({
     });
   }, [selectedYear, rateLookup]);
 
-  const ensureSattaTablesExist = async () => {
-    if (!supabase) return;
-    const queries = [
-      `CREATE TABLE IF NOT EXISTS satta_base_rates (
-         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-         base_rate NUMERIC(15,2) NOT NULL DEFAULT 17500,
-         start_date DATE NOT NULL DEFAULT CURRENT_DATE,
-         remarks TEXT,
-         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-       );`,
-      `ALTER TABLE IF EXISTS satta_base_rates DISABLE ROW LEVEL SECURITY;`,
-      `CREATE TABLE IF NOT EXISTS satta_differentials (
-         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-         area TEXT NOT NULL,
-         grade TEXT NOT NULL,
-         differential NUMERIC(15,2) NOT NULL DEFAULT 0,
-         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-         UNIQUE(area, grade)
-       );`,
-      `ALTER TABLE IF EXISTS satta_differentials DISABLE ROW LEVEL SECURITY;`,
-      `CREATE TABLE IF NOT EXISTS satta_calculated_rates (
-         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-         base_rate_id UUID,
-         base_rate NUMERIC(15,2) NOT NULL,
-         start_date DATE NOT NULL,
-         area TEXT NOT NULL,
-         grade TEXT NOT NULL,
-         differential NUMERIC(15,2) NOT NULL,
-         final_rate NUMERIC(15,2) NOT NULL,
-         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-       );`,
-      `ALTER TABLE IF EXISTS satta_calculated_rates DISABLE ROW LEVEL SECURITY;`,
-      `CREATE TABLE IF NOT EXISTS satta_base_rate_audit_logs (
-         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-         old_rate NUMERIC(15,2),
-         new_rate NUMERIC(15,2) NOT NULL,
-         changed_date DATE NOT NULL,
-         remarks TEXT,
-         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-       );`,
-      `ALTER TABLE IF EXISTS satta_base_rate_audit_logs DISABLE ROW LEVEL SECURITY;`,
-      `CREATE TABLE IF NOT EXISTS satta_differential_audit_logs (
-         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-         changed_date DATE NOT NULL DEFAULT CURRENT_DATE,
-         area TEXT NOT NULL,
-         grade TEXT NOT NULL,
-         old_differential NUMERIC(15,2),
-         new_differential NUMERIC(15,2) NOT NULL,
-         differential_change NUMERIC(15,2),
-         changed_by TEXT DEFAULT 'ADMIN',
-         remarks TEXT,
-         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-       );`,
-      `ALTER TABLE IF EXISTS satta_differential_audit_logs DISABLE ROW LEVEL SECURITY;`
-    ];
-
-    for (const sql of queries) {
-      try {
-        await supabase.rpc('exec_sql', { query: sql });
-      } catch (err) {
-        console.warn('Inline schema query warning:', err);
-      }
-    }
-    
-    try {
-      await supabase.rpc('exec_sql', { query: "NOTIFY pgrst, 'reload schema';" });
-    } catch (_) {}
-  };
-
-  const loadChartConfig = async (isRetry = false) => {
+  const loadChartConfig = async () => {
     setIsLoading(true);
     try {
       if (!supabase) return;
       
-      // Fetch latest base rate
+      // Fetch latest base rate (strictly read-only; no inline DDL or rate mutation on load)
       const { data: baseRates, error: brErr } = await supabase
         .from('satta_base_rates')
         .select('*')
@@ -321,12 +252,7 @@ export default function SattaChart({
         .order('created_at', { ascending: false })
         .limit(1);
 
-      if (brErr && !isRetry) {
-        console.log("Database fetch failed. Attempting self-healing table setup...", brErr.message);
-        await ensureSattaTablesExist();
-        setIsLoading(false);
-        return loadChartConfig(true);
-      } else if (brErr) {
+      if (brErr) {
         throw brErr;
       }
 
@@ -337,18 +263,20 @@ export default function SattaChart({
         setRemarks(baseRates[0].remarks || '');
       }
 
-      // Fetch differentials
+      // Fetch differentials without mutating or deleting database rows during read
       const { data: diffs, error: diffErr } = await supabase
         .from('satta_differentials')
         .select('*');
 
+      if (diffErr) {
+        throw diffErr;
+      }
+
       if (diffs && diffs.length > 0) {
-        // Map to structured cache and auto-sanitize extreme typos if any (> 5000)
         const cache: Record<string, Record<string, number>> = {};
         const userMap: Record<string, Record<string, { user: string; time?: string }>> = {};
         diffs.forEach(item => {
           let area = String(item.area || '').trim().toUpperCase();
-          // LOWER ASSAM & BILASIPARA & L/A TARABARI are the exact same: treat all as L/A TARABARI
           if (
             area === 'LOWER ASSAM' || 
             area === 'BILASIPARA' || 
@@ -363,25 +291,13 @@ export default function SattaChart({
           }
           if (!cache[area]) cache[area] = {};
           if (!userMap[area]) userMap[area] = {};
-          let val = Number(item.differential);
-          if (Math.abs(val) > 5000) {
-            val = Math.round(val / 10);
-            if (supabase) {
-              supabase.from('satta_differentials').update({ differential: val }).eq('id', item.id).then();
-            }
-          }
+          const val = Number(item.differential);
           cache[area][item.grade] = val;
           userMap[area][item.grade] = {
             user: item.updated_by || 'ADMIN',
             time: item.updated_at || item.created_at
           };
         });
-
-        // Clean up any stale LOWER ASSAM, BILASIPARA, or BELLOW ASSAM rows from database
-        if (supabase) {
-          supabase.from('satta_differentials').delete().in('area', ['LOWER ASSAM', 'BILASIPARA', 'BELLOW ASSAM', 'BELOW ASSAM']).then();
-          supabase.from('satta_calculated_rates').delete().in('area', ['LOWER ASSAM', 'BILASIPARA', 'BELLOW ASSAM', 'BELOW ASSAM']).then();
-        }
 
         setDbDifferentials(cache);
         setDbDiffUsers(userMap);
@@ -397,46 +313,7 @@ export default function SattaChart({
     }
   };
 
-  const silentSeedHistoricalList = async (activeDiffs?: Record<string, Record<string, number>>) => {
-    // Satta rates must originate strictly from user input and Supabase tables, not hardcoded seed lists
-    if (!supabase) return;
-    try {
-      const diffsToUse = activeDiffs || dbDifferentials || {};
-      const { data: baseRates } = await supabase
-        .from('satta_base_rates')
-        .select('*')
-        .order('start_date', { ascending: false });
-
-      if (baseRates && baseRates.length > 0) {
-        for (const item of baseRates) {
-          const calcRows: any[] = [];
-          Object.keys(diffsToUse).forEach(area => {
-            const gradesCache = diffsToUse[area] || {};
-            Object.keys(gradesCache).forEach(grade => {
-              const diffVal = gradesCache[grade] || 0;
-              calcRows.push({
-                base_rate_id: item.id,
-                base_rate: Number(item.base_rate),
-                start_date: item.start_date,
-                area: area,
-                grade: grade,
-                differential: diffVal,
-                final_rate: Number(item.base_rate) + diffVal
-              });
-            });
-          });
-          if (calcRows.length > 0) {
-            await supabase.from('satta_calculated_rates').delete().eq('start_date', item.start_date);
-            await supabase.from('satta_calculated_rates').insert(calcRows);
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("Calculated rate synchronization warning:", e);
-    }
-  };
-
-  const fetchRateHistory = async (isRetry = false) => {
+  const fetchRateHistory = async () => {
     try {
       if (!supabase) return;
       const { data, error } = await supabase
@@ -445,11 +322,7 @@ export default function SattaChart({
         .order('start_date', { ascending: false })
         .order('created_at', { ascending: false });
 
-      if (error && !isRetry) {
-        console.log("History fetch failed. Self-repair routing...");
-        await ensureSattaTablesExist();
-        return fetchRateHistory(true);
-      } else if (error) {
+      if (error) {
         throw error;
       }
 

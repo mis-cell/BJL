@@ -535,41 +535,65 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
          }
       }
 
-      if (sattaData.satta_id) {
-         inserted = await dbModule.update('satta_master', 'satta_id', sattaData.satta_id, sattaData);
-      } else {
-         inserted = await dbModule.insert('satta_master', sattaData);
-      }
+      sattaData.financial_year = isEditMode
+        ? (initialData?.financial_year || sattaData.financial_year || '2026-2027')
+        : (sattaData.financial_year || '2026-2027');
 
-      let resolvedSattaId = inserted?.satta_id || inserted?.id || sattaData.satta_id;
-      if (!resolvedSattaId && sattaData.satta_no) {
-        const allSattasAfter = await dbModule.fetchAll('satta_master').catch(() => []);
-        const matchAfter = allSattasAfter.find((s: any) => String(s.satta_no || '').trim() === String(sattaData.satta_no).trim());
-        if (matchAfter) {
-          resolvedSattaId = matchAfter.satta_id || matchAfter.id;
+      const sqlVal = (v: any) => {
+        if (v === null || v === undefined) return 'NULL';
+        if (typeof v === 'number') return isFinite(v) ? String(v) : '0';
+        if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+        return `'${String(v).replace(/'/g, "''")}'`;
+      };
+
+      const targetSattaId = sattaData.satta_id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `satta-${Date.now()}`);
+      sattaData.satta_id = targetSattaId;
+
+      try {
+        const txQueries: string[] = [];
+        const masterCols = Object.keys(sattaData);
+        const masterVals = masterCols.map(k => sqlVal((sattaData as any)[k]));
+        const updateSet = masterCols.filter(k => k !== 'satta_id').map(k => `${k} = EXCLUDED.${k}`).join(', ');
+        txQueries.push(
+          `INSERT INTO satta_master (${masterCols.join(', ')}) VALUES (${masterVals.join(', ')}) ON CONFLICT (satta_id) DO UPDATE SET ${updateSet};`
+        );
+        txQueries.push(`DELETE FROM satta_quality_details WHERE satta_id = ${sqlVal(targetSattaId)};`);
+        if (qd) {
+          for (const row of qd) {
+            if (row.quality || row.qty || row.rs || row.marka || row.agency) {
+              txQueries.push(
+                `INSERT INTO satta_quality_details (satta_id, satta_no, financial_year, quality, qty, agency, marka, rs) VALUES (${sqlVal(targetSattaId)}, ${sqlVal(sattaData.satta_no)}, ${sqlVal(sattaData.financial_year)}, ${sqlVal(row.quality || '')}, ${sqlVal(Number(row.qty) || 0)}, ${sqlVal(row.agency || '')}, ${sqlVal(row.marka || '')}, ${sqlVal(Number(row.rs) || 0)});`
+              );
+            }
+          }
         }
-      }
-      
-      if (qd) {
-        // Delete old details if editing and we have a valid satta_id, then re-insert
-        if (isEditMode && resolvedSattaId) {
-           await dbModule.delete('satta_quality_details', 'satta_id', resolvedSattaId).catch(() => {});
+        await dbModule.executeTransaction(txQueries);
+        inserted = { ...sattaData };
+      } catch (_txErr) {
+        if (isEditMode) {
+          inserted = await dbModule.update('satta_master', 'satta_id', sattaData.satta_id, sattaData);
+        } else {
+          inserted = await dbModule.insert('satta_master', sattaData);
         }
 
-        for (const row of qd) {
-          if (row.quality || row.qty || row.rs || row.marka || row.agency) {
-             try {
-                await dbModule.insert('satta_quality_details', {
-                  satta_id: resolvedSattaId || sattaData.satta_no,
-                  satta_no: sattaData.satta_no,
-                  financial_year: inserted?.financial_year || sattaData.financial_year,
-                  quality: row.quality,
-                  qty: Number(row.qty) || 0,
-                  agency: row.agency || '',
-                  marka: row.marka || '',
-                  rs: Number(row.rs) || 0
-                });
-             } catch(e) { console.log("Insert line error in quality", e); }
+        const resolvedSattaId = inserted?.satta_id || inserted?.id || sattaData.satta_id;
+        if (qd) {
+          if (isEditMode && resolvedSattaId) {
+            await dbModule.delete('satta_quality_details', 'satta_id', resolvedSattaId);
+          }
+          for (const row of qd) {
+            if (row.quality || row.qty || row.rs || row.marka || row.agency) {
+              await dbModule.insert('satta_quality_details', {
+                satta_id: resolvedSattaId || sattaData.satta_no,
+                satta_no: sattaData.satta_no,
+                financial_year: inserted?.financial_year || sattaData.financial_year,
+                quality: row.quality,
+                qty: Number(row.qty) || 0,
+                agency: row.agency || '',
+                marka: row.marka || '',
+                rs: Number(row.rs) || 0
+              });
+            }
           }
         }
       }

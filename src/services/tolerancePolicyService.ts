@@ -1,236 +1,234 @@
 import { supabase } from '../lib/supabase';
-import { dbModule } from './dbModule';
-import { logChange } from './auditLogService';
 
-export interface TolerancePolicy {
-  id?: string;
-  status?: string;
-  policy_name: string;
+export interface TolerancePolicyItem {
+  id: string;
+  unit_type: string;
+  label: string;
   tolerance_pct: number;
-  max_limit_kg?: number;
-  max_limit_mt?: number;
-  max_weight_limit_kg?: number;
-  max_weight_limit_mt?: number;
-  unit?: string;
-  applicable_unit?: string;
-  rule_formula?: string;
+  tolerance_mt: number;
+  min_lorries: number;
+  max_lorries: number;
   is_active: boolean;
-  is_default?: boolean;
-  description?: string;
-  created_at?: string;
+  remarks: string;
   updated_at?: string;
 }
 
-export const DEFAULT_TOLERANCE_POLICY: TolerancePolicy = {
-  id: '01',
-  status: 'ACTIVE',
-  policy_name: 'Sauda Contract Execution Exemption (3%)',
-  tolerance_pct: 3.0,
-  max_limit_kg: 0,
-  max_limit_mt: 0,
-  max_weight_limit_kg: 0,
-  max_weight_limit_mt: 0,
-  unit: 'BALES',
-  applicable_unit: 'BALES',
-  rule_formula: '3% of Sauda Total Contract Quantity',
-  is_active: true,
-  is_default: true,
-  description: '3% Execution Exemption calculated directly from Sauda Total Contract Quantity.'
-};
+export const DEFAULT_TOLERANCE_POLICIES: TolerancePolicyItem[] = [
+  {
+    id: 'pol_bales',
+    unit_type: 'BALES',
+    label: 'Bales Contract (Standard)',
+    tolerance_pct: 5,
+    tolerance_mt: 1.5,
+    min_lorries: 1,
+    max_lorries: 50,
+    is_active: true,
+    remarks: '±5% or ±1.500 MT weight tolerance for Bales contracts'
+  },
+  {
+    id: 'pol_loose',
+    unit_type: 'LOOSE',
+    label: 'Loose Jute Contract',
+    tolerance_pct: 5,
+    tolerance_mt: 1.5,
+    min_lorries: 1,
+    max_lorries: 50,
+    is_active: true,
+    remarks: '±5% or ±1.500 MT weight tolerance for Loose contracts'
+  },
+  {
+    id: 'pol_pbales',
+    unit_type: 'P.BALES',
+    label: 'Pucca Bales (P.Bales)',
+    tolerance_pct: 5,
+    tolerance_mt: 1.0,
+    min_lorries: 1,
+    max_lorries: 50,
+    is_active: true,
+    remarks: '±5% or ±1.000 MT weight tolerance for P.Bales'
+  },
+  {
+    id: 'pol_hbales',
+    unit_type: 'H.BALES',
+    label: 'Half Bales (H.Bales)',
+    tolerance_pct: 5,
+    tolerance_mt: 1.0,
+    min_lorries: 1,
+    max_lorries: 50,
+    is_active: true,
+    remarks: '±5% or ±1.000 MT weight tolerance for H.Bales'
+  },
+  {
+    id: 'pol_drums',
+    unit_type: 'DRUMS',
+    label: 'Drums / Other Units',
+    tolerance_pct: 5,
+    tolerance_mt: 1.0,
+    min_lorries: 1,
+    max_lorries: 50,
+    is_active: true,
+    remarks: '±5% weight tolerance for Drum units'
+  }
+];
 
-let cachedActivePolicy: TolerancePolicy = DEFAULT_TOLERANCE_POLICY;
+const LOCAL_STORAGE_KEY = 'bally_tolerance_policies_v1';
 
-export function normalizePolicyRecord(d: any): TolerancePolicy {
-  const kg = Number(d.max_limit_kg || d.max_weight_limit_kg) || 1500.0;
-  const mt = Number(d.max_limit_mt || d.max_weight_limit_mt) || (kg / 1000) || 1.5;
-  const tolPct = Number(d.tolerance_pct) || 5.0;
-  const unit = String(d.unit || d.applicable_unit || 'BALES').toUpperCase();
-  const isActive = d.is_active !== undefined ? Boolean(d.is_active) : (String(d.status || '').toUpperCase() === 'ACTIVE');
+let cachedPolicies: TolerancePolicyItem[] | null = null;
+
+function parseNonNegativeNum(val: any, fallback: number): number {
+  if (val === undefined || val === null || String(val).trim() === '') return fallback;
+  const n = Number(val);
+  return !isNaN(n) && n >= 0 ? n : fallback;
+}
+
+function normalizePolicyRow(d: any): TolerancePolicyItem {
+  return {
+    id: String(d.id || `pol_${String(d.unit_type || '').toLowerCase()}`),
+    unit_type: String(d.unit_type || 'BALES').toUpperCase(),
+    label: String(d.label || d.unit_type || 'Standard'),
+    tolerance_pct: parseNonNegativeNum(d.tolerance_pct, 5),
+    tolerance_mt: parseNonNegativeNum(d.tolerance_mt, 1.5),
+    min_lorries: parseNonNegativeNum(d.min_lorries, 1),
+    max_lorries: parseNonNegativeNum(d.max_lorries, 50),
+    is_active: d.is_active !== false,
+    remarks: String(d.remarks || ''),
+    updated_at: d.updated_at
+  };
+}
+
+export function getTolerancePoliciesSync(): TolerancePolicyItem[] {
+  if (cachedPolicies && cachedPolicies.length > 0) {
+    return cachedPolicies;
+  }
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cachedPolicies = parsed.map(normalizePolicyRow);
+          return cachedPolicies;
+        }
+      }
+    } catch (_e) {}
+  }
+  return DEFAULT_TOLERANCE_POLICIES;
+}
+
+export async function fetchTolerancePolicies(): Promise<TolerancePolicyItem[]> {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('tolerance_policy_master')
+      .select('*')
+      .order('unit_type', { ascending: true });
+
+    if (!error && data && data.length > 0) {
+      const normalized = data.map(normalizePolicyRow);
+      cachedPolicies = normalized;
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(normalized));
+        } catch (_e) {}
+      }
+      return normalized;
+    }
+  }
+  return getTolerancePoliciesSync();
+}
+
+export async function saveTolerancePolicies(policies: TolerancePolicyItem[]): Promise<boolean> {
+  if (!supabase) {
+    throw new Error('Database client is not initialized; cannot save tolerance policies.');
+  }
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    throw new Error('Cannot save tolerance policies while offline.');
+  }
+
+  const nowIso = new Date().toISOString();
+  const rows = policies.map(p => ({
+    ...normalizePolicyRow(p),
+    updated_at: nowIso
+  }));
+
+  const { data: savedRows, error } = await supabase
+    .from('tolerance_policy_master')
+    .upsert(rows, { onConflict: 'id' })
+    .select();
+
+  if (error) {
+    throw new Error(`Failed to save tolerance policies to database: ${error.message}`);
+  }
+  if (!savedRows || savedRows.length !== rows.length) {
+    throw new Error(
+      `Incomplete tolerance policy save: expected ${rows.length} rows, database returned ${savedRows?.length || 0}.`
+    );
+  }
+
+  const confirmedPolicies = savedRows.map(normalizePolicyRow);
+  cachedPolicies = confirmedPolicies;
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(confirmedPolicies));
+    window.dispatchEvent(new CustomEvent('tolerance-policy-updated', { detail: confirmedPolicies }));
+  }
+
+  return true;
+}
+
+export function getPolicyForUnit(unitType: string): TolerancePolicyItem {
+  const policies = getTolerancePoliciesSync();
+  const clean = String(unitType || 'BALES').trim().toUpperCase();
+  const exact = policies.find(p => p.unit_type.toUpperCase() === clean && p.is_active);
+  if (exact) return exact;
+
+  if (clean.includes('LOOSE') || clean === 'LOS') {
+    return policies.find(p => p.unit_type === 'LOOSE') || DEFAULT_TOLERANCE_POLICIES[1];
+  }
+  if (clean.includes('P.BALE') || clean.includes('PBALE') || clean === 'PB') {
+    return policies.find(p => p.unit_type === 'P.BALES') || DEFAULT_TOLERANCE_POLICIES[2];
+  }
+  if (clean.includes('H.BALE') || clean.includes('HBALE') || clean === 'HB') {
+    return policies.find(p => p.unit_type === 'H.BALES') || DEFAULT_TOLERANCE_POLICIES[3];
+  }
+  if (clean.includes('DRUM')) {
+    return policies.find(p => p.unit_type === 'DRUMS') || DEFAULT_TOLERANCE_POLICIES[4];
+  }
+  return policies.find(p => p.unit_type === 'BALES') || DEFAULT_TOLERANCE_POLICIES[0];
+}
+
+export function calculateWeightTolerance(
+  contractWeightMt: number,
+  receivedWeightMt: number,
+  unitType: string = 'BALES'
+) {
+  const policy = getPolicyForUnit(unitType);
+  const cWt = Number(contractWeightMt) || 0;
+  const rWt = Number(receivedWeightMt) || 0;
+  const diffMt = Number((rWt - cWt).toFixed(3));
+  const absDiffMt = Math.abs(diffMt);
+  const diffPct = cWt > 0 ? Number(((absDiffMt / cWt) * 100).toFixed(2)) : 0;
+
+  const pctLimitMt = cWt > 0 ? (cWt * policy.tolerance_pct) / 100 : 0;
+  const allowedMarginMt =
+    policy.tolerance_pct === 0 && policy.tolerance_mt === 0
+      ? 0
+      : Math.max(pctLimitMt, policy.tolerance_mt);
+
+  const isWithinTolerance = cWt > 0 && rWt > 0 && absDiffMt <= allowedMarginMt;
+  const isCompleted = cWt > 0 && (rWt >= cWt - allowedMarginMt);
+  const isShort = cWt > 0 && rWt > 0 && rWt < cWt - allowedMarginMt;
+  const isExcess = cWt > 0 && rWt > cWt + allowedMarginMt;
 
   return {
-    ...d,
-    status: isActive ? 'ACTIVE' : 'INACTIVE',
-    is_active: isActive,
-    policy_name: d.policy_name || `Tolerance Policy (${tolPct}% / ${kg} KG)`,
-    tolerance_pct: tolPct,
-    max_limit_kg: kg,
-    max_limit_mt: mt,
-    max_weight_limit_kg: kg,
-    max_weight_limit_mt: mt,
-    unit: unit,
-    applicable_unit: unit,
-    rule_formula: d.rule_formula || `Min(${tolPct}% of Sauda MT, ${mt.toFixed(3)} MT)`,
-    description: d.description || `Lower of ${tolPct}% of Sauda contract quantity or ${kg.toLocaleString()} KG (${(kg / 100).toFixed(2)} Qtl / ${mt.toFixed(3)} MT).`
+    policy,
+    contractWeightMt: cWt,
+    receivedWeightMt: rWt,
+    diffMt,
+    diffPct,
+    allowedMarginMt: Number(allowedMarginMt.toFixed(3)),
+    isWithinTolerance,
+    isCompleted,
+    isShort,
+    isExcess
   };
-}
-
-export async function getActiveTolerancePolicy(): Promise<TolerancePolicy> {
-  try {
-    if (supabase) {
-      const { data: tpData, error: tpError } = await supabase
-        .from('tolerance_policy')
-        .select('*')
-        .or('is_active.eq.true,status.ilike.ACTIVE')
-        .order('updated_at', { ascending: false })
-        .limit(1);
-
-      if (!tpError && tpData && tpData.length > 0) {
-        cachedActivePolicy = normalizePolicyRecord(tpData[0]);
-        localStorage.setItem('active_tolerance_policy', JSON.stringify(cachedActivePolicy));
-        return cachedActivePolicy;
-      }
-
-      const { data: tpmData, error: tpmError } = await supabase
-        .from('tolerance_policy_master')
-        .select('*')
-        .eq('is_active', true)
-        .order('updated_at', { ascending: false })
-        .limit(1);
-
-      if (!tpmError && tpmData && tpmData.length > 0) {
-        cachedActivePolicy = normalizePolicyRecord(tpmData[0]);
-        localStorage.setItem('active_tolerance_policy', JSON.stringify(cachedActivePolicy));
-        return cachedActivePolicy;
-      }
-    }
-
-    const localSaved = localStorage.getItem('active_tolerance_policy');
-    if (localSaved) {
-      try {
-        const parsed = JSON.parse(localSaved);
-        if (parsed && typeof parsed.tolerance_pct === 'number') {
-          cachedActivePolicy = normalizePolicyRecord(parsed);
-          return cachedActivePolicy;
-        }
-      } catch (e) {}
-    }
-  } catch (err) {
-    console.warn("Could not fetch active tolerance policy from database, using cached/default:", err);
-  }
-
-  return cachedActivePolicy;
-}
-
-export function getCachedTolerancePolicy(): TolerancePolicy {
-  try {
-    const localSaved = localStorage.getItem('active_tolerance_policy');
-    if (localSaved) {
-      const parsed = JSON.parse(localSaved);
-      if (parsed && typeof parsed.tolerance_pct === 'number') {
-        return normalizePolicyRecord(parsed);
-      }
-    }
-  } catch (e) {}
-  return cachedActivePolicy;
-}
-
-export async function getAllTolerancePolicies(): Promise<TolerancePolicy[]> {
-  try {
-    if (supabase) {
-      const { data: tpData, error: tpError } = await supabase
-        .from('tolerance_policy')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (!tpError && tpData && tpData.length > 0) {
-        return tpData.map(normalizePolicyRecord);
-      }
-
-      const { data: tpmData, error: tpmError } = await supabase
-        .from('tolerance_policy_master')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (!tpmError && tpmData && tpmData.length > 0) {
-        return tpmData.map(normalizePolicyRecord);
-      }
-    }
-
-    const localList = localStorage.getItem('all_tolerance_policies');
-    if (localList) {
-      try {
-        const parsed = JSON.parse(localList);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map(normalizePolicyRecord);
-        }
-      } catch (e) {}
-    }
-  } catch (err) {
-    console.error("Error fetching all tolerance policies:", err);
-  }
-
-  return [DEFAULT_TOLERANCE_POLICY];
-}
-
-export async function saveTolerancePolicy(policy: Partial<TolerancePolicy>): Promise<TolerancePolicy> {
-  const nowIso = new Date().toISOString();
-  const maxKg = Number(policy.max_limit_kg || policy.max_weight_limit_kg) || 1500;
-  const maxMt = Number(policy.max_limit_mt || policy.max_weight_limit_mt) || (maxKg / 1000);
-  const tolPct = Number(policy.tolerance_pct) || 5.0;
-  const unit = String(policy.unit || policy.applicable_unit || 'BALES').toUpperCase();
-  const isActive = policy.is_active !== undefined ? Boolean(policy.is_active) : true;
-
-  const payload: TolerancePolicy = {
-    policy_name: policy.policy_name || `Tolerance Policy (${tolPct}% / ${maxKg} KG)`,
-    status: isActive ? 'ACTIVE' : 'INACTIVE',
-    is_active: isActive,
-    tolerance_pct: tolPct,
-    max_limit_kg: maxKg,
-    max_limit_mt: maxMt,
-    max_weight_limit_kg: maxKg,
-    max_weight_limit_mt: maxMt,
-    unit: unit,
-    applicable_unit: unit,
-    rule_formula: policy.rule_formula || `Min(${tolPct}% of Sauda MT, ${maxMt.toFixed(3)} MT)`,
-    description: policy.description || `Lower of ${tolPct}% of Sauda contract quantity or ${maxKg} KG (${(maxKg / 100).toFixed(2)} Qtl / ${maxMt.toFixed(3)} MT).`,
-    updated_at: nowIso
-  };
-
-  if (policy.id) {
-    payload.id = policy.id;
-  }
-
-  try {
-    if (supabase) {
-      if (payload.id) {
-        await supabase.from('tolerance_policy').update(payload).eq('id', payload.id);
-      } else {
-        const { data } = await supabase.from('tolerance_policy').insert(payload).select().maybeSingle();
-        if (data?.id) payload.id = data.id;
-      }
-    }
-  } catch (err) {
-    console.warn("Save tolerance policy warning:", err);
-  }
-
-  if (payload.is_active) {
-    cachedActivePolicy = payload;
-    localStorage.setItem('active_tolerance_policy', JSON.stringify(payload));
-  }
-
-  return payload;
-}
-
-export async function toggleTolerancePolicyActive(id: string, active: boolean): Promise<boolean> {
-  try {
-    if (supabase) {
-      await supabase.from('tolerance_policy').update({ status: active ? 'ACTIVE' : 'INACTIVE', is_active: active, updated_at: new Date().toISOString() }).eq('id', id);
-    }
-    return true;
-  } catch (err) {
-    console.error("Toggle tolerance policy active failed:", err);
-    return false;
-  }
-}
-
-export async function deleteTolerancePolicy(id: string): Promise<boolean> {
-  try {
-    if (supabase) {
-      await supabase.from('tolerance_policy').delete().eq('id', id);
-    }
-    return true;
-  } catch (err) {
-    console.error("Delete tolerance policy failed:", err);
-    return false;
-  }
 }

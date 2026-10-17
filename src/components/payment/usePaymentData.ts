@@ -1202,139 +1202,99 @@ export function usePaymentData(onSaveSuccess?: () => void) {
         repayment_date: masterData.repayment_date || ''
       };
 
-      let savedMaster: any = null;
-      let mErr: any = null;
-      const currentPayload = { ...initialPayload };
-
-      for (let attempt = 0; attempt < 8; attempt++) {
-        let res = await supabase
-          .from('payment_master')
-          .upsert(currentPayload, { onConflict: 'voucher_no' })
-          .select()
-          .single();
-
-        if (res.error && res.error.message?.includes('does not exist')) {
-          await ensurePaymentTablesExist();
-          res = await supabase
-            .from('payment_master')
-            .upsert(currentPayload, { onConflict: 'voucher_no' })
-            .select()
-            .single();
-        }
-
-        if (res.error && (res.error.message?.includes('ON CONFLICT') || res.error.message?.includes('on conflict') || res.error.message?.includes('constraint'))) {
-          const { data: existing } = await supabase
-            .from('payment_master')
-            .select('*')
-            .eq('voucher_no', masterData.voucher_no)
-            .maybeSingle();
-
-          if (existing) {
-            res = await supabase
-              .from('payment_master')
-              .update(currentPayload)
-              .eq('voucher_no', masterData.voucher_no)
-              .select()
-              .single();
-          } else {
-            res = await supabase
-              .from('payment_master')
-              .insert(currentPayload)
-              .select()
-              .single();
-          }
-        }
-
-        if (res.error) {
-          const match = res.error.message?.match(/Could not find the '([^']+)' column/i);
-          if (match && match[1] && match[1] in currentPayload) {
-            console.warn(`Column '${match[1]}' not found in payment_master schema, stripping and retrying...`);
-            delete currentPayload[match[1]];
-            continue;
-          }
-          mErr = res.error;
-          break;
-        } else {
-          savedMaster = res.data;
-          mErr = null;
-          break;
-        }
-      }
-
-      const recordToSave = savedMaster || currentPayload;
-      if (recordToSave && recordToSave.voucher_no) {
-        await dbModule.upsert('payment_master', recordToSave).catch(() => {});
-      }
-
-      if (mErr && !savedMaster) {
-        throw new Error(mErr.message || "Failed to save to Supabase payment_master.");
-      }
-
-      const masterRecord = savedMaster || recordToSave;
-      if (masterRecord && detailCols.length > 0) {
-        await supabase.from('payment_details').delete().eq('voucher_no', masterData.voucher_no);
-        const rowsToWrite = detailCols
-          .filter(c => c.grade && c.grade.trim() !== '')
-          .map(c => ({
-            payment_id: masterRecord.payment_id || null,
-            voucher_no: masterData.voucher_no,
-            mr_no: masterData.mr_no,
-            col_index: c.col_index,
-            grade: c.grade,
-            area: c.area,
-            agency: c.agency,
-            marka_crop: c.marka_crop,
-            quantity: Number(c.quantity) || 0,
-            arr_qty_wt: Number(c.arr_qty_wt) || 0,
-            min_qty_wt: Number(c.min_qty_wt) || 0,
-            wt_phota: Number(c.wt_phota) || 0,
-            wt_quantity: Number(c.wt_quantity) || 0,
-            rate_value: Number(c.rate_value) || 0,
-            premium: Number(c.premium) || 0,
-            sett_pct: getColSettPct(c),
-            deduction_rate: getColDeduction(c),
-            sett_rate: getColSettRate(c),
-            quantity_qtl: getColQtyQtl(c),
-            amount: getColAmount(c),
-            gd_claim: Number(c.gd_claim) || 0,
-            gd_sett: Number(c.gd_sett) || 0,
-            gd_rev: Number(c.gd_rev) || 0,
-            gd_final: Number(c.gd_final) || 0,
-            moist_claim: Number(c.moist_claim) || 0,
-            moist_sett: Number(c.moist_sett) || 0,
-            moist_rev: Number(c.moist_rev) || 0,
-            moist_final: Number(c.moist_final) || 0,
-            dust_claim: Number(c.dust_claim) || 0,
-            dust_sett: Number(c.dust_sett) || 0,
-            dust_rev: Number(c.dust_rev) || 0,
-            dust_final: Number(c.dust_final) || 0,
-            ncv_claim: Number(c.ncv_claim) || 0,
-            ncv_sett: Number(c.ncv_sett) || 0,
-            ncv_rev: Number(c.ncv_rev) || 0,
-            ncv_final: Number(c.ncv_final) || 0,
-            po_grade_claim: Number(c.po_grade_claim) || 0,
-            po_grade_sett: Number(c.po_grade_sett) || 0,
-            po_grade_rev: Number(c.po_grade_rev) || 0,
-            po_grade_final: Number(c.po_grade_final) || 0,
-            adjust_type: c.adjust_type,
-            remark: c.remark,
-            claim_settlement: Number(c.claim_settlement) || 0
-          }));
-
-        if (rowsToWrite.length > 0) {
-          await supabase.from('payment_details').insert(rowsToWrite);
-        }
-      }
-
       const targetArrivalPaymentStatus = (payableVal > 0 && parsedPaid >= payableVal - 0.01)
         ? 'Paid'
         : (parsedPaid > 0 ? 'Partially Paid' : 'Pending');
 
-      if (masterData.mr_no) {
-        await supabase.from('final_arrival').update({ payment_status: targetArrivalPaymentStatus }).eq('mr_no', masterData.mr_no);
-      }
-      if (masterData.po_no) {
-        await supabase.from('purchase_master').update({ payment_status: targetArrivalPaymentStatus }).eq('po_no', masterData.po_no);
+      const rowsToWrite = detailCols
+        .filter(c => c.grade && c.grade.trim() !== '')
+        .map(c => ({
+          voucher_no: masterData.voucher_no,
+          mr_no: masterData.mr_no,
+          col_index: c.col_index,
+          grade: c.grade,
+          area: c.area,
+          agency: c.agency,
+          marka_crop: c.marka_crop,
+          quantity: Number(c.quantity) || 0,
+          arr_qty_wt: Number(c.arr_qty_wt) || 0,
+          min_qty_wt: Number(c.min_qty_wt) || 0,
+          wt_phota: Number(c.wt_phota) || 0,
+          wt_quantity: Number(c.wt_quantity) || 0,
+          rate_value: Number(c.rate_value) || 0,
+          premium: Number(c.premium) || 0,
+          sett_pct: getColSettPct(c),
+          deduction_rate: getColDeduction(c),
+          sett_rate: getColSettRate(c),
+          quantity_qtl: getColQtyQtl(c),
+          amount: getColAmount(c),
+          gd_claim: Number(c.gd_claim) || 0,
+          gd_sett: Number(c.gd_sett) || 0,
+          gd_rev: Number(c.gd_rev) || 0,
+          gd_final: Number(c.gd_final) || 0,
+          moist_claim: Number(c.moist_claim) || 0,
+          moist_sett: Number(c.moist_sett) || 0,
+          moist_rev: Number(c.moist_rev) || 0,
+          moist_final: Number(c.moist_final) || 0,
+          dust_claim: Number(c.dust_claim) || 0,
+          dust_sett: Number(c.dust_sett) || 0,
+          dust_rev: Number(c.dust_rev) || 0,
+          dust_final: Number(c.dust_final) || 0,
+          ncv_claim: Number(c.ncv_claim) || 0,
+          ncv_sett: Number(c.ncv_sett) || 0,
+          ncv_rev: Number(c.ncv_rev) || 0,
+          ncv_final: Number(c.ncv_final) || 0,
+          po_grade_claim: Number(c.po_grade_claim) || 0,
+          po_grade_sett: Number(c.po_grade_sett) || 0,
+          po_grade_rev: Number(c.po_grade_rev) || 0,
+          po_grade_final: Number(c.po_grade_final) || 0,
+          adjust_type: c.adjust_type,
+          remark: c.remark,
+          claim_settlement: Number(c.claim_settlement) || 0
+        }));
+
+      const sqlVal = (v: any) => {
+        if (v === null || v === undefined) return 'NULL';
+        if (typeof v === 'number') return isFinite(v) ? String(v) : '0';
+        if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+        return `'${String(v).replace(/'/g, "''")}'`;
+      };
+
+      try {
+        const masterCols = Object.keys(initialPayload);
+        const masterVals = masterCols.map(k => sqlVal(initialPayload[k]));
+        const updateSet = masterCols.filter(k => k !== 'voucher_no').map(k => `${k} = EXCLUDED.${k}`).join(', ');
+        const txQueries: string[] = [
+          `INSERT INTO payment_master (${masterCols.join(', ')}) VALUES (${masterVals.join(', ')}) ON CONFLICT (voucher_no) DO UPDATE SET ${updateSet};`,
+          `DELETE FROM payment_details WHERE voucher_no = ${sqlVal(masterData.voucher_no)};`
+        ];
+        for (const row of rowsToWrite) {
+          const dCols = Object.keys(row);
+          const dVals = dCols.map(k => sqlVal((row as any)[k]));
+          txQueries.push(`INSERT INTO payment_details (${dCols.join(', ')}) VALUES (${dVals.join(', ')});`);
+        }
+        if (masterData.mr_no) {
+          txQueries.push(`UPDATE final_arrival SET payment_status = ${sqlVal(targetArrivalPaymentStatus)} WHERE mr_no = ${sqlVal(masterData.mr_no)};`);
+        }
+        if (masterData.po_no) {
+          txQueries.push(`UPDATE purchase_master SET payment_status = ${sqlVal(targetArrivalPaymentStatus)} WHERE po_no = ${sqlVal(masterData.po_no)};`);
+        }
+        await dbModule.executeTransaction(txQueries);
+      } catch (_txErr) {
+        const savedMaster = await dbModule.upsert('payment_master', initialPayload, 'voucher_no');
+        const { error: delErr } = await supabase.from('payment_details').delete().eq('voucher_no', masterData.voucher_no);
+        if (delErr) throw delErr;
+        if (rowsToWrite.length > 0) {
+          const rowsWithId = rowsToWrite.map(r => ({ ...r, payment_id: savedMaster?.payment_id || null }));
+          const { error: insErr } = await supabase.from('payment_details').insert(rowsWithId);
+          if (insErr) throw insErr;
+        }
+        if (masterData.mr_no) {
+          await supabase.from('final_arrival').update({ payment_status: targetArrivalPaymentStatus }).eq('mr_no', masterData.mr_no);
+        }
+        if (masterData.po_no) {
+          await supabase.from('purchase_master').update({ payment_status: targetArrivalPaymentStatus }).eq('po_no', masterData.po_no);
+        }
       }
 
       setShowSuccessAnim(true);
@@ -1358,11 +1318,71 @@ export function usePaymentData(onSaveSuccess?: () => void) {
 
     setLoading(true);
     try {
-      await supabase.from('payment_details').delete().eq('voucher_no', voucherNo);
-      await supabase.from('payment_master').delete().eq('voucher_no', voucherNo);
-      await dbModule.delete('payment_master', 'voucher_no', voucherNo).catch(() => {});
-      setSuccessMessage(`Payment Voucher ${voucherNo} deleted successfully.`);
-      initPage();
+      const targetVoucher = String(voucherNo || '').trim();
+      const targetPayment = paymentList.find(
+        (p) => String(p.voucher_no || '').trim().toUpperCase() === targetVoucher.toUpperCase()
+      );
+      const linkedMrNo = String(targetPayment?.mr_no || targetPayment?.arrival_no || '').trim();
+      const linkedPoNo = String(targetPayment?.po_no || '').trim();
+
+      const esc = (v: string) => `'${v.replace(/'/g, "''")}'`;
+      try {
+        await dbModule.executeTransaction([
+          `DELETE FROM payment_details WHERE voucher_no = ${esc(targetVoucher)};`,
+          `DELETE FROM payment_master WHERE voucher_no = ${esc(targetVoucher)};`,
+        ]);
+      } catch (_txErr) {
+        const { error: detErr } = await supabase.from('payment_details').delete().eq('voucher_no', targetVoucher);
+        if (detErr) throw detErr;
+        await dbModule.delete('payment_master', 'voucher_no', targetVoucher);
+      }
+
+      // Recompute linked MR & PO payment status from remaining active payments
+      if (supabase && (linkedMrNo || linkedPoNo)) {
+        const { data: remainingPayments } = await supabase
+          .from('payment_master')
+          .select('voucher_no, mr_no, arrival_no, po_no, paid_amount, payable_amt, total_amount, status');
+
+        const activeRemaining = (remainingPayments || []).filter((p: any) => {
+          const st = String(p.status || '').trim().toLowerCase();
+          return st !== 'cancelled' && st !== 'rejected' && String(p.voucher_no || '').trim().toUpperCase() !== targetVoucher.toUpperCase();
+        });
+
+        if (linkedMrNo) {
+          const mrPayments = activeRemaining.filter(
+            (p: any) =>
+              String(p.mr_no || '').trim().toUpperCase() === linkedMrNo.toUpperCase() ||
+              String(p.arrival_no || '').trim().toUpperCase() === linkedMrNo.toUpperCase()
+          );
+          const mrPaidSum = mrPayments.reduce((s: number, p: any) => s + (Number(p.paid_amount) || 0), 0);
+          const mrPayable = mrPayments.reduce((s: number, p: any) => Math.max(s, Number(p.payable_amt || p.total_amount) || 0), 0);
+          const newMrStatus =
+            mrPayments.length === 0 || mrPaidSum <= 0
+              ? 'Pending'
+              : mrPayable > 0 && mrPaidSum >= mrPayable
+              ? 'Paid'
+              : 'Partially Paid';
+          await supabase.from('final_arrival').update({ payment_status: newMrStatus }).eq('mr_no', linkedMrNo);
+        }
+
+        if (linkedPoNo) {
+          const poPayments = activeRemaining.filter(
+            (p: any) => String(p.po_no || '').trim().toUpperCase() === linkedPoNo.toUpperCase()
+          );
+          const poPaidSum = poPayments.reduce((s: number, p: any) => s + (Number(p.paid_amount) || 0), 0);
+          const poPayable = poPayments.reduce((s: number, p: any) => Math.max(s, Number(p.payable_amt || p.total_amount) || 0), 0);
+          const newPoStatus =
+            poPayments.length === 0 || poPaidSum <= 0
+              ? 'Pending'
+              : poPayable > 0 && poPaidSum >= poPayable
+              ? 'Paid'
+              : 'Partially Paid';
+          await supabase.from('purchase_master').update({ payment_status: newPoStatus }).eq('po_no', linkedPoNo);
+        }
+      }
+
+      setSuccessMessage(`Payment Voucher ${voucherNo} deleted and linked MR/PO statuses recomputed.`);
+      await initPage();
     } catch (e: any) {
       setErrorMessage(e.message || "Failed to delete payment.");
     } finally {
@@ -1384,9 +1404,10 @@ export function usePaymentData(onSaveSuccess?: () => void) {
         const newCols = [emptyDetailColumn(1), emptyDetailColumn(2), emptyDetailColumn(3), emptyDetailColumn(4)];
         details.forEach((d: any, idx: number) => {
           if (idx < 4) {
-            const settPct = d.sett_pct !== undefined && d.sett_pct !== null && !isNaN(Number(d.sett_pct)) && Number(d.sett_pct) > 0
-              ? Number(d.sett_pct)
-              : (Number(d.gd_claim) > 0 ? Number(d.gd_claim) : Number(d.gd_sett || d.sett_pct || 0));
+            const settPct =
+              d.sett_pct !== undefined && d.sett_pct !== null && String(d.sett_pct).trim() !== '' && !isNaN(Number(d.sett_pct)) && Number(d.sett_pct) >= 0
+                ? Number(d.sett_pct)
+                : (Number(d.gd_claim) > 0 ? Number(d.gd_claim) : Number(d.gd_sett || 0));
             const origRate = Number(d.rate_value) || 0;
             const premium = Number(d.premium || 0);
             const sattaDed = getColDeduction({ ...d, rate_value: origRate, premium: premium, sett_pct: settPct });

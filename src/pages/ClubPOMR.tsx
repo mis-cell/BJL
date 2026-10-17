@@ -40,7 +40,22 @@ interface ClubbingRecord {
   remarks: string;
 }
 
-const inMemoryClubbedHistory: ClubbingRecord[] = [];
+const mapDbRowToClubRecord = (row: any): ClubbingRecord => ({
+  id: String(row.id || row.club_id || ''),
+  clubbedAt: String(row.clubbed_at || row.clubbedAt || row.created_at || '').split('T')[0],
+  supplier: String(row.supplier || ''),
+  poNos: Array.isArray(row.po_nos)
+    ? row.po_nos
+    : (typeof row.po_nos === 'string' && row.po_nos.startsWith('[') ? JSON.parse(row.po_nos) : (row.po_no ? [row.po_no] : [])),
+  amadNos: Array.isArray(row.amad_nos)
+    ? row.amad_nos
+    : (typeof row.amad_nos === 'string' && row.amad_nos.startsWith('[') ? JSON.parse(row.amad_nos) : (row.mr_no ? [row.mr_no] : [])),
+  totalPoWeight: Number(row.total_po_weight ?? row.totalPoWeight ?? 0),
+  totalReceivedWeight: Number(row.total_received_weight ?? row.totalReceivedWeight ?? 0),
+  variancePct: Number(row.variance_pct ?? row.variancePct ?? 0),
+  recordedBy: String(row.recorded_by || row.recordedBy || row.clubbed_by || 'SYSTEM-AUDITOR'),
+  remarks: String(row.remarks || '')
+});
 
 export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
   const [loading, setLoading] = useState(false);
@@ -77,12 +92,13 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
   const loadInitialData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch tables
-      const [allPos, allAmads, allFinalArrivals, allInspections] = await Promise.all([
+      // 1. Fetch tables including persistent clubbed_pomr history
+      const [allPos, allAmads, allFinalArrivals, allInspections, allClubbed] = await Promise.all([
         dbModule.fetchAll('purchase_master').catch(() => []),
         dbModule.fetchAll('temporary_material_received').catch(() => []),
         dbModule.fetchAll('final_arrival').catch(() => []),
-        dbModule.fetchAll('mill_inspection_master').catch(() => [])
+        dbModule.fetchAll('mill_inspection_master').catch(() => []),
+        dbModule.fetchAll('clubbed_pomr').catch(() => [])
       ]);
 
       // Extract unique suppliers from tables
@@ -100,7 +116,7 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
         setSelectedSupplier('ALL');
       }
 
-      setClubbingHistory(inMemoryClubbedHistory);
+      setClubbingHistory((allClubbed || []).map(mapDbRowToClubRecord));
 
     } catch (err) {
       console.error('Error loading Master entries:', err);
@@ -185,17 +201,54 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
   const handleUnclubInspection = async (mrNo: string) => {
     setLoading(true);
     try {
-      await dbModule.update('material_inspection', 'mr_no', mrNo, {
-        arrival_no: "",
-        po_no: "",
-        mill_po_no: ""
-      });
-      setSuccessToast(`Successfully un-clubbed Sauda Check Point and P.O for inspection: ${mrNo}`);
+      const cleanMr = String(mrNo || '').trim();
+      if (!cleanMr) throw new Error('MR number is required to un-club.');
+
+      const esc = (v: string) => `'${v.replace(/'/g, "''")}'`;
+      const txStatements = [
+        `UPDATE mill_inspection_master SET arrival_no = '', po_no = '', mill_po_no = '' WHERE mr_no = ${esc(cleanMr)};`,
+        `UPDATE material_inspection SET arrival_no = '', po_no = '', mill_po_no = '' WHERE mr_no = ${esc(cleanMr)};`,
+        `DELETE FROM clubbed_pomr WHERE mr_no = ${esc(cleanMr)};`
+      ];
+
+      let updatedMaster = false;
+      try {
+        await dbModule.executeTransaction(txStatements);
+        updatedMaster = true;
+      } catch (_txErr) {
+        try {
+          await dbModule.update('mill_inspection_master', 'mr_no', cleanMr, {
+            arrival_no: '',
+            po_no: '',
+            mill_po_no: ''
+          });
+          updatedMaster = true;
+        } catch (_mErr) {}
+
+        try {
+          await dbModule.update('material_inspection', 'mr_no', cleanMr, {
+            arrival_no: '',
+            po_no: '',
+            mill_po_no: ''
+          });
+          updatedMaster = true;
+        } catch (_iErr) {}
+
+        if (supabase) {
+          await supabase.from('clubbed_pomr').delete().eq('mr_no', cleanMr);
+        }
+      }
+
+      if (!updatedMaster) {
+        throw new Error(`No inspection record found for MR ${cleanMr} in mill_inspection_master or material_inspection.`);
+      }
+
+      setSuccessToast(`Successfully un-clubbed Sauda Check Point and P.O for inspection: ${cleanMr}`);
       setSelectedInspection(null);
-      
-      // Refresh documents
+
+      await loadInitialData();
       if (selectedSupplier) {
-        fetchSupplierDocuments(selectedSupplier);
+        await fetchSupplierDocuments(selectedSupplier);
       }
       setTimeout(() => setSuccessToast(null), 4000);
     } catch (err: any) {
@@ -207,7 +260,7 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
     }
   };
 
-  const executeClubbing = () => {
+  const executeClubbing = async () => {
     if (selectedPos.length === 0 || selectedAmads.length === 0) return;
 
     // Calculate aggregated weights
@@ -229,9 +282,12 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
       }
     }
 
+    const clubId = `CLUB-${Date.now().toString().slice(-6)}`;
+    const clubbedDate = new Date().toISOString().split('T')[0];
+
     const newClub: ClubbingRecord = {
-      id: `CLUB-${Date.now().toString().slice(-4)}`,
-      clubbedAt: new Date().toISOString().split('T')[0],
+      id: clubId,
+      clubbedAt: clubbedDate,
       supplier: finalSupplier,
       poNos: [...selectedPos],
       amadNos: [...selectedAmads],
@@ -242,35 +298,52 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
       remarks: remarks || 'Manual operational mapping Alignment'
     };
 
-    const updatedHistory = [newClub, ...clubbingHistory];
-    inMemoryClubbedHistory.length = 0;
-    inMemoryClubbedHistory.push(...updatedHistory);
-    setClubbingHistory(updatedHistory);
+    try {
+      setLoading(true);
+      await dbModule.insert('clubbed_pomr', {
+        id: clubId,
+        po_no: selectedPos[0] || '',
+        mr_no: selectedAmads[0] || '',
+        po_nos: JSON.stringify(newClub.poNos),
+        amad_nos: JSON.stringify(newClub.amadNos),
+        supplier: newClub.supplier,
+        total_po_weight: newClub.totalPoWeight,
+        total_received_weight: newClub.totalReceivedWeight,
+        variance_pct: newClub.variancePct,
+        recorded_by: newClub.recordedBy,
+        clubbed_by: newClub.recordedBy,
+        clubbed_at: new Date().toISOString(),
+        remarks: newClub.remarks,
+        status: 'ACTIVE'
+      });
 
-    setRemarks('');
-    setSelectedPos([]);
-    setSelectedAmads([]);
-    setSuccessToast(`Vouchers successfully clubbed. ID: ${newClub.id}`);
-    
-    // Refresh lists
-    if (selectedSupplier) {
-      fetchSupplierDocuments(selectedSupplier);
+      const updatedHistory = [newClub, ...clubbingHistory];
+      setClubbingHistory(updatedHistory);
+
+      setRemarks('');
+      setSelectedPos([]);
+      setSelectedAmads([]);
+      setSuccessToast(`Vouchers successfully clubbed and persisted. ID: ${newClub.id}`);
+
+      if (selectedSupplier) {
+        await fetchSupplierDocuments(selectedSupplier);
+      }
+      setTimeout(() => setSuccessToast(null), 4000);
+    } catch (err: any) {
+      console.error('Error saving clubbed record to clubbed_pomr:', err);
+      alert(`Failed to save clubbing record to database: ${err.message || err}`);
+    } finally {
+      setLoading(false);
     }
-    
-    setTimeout(() => setSuccessToast(null), 4000);
   };
 
   const deleteClubItem = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this clubbed record?")) return;
     try {
-      if (supabase) {
-        await supabase.from('clubbed_pomr').delete().eq('id', id);
-      }
+      await dbModule.delete('clubbed_pomr', 'id', id);
       const updated = clubbingHistory.filter(c => c.id !== id);
-      inMemoryClubbedHistory.length = 0;
-      inMemoryClubbedHistory.push(...updated);
       setClubbingHistory(updated);
-      setSuccessToast(`Pairing record deleted.`);
+      setSuccessToast(`Pairing record deleted from database.`);
       setTimeout(() => setSuccessToast(null), 3000);
     } catch (err: any) {
       console.error("Delete pairing error:", err);

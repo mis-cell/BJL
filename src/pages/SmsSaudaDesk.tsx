@@ -165,7 +165,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
     }
   };
 
-  // 2. Load marked / completed SMS map
+  // 2. Load marked / completed SMS map keyed strictly by unique sms_id
   const loadMarkedSmsRecords = async () => {
     let loadedMap: Record<string, { 
       sauda_no: string; 
@@ -190,9 +190,10 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
           .select('*');
 
         if (!error && data) {
+          const freshDbMap: typeof loadedMap = {};
           data.forEach((rec: any) => {
-            if (rec.sauda_no || rec.sauda_created) {
-              const info = {
+            if ((rec.sauda_no || rec.sauda_created) && rec.sms_id) {
+              freshDbMap[String(rec.sms_id)] = {
                 sauda_no: rec.sauda_no,
                 sauda_id: rec.sauda_id,
                 match_percent: rec.match_percent || rec.match_score || 100,
@@ -200,14 +201,9 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
                 marked_at: rec.marked_at || rec.created_at,
                 db_id: rec.id
               };
-              if (rec.sms_id) {
-                loadedMap[rec.sms_id] = info;
-              }
-              if (rec.raw_sms_body) {
-                loadedMap[rec.raw_sms_body.trim()] = info;
-              }
             }
           });
+          loadedMap = { ...loadedMap, ...freshDbMap };
         }
       } catch (err) {
         console.warn("Error loading marked SMS records from Supabase:", err);
@@ -323,45 +319,26 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
     const currentUserName = userCtx.userName || 'Admin';
     const nowIso = new Date().toISOString();
 
-    const markInfo = {
-      sauda_no: saudaNo,
-      sauda_id: selectedSauda.sauda_id,
-      match_percent: matchScore,
-      marked_by: currentUserName,
-      marked_at: nowIso
-    };
-
-    const updatedMap = {
-      ...markedSmsMap,
-      [sms.id]: markInfo
-    };
-    if (sms.body) {
-      updatedMap[sms.body.trim()] = markInfo;
+    if (!sms.id) {
+      alert('Cannot link SMS: missing unique sms_id.');
+      return;
     }
 
-    setMarkedSmsMap(updatedMap);
-    localStorage.setItem('sms_sauda_marked_map', JSON.stringify(updatedMap));
-
-    // Save to Supabase `sms_sauda`
-    if (supabase) {
-      try {
-        const { data: existingById } = await supabase
+    try {
+      let savedDbRecord: any = null;
+      if (supabase) {
+        // Strict SMS ID isolation: match ONLY by sms_id, never overwrite another SMS row sharing the same sauda_no
+        const { data: existingById, error: lookupErr } = await supabase
           .from('sms_sauda')
           .select('id')
           .eq('sms_id', sms.id)
           .limit(1);
 
-        let existingId = existingById && existingById.length > 0 ? existingById[0].id : null;
-        if (!existingId && saudaNo) {
-          const { data: existingBySauda } = await supabase
-            .from('sms_sauda')
-            .select('id')
-            .eq('sauda_no', saudaNo)
-            .limit(1);
-          if (existingBySauda && existingBySauda.length > 0) {
-            existingId = existingBySauda[0].id;
-          }
+        if (lookupErr) {
+          throw new Error(`Failed to verify existing SMS link: ${lookupErr.message}`);
         }
+
+        const existingId = existingById && existingById.length > 0 ? existingById[0].id : null;
 
         const payload = {
           sms_id: sms.id,
@@ -382,49 +359,66 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
         };
 
         if (existingId) {
-          await dbModule.update('sms_sauda', 'id', existingId, payload);
+          savedDbRecord = await dbModule.update('sms_sauda', 'id', existingId, payload);
         } else {
-          await dbModule.insert('sms_sauda', payload);
+          savedDbRecord = await dbModule.insert('sms_sauda', payload);
         }
-      } catch (dbErr) {
-        console.warn("Failed to persist marked SMS link in Supabase:", dbErr);
       }
-    }
 
-    window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sms_sauda' } }));
-    alert(`✓ SMS successfully linked to Sauda Contract #${saudaNo} (Score: ${matchScore}%)`);
+      const markInfo = {
+        sauda_no: saudaNo,
+        sauda_id: selectedSauda.sauda_id,
+        match_percent: matchScore,
+        marked_by: currentUserName,
+        marked_at: nowIso,
+        db_id: savedDbRecord?.id
+      };
+
+      const updatedMap = {
+        ...markedSmsMap,
+        [sms.id]: markInfo
+      };
+
+      setMarkedSmsMap(updatedMap);
+      localStorage.setItem('sms_sauda_marked_map', JSON.stringify(updatedMap));
+
+      window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sms_sauda' } }));
+      alert(`✓ SMS #${sms.id} successfully linked to Sauda Contract #${saudaNo} (Score: ${matchScore}%)`);
+    } catch (dbErr: any) {
+      console.error("Failed to persist marked SMS link in Supabase:", dbErr);
+      alert(`Failed to link SMS #${sms.id}: ${dbErr?.message || 'Database write failed'}`);
+    }
   };
 
-  // Handle Unmark / Reset Link
+  // Handle Unmark / Reset Link (strictly isolated by sms.id)
   const handleUnmark = async (sms: IncomingSmsItem) => {
     if (!isAuthorizedForMarkSms()) {
       alert("Access Denied: Only Admin and Level 4 users are authorized to unmark this SMS.");
       return;
     }
 
-    const updatedMap = { ...markedSmsMap };
-    delete updatedMap[sms.id];
-    if (sms.body) {
-      delete updatedMap[sms.body.trim()];
-    }
+    if (!sms.id) return;
 
-    setMarkedSmsMap(updatedMap);
-    localStorage.setItem('sms_sauda_marked_map', JSON.stringify(updatedMap));
-
-    if (supabase) {
-      try {
-        if (sms.id) {
-          await dbModule.update('sms_sauda', 'sms_id', sms.id, { sauda_created: false }).catch(() => {});
-        }
-        if (sms.body) {
-          await dbModule.update('sms_sauda', 'raw_sms_body', sms.body, { sauda_created: false }).catch(() => {});
-        }
-      } catch (err) {
-        console.warn("Failed to unmark SMS in Supabase:", err);
+    try {
+      if (supabase) {
+        await dbModule.update('sms_sauda', 'sms_id', sms.id, {
+          sauda_created: false,
+          sauda_no: '',
+          sauda_id: null
+        });
       }
-    }
 
-    window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sms_sauda' } }));
+      const updatedMap = { ...markedSmsMap };
+      delete updatedMap[sms.id];
+
+      setMarkedSmsMap(updatedMap);
+      localStorage.setItem('sms_sauda_marked_map', JSON.stringify(updatedMap));
+
+      window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sms_sauda' } }));
+    } catch (err: any) {
+      console.error("Failed to unmark SMS in Supabase:", err);
+      alert(`Failed to unmark SMS #${sms.id}: ${err?.message || 'Database error'}`);
+    }
   };
 
   // Open the Review & Match modal for an SMS
@@ -436,7 +430,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
   // Compute live match statistics and annotated rows for the SMS feed
   const processedSmsList = useMemo(() => {
     return googleSheetSmsData.map(sms => {
-      const markedInfo = markedSmsMap[sms.id] || (sms.body ? markedSmsMap[sms.body.trim()] : undefined);
+      const markedInfo = markedSmsMap[sms.id];
       const isMarked = Boolean(markedInfo && markedInfo.sauda_no);
       
       const extracted = extractSmsEntities(

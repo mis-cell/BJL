@@ -758,20 +758,8 @@ export function useStockSummaryData(initialSubTab: StockSubTab = 'opening') {
       resetClosingForm();
       await loadClosingStocks();
     } catch (dbErr: any) {
-      console.warn("DB write failed, fallback to offline local storage", dbErr);
-      const current = [...closingStocks];
-      if (isEditing && closingFormState.id) {
-        const idx = current.findIndex(c => c.id === closingFormState.id);
-        if (idx !== -1) {
-          current[idx] = { ...payload, id: closingFormState.id };
-        }
-      } else {
-        current.unshift({ ...payload, id: `local-${Date.now()}` });
-      }
-      setClosingStocks(current);
-      alert("Success: Closing Inventory Stock record saved!");
-      setIsFormModalOpen(false);
-      resetClosingForm();
+      console.error("Closing Stock DB write failed:", dbErr);
+      alert("Error saving Closing Stock record to database: " + (dbErr.message || String(dbErr)));
     } finally {
       setLoading(false);
     }
@@ -875,41 +863,28 @@ export function useStockSummaryData(initialSubTab: StockSubTab = 'opening') {
     }
 
     try {
-      const newRecord = {
-        ...transferRecord,
-        id: `transfer-${Date.now()}`,
-        godown: transferTargetGodown,
-        quantity: qtyToTransfer,
-        weight: (Number(transferRecord.weight || 0) * (qtyToTransfer / Number(transferRecord.quantity || 1))),
-        opening_date: new Date().toISOString().split('T')[0]
-      };
+      const sourceQty = Number(transferRecord.quantity || 0);
+      const sourceWt = Number(transferRecord.weight || 0);
+      const transferWt = Number((sourceWt * (qtyToTransfer / Math.max(1, sourceQty))).toFixed(3));
+      const updatedSourceQty = sourceQty - qtyToTransfer;
+      const updatedSourceWt = Number((sourceWt * (updatedSourceQty / Math.max(1, sourceQty))).toFixed(3));
+      const openingDate = new Date().toISOString().split('T')[0];
 
-      const updatedSourceQty = Number(transferRecord.quantity || 0) - qtyToTransfer;
-      const updatedSourceWt = Number(transferRecord.weight || 0) * (updatedSourceQty / Number(transferRecord.quantity || 1));
-
-      if (supabase) {
-        await supabase.from('opening_stock').update({ quantity: updatedSourceQty, weight: updatedSourceWt }).eq('id', transferRecord.id);
-        await supabase.from('godown_wise_stock').update({ quantity: updatedSourceQty, weight: updatedSourceWt }).eq('id', transferRecord.id);
-        await supabase.from('opening_stock').insert({
-          opening_date: newRecord.opening_date,
-          godown: newRecord.godown,
-          area: newRecord.area,
-          grade: newRecord.grade,
-          jci: newRecord.jci || 'No',
-          unit: newRecord.unit || 'BALES',
-          quantity: newRecord.quantity,
-          weight: newRecord.weight
-        });
-      }
+      const esc = (v: any) => `'${String(v ?? '').replace(/'/g, "''")}'`;
+      await dbModule.executeTransaction([
+        `UPDATE opening_stock SET quantity = ${updatedSourceQty}, weight = ${updatedSourceWt} WHERE id = ${esc(transferRecord.id)} AND quantity = ${sourceQty};`,
+        `UPDATE godown_wise_stock SET quantity = ${updatedSourceQty}, weight = ${updatedSourceWt} WHERE id = ${esc(transferRecord.id)};`,
+        `INSERT INTO opening_stock (opening_date, godown, area, grade, jci, unit, quantity, weight) VALUES (${esc(openingDate)}, ${esc(transferTargetGodown)}, ${esc(transferRecord.area)}, ${esc(transferRecord.grade)}, ${esc(transferRecord.jci || 'No')}, ${esc(transferRecord.unit || 'BALES')}, ${qtyToTransfer}, ${transferWt});`
+      ]);
 
       await loadOpeningStocks();
-      alert(`Success: Transferred ${qtyToTransfer} bales to godown ${transferTargetGodown}!`);
+      alert(`Success: Atomically transferred ${qtyToTransfer} bales to godown ${transferTargetGodown}!`);
       setTransferRecord(null);
       setTransferBales('');
       setTransferTargetGodown('');
-    } catch (err) {
+    } catch (err: any) {
       console.error("Transfer failed:", err);
-      alert("Error executing stock transfer.");
+      alert("Error executing atomic stock transfer: " + (err.message || String(err)));
     }
   };
 
@@ -957,10 +932,8 @@ export function useStockSummaryData(initialSubTab: StockSubTab = 'opening') {
           resetClosingForm();
         }
       } catch (err: any) {
-        console.warn("DB delete failed, pruning in memory", err);
-        const updated = closingStocks.filter(c => c.id !== id);
-        setClosingStocks(updated);
-        alert("Closing Stock record deleted.");
+        console.error("Closing Stock DB delete failed:", err);
+        alert("Failed to delete Closing Stock record: " + (err.message || String(err)));
       } finally {
         setLoading(false);
       }

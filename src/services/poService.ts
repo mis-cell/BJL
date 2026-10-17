@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { dbModule } from './dbModule';
 import { PoItemRow } from '../types/purchaseOrder';
 
 export const poService = {
@@ -11,17 +12,13 @@ export const poService = {
 
     let details: any[] = [];
     if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from(detailTable)
-          .select('*')
-          .eq('po_no', poNoClean)
-          .order('srl_no', { ascending: true });
-        if (!error && data && data.length > 0) {
-          details = data;
-        }
-      } catch (err) {
-        console.warn(`Direct fetch from ${detailTable} failed:`, err);
+      const { data, error } = await supabase
+        .from(detailTable)
+        .select('*')
+        .eq('po_no', poNoClean)
+        .order('srl_no', { ascending: true });
+      if (!error && data && data.length > 0) {
+        details = data;
       }
     }
 
@@ -35,43 +32,49 @@ export const poService = {
       marka_code: String(d.marka_code || d.marka || ''),
       marka_name: String(d.marka_name || d.marka || d.marka_code || ''),
       qty: Number(d.quantity || d.qty || 0),
-      weight: Number(d.weight_mt || d.weight || 0),
-      rate: Number(d.rate_qntl || d.rate || d.rs || 0),
-      premium: Number(d.premium || 0)
+      weight: Number(d.weight_mt ?? d.weight ?? 0),
+      rate: Number(d.rate_qntl ?? d.rate ?? d.rs ?? 0),
+      premium: Number(d.premium ?? 0)
     }));
   },
 
   /**
-   * Batch persist PO detail rows cleanly into Supabase
+   * Atomically persist PO detail rows into Supabase and verify returned row count
    */
   async savePoDetails(
     detailTable: string, 
     poNo: string, 
     items: any[], 
     lookupLists?: { gradeList?: any[]; agencyList?: any[]; markaList?: any[] }
-  ): Promise<void> {
+  ): Promise<any[]> {
     const finalPoNo = String(poNo || '').trim();
-    if (!finalPoNo) return;
-    
-    // 1. Clear old detail rows from Supabase
-    if (supabase) {
-      try {
-        await supabase.from(detailTable).delete().eq('po_no', finalPoNo);
-      } catch (e) {
-        console.warn(`Failed to delete from ${detailTable}:`, e);
-      }
+    if (!finalPoNo) {
+      throw new Error('Cannot save PO details without a valid PO number.');
     }
-
-    if (!items || items.length === 0) return;
+    if (!supabase) {
+      throw new Error('Database client is not initialized.');
+    }
 
     const grades = lookupLists?.gradeList || [];
     const agencies = lookupLists?.agencyList || [];
     const markas = lookupLists?.markaList || [];
 
     const itemsToInsert: any[] = [];
-    for (let i = 0; i < items.length; i++) {
+    for (let i = 0; i < (items || []).length; i++) {
       const item = items[i];
-      if (item && (item.grade_code || item.grade_name || item.agency_code || item.agency_name || item.marka_code || item.marka_name || Number(item.qty) > 0 || Number(item.weight) > 0 || Number(item.rate) > 0 || Number(item.premium) > 0)) {
+      if (
+        item &&
+        (item.grade_code ||
+          item.grade_name ||
+          item.agency_code ||
+          item.agency_name ||
+          item.marka_code ||
+          item.marka_name ||
+          Number(item.qty) > 0 ||
+          Number(item.weight) > 0 ||
+          Number(item.rate) > 0 ||
+          Number(item.premium) > 0)
+      ) {
         const rawG = String(item.grade_code || item.grade_name || '').trim();
         const rawA = String(item.agency_code || item.agency_name || '').trim();
         const rawM = String(item.marka_code || item.marka_name || '').trim();
@@ -87,7 +90,7 @@ export const poService = {
         const mCode = mMatch ? mMatch.marka_code : String(item.marka_code || rawM).trim();
         const mName = mMatch ? mMatch.marka_name : String(item.marka_name || rawM).trim();
 
-        const detailRow = {
+        itemsToInsert.push({
           po_no: finalPoNo,
           srl_no: i + 1,
           crop_year: String(item.crop || item.crop_year || '2026-27').trim(),
@@ -101,34 +104,45 @@ export const poService = {
           weight_mt: Number(Number(item.weight || 0).toFixed(3)) || 0,
           rate_qntl: Number(Number(item.rate || 0).toFixed(2)) || 0,
           premium: Number(Number(item.premium || 0).toFixed(2)) || 0
-        };
-        itemsToInsert.push(detailRow);
+        });
       }
     }
 
-    if (itemsToInsert.length === 0) return;
+    const esc = (v: any) => `'${String(v ?? '').replace(/'/g, "''")}'`;
+    const statements: string[] = [
+      `DELETE FROM ${detailTable} WHERE po_no = ${esc(finalPoNo)};`
+    ];
 
-    if (supabase) {
-      const { error: batchErr } = await supabase.from(detailTable).insert(itemsToInsert);
-      if (batchErr) {
-        console.warn(`Batch insert on ${detailTable} failed, attempting sanitized insert:`, batchErr);
-        const coreItems = itemsToInsert.map(row => ({
-          po_no: row.po_no,
-          srl_no: row.srl_no,
-          crop_year: row.crop_year,
-          grade_code: row.grade_code,
-          agency_code: row.agency_code,
-          marka_code: row.marka_code,
-          quantity: row.quantity,
-          weight_mt: row.weight_mt,
-          rate_qntl: row.rate_qntl,
-          premium: row.premium
-        }));
-        const { error: retryErr } = await supabase.from(detailTable).insert(coreItems);
-        if (retryErr) {
-          console.error(`Sanitized insert on ${detailTable} failed:`, retryErr);
+    for (const row of itemsToInsert) {
+      statements.push(
+        `INSERT INTO ${detailTable} (po_no, srl_no, crop_year, grade_code, grade_name, agency_code, agency_name, marka_code, marka_name, quantity, weight_mt, rate_qntl, premium) VALUES (${esc(row.po_no)}, ${Number(row.srl_no)}, ${esc(row.crop_year)}, ${esc(row.grade_code)}, ${esc(row.grade_name)}, ${esc(row.agency_code)}, ${esc(row.agency_name)}, ${esc(row.marka_code)}, ${esc(row.marka_name)}, ${Number(row.quantity)}, ${Number(row.weight_mt)}, ${Number(row.rate_qntl)}, ${Number(row.premium)});`
+      );
+    }
+
+    try {
+      await dbModule.executeTransaction(statements);
+    } catch (_txErr) {
+      const { error: delErr } = await supabase.from(detailTable).delete().eq('po_no', finalPoNo);
+      if (delErr) {
+        throw new Error(`Failed to clear existing detail rows in ${detailTable}: ${delErr.message}`);
+      }
+      if (itemsToInsert.length > 0) {
+        const { data: savedRows, error: insErr } = await supabase
+          .from(detailTable)
+          .insert(itemsToInsert)
+          .select();
+        if (insErr) {
+          throw new Error(`Failed to save PO detail items in ${detailTable}: ${insErr.message}`);
         }
+        if (!savedRows || savedRows.length !== itemsToInsert.length) {
+          throw new Error(
+            `Incomplete PO detail save in ${detailTable}: expected ${itemsToInsert.length} rows, saved ${savedRows?.length || 0}.`
+          );
+        }
+        return savedRows;
       }
     }
+
+    return itemsToInsert;
   }
 };

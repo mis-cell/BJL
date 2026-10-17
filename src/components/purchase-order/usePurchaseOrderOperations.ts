@@ -156,14 +156,16 @@ export function usePurchaseOrderOperations({
         .sort((a: any, b: any) => (Number(a.srl_no || a.srl || 0) - Number(b.srl_no || b.srl || 0)));
       
       const isBales = (poHeader.purchase_unit_name || 'BALES') === 'BALES';
+      const unitWtKgs = parseFloat(poHeader.weight_unit_kgs) || (isBales ? 147.5 : 50);
       const mappedItems = filtered.map((d: any, idx: number) => {
-        const qtyVal = d.quantity || 0;
-        const weightVal = isBales 
-          ? parseFloat(((qtyVal * 147.5) / 1000).toFixed(3)) 
-          : (d.weight_mt || 0);
+        const qtyVal = Number(d.quantity || d.qty || 0);
+        const storedWt = Number(d.weight_mt ?? d.weight ?? 0);
+        const weightVal = storedWt > 0
+          ? storedWt
+          : (qtyVal > 0 ? parseFloat(((qtyVal * unitWtKgs) / 1000).toFixed(3)) : 0);
         return {
           srl: idx + 1,
-          crop: d.crop_year || '2025-26',
+          crop: d.crop_year || poHeader.financial_year || '2026-27',
           grade_code: d.grade_code || '',
           grade_name: gradeList.find(g => g.grade_code === d.grade_code)?.grade_name || d.grade_code || 'STANDARD GRADE',
           agency_code: d.agency_code || '',
@@ -497,6 +499,34 @@ export function usePurchaseOrderOperations({
         history: history.length > 0 ? history : undefined
       };
 
+      const reopenDbPayload = {
+        is_closed: false,
+        is_reopened: true,
+        pending: true,
+        status: 'open',
+        open_remarks: openRemarksPayload
+      };
+
+      const updatedRows: any[] = [];
+      try {
+        const r1 = await dbModule.update('sauda_check_point', 'po_no', reopenAuthModalPo.po_no, reopenDbPayload);
+        if (r1) updatedRows.push(r1);
+      } catch (_e) {}
+      try {
+        const r2 = await dbModule.update('purchase_master', 'po_no', reopenAuthModalPo.po_no, reopenDbPayload);
+        if (r2) updatedRows.push(r2);
+      } catch (_e) {}
+      if (reopenAuthModalPo.sauda_no || reopenAuthModalPo.po_no) {
+        try {
+          const r3 = await dbModule.update('sauda_master', 'sauda_no', reopenAuthModalPo.sauda_no || reopenAuthModalPo.po_no, reopenDbPayload);
+          if (r3) updatedRows.push(r3);
+        } catch (_e) {}
+      }
+
+      if (updatedRows.length === 0) {
+        throw new Error(`Database update failed: no authoritative record found for PO #${reopenAuthModalPo.po_no}.`);
+      }
+
       localStorage.setItem(`sauda_reopened_${cleanPo}`, 'true');
       localStorage.removeItem(`sauda_closed_${cleanPo}`);
       localStorage.removeItem(`sauda_cancelled_${cleanPo}`);
@@ -506,20 +536,6 @@ export function usePurchaseOrderOperations({
         localStorage.removeItem(`sauda_closed_${cleanSauda}`);
         localStorage.removeItem(`sauda_cancelled_${cleanSauda}`);
         localStorage.setItem(`sauda_open_remarks_${cleanSauda}`, JSON.stringify(openRemarksPayload));
-      }
-
-      const reopenDbPayload = {
-        is_closed: false,
-        is_reopened: true,
-        pending: true,
-        status: 'open',
-        open_remarks: openRemarksPayload
-      };
-
-      await dbModule.update('sauda_check_point', 'po_no', reopenAuthModalPo.po_no, reopenDbPayload).catch(() => {});
-      await dbModule.update('purchase_master', 'po_no', reopenAuthModalPo.po_no, reopenDbPayload).catch(() => {});
-      if (reopenAuthModalPo.sauda_no || reopenAuthModalPo.po_no) {
-        await dbModule.update('sauda_master', 'sauda_no', reopenAuthModalPo.sauda_no || reopenAuthModalPo.po_no, reopenDbPayload).catch(() => {});
       }
 
       window.dispatchEvent(new Event('storage'));
@@ -592,17 +608,31 @@ export function usePurchaseOrderOperations({
       if (!confirmRestore) return;
 
       try {
+        const restoredRows: any[] = [];
+        try {
+          const r1 = await dbModule.update('sauda_check_point', 'po_no', item.po_no, { status: 'pending', pending: true, is_closed: false });
+          if (r1) restoredRows.push(r1);
+        } catch (_e) {}
+        try {
+          const r2 = await dbModule.update('purchase_master', 'po_no', item.po_no, { status: 'pending', pending: true, is_closed: false });
+          if (r2) restoredRows.push(r2);
+        } catch (_e) {}
+        if (item.sauda_no || item.po_no) {
+          try {
+            const r3 = await dbModule.update('sauda_master', 'sauda_no', item.sauda_no || item.po_no, { status: 'active', is_closed: false });
+            if (r3) restoredRows.push(r3);
+          } catch (_e) {}
+        }
+
+        if (restoredRows.length === 0) {
+          throw new Error(`Restore failed: no authoritative database record updated for PO #${item.po_no}.`);
+        }
+
         localStorage.removeItem(`sauda_cancelled_${cleanPo}`);
         localStorage.removeItem(`sauda_closed_${cleanPo}`);
         if (cleanSauda) {
           localStorage.removeItem(`sauda_cancelled_${cleanSauda}`);
           localStorage.removeItem(`sauda_closed_${cleanSauda}`);
-        }
-
-        await dbModule.update('sauda_check_point', 'po_no', item.po_no, { status: 'pending', pending: true, is_closed: false }).catch(() => {});
-        await dbModule.update('purchase_master', 'po_no', item.po_no, { status: 'pending', pending: true, is_closed: false }).catch(() => {});
-        if (item.sauda_no || item.po_no) {
-          await dbModule.update('sauda_master', 'sauda_no', item.sauda_no || item.po_no, { status: 'active', is_closed: false }).catch(() => {});
         }
 
         window.dispatchEvent(new Event('storage'));
@@ -627,6 +657,27 @@ export function usePurchaseOrderOperations({
     if (!confirmed) return;
 
     try {
+      const cancelDbPayload = { status: 'cancelled', pending: false, is_closed: true, is_reopened: false, open_remarks: null };
+      const cancelledRows: any[] = [];
+      try {
+        const r1 = await dbModule.update('sauda_check_point', 'po_no', item.po_no, cancelDbPayload);
+        if (r1) cancelledRows.push(r1);
+      } catch (_e) {}
+      try {
+        const r2 = await dbModule.update('purchase_master', 'po_no', item.po_no, cancelDbPayload);
+        if (r2) cancelledRows.push(r2);
+      } catch (_e) {}
+      if (item.sauda_no || item.po_no) {
+        try {
+          const r3 = await dbModule.update('sauda_master', 'sauda_no', item.sauda_no || item.po_no, { status: 'cancelled', is_closed: true, is_reopened: false, open_remarks: null });
+          if (r3) cancelledRows.push(r3);
+        } catch (_e) {}
+      }
+
+      if (cancelledRows.length === 0) {
+        throw new Error(`Cancel failed: no authoritative database record updated for PO #${item.po_no}.`);
+      }
+
       localStorage.setItem(`sauda_cancelled_${cleanPo}`, 'true');
       localStorage.setItem(`sauda_closed_${cleanPo}`, 'true');
       localStorage.removeItem(`sauda_reopened_${cleanPo}`);
@@ -636,13 +687,6 @@ export function usePurchaseOrderOperations({
         localStorage.setItem(`sauda_closed_${cleanSauda}`, 'true');
         localStorage.removeItem(`sauda_reopened_${cleanSauda}`);
         localStorage.removeItem(`sauda_open_remarks_${cleanSauda}`);
-      }
-
-      const cancelDbPayload = { status: 'cancelled', pending: false, is_closed: true, is_reopened: false, open_remarks: null };
-      await dbModule.update('sauda_check_point', 'po_no', item.po_no, cancelDbPayload).catch(() => {});
-      await dbModule.update('purchase_master', 'po_no', item.po_no, cancelDbPayload).catch(() => {});
-      if (item.sauda_no || item.po_no) {
-        await dbModule.update('sauda_master', 'sauda_no', item.sauda_no || item.po_no, { status: 'cancelled', is_closed: true, is_reopened: false, open_remarks: null }).catch(() => {});
       }
 
       window.dispatchEvent(new Event('storage'));
@@ -716,6 +760,35 @@ export function usePurchaseOrderOperations({
         formatted_time: formattedTime
       };
 
+      const closeDbPayload = {
+        is_closed: true,
+        is_reopened: false,
+        pending: false,
+        status: 'closed',
+        open_remarks: null,
+        close_remarks: closeRemarksPayload
+      };
+
+      const closedRows: any[] = [];
+      try {
+        const r1 = await dbModule.update('sauda_check_point', 'po_no', closeModalPo.po_no, closeDbPayload);
+        if (r1) closedRows.push(r1);
+      } catch (_e) {}
+      try {
+        const r2 = await dbModule.update('purchase_master', 'po_no', closeModalPo.po_no, closeDbPayload);
+        if (r2) closedRows.push(r2);
+      } catch (_e) {}
+      if (closeModalPo.sauda_no || closeModalPo.po_no) {
+        try {
+          const r3 = await dbModule.update('sauda_master', 'sauda_no', closeModalPo.sauda_no || closeModalPo.po_no, closeDbPayload);
+          if (r3) closedRows.push(r3);
+        } catch (_e) {}
+      }
+
+      if (closedRows.length === 0) {
+        throw new Error(`Close failed: no authoritative database record updated for PO #${closeModalPo.po_no}.`);
+      }
+
       localStorage.setItem(`sauda_closed_${cleanPo}`, 'true');
       localStorage.removeItem(`sauda_reopened_${cleanPo}`);
       localStorage.removeItem(`sauda_open_remarks_${cleanPo}`);
@@ -726,21 +799,6 @@ export function usePurchaseOrderOperations({
         localStorage.removeItem(`sauda_reopened_${cleanSauda}`);
         localStorage.removeItem(`sauda_open_remarks_${cleanSauda}`);
         localStorage.setItem(`sauda_close_remarks_${cleanSauda}`, JSON.stringify(closeRemarksPayload));
-      }
-
-      const closeDbPayload = {
-        is_closed: true,
-        is_reopened: false,
-        pending: false,
-        status: 'closed',
-        open_remarks: null,
-        close_remarks: closeRemarksPayload
-      };
-
-      await dbModule.update('sauda_check_point', 'po_no', closeModalPo.po_no, closeDbPayload).catch(() => {});
-      await dbModule.update('purchase_master', 'po_no', closeModalPo.po_no, closeDbPayload).catch(() => {});
-      if (closeModalPo.sauda_no || closeModalPo.po_no) {
-        await dbModule.update('sauda_master', 'sauda_no', closeModalPo.sauda_no || closeModalPo.po_no, closeDbPayload).catch(() => {});
       }
 
       window.dispatchEvent(new Event('storage'));
@@ -980,14 +1038,16 @@ export function usePurchaseOrderOperations({
       const filtered = await poService.fetchPoDetails(DETAIL_TABLE, poHeader.po_no);
       
       const isBales = (poHeader.purchase_unit_name || 'BALES') === 'BALES';
+      const unitWtKgs = parseFloat(poHeader.weight_unit_kgs) || (isBales ? 147.5 : 50);
       const mappedItems = filtered.map((d: any, idx: number) => {
-        const qtyVal = d.qty || d.quantity || 0;
-        const weightVal = isBales 
-          ? parseFloat(((qtyVal * 147.5) / 1000).toFixed(3)) 
-          : (d.weight || d.weight_mt || 0);
+        const qtyVal = Number(d.qty || d.quantity || 0);
+        const storedWt = Number(d.weight ?? d.weight_mt ?? 0);
+        const weightVal = storedWt > 0
+          ? storedWt
+          : (qtyVal > 0 ? parseFloat(((qtyVal * unitWtKgs) / 1000).toFixed(3)) : 0);
         return {
           srl: idx + 1,
-          crop: d.crop || d.crop_year || '2025-26',
+          crop: d.crop || d.crop_year || poHeader.financial_year || '2026-27',
           grade_code: d.grade_code || '',
           grade_name: gradeList.find(g => g.grade_code === d.grade_code)?.grade_name || d.grade_name || d.grade_code || 'STANDARD GRADE',
           agency_code: d.agency_code || '',
@@ -1020,13 +1080,13 @@ export function usePurchaseOrderOperations({
         units_per_lorry: String(poHeader.units_per_lorry || '0'),
         total_units: (poHeader.total_units !== undefined && poHeader.total_units !== null && Number(poHeader.total_units) > 0)
           ? String(poHeader.total_units)
-          : (isBales && sumQty > 0 ? sumQty.toString() : String(poHeader.total_units || '0')),
+          : (sumQty > 0 ? sumQty.toString() : String(poHeader.total_units || '0')),
         weight_per_lorry: poHeader.weight_per_lorry !== undefined && poHeader.weight_per_lorry !== null && !isNaN(Number(poHeader.weight_per_lorry)) && Number(poHeader.weight_per_lorry) > 0
           ? Number(poHeader.weight_per_lorry).toFixed(3)
           : String(poHeader.weight_per_lorry || '0.000'),
         total_contract_mt: (poHeader.total_contract_mt !== undefined && poHeader.total_contract_mt !== null && Number(poHeader.total_contract_mt) > 0)
           ? Number(poHeader.total_contract_mt).toFixed(3)
-          : (isBales && sumWt > 0 ? sumWt.toFixed(3) : String(poHeader.total_contract_mt || '0')),
+          : (sumWt > 0 ? sumWt.toFixed(3) : String(poHeader.total_contract_mt || '0')),
         marka_type: poHeader.marka_type || 'Normal',
         marka_penalty: String(poHeader.marka_penalty || '0'),
         qty_penalty: String(poHeader.qty_penalty || '5'),
@@ -1054,29 +1114,28 @@ export function usePurchaseOrderOperations({
 
   const handleDownloadPoPdf = async (poHeader: any) => {
     try {
-      const details = await dbModule.fetchAll(DETAIL_TABLE);
-      const filtered = details
-        .filter((d: any) => d.po_no === poHeader.po_no)
-        .sort((a: any, b: any) => (Number(a.srl_no || a.srl || 0) - Number(b.srl_no || b.srl || 0)));
+      const filtered = await poService.fetchPoDetails(DETAIL_TABLE, poHeader.po_no);
       
       const isBales = (poHeader.purchase_unit_name || 'BALES') === 'BALES';
+      const unitWtKgs = parseFloat(poHeader.weight_unit_kgs) || (isBales ? 147.5 : 50);
       const mappedItems = filtered.map((d: any, idx: number) => {
-        const qtyVal = d.quantity || 0;
-        const weightVal = isBales 
-          ? parseFloat(((qtyVal * 147.5) / 1000).toFixed(3)) 
-          : (d.weight_mt || 0);
+        const qtyVal = Number(d.qty || d.quantity || 0);
+        const storedWt = Number(d.weight ?? d.weight_mt ?? 0);
+        const weightVal = storedWt > 0
+          ? storedWt
+          : (qtyVal > 0 ? parseFloat(((qtyVal * unitWtKgs) / 1000).toFixed(3)) : 0);
         return {
           srl: idx + 1,
-          crop: d.crop_year || '2025-26',
+          crop: d.crop || d.crop_year || poHeader.financial_year || '2026-27',
           grade_code: d.grade_code || '',
-          grade_name: gradeList.find(g => g.grade_code === d.grade_code)?.grade_name || d.grade_code || 'STANDARD GRADE',
+          grade_name: gradeList.find(g => g.grade_code === d.grade_code)?.grade_name || d.grade_name || d.grade_code || 'STANDARD GRADE',
           agency_code: d.agency_code || '',
-          agency_name: agencyList.find(a => a.agency_code === d.agency_code)?.agency_name || d.agency_code || 'MAIN AGENCY',
+          agency_name: agencyList.find(a => a.agency_code === d.agency_code)?.agency_name || d.agency_name || d.agency_code || 'MAIN AGENCY',
           marka_code: d.marka_code || '',
-          marka_name: markaList.find(m => m.marka_code === d.marka_code)?.marka_name || d.marka_code || 'NORMAL GRADE',
+          marka_name: markaList.find(m => m.marka_code === d.marka_code)?.marka_name || d.marka_name || d.marka_code || 'NORMAL GRADE',
           qty: qtyVal,
           weight: weightVal,
-          rate: d.rate_qntl || 0
+          rate: d.rate || d.rate_qntl || 0
         };
       });
 

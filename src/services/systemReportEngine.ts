@@ -1125,27 +1125,20 @@ export async function loadAndProcessSystemReportData(): Promise<{
       ? Number(sattaRates[0].base_rate || 0) 
       : 0;
 
-    // Arrival by PO and Sauda
+    // Arrival by PO and Sauda (deduplicated per arrival row so identical po_no/contract_po_no/sauda_no never double-add weight)
     const arrivalByPo = new Map<string, number>();
     const finalArrivalSet = new Set<string>();
     (finals || []).forEach((f: any) => {
       const wt = Number(f.electronic_net_weight || f.weight_reduced || 0);
-      if (f.po_no) {
-        arrivalByPo.set(f.po_no, (arrivalByPo.get(f.po_no) || 0) + wt);
-        finalArrivalSet.add(String(f.po_no).trim().toUpperCase());
-      }
-      if (f.contract_po_no) {
-        arrivalByPo.set(f.contract_po_no, (arrivalByPo.get(f.contract_po_no) || 0) + wt);
-        finalArrivalSet.add(String(f.contract_po_no).trim().toUpperCase());
-      }
-      if (f.sauda_no) {
-        arrivalByPo.set(f.sauda_no, (arrivalByPo.get(f.sauda_no) || 0) + wt);
-        finalArrivalSet.add(String(f.sauda_no).trim().toUpperCase());
-      }
-      if (f.arrival_no) {
-        arrivalByPo.set(f.arrival_no, (arrivalByPo.get(f.arrival_no) || 0) + wt);
-        finalArrivalSet.add(String(f.arrival_no).trim().toUpperCase());
-      }
+      const rowKeys = new Set<string>(
+        [f.po_no, f.contract_po_no, f.sauda_no, f.arrival_no]
+          .map(x => String(x || '').trim())
+          .filter(Boolean)
+      );
+      rowKeys.forEach(k => {
+        arrivalByPo.set(k, (arrivalByPo.get(k) || 0) + wt);
+        finalArrivalSet.add(k.toUpperCase());
+      });
       if (f.mr_no) finalArrivalSet.add(String(f.mr_no).trim().toUpperCase());
       if (f.final_arrival_no) finalArrivalSet.add(String(f.final_arrival_no).trim().toUpperCase());
     });
@@ -1185,13 +1178,18 @@ export async function loadAndProcessSystemReportData(): Promise<{
       }
     });
 
-    // Payments by PO & MR (combining payment_master and payment_details)
+    // Payments by PO & MR (deduplicating alias keys per payment row)
     const paymentByPo = new Map<string, number>();
     (payments || []).forEach((p: any) => {
-      const amt = Number(p.payable_amt ||  0);
-      if (p.po_no) paymentByPo.set(p.po_no, (paymentByPo.get(p.po_no) || 0) + amt);
-      if (p.mr_no) paymentByPo.set(p.mr_no, (paymentByPo.get(p.mr_no) || 0) + amt);
-      if (p.voucher_no) paymentByPo.set(p.voucher_no, (paymentByPo.get(p.voucher_no) || 0) + amt);
+      const amt = Number(p.paid_amount ?? p.payable_amt ?? 0);
+      const pKeys = new Set<string>(
+        [p.po_no, p.mr_no, p.voucher_no]
+          .map(x => String(x || '').trim())
+          .filter(Boolean)
+      );
+      pKeys.forEach(k => {
+        paymentByPo.set(k, (paymentByPo.get(k) || 0) + amt);
+      });
     });
 
     (paymentDetails || []).forEach((pd: any) => {
@@ -1443,17 +1441,16 @@ export async function loadAndProcessSystemReportData(): Promise<{
       return 'Direct Purchase / Head Office';
     };
 
-    const uniquePosList: any[] = [];
-    const seenPosKeys = new Set<string>();
+    const uniquePosMap = new Map<string, any>();
 
     const pushUniquePo = (item: any, prefix: string) => {
       if (!item) return;
-      const idVal = item.sauda_id || item.po_id || item.id;
-      const rawNo = item.po_no || item.sauda_no || item.contract_po_no || item.session;
-      const key = `${prefix}_${idVal || rawNo || Math.random()}`;
-      if (!seenPosKeys.has(key)) {
-        seenPosKeys.add(key);
-        uniquePosList.push(item);
+      const rawNo = String(item.po_no || item.sauda_no || item.contract_po_no || item.session || item.id || '').trim().toUpperCase();
+      if (!rawNo) return;
+      const canonicalKey = getCleanNumberKey(rawNo) || rawNo;
+      // Later stages (FINAL_PO > SCP > SAUDA_DESK) override earlier stage for the same contract
+      if (!uniquePosMap.has(canonicalKey) || prefix === 'FINAL_PO' || prefix === 'SCP') {
+        uniquePosMap.set(canonicalKey, item);
       }
     };
 
@@ -1510,6 +1507,8 @@ export async function loadAndProcessSystemReportData(): Promise<{
         id: p.po_id || p.id
       }, 'FINAL_PO');
     });
+
+    const uniquePosList: any[] = Array.from(uniquePosMap.values());
 
     const transactionLines: ReportTransactionLine[] = [];
     let txnCounter = 1;

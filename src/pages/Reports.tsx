@@ -23,6 +23,7 @@ import {
   ReportTransactionLine,
   SystemReportDataset
 } from '../services/systemReportEngine';
+import { exportToCSV } from '../utils/exportHelpers';
 
 import { ReportFilterBar } from '../components/system-reports/ReportFilterBar';
 import { Priority1Dashboard } from '../components/system-reports/Priority1Dashboard';
@@ -193,17 +194,14 @@ export default function Reports({ onClose }: ReportsProps) {
       'Qty (MT)', 'Purchase Rate', 'Base Rate', 'Gross Value', 'Premium', 'Deductions', 'Effective Cost'
     ];
     const rows = filteredTransactions.map(t => [
-      t.txnId, t.date, t.saudaNo, t.poNo, `"${t.supplier}"`, `"${t.broker}"`, `"${t.agency}"`, `"${t.area}"`, t.grade,
+      t.txnId, t.date, t.saudaNo, t.poNo, t.supplier, t.broker, t.agency, t.area, t.grade,
       t.quantityMT, t.purchaseRate, t.baseRate, t.grossPurchaseValue, t.premiumAmount, t.deductionAmount, t.effectiveCost
     ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const encoded = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encoded);
-    link.setAttribute('download', `system_report_${activeSection}_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportToCSV(
+      `system_report_${activeSection}_${new Date().toISOString().split('T')[0]}.csv`,
+      headers,
+      rows
+    );
   };
 
   return (
