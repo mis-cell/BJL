@@ -922,56 +922,26 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     try {
       if (navigator.onLine) await flushOfflineQueue().catch(() => {});
       const [saudasData, posData, arrivalsData, scpData] = await Promise.all([
-        dbModule.fetchAll('sauda_master', 'created_at', false),
+        dbModule.fetchAll('sauda_master', 'created_at', false).catch(async () => {
+          return await dbModule.fetchAll('sauda_master').catch(async () => {
+            if (supabase) {
+              const { data } = await supabase.from('sauda_master').select('*').order('date', { ascending: false });
+              return data || [];
+            }
+            return [];
+          });
+        }),
         dbModule.fetchAll('purchase_master').catch(() => []),
         dbModule.fetchAll('temporary_material_received', 'created_at', false).catch(() => []),
         dbModule.fetchAll('sauda_check_point').catch(() => [])
       ]);
 
-      // Automatically identify Saudas that have already moved to Sauda Check Point
-      const checkPointRefs = new Set<string>();
-      (scpData || []).forEach((cp: any) => {
-        [cp.po_no, cp.contract_po_no, cp.sauda_no].filter(Boolean).forEach(ref => {
-          const s = String(ref).trim().toUpperCase();
-          checkPointRefs.add(s);
-          const digits = s.replace(/[^0-9]/g, '').replace(/^20262027/, '').replace(/^0+/, '');
-          if (digits) checkPointRefs.add(digits);
-        });
-      });
-
-      // Purge any Sauda from sauda_master and sauda_quality_details that already moved to Sauda Check Point
-      const movedSaudas = (saudasData || []).filter((s: any) => {
-        const sNo = String(s.sauda_no || '').trim().toUpperCase();
-        const sDigits = sNo.replace(/[^0-9]/g, '').replace(/^20262027/, '').replace(/^0+/, '');
-        return checkPointRefs.has(sNo) || (sDigits && checkPointRefs.has(sDigits));
-      });
-
-      if (movedSaudas.length > 0 && supabase) {
-        const idsToDelete = movedSaudas.map((s: any) => s.sauda_id || s.id).filter(Boolean);
-        const nosToDelete = movedSaudas.map((s: any) => s.sauda_no).filter(Boolean);
-        if (idsToDelete.length > 0) {
-          supabase.from('sauda_quality_details').delete().in('sauda_id', idsToDelete).then(() => {});
-          supabase.from('sauda_master').delete().in('sauda_id', idsToDelete).then(() => {});
-        }
-        if (nosToDelete.length > 0) {
-          supabase.from('sauda_quality_details').delete().in('sauda_no', nosToDelete).then(() => {});
-          supabase.from('sauda_master').delete().in('sauda_no', nosToDelete).then(() => {});
-        }
-      }
-
-      // Only retain active Saudas that have NOT moved to Sauda Check Point
-      const remainingSaudas = (saudasData || []).filter((s: any) => {
-        const sNo = String(s.sauda_no || '').trim().toUpperCase();
-        const sDigits = sNo.replace(/[^0-9]/g, '').replace(/^20262027/, '').replace(/^0+/, '');
-        return !(checkPointRefs.has(sNo) || (sDigits && checkPointRefs.has(sDigits)));
-      });
-
-      setSaudaList(remainingSaudas);
+      setSaudaList(saudasData || []);
       setPoList(posData || []);
       setArrivalsList(arrivalsData || []);
       setScpList(scpData || []);
     } catch(e) {
-      console.error(e);
+      console.error("fetchSaudas error:", e);
     } finally {
       setIsRefreshing(false);
     }
@@ -1184,8 +1154,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
     const sId = String(s.sauda_id || (s as any).id || '').trim().toUpperCase();
     const sNo = String(s.sauda_no || '').trim().toUpperCase();
-    const sSession = String(s.session || '').trim().toUpperCase();
+    const sSession = String(s.session || s.financial_year || '').trim().toUpperCase();
     const sDisplay = (formatPoNumber(s) || '').trim().toUpperCase();
+
+    if (!sNo && !sId) return false;
 
     const getCleanDigits = (str: string) => {
       if (!str) return '';
@@ -1208,7 +1180,6 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
     const sNoDigits = getCleanDigits(sNo);
     const sDisplayDigits = getCleanDigits(sDisplay);
-    const sSessionDigits = getCleanDigits(sSession);
 
     const allPoSources = [...(scpList || []), ...(poList || [])];
 
@@ -1223,15 +1194,20 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       const pPtf = String(p.ptf_no || '').trim().toUpperCase();
 
       const pTokens = [pPo, pContract, pSaudaNo, pPtf].filter(Boolean);
-      if (pTokens.some(tok => tok === sNo || tok === sDisplay || tok === sSession)) {
+      if (pTokens.some(tok => tok === sNo || tok === sDisplay)) {
         return true;
       }
 
-      for (const tok of pTokens) {
-        const tokDigits = getCleanDigits(tok);
-        if (sNoDigits && tokDigits && sNoDigits === tokDigits) return true;
-        if (sDisplayDigits && tokDigits && sDisplayDigits === tokDigits) return true;
-        if (sSessionDigits && tokDigits && sSessionDigits === tokDigits) return true;
+      if (sNoDigits && sNoDigits.length >= 2) {
+        for (const tok of pTokens) {
+          const tokDigits = getCleanDigits(tok);
+          if (tokDigits && tokDigits === sNoDigits) {
+            const pSession = String(p.session || p.financial_year || '').trim().toUpperCase();
+            if (!sSession || !pSession || sSession === pSession || pSession.includes(sSession) || sSession.includes(pSession)) {
+              return true;
+            }
+          }
+        }
       }
 
       return false;
@@ -1582,7 +1558,22 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
             </button>
 
             {/* Quick Section Switchers Beside Search */}
-            <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 shrink-0 gap-1">
+            <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 shrink-0 gap-1 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setStatusTab('all')}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                  statusTab === 'all'
+                    ? "bg-slate-900 text-white shadow-2xs"
+                    : "text-slate-700 hover:bg-slate-200"
+                )}
+                title="All Registered Contracts"
+              >
+                <span>All Contracts</span>
+                <span className="text-[10px] font-mono opacity-80">({totalSaudas})</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setStatusTab('pending')}
@@ -1594,7 +1585,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 )}
                 title="Main Dashboard (Pending Saudas)"
               >
-                <span>Main Dashboard</span>
+                <span>Pending</span>
                 <span className="text-[10px] font-mono opacity-80">({pendingSaudasCount})</span>
               </button>
 
@@ -1629,7 +1620,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                   title="Reject"
                 >
                   <X className="w-3.5 h-3.5" />
-                  <span>Reject</span>
+                  <span>Rejected</span>
                   <span className="text-[10px] font-mono opacity-80">({rejectedSaudasCount})</span>
                 </button>
               )}
@@ -1704,12 +1695,18 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                           {entry.session}
                         </td>
                       )}
-                      <td className={cn("font-bold uppercase text-xs whitespace-nowrap min-w-[130px]", isUser10 ? "px-2 max-w-[220px]" : "px-4 max-w-[150px]")}>
-                        {entry.broker}
+                      <td 
+                        className={cn("font-bold uppercase text-xs truncate overflow-hidden min-w-[180px] max-w-[240px] px-3.5 py-2.5 border-r border-[#CBD5E1]", isSelected ? "text-white" : "text-[#111111]")}
+                        title={entry.broker}
+                      >
+                        {entry.broker || '-'}
                       </td>
                       {!isUser10 && (
-                        <td className={cn("px-4 uppercase truncate max-w-[150px]", isSelected ? "text-emerald-100" : "text-slate-600")}>
-                          {entry.supplier}
+                        <td 
+                          className={cn("font-bold uppercase text-xs truncate overflow-hidden min-w-[220px] max-w-[280px] px-3.5 py-2.5 border-r border-[#CBD5E1]", isSelected ? "text-white" : "text-[#262626]")}
+                          title={entry.supplier}
+                        >
+                          {entry.supplier || '-'}
                         </td>
                       )}
                       {!isUser10 && (
