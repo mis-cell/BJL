@@ -337,7 +337,7 @@ export const InspectionHeaderCard: React.FC<InspectionHeaderCardProps> = ({
           />
         </div>
 
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 hidden" >
           <label className="text-xs font-extrabold text-slate-700">Mill P.O. No.</label>
           <input
             type="text"
@@ -347,7 +347,7 @@ export const InspectionHeaderCard: React.FC<InspectionHeaderCardProps> = ({
           />
         </div>
 
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 hidden">
           <label className="text-xs font-extrabold text-slate-700">Mill P.O. Date</label>
           <input
             type="date"
@@ -357,7 +357,7 @@ export const InspectionHeaderCard: React.FC<InspectionHeaderCardProps> = ({
           />
         </div>
 
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 hidden">
           <label className="text-xs font-extrabold text-slate-700">MR. Spcl Print</label>
           <input
             type="text"
@@ -371,8 +371,8 @@ export const InspectionHeaderCard: React.FC<InspectionHeaderCardProps> = ({
           <label className="text-xs font-extrabold text-slate-700">Lorry Number</label>
           <input
             type="text"
-            value={headerForm.lorry_number || ""}
-            onChange={(e) => onHeaderChange("lorry_number", e.target.value)}
+            value={headerForm.lorry_number.toUpperCase() || ""}
+            onChange={(e) => onHeaderChange("lorry_number", e.target.value.toUpperCase())}
             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono font-bold bg-white text-slate-900 focus:outline-none"
           />
         </div>

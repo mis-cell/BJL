@@ -52,14 +52,14 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
           </div>
           <div>
             <span className="text-[10px] text-slate-500 font-bold uppercase block">Lorry / Vehicle No</span>
-            <span className="font-mono font-bold">{viewModalData.master.lorry_number || '-'}</span>
+            <span className="font-mono font-bold">{viewModalData.master.lorry_number.toUpperCase() || '-'}</span>
           </div>
-          <div>
+          {/* <div>
             <span className="text-[10px] text-slate-500 font-bold uppercase block">Moisture (%)</span>
             <span className="font-mono font-black text-blue-900">
               {Number(viewModalData.master.summary_rate_wt_claim || 0) > 0 ? `${Number(viewModalData.master.summary_rate_wt_claim).toFixed(2)}%` : '-'}
             </span>
-          </div>
+          </div> */}
           <div>
             <span className="text-[10px] text-slate-500 font-bold uppercase block">Supplier Name</span>
             <span className="font-bold text-slate-800 uppercase">{viewModalData.master.supplier || '-'}</span>
@@ -74,10 +74,10 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
               {viewModalData.master.payable_bill_no ? `${viewModalData.master.payable_bill_no} (${viewModalData.master.payable_bill_date || '-'})` : '-'}
             </span>
           </div>
-          <div>
+          {/* <div>
             <span className="text-[10px] text-slate-500 font-bold uppercase block">Payment Status</span>
             <span className="font-bold uppercase text-emerald-700">{viewModalData.master.payment_status || 'Settled'}</span>
-          </div>
+          </div> */}
         </div>
 
         {/* Quality & Grade Specification Table */}

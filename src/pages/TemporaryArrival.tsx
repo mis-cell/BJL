@@ -766,6 +766,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     if (name === 'broker' || name === 'supplier' || name === 'challan_supplier' || name === 'arrival_area_name') {
       finalValue = (value || '').toUpperCase();
     }
+    if (name === 'date' ) {
+      formData.lorry_date = value;
+    }
     setFormData(prev => {
       const updated = {
         ...prev,
@@ -1636,7 +1639,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Challan */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="challan_rr_no_1272" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Challan No & Date / R.R. No.
+                    Challan No & Date.
                   </label>
 
                   <input

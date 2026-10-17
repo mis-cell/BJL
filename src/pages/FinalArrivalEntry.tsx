@@ -64,9 +64,9 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
               <h2 className="font-serif font-bold text-lg text-white tracking-wide flex items-center gap-2">
                 Final Arrival
               </h2>
-              <p className="text-[11px] text-emerald-200/90 font-medium mt-0.5">
+              {/* <p className="text-[11px] text-emerald-200/90 font-medium mt-0.5">
                 Enter final M.R details and receipt grid items
-              </p>
+              </p> */}
             </div>
           </div>
           {/* Action Controls & Session Badge */}

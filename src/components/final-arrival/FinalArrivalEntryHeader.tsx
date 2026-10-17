@@ -267,7 +267,7 @@ export function FinalArrivalEntryHeader({
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Challan/RR No */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">Challan / RR No.</label>
+          <label className="block text-[11px] font-bold text-slate-700 mb-1">Challan No & Date.</label>
           <input
             type="text"
             value={formData.challan_rr_no || formData.challan_railway_receipt_no || ''}
@@ -277,8 +277,10 @@ export function FinalArrivalEntryHeader({
         </div>
 
         {/* Challan/RR Date */}
-        <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">Challan / RR Date</label>
+        <div className="hidden">
+          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+            Challan No & Date.
+          </label>
           <input
             type="date"
             value={formData.challan_rr_date || ''}
@@ -292,7 +294,7 @@ export function FinalArrivalEntryHeader({
           <label className="block text-[11px] font-bold text-slate-700 mb-1">Lorry Number</label>
           <input
             type="text"
-            value={formData.lorry_number || ''}
+            value={formData.lorry_number.toUpperCase() || ''}
             onChange={(e) => handleInputChange('lorry_number', e.target.value.toUpperCase())}
             placeholder="WB-XX-XXXX"
             className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-mono font-bold uppercase focus:border-[#D94B5A]"
