@@ -164,7 +164,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       unit_name: initialData?.unit_name || 'BALES',
       way_bill_no: initialData?.way_bill_no || '',
       way_bill_date: initialData?.way_bill_date || '',
-      apmc_fees: initialData?.apmc_fees || 0,
+      apmc_fees: Number(initialData?.apmc_fees ?? (initialData as any)?.arival_apmc_fees ?? 0),
       remarks: initialData?.remarks || '',
 
       // Bottom weights
@@ -1046,7 +1046,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         unit_name: formData.unit_name,
         way_bill_no: formData.way_bill_no,
         way_bill_date: sanitizeDate(formData.way_bill_date),
-        apmc_fees: formData.apmc_fees || 0,
+        apmc_fees: Number(formData.apmc_fees) || 0,
         remarks: formData.remarks,
         total_packets: totalPacketsSum,
         weight_qtl: totalWeightSum * 10,
@@ -1124,6 +1124,14 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           const errMsg = e?.message || String(e || '');
           const match = errMsg.match(/Could not find the '([^']+)' column/i);
           if (match && match[1] && (dbPayload as any)[match[1]] !== undefined) {
+            if (match[1] === 'apmc_fees' && supabase) {
+              try {
+                await supabase.rpc('exec_sql', {
+                  query: `ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS apmc_fees NUMERIC(15,2) DEFAULT 0; NOTIFY pgrst, 'reload schema';`
+                });
+                return await operation();
+              } catch (_) {}
+            }
             console.warn(`Stripping unknown column '${match[1]}' from payload and retrying`);
             delete (dbPayload as any)[match[1]];
             return await operation();
@@ -1193,6 +1201,20 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         });
 
         alert(`Arrival Register Saved successfully!\nAdded under Arrival Voucher #${formData.arrival_no}`);
+      }
+
+      // Propagate A.P.M.C Fees (Rs.) downstream to Final Arrival, Inspection, and Settlement if linked records exist
+      const savedApmcFees = Number(formData.apmc_fees) || 0;
+      const cleanArrNo = (formData.arrival_no || '').trim();
+      if (supabase && cleanArrNo) {
+        try {
+          await Promise.all([
+            supabase.from('final_arrival').update({ apmc_fees: savedApmcFees }).or(`temporary_arrival_no.eq.${cleanArrNo},arrival_no.eq.${cleanArrNo},final_arrival_no.eq.${cleanArrNo}`).then(() => {}, () => {}),
+            supabase.from('material_inspection').update({ arival_apmc_fees: savedApmcFees }).or(`arrival_no.eq.${cleanArrNo},mr_no.eq.${cleanArrNo}`).then(() => {}, () => {}),
+            supabase.from('mill_inspection_master').update({ arival_apmc_fees: savedApmcFees }).or(`arrival_no.eq.${cleanArrNo},mr_no.eq.${cleanArrNo}`).then(() => {}, () => {}),
+            supabase.from('mr_settlement_master').update({ arival_apmc_fees: savedApmcFees }).or(`arrival_no.eq.${cleanArrNo},mr_no.eq.${cleanArrNo}`).then(() => {}, () => {})
+          ]);
+        } catch (_) {}
       }
 
       // Dynamically calculate and update status of PO & Sauda based on total received quantities/weights

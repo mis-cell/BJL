@@ -496,6 +496,9 @@ export function useInspectionLogic() {
           if (!existing.arrival_no && fa.final_arrival_no) existing.arrival_no = fa.final_arrival_no;
           if (!existing.arrival_date && fa.date) existing.arrival_date = fa.date;
           if (!existing.grid_details) existing.grid_details = fa.grid_details || fa.items || fa.details;
+          if (!Number(existing.arival_apmc_fees) && (Number(fa.apmc_fees) > 0 || Number(fa.arival_apmc_fees) > 0)) {
+            existing.arival_apmc_fees = Number(fa.apmc_fees || fa.arival_apmc_fees || 0);
+          }
         }
       });
 
@@ -790,7 +793,8 @@ export function useInspectionLogic() {
           claim_ncv: clmNcv,
           detention_days: detDays,
           mr_spcl_print: fa.mr_spcl_print || prev.mr_spcl_print || "",
-          remarks: fa.remarks || prev.remarks || ""
+          remarks: fa.remarks || prev.remarks || "",
+          arival_apmc_fees: Number(fa.apmc_fees ?? fa.arival_apmc_fees ?? prev.arival_apmc_fees ?? 0)
         };
         return next;
       });
@@ -823,6 +827,10 @@ export function useInspectionLogic() {
 
           const foundFa = faDbRes.data;
           const foundTmr = tmrDbRes.data;
+          const dbApmc = Number(foundTmr?.apmc_fees ?? foundTmr?.arival_apmc_fees ?? foundFa?.apmc_fees ?? foundFa?.arival_apmc_fees ?? 0);
+          if (dbApmc > 0) {
+            setHeaderForm(prev => ({ ...prev, arival_apmc_fees: dbApmc }));
+          }
 
           if (midRes.data && Array.isArray(midRes.data) && midRes.data.length > 0) {
             rawGridItems = midRes.data;
@@ -1473,6 +1481,7 @@ export function useInspectionLogic() {
         deduction_rate: Number(headerForm.deduction_rate) || 0,
         deduction_qty: Number(headerForm.deduction_qty) || 0,
         deduction_amount: Number(headerForm.deduction_amount) || 0,
+        arival_apmc_fees: Number(headerForm.arival_apmc_fees ?? (headerForm as any).apmc_fees ?? 0),
         status: "Completed",
         grid_details: JSON.stringify(validDetails)
       };

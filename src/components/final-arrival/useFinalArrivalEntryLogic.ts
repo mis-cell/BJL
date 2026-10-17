@@ -440,7 +440,7 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
         unit_name: (matchedAmad?.unit_name || matchedInsp?.unit_name || prev.unit_name || 'BALES').toUpperCase(),
         way_bill_no: matchedAmad?.way_bill_no || matchedInsp?.way_bill_no || prev.way_bill_no,
         way_bill_date: matchedAmad?.way_bill_date || matchedInsp?.way_bill_date || prev.way_bill_date,
-        apmc_fees: matchedAmad?.apmc_fees || matchedInsp?.apmc_fees || prev.apmc_fees,
+        apmc_fees: Number(matchedAmad?.apmc_fees ?? matchedAmad?.arival_apmc_fees ?? matchedInsp?.apmc_fees ?? matchedInsp?.arival_apmc_fees ?? prev.apmc_fees ?? 0),
         remarks: matchedAmad?.remarks || matchedInsp?.remarks || prev.remarks,
         challan_material_weight: Number(matchedAmad?.challan_material_weight) || Number(matchedInsp?.challan_material_weight) || Number(prev.challan_material_weight),
         actual_gross_weight: Number(matchedAmad?.actual_gross_weight) || Number(matchedInsp?.actual_gross_weight) || Number(prev.actual_gross_weight),
@@ -682,7 +682,7 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
         unit_name: matchedInspection?.unit_name || amadData?.unit_name || prev.unit_name,
         way_bill_no: matchedInspection?.way_bill_no || amadData?.way_bill_no || prev.way_bill_no,
         way_bill_date: matchedInspection?.way_bill_date || amadData?.way_bill_date || prev.way_bill_date,
-        apmc_fees: matchedInspection?.apmc_fees || amadData?.apmc_fees || prev.apmc_fees,
+        apmc_fees: Number(matchedInspection?.apmc_fees ?? (matchedInspection as any)?.arival_apmc_fees ?? amadData?.apmc_fees ?? (amadData as any)?.arival_apmc_fees ?? prev.apmc_fees ?? 0),
         remarks: matchedInspection?.remarks || amadData?.remarks || prev.remarks,
         temporary_arrival_no: matchedInspection?.arrival_no || amadData?.temporary_arrival_no || amadData?.amad_no || prev.temporary_arrival_no,
         arrival_no: matchedInspection?.arrival_no || amadData?.temporary_arrival_no || amadData?.amad_no || prev.temporary_arrival_no,
@@ -959,6 +959,10 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
           if (matchedArea) {
             next.arrival_area_code = matchedArea.area_code;
           }
+        }
+        const matchedTemp = temporaryArrivalList.find((t: any) => String(t.po_no || '').trim().toUpperCase() === valUpper && Number(t.apmc_fees ?? t.arival_apmc_fees ?? 0) > 0);
+        if (matchedTemp && !Number(next.apmc_fees)) {
+          next.apmc_fees = Number(matchedTemp.apmc_fees ?? matchedTemp.arival_apmc_fees ?? 0);
         }
         if (!next.temporary_arrival_no && (!details || details.length === 0 || !details.some(d => d.receipt_grade_name || d.netto_pnto > 0))) {
           loadDetailsFromPo(valUpper);
@@ -1250,7 +1254,7 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
         way_bill_no: formData.way_bill_no,
         way_bill_date: sanitizeDate(formData.way_bill_date),
         rr_gr_no: formData.rr_gr_no || '',
-        apmc_fees: formData.apmc_fees || 0,
+        apmc_fees: Number(formData.apmc_fees) || 0,
         remarks: formData.remarks,
         temporary_arrival_no: formData.temporary_arrival_no,
         temporary_arrival_date: sanitizeDate(formData.temporary_arrival_date),

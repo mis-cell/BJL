@@ -457,9 +457,19 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         return existing ? { ...emptyDetailColumn(idx), ...existing } : (detailCols[idx-1] || emptyDetailColumn(idx));
       });
 
+      let viewApmcFees = Number(activeMaster.arival_apmc_fees ?? activeMaster.apmc_fees ?? 0);
+      if (viewApmcFees <= 0) {
+        viewApmcFees = await resolveTemporaryArrivalApmcFees({
+          candidateNos: [activeMaster.arrival_no, activeMaster.mr_no, targetMrNo],
+          poNo: activeMaster.po_no || '',
+          lorryNo: activeMaster.lorry_number || ''
+        });
+      }
+
       setViewModalData({
         master: {
           ...activeMaster,
+          arival_apmc_fees: viewApmcFees,
           deductions: deductionsList
         },
         details: activeDetails
@@ -791,6 +801,138 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     }
   };
 
+  const resolveTemporaryArrivalApmcFees = async (params: {
+    candidateNos?: (string | undefined | null)[];
+    poNo?: string | null;
+    lorryNo?: string | null;
+    faMaster?: any;
+    inspMaster?: any;
+  }): Promise<number> => {
+    try {
+      const cleanCode = (v: any) => String(v || '').trim().replace(/^#/, '').toUpperCase();
+      const cleanLorry = (v: any) => String(v || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const getFee = (rec: any) => {
+        if (!rec) return 0;
+        const val = Number(rec.apmc_fees ?? rec.arival_apmc_fees ?? rec.arrival_apmc_fees ?? 0);
+        return isNaN(val) ? 0 : val;
+      };
+
+      const validCandidates = Array.from(
+        new Set(
+          (params.candidateNos || [])
+            .map(cleanCode)
+            .filter(c => c.length > 0 && c !== 'MR' && c !== 'FA' && c !== 'N/A')
+        )
+      );
+      const poUpper = cleanCode(params.poNo);
+      const lorryNorm = cleanLorry(params.lorryNo);
+
+      const [tempRes, dbTemp] = await Promise.all([
+        supabase ? supabase.from('temporary_material_received').select('*').then(r => r.data || [], () => []) : Promise.resolve([]),
+        dbModule.fetchAll('temporary_material_received').catch(() => [])
+      ]);
+
+      const allTemp = [...(tempRes || []), ...(dbTemp || [])];
+
+      if (allTemp.length > 0) {
+        const pickBest = (matches: any[]) => {
+          if (matches.length === 0) return null;
+          const withFee = matches.find(m => getFee(m) > 0);
+          return withFee || matches[0];
+        };
+
+        // Tier 1: Exact match on temporary_arrival_no / amad_no / arrival_no / mr_no
+        const tier1Matches = validCandidates.length > 0
+          ? allTemp.filter((t: any) => {
+              const tCodes = [
+                cleanCode(t.temporary_arrival_no),
+                cleanCode(t.amad_no),
+                cleanCode(t.arrival_no),
+                cleanCode(t.mr_no)
+              ].filter(Boolean);
+              return tCodes.some(tc => validCandidates.includes(tc));
+            })
+          : [];
+
+        // Tier 2: Match on both PO No and normalized Lorry Number
+        const tier2Matches = (poUpper && lorryNorm.length >= 4)
+          ? allTemp.filter((t: any) => {
+              const tPo = cleanCode(t.po_no);
+              const tLorry = cleanLorry(t.lorry_number || t.lorry_no || t.vehicle_no);
+              return tPo === poUpper && tLorry === lorryNorm;
+            })
+          : [];
+
+        // Tier 3: Match on normalized Lorry Number
+        const tier3Matches = (lorryNorm.length >= 4)
+          ? allTemp.filter((t: any) => {
+              const tLorry = cleanLorry(t.lorry_number || t.lorry_no || t.vehicle_no);
+              return tLorry === lorryNorm;
+            })
+          : [];
+
+        // Tier 4: Match on PO No
+        const tier4Matches = poUpper
+          ? allTemp.filter((t: any) => cleanCode(t.po_no) === poUpper)
+          : [];
+
+        const matchedTemp =
+          pickBest(tier1Matches) ||
+          pickBest(tier2Matches) ||
+          pickBest(tier3Matches) ||
+          pickBest(tier4Matches);
+
+        const tempFee = getFee(matchedTemp);
+        if (tempFee > 0) {
+          return tempFee;
+        }
+      }
+
+      // Check Final Arrival / Inspection Master records passed in
+      const directFee = getFee(params.faMaster) || getFee(params.inspMaster);
+      if (directFee > 0) {
+        return directFee;
+      }
+
+      // Fallback: Check amad_change_history in case apmc_fees was recorded in new_values audit JSON
+      const [histRes, dbHist] = await Promise.all([
+        supabase ? supabase.from('amad_change_history').select('amad_no, new_values').order('changed_at', { ascending: false }).limit(200).then(r => r.data || [], () => []) : Promise.resolve([]),
+        dbModule.fetchAll('amad_change_history').catch(() => [])
+      ]);
+      const allHist = [...(histRes || []), ...(dbHist || [])];
+      for (const h of allHist) {
+        if (!h?.new_values) continue;
+        try {
+          const parsed = typeof h.new_values === 'string' ? JSON.parse(h.new_values) : h.new_values;
+          const fee = getFee(parsed);
+          if (fee <= 0) continue;
+
+          const hAmad = cleanCode(h.amad_no || parsed.temporary_arrival_no || parsed.amad_no || parsed.arrival_no);
+          const hPo = cleanCode(parsed.po_no);
+          const hLorry = cleanLorry(parsed.lorry_number || parsed.lorry_no);
+
+          const isMatch =
+            (hAmad && validCandidates.includes(hAmad)) ||
+            (poUpper && lorryNorm.length >= 4 && hPo === poUpper && hLorry === lorryNorm) ||
+            (lorryNorm.length >= 4 && hLorry === lorryNorm) ||
+            (poUpper && hPo === poUpper);
+
+          if (isMatch) {
+            if (supabase && hAmad) {
+              supabase.from('temporary_material_received').update({ apmc_fees: fee }).eq('temporary_arrival_no', hAmad).then(() => {}, () => {});
+            }
+            return fee;
+          }
+        } catch (_) {}
+      }
+
+      return 0;
+    } catch (e) {
+      console.warn("Could not resolve temporary arrival APMC fees:", e);
+      return 0;
+    }
+  };
+
   const handlePoNoSelection = async (poNo: string, preserveMrNo: boolean = false) => {
     setSelectedPoNo(poNo);
     if (!poNo) {
@@ -1026,6 +1168,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           );
         });
 
+        const poArrivalApmcFees = await resolveTemporaryArrivalApmcFees({
+          poNo: poData.po_no || cleanPoNo
+        });
+
         setMasterData(prev => ({
           ...initialMaster(),
           po_no: poData.po_no || cleanPoNo,
@@ -1036,6 +1182,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           po_type: poData.po_type || 'MILL_PO',
           rate_qntl: Number(poData.rate_qntl || poData.rate_mt || poData.b_rate || 0),
           sett_date: prev.sett_date || new Date().toISOString().split('T')[0],
+          arival_apmc_fees: poArrivalApmcFees,
           mr_no: '',
           lorry_number: '',
           arrival_no: '',
@@ -1069,11 +1216,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       if (!supabase) return;
 
       // 1. Fetch source records first (final_arrival or mill_inspection_master & details) for enrichment
-      const { data: faMaster } = await supabase
+      const { data: faMasterList } = await supabase
         .from('final_arrival')
         .select('*')
-        .or(`mr_no.eq.${targetMrNo},final_arrival_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`)
-        .maybeSingle();
+        .or(`mr_no.eq.${targetMrNo},final_arrival_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo},temporary_arrival_no.eq.${targetMrNo}`)
+        .limit(1);
+      const faMaster = faMasterList?.[0] || null;
 
       let faGridArr: any[] = [];
       if (faMaster?.grid_details) {
@@ -1085,8 +1233,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       let inspMaster: any = null;
       try {
-        const matInspRes = await supabase.from('material_inspection').select('*').or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).maybeSingle();
-        inspMaster = matInspRes?.data || null;
+        const matInspRes = await supabase.from('material_inspection').select('*').or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).limit(1);
+        inspMaster = matInspRes?.data?.[0] || null;
+        if (!inspMaster) {
+          const millInspRes = await supabase.from('mill_inspection_master').select('*').or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).limit(1);
+          inspMaster = millInspRes?.data?.[0] || null;
+        }
       } catch (e) {
         console.warn("Error fetching inspection master:", e);
       }
@@ -1169,43 +1321,22 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
 
       // Fetch Temporary Arrival record to retrieve A.P.M.C Fees (Rs.)
-      let tempArrivalData: any = null;
-      try {
-        const poNo = poNoForDet;
-        const lorryNo = faMaster?.lorry_number || inspMaster?.lorry_number || '';
-        const arrNo = faMaster?.final_arrival_no || faMaster?.arrival_no || inspMaster?.arrival_no || targetMrNo;
-
-        const [tempRes, dbTemp] = await Promise.all([
-          supabase.from('temporary_material_received').select('*'),
-          dbModule.fetchAll('temporary_material_received').catch(() => [])
-        ]);
-        const allTemp = [...(tempRes.data || []), ...(dbTemp || [])];
-
-        if (allTemp.length > 0) {
-          const match = allTemp.find((t: any) => {
-            const tAmad = String(t.amad_no || t.temporary_arrival_no || t.arrival_no || '').trim().toUpperCase();
-            const tLorry = String(t.lorry_number || t.vehicle_no || '').trim().toUpperCase();
-            const tPo = String(t.po_no || '').trim().toUpperCase();
-            const targetUpper = String(arrNo || targetMrNo).trim().toUpperCase();
-            const lorryUpper = String(lorryNo).trim().toUpperCase();
-            const poUpper = String(poNo).trim().toUpperCase();
-
-            return (
-              (targetUpper && (tAmad === targetUpper || tAmad.includes(targetUpper) || targetUpper.includes(tAmad))) ||
-              (tLorry && lorryUpper && (tLorry === lorryUpper || tLorry.includes(lorryUpper) || lorryUpper.includes(tLorry))) ||
-              (tPo && poUpper && tPo === poUpper && tLorry && lorryUpper && tLorry === lorryUpper) ||
-              (tPo && poUpper && tPo === poUpper)
-            );
-          });
-          if (match) tempArrivalData = match;
-        }
-      } catch (e) {
-        console.warn("Could not fetch temporary arrival APMC fees:", e);
-      }
-
-      const resolvedArrivalApmcFees = Number(
-        tempArrivalData?.apmc_fees ?? tempArrivalData?.arival_apmc_fees ?? faMaster?.apmc_fees ?? faMaster?.arival_apmc_fees ?? inspMaster?.apmc_fees ?? 0
-      );
+      const resolvedArrivalApmcFees = await resolveTemporaryArrivalApmcFees({
+        candidateNos: [
+          faMaster?.temporary_arrival_no,
+          faMaster?.arrival_no,
+          faMaster?.final_arrival_no,
+          faMaster?.mr_no,
+          inspMaster?.arrival_no,
+          inspMaster?.ref_arrival_no,
+          inspMaster?.mr_no,
+          targetMrNo
+        ],
+        poNo: poNoForDet || cleanTargetPo,
+        lorryNo: faMaster?.lorry_number || faMaster?.lorry_no || inspMaster?.lorry_number || inspMaster?.lorry_no || '',
+        faMaster,
+        inspMaster
+      });
 
       const { totalPaid: syncedPaidAmount, payDetails: matchedPayDetails } = await syncPaymentModuleData(targetMrNo, poNoForDet);
 

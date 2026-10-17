@@ -909,6 +909,7 @@ if (supabase) {
       `ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS consignment_date DATE;`,
       `ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS arrival_remarks TEXT;`,
       `ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;`,
+      `ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS apmc_fees NUMERIC DEFAULT 0;`,
       `ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS grid_details JSONB;`,
       `ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS details JSONB;`,
       `ALTER TABLE IF EXISTS material_inspection ADD COLUMN IF NOT EXISTS company_id TEXT;`,
@@ -1048,6 +1049,10 @@ if (supabase) {
       `ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS auto_ho_settlement BOOLEAN DEFAULT FALSE;`,
       `ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS detention_days INTEGER DEFAULT 0;`,
       `ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS arrival_no TEXT;`,
+      `ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC(15,2) DEFAULT 0;`,
+      `ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS apmc_fees NUMERIC(15,2) DEFAULT 0;`,
+      `ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS actual_apmc_fees NUMERIC(15,2) DEFAULT 0;`,
+      `ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS final_apmc_fees NUMERIC(15,2) DEFAULT 0;`,
       `ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS arrival_date DATE;`,
       `ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC(15,2) DEFAULT 0.00;`,
       `ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS actual_apmc_fees NUMERIC(15,2) DEFAULT 0.00;`,
@@ -1211,6 +1216,8 @@ if (supabase) {
       `ALTER TABLE IF EXISTS closing_stock ADD COLUMN IF NOT EXISTS unit VARCHAR(50) DEFAULT 'BALES';`,
       `ALTER TABLE IF EXISTS closing_stock ADD COLUMN IF NOT EXISTS quantity NUMERIC(15,3) DEFAULT 0.00;`,
       `ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';`,
+      `ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS apmc_fees NUMERIC(15,2) DEFAULT 0;`,
+      `ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC(15,2) DEFAULT 0;`,
       `ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS consignment_note TEXT;`,
       `ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS consignment_note_no TEXT;`,
       `ALTER TABLE IF EXISTS temporary_material_received ADD COLUMN IF NOT EXISTS challan_railway_receipt_no TEXT;`,
@@ -1220,6 +1227,8 @@ if (supabase) {
       `UPDATE temporary_material_received SET challan_railway_receipt_no = challan_rr_no WHERE challan_railway_receipt_no IS NULL AND challan_rr_no IS NOT NULL;`,
       `UPDATE temporary_material_received SET challan_rr_no = challan_railway_receipt_no WHERE challan_rr_no IS NULL AND challan_railway_receipt_no IS NOT NULL;`,
       `ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';`,
+      `ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS apmc_fees NUMERIC(15,2) DEFAULT 0;`,
+      `ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC(15,2) DEFAULT 0;`,
       `ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS temporary_arrival_no TEXT;`,
       `ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS temporary_arrival_date DATE;`,
       `ALTER TABLE IF EXISTS final_arrival ADD COLUMN IF NOT EXISTS final_arrival_no TEXT;`,
@@ -1953,26 +1962,26 @@ if (supabase) {
       `ALTER TABLE IF EXISTS party_ledger DISABLE ROW LEVEL SECURITY;`,
       // Ledger Triggers
       `CREATE OR REPLACE FUNCTION trg_payment_master_ledger()
-       RETURNS TRIGGER AS $
+       RETURNS TRIGGER AS $$
        BEGIN
           INSERT INTO party_ledger (party_id, party_name, transaction_date, transaction_type, reference_no, debit, credit, remarks)
           VALUES (NEW.party_id, NEW.party_name, NEW.payment_date, 'Payment', NEW.voucher_no, NEW.total_amount, 0.00, NEW.remarks);
           RETURN NEW;
        END;
-       $ LANGUAGE plpgsql;`,
+       $$ LANGUAGE plpgsql;`,
       `DROP TRIGGER IF EXISTS trg_payment_master_ledger_insert ON payment_master;`,
       `CREATE TRIGGER trg_payment_master_ledger_insert
        AFTER INSERT ON payment_master
        FOR EACH ROW EXECUTE FUNCTION trg_payment_master_ledger();`,
        
       `CREATE OR REPLACE FUNCTION trg_mr_settlement_ledger()
-       RETURNS TRIGGER AS $
+       RETURNS TRIGGER AS $$
        BEGIN
           INSERT INTO party_ledger (party_id, party_name, transaction_date, transaction_type, reference_no, debit, credit, remarks)
           VALUES (NEW.supplier, NEW.supplier, NEW.sett_date, 'MR Approved', NEW.mr_no, 0.00, COALESCE(NEW.payable_amt, 0.00), NEW.remarks);
           RETURN NEW;
        END;
-       $ LANGUAGE plpgsql;`,
+       $$ LANGUAGE plpgsql;`,
       `DROP TRIGGER IF EXISTS trg_mr_settlement_ledger_insert ON mr_settlement_master;`,
       `CREATE TRIGGER trg_mr_settlement_ledger_insert
        AFTER INSERT ON mr_settlement_master
@@ -1990,7 +1999,7 @@ if (supabase) {
        SELECT 'JULY TO DECEMBER (DRY SEASON)', 'Standard / Non-DAISEE', 'Moisture threshold limit is 18%'
        WHERE NOT EXISTS (SELECT 1 FROM moisture_logic WHERE season = 'JULY TO DECEMBER (DRY SEASON)' AND operating_area = 'Standard / Non-DAISEE');`,
       // Rename vehicle tracking columns to lorry_number
-      `DO $ 
+      `DO $$ 
        BEGIN 
          IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='temporary_material_received' AND column_name='lorry_no') THEN 
            ALTER TABLE temporary_material_received RENAME COLUMN lorry_no TO lorry_number; 
@@ -2012,7 +2021,7 @@ if (supabase) {
          END IF; 
          
          -- Recreate any views if necessary, or just rely on the new column names
-       END $;`,
+       END $$;`,
       `ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS deductions JSONB;`,
       // Self-heal: if an earlier Temp/Final split left POs only in sauda_check_point,
       // pull them back into purchase_master so the single-table (status-based) split
