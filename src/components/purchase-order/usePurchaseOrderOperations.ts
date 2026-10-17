@@ -397,7 +397,8 @@ export function usePurchaseOrderOperations({
 
       if (supabase) {
         try { await supabase.from('material_inspection').update({ pass_status: 'pass', status: 'resolved' }).eq('po_no', targetPo.po_no); } catch (e) {}
-        try { await supabase.from('sauda_check_point').update({ pass_status: 'pass', mismatch_cleared: true, workflow_stage: 'final_po' }).eq('po_no', targetPo.po_no); } catch (e) {}
+        await dbModule.update('purchase_master', 'po_no', targetPo.po_no, { pass_status: 'pass', mismatch_cleared: true, workflow_stage: 'final_po' }).catch(() => {});
+        await dbModule.update('sauda_check_point', 'po_no', targetPo.po_no, { pass_status: 'pass', mismatch_cleared: true, workflow_stage: 'final_po' }).catch(() => {});
       }
 
       setPoList(prev => prev.map(p => {
@@ -469,7 +470,7 @@ export function usePurchaseOrderOperations({
       });
 
       const cleanPo = String(reopenAuthModalPo.po_no || '').trim().toUpperCase();
-      const cleanSauda = String(reopenAuthModalPo.sauda_no || '').trim().toUpperCase();
+      const cleanSauda = String(reopenAuthModalPo.sauda_no || reopenAuthModalPo.contract_po_no || '').trim().toUpperCase();
 
       let existingOpenRemarks: any = reopenAuthModalPo.open_remarks;
       if (typeof existingOpenRemarks === 'string') {
@@ -498,65 +499,28 @@ export function usePurchaseOrderOperations({
 
       localStorage.setItem(`sauda_reopened_${cleanPo}`, 'true');
       localStorage.removeItem(`sauda_closed_${cleanPo}`);
+      localStorage.removeItem(`sauda_cancelled_${cleanPo}`);
       localStorage.setItem(`sauda_open_remarks_${cleanPo}`, JSON.stringify(openRemarksPayload));
       if (cleanSauda) {
         localStorage.setItem(`sauda_reopened_${cleanSauda}`, 'true');
         localStorage.removeItem(`sauda_closed_${cleanSauda}`);
+        localStorage.removeItem(`sauda_cancelled_${cleanSauda}`);
         localStorage.setItem(`sauda_open_remarks_${cleanSauda}`, JSON.stringify(openRemarksPayload));
       }
 
-      if (supabase) {
-        try {
-          await supabase
-            .from('sauda_check_point')
-            .update({
-              is_closed: false,
-              is_reopened: true,
-              status: 'open',
-              open_remarks: openRemarksPayload
-            })
-            .eq('po_no', reopenAuthModalPo.po_no);
-        } catch (err) {
-          console.warn("Update sauda_check_point open_remarks error:", err);
-        }
+      const reopenDbPayload = {
+        is_closed: false,
+        is_reopened: true,
+        pending: true,
+        status: 'open',
+        open_remarks: openRemarksPayload
+      };
 
-        try {
-          await supabase
-            .from('sauda_master')
-            .update({
-              is_closed: false,
-              is_reopened: true,
-              status: 'open',
-              open_remarks: openRemarksPayload
-            })
-            .or(`sauda_no.eq.${reopenAuthModalPo.po_no},po_no.eq.${reopenAuthModalPo.po_no}`);
-        } catch (err) {
-          console.warn("Update sauda_master open_remarks error:", err);
-        }
-
-        try {
-          await supabase
-            .from('purchase_master')
-            .update({
-              is_closed: false,
-              is_reopened: true,
-              status: 'open',
-              open_remarks: openRemarksPayload
-            })
-            .eq('po_no', reopenAuthModalPo.po_no);
-        } catch (err) {
-          console.warn("Update purchase_master open_remarks error:", err);
-        }
+      await dbModule.update('sauda_check_point', 'po_no', reopenAuthModalPo.po_no, reopenDbPayload).catch(() => {});
+      await dbModule.update('purchase_master', 'po_no', reopenAuthModalPo.po_no, reopenDbPayload).catch(() => {});
+      if (reopenAuthModalPo.sauda_no || reopenAuthModalPo.po_no) {
+        await dbModule.update('sauda_master', 'sauda_no', reopenAuthModalPo.sauda_no || reopenAuthModalPo.po_no, reopenDbPayload).catch(() => {});
       }
-
-      try {
-        await dbModule.update('sauda_check_point', 'po_no', reopenAuthModalPo.po_no, {
-          is_closed: false,
-          is_reopened: true,
-          status: 'open',
-          open_remarks: openRemarksPayload
-        });
-      } catch (e) {}
 
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('sauda_status_changed', {
@@ -580,6 +544,7 @@ export function usePurchaseOrderOperations({
         ...reopenAuthModalPo,
         is_closed: false,
         is_reopened: true,
+        pending: true,
         status: 'open',
         open_remarks: openRemarksPayload
       };
@@ -617,7 +582,7 @@ export function usePurchaseOrderOperations({
 
     const isCurrentlyCancelled = item.status === 'cancelled';
     const cleanPo = String(item.po_no || '').trim().toUpperCase();
-    const cleanSauda = String(item.sauda_no || '').trim().toUpperCase();
+    const cleanSauda = String(item.sauda_no || item.contract_po_no || '').trim().toUpperCase();
 
     if (isCurrentlyCancelled) {
       const confirmRestore = await askConfirm(
@@ -634,14 +599,11 @@ export function usePurchaseOrderOperations({
           localStorage.removeItem(`sauda_closed_${cleanSauda}`);
         }
 
-        if (supabase) {
-          await supabase.from('sauda_check_point').update({ status: 'pending', is_closed: false }).eq('po_no', item.po_no);
-          await supabase.from('sauda_master').update({ status: 'active', is_closed: false }).or(`sauda_no.eq.${item.po_no},po_no.eq.${item.po_no}`);
-          await supabase.from('purchase_master').update({ status: 'pending', is_closed: false }).eq('po_no', item.po_no);
+        await dbModule.update('sauda_check_point', 'po_no', item.po_no, { status: 'pending', pending: true, is_closed: false }).catch(() => {});
+        await dbModule.update('purchase_master', 'po_no', item.po_no, { status: 'pending', pending: true, is_closed: false }).catch(() => {});
+        if (item.sauda_no || item.po_no) {
+          await dbModule.update('sauda_master', 'sauda_no', item.sauda_no || item.po_no, { status: 'active', is_closed: false }).catch(() => {});
         }
-        try {
-          await dbModule.update('sauda_check_point', 'po_no', item.po_no, { status: 'pending', is_closed: false });
-        } catch (e) {}
 
         window.dispatchEvent(new Event('storage'));
         window.dispatchEvent(new CustomEvent('sauda_status_changed', { detail: { po_no: item.po_no, status: 'pending' } }));
@@ -667,31 +629,18 @@ export function usePurchaseOrderOperations({
     try {
       localStorage.setItem(`sauda_cancelled_${cleanPo}`, 'true');
       localStorage.setItem(`sauda_closed_${cleanPo}`, 'true');
+      localStorage.removeItem(`sauda_reopened_${cleanPo}`);
       if (cleanSauda) {
         localStorage.setItem(`sauda_cancelled_${cleanSauda}`, 'true');
         localStorage.setItem(`sauda_closed_${cleanSauda}`, 'true');
+        localStorage.removeItem(`sauda_reopened_${cleanSauda}`);
       }
 
-      if (supabase) {
-        await supabase
-          .from('sauda_check_point')
-          .update({ status: 'cancelled', is_closed: true })
-          .eq('po_no', item.po_no);
-
-        await supabase
-          .from('sauda_master')
-          .update({ status: 'cancelled', is_closed: true })
-          .or(`sauda_no.eq.${item.po_no},po_no.eq.${item.po_no}`);
-
-        await supabase
-          .from('purchase_master')
-          .update({ status: 'cancelled', is_closed: true })
-          .eq('po_no', item.po_no);
+      await dbModule.update('sauda_check_point', 'po_no', item.po_no, { status: 'cancelled', pending: false, is_closed: true, is_reopened: false }).catch(() => {});
+      await dbModule.update('purchase_master', 'po_no', item.po_no, { status: 'cancelled', pending: false, is_closed: true, is_reopened: false }).catch(() => {});
+      if (item.sauda_no || item.po_no) {
+        await dbModule.update('sauda_master', 'sauda_no', item.sauda_no || item.po_no, { status: 'cancelled', is_closed: true, is_reopened: false }).catch(() => {});
       }
-
-      try {
-        await dbModule.update('sauda_check_point', 'po_no', item.po_no, { status: 'cancelled', is_closed: true });
-      } catch (e) {}
 
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('sauda_status_changed', { detail: { po_no: item.po_no, status: 'cancelled' } }));
@@ -753,7 +702,7 @@ export function usePurchaseOrderOperations({
       });
 
       const cleanPo = String(closeModalPo.po_no || '').trim().toUpperCase();
-      const cleanSauda = String(closeModalPo.sauda_no || '').trim().toUpperCase();
+      const cleanSauda = String(closeModalPo.sauda_no || closeModalPo.contract_po_no || '').trim().toUpperCase();
 
       const closeRemarksPayload = {
         remarks: (remarks || '').trim() || 'Closed manually by Level 4 / Admin',
@@ -766,66 +715,29 @@ export function usePurchaseOrderOperations({
 
       localStorage.setItem(`sauda_closed_${cleanPo}`, 'true');
       localStorage.removeItem(`sauda_reopened_${cleanPo}`);
+      localStorage.removeItem(`sauda_open_remarks_${cleanPo}`);
       localStorage.setItem(`sauda_close_remarks_${cleanPo}`, JSON.stringify(closeRemarksPayload));
 
       if (cleanSauda) {
         localStorage.setItem(`sauda_closed_${cleanSauda}`, 'true');
         localStorage.removeItem(`sauda_reopened_${cleanSauda}`);
+        localStorage.removeItem(`sauda_open_remarks_${cleanSauda}`);
         localStorage.setItem(`sauda_close_remarks_${cleanSauda}`, JSON.stringify(closeRemarksPayload));
       }
 
-      if (supabase) {
-        try {
-          await supabase
-            .from('sauda_check_point')
-            .update({
-              is_closed: true,
-              is_reopened: false,
-              status: 'closed',
-              close_remarks: closeRemarksPayload
-            })
-            .eq('po_no', closeModalPo.po_no);
-        } catch (err) {
-          console.warn("Update sauda_check_point close error:", err);
-        }
+      const closeDbPayload = {
+        is_closed: true,
+        is_reopened: false,
+        pending: false,
+        status: 'closed',
+        close_remarks: closeRemarksPayload
+      };
 
-        try {
-          await supabase
-            .from('sauda_master')
-            .update({
-              is_closed: true,
-              is_reopened: false,
-              status: 'closed',
-              close_remarks: closeRemarksPayload
-            })
-            .or(`sauda_no.eq.${closeModalPo.po_no},po_no.eq.${closeModalPo.po_no}`);
-        } catch (err) {
-          console.warn("Update sauda_master close error:", err);
-        }
-
-        try {
-          await supabase
-            .from('purchase_master')
-            .update({
-              is_closed: true,
-              is_reopened: false,
-              status: 'closed',
-              close_remarks: closeRemarksPayload
-            })
-            .eq('po_no', closeModalPo.po_no);
-        } catch (err) {
-          console.warn("Update purchase_master close error:", err);
-        }
+      await dbModule.update('sauda_check_point', 'po_no', closeModalPo.po_no, closeDbPayload).catch(() => {});
+      await dbModule.update('purchase_master', 'po_no', closeModalPo.po_no, closeDbPayload).catch(() => {});
+      if (closeModalPo.sauda_no || closeModalPo.po_no) {
+        await dbModule.update('sauda_master', 'sauda_no', closeModalPo.sauda_no || closeModalPo.po_no, closeDbPayload).catch(() => {});
       }
-
-      try {
-        await dbModule.update('sauda_check_point', 'po_no', closeModalPo.po_no, {
-          is_closed: true,
-          is_reopened: false,
-          status: 'closed',
-          close_remarks: closeRemarksPayload
-        });
-      } catch (e) {}
 
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('sauda_status_changed', {
@@ -946,9 +858,9 @@ export function usePurchaseOrderOperations({
           marka_type: source?.marka_type || item.marka_type || null,
           marka_penalty: source?.marka_penalty || item.marka_penalty || 0,
           qty_penalty: source?.qty_penalty || item.qty_penalty || 5,
-          delivery_from: source?.delivery_from || source?.shipment_date || item.delivery_from || item.shipment_date || null,
-          delivery_to: source?.delivery_to || source?.shipment_date || item.delivery_to || item.shipment_date || null,
-          grace_days: source?.grace_days || source?.shipment_days || item.grace_days || 0,
+          delivery_from: item.delivery_from || source?.delivery_from || source?.shipment_date || item.shipment_date || null,
+          delivery_to: item.delivery_to || source?.delivery_to || source?.shipment_date || item.shipment_date || null,
+          grace_days: item.grace_days ?? source?.grace_days ?? source?.shipment_days ?? 0,
           delivery_penalty: source?.delivery_penalty || source?.shipment_penalty || item.delivery_penalty || 0,
           contract_po_no: source?.contract_po_no || item.contract_po_no || '',
           contract_date: source?.contract_date || source?.date || item.contract_date || null,
@@ -969,10 +881,7 @@ export function usePurchaseOrderOperations({
           }
         }
         
-        const upsertRes = await supabase.from('purchase_master').upsert(poPayload, { onConflict: 'po_no' });
-        if (upsertRes.error) {
-          throw new Error(upsertRes.error.message);
-        }
+        await dbModule.upsert('purchase_master', poPayload, 'po_no');
         
         if (scpDetails && scpDetails.length > 0) {
           const isBales = (rawPayload.purchase_unit_name || 'BALES') === 'BALES';
@@ -1006,19 +915,21 @@ export function usePurchaseOrderOperations({
             };
           });
           await supabase.from('purchase_detail_master').delete().eq('po_no', item.po_no);
-          await supabase.from('purchase_detail_master').insert(detailRows);
+          for (const row of detailRows) {
+            await dbModule.insert('purchase_detail_master', row).catch(() => {});
+          }
         }
         
         await supabase.from('sauda_check_point_details').delete().eq('po_no', item.po_no);
         await supabase.from('sauda_check_point').delete().eq('po_no', item.po_no);
 
         try {
-          await supabase.from('material_mismatch').update({ status: 'resolved', approved_by: 'Admin L5', remarks: 'Passed to Final P.O' }).eq('po_no', item.po_no);
-          await supabase.from('satta_mismatch').update({ status: 'resolved', approved_by: 'Admin L5', remarks: 'Passed to Final P.O' }).eq('po_no', item.po_no);
+          await dbModule.update('material_mismatch', 'po_no', item.po_no, { status: 'resolved', approved_by: 'Admin L5', remarks: 'Passed to Final P.O' }).catch(() => {});
+          await dbModule.update('satta_mismatch', 'po_no', item.po_no, { status: 'resolved', approved_by: 'Admin L5', remarks: 'Passed to Final P.O' }).catch(() => {});
           if (saudaNo) {
-            await supabase.from('satta_mismatch').update({ status: 'resolved', approved_by: 'Admin L5', remarks: 'Passed to Final P.O' }).eq('sauda_no', saudaNo);
-            await supabase.from('sauda_master').update({ mismatch_cleared: true, satta_dispute_approved: true }).eq('sauda_no', saudaNo);
-            await supabase.from('sms_sauda').update({ mismatch_cleared: true, satta_dispute_approved: true }).eq('sauda_no', saudaNo);
+            await dbModule.update('satta_mismatch', 'sauda_no', saudaNo, { status: 'resolved', approved_by: 'Admin L5', remarks: 'Passed to Final P.O' }).catch(() => {});
+            await dbModule.update('sauda_master', 'sauda_no', saudaNo, { mismatch_cleared: true, satta_dispute_approved: true }).catch(() => {});
+            await dbModule.update('sms_sauda', 'sauda_no', saudaNo, { mismatch_cleared: true, satta_dispute_approved: true }).catch(() => {});
           }
         } catch (_ignore) {}
       } else {

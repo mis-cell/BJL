@@ -884,6 +884,21 @@ export function usePurchaseOrderFormLogic({
       });
 
       const isPtfEntry = Boolean(poHeader.ptf_no || String(poHeader.po_no || '').toUpperCase().includes('(PTF)'));
+      const cleanPoKey = String(poHeader.po_no || '').trim().toUpperCase();
+      let cachedDeliveryDates: any = null;
+      try {
+        const rawDates = localStorage.getItem(`sauda_delivery_dates_${cleanPoKey}`);
+        if (rawDates) cachedDeliveryDates = JSON.parse(rawDates);
+      } catch (_e) {}
+
+      const resolvedDeliveryFrom = cachedDeliveryDates?.delivery_from || poHeader.delivery_from || poHeader.shipment_date || todayStr;
+      const resolvedDeliveryTo = cachedDeliveryDates?.delivery_to || poHeader.delivery_to || poHeader.shipment_date || resolvedDeliveryFrom || todayStr;
+      const resolvedGraceDays = cachedDeliveryDates?.grace_days !== undefined
+        ? String(cachedDeliveryDates.grace_days)
+        : (poHeader.grace_days?.toString() || poHeader.shipment_days?.toString() || '0');
+      const resolvedDeliveryPenalty = cachedDeliveryDates?.delivery_penalty !== undefined
+        ? String(cachedDeliveryDates.delivery_penalty)
+        : (poHeader.delivery_penalty?.toString() || poHeader.shipment_penalty?.toString() || '0');
 
       setFormData({
         is_ptf: isPtfEntry,
@@ -916,10 +931,10 @@ export function usePurchaseOrderFormLogic({
         marka_type: poHeader.marka_type || 'Normal',
         marka_penalty: poHeader.marka_penalty?.toString() || '0',
         qty_penalty: poHeader.qty_penalty?.toString() || '5',
-        delivery_from: poHeader.delivery_from || todayStr,
-        delivery_to: poHeader.delivery_to || todayStr,
-        grace_days: poHeader.grace_days?.toString() || '0',
-        delivery_penalty: poHeader.delivery_penalty?.toString() || '0',
+        delivery_from: resolvedDeliveryFrom,
+        delivery_to: resolvedDeliveryTo,
+        grace_days: resolvedGraceDays,
+        delivery_penalty: resolvedDeliveryPenalty,
         contract_po_no: poHeader.contract_po_no || '',
         contract_date: poHeader.contract_date || todayStr,
         rate_detail: poHeader.rate_detail || '',
@@ -1113,13 +1128,35 @@ export function usePurchaseOrderFormLogic({
       const unit = formData.purchase_unit_name || (formData as any).unit_type || formData.po_type || 'BALES';
       const tol = calculateWeightTolerance(contractWeight, totalReceivedMt, unit);
       const isWeightCompleted = tol.isCompleted;
-      const isPendingVal = isWeightCompleted ? false : (formData.pending === 'Yes');
-      
-      const payload = {
+
+      const cleanPoKey = finalPoNo.toUpperCase();
+      const existingPoInList = (poList || []).find((p: any) => exactPoNo(p.po_no, finalPoNo));
+      const isReopenedPo = Boolean(
+        existingPoInList?.is_reopened ||
+        localStorage.getItem(`sauda_reopened_${cleanPoKey}`) === 'true'
+      );
+      const isPendingVal = isReopenedPo ? true : (isWeightCompleted ? false : (formData.pending === 'Yes'));
+
+      // Persist delivery dates in localStorage for instant and guaranteed reload persistence
+      const deliveryCachePayload = {
+        delivery_from: formData.delivery_from || null,
+        delivery_to: formData.delivery_to || null,
+        shipment_date: formData.delivery_to || formData.delivery_from || null,
+        grace_days: parseInt(formData.grace_days) || 0,
+        shipment_days: parseInt(formData.grace_days) || 0,
+        delivery_penalty: parseFloat(formData.delivery_penalty) || 0,
+        updated_at: new Date().toISOString()
+      };
+      localStorage.setItem(`sauda_delivery_dates_${cleanPoKey}`, JSON.stringify(deliveryCachePayload));
+      if (formData.contract_po_no) {
+        localStorage.setItem(`sauda_delivery_dates_${String(formData.contract_po_no).trim().toUpperCase()}`, JSON.stringify(deliveryCachePayload));
+      }
+
+      const payload: Record<string, any> = {
         financial_year: '2026-2027',
         purchase_order: formData.purchase_order,
         po_type: formData.po_type,
-        status: isTempPo ? 'temp' : 'final',
+        status: isReopenedPo ? 'open' : (isTempPo ? 'temp' : 'final'),
         ptf_no: formData.is_ptf ? formData.ptf_no : null,
         pending: isPendingVal,
         po_no: finalPoNo,
@@ -1143,8 +1180,11 @@ export function usePurchaseOrderFormLogic({
         qty_penalty: parseFloat(formData.qty_penalty) || 0,
         delivery_from: formData.delivery_from || null,
         delivery_to: formData.delivery_to || null,
+        shipment_date: formData.delivery_to || formData.delivery_from || null,
         grace_days: parseInt(formData.grace_days) || 0,
+        shipment_days: parseInt(formData.grace_days) || 0,
         delivery_penalty: parseFloat(formData.delivery_penalty) || 0,
+        shipment_penalty: parseFloat(formData.delivery_penalty) || 0,
         contract_po_no: formData.contract_po_no || formData.no || finalPoNo,
         sauda_no: formData.no || formData.contract_po_no || finalPoNo,
         agency: formData.items?.[0]?.agency_name || formData.items?.[0]?.agency_code || '',
@@ -1161,8 +1201,32 @@ export function usePurchaseOrderFormLogic({
         s_date: formData.s_date || null
       };
 
-      // 1. Single efficient upsert into master table
+      if (isReopenedPo) {
+        payload.is_closed = false;
+        payload.is_reopened = true;
+        if (existingPoInList?.open_remarks) {
+          payload.open_remarks = existingPoInList.open_remarks;
+        }
+      }
+
+      // 1. Single efficient upsert into master table (with automatic column-stripping and conflict fallback)
       await dbModule.upsert(MASTER_TABLE, payload, 'po_no');
+
+      // Also sync delivery dates across linked tables if editing an existing PO
+      if (existingPoInList) {
+        const syncDatePayload = {
+          delivery_from: formData.delivery_from || null,
+          delivery_to: formData.delivery_to || null,
+          grace_days: parseInt(formData.grace_days) || 0,
+          delivery_penalty: parseFloat(formData.delivery_penalty) || 0
+        };
+        if (MASTER_TABLE !== 'purchase_master') {
+          await dbModule.update('purchase_master', 'po_no', finalPoNo, syncDatePayload).catch(() => {});
+        }
+        if (MASTER_TABLE !== 'sauda_check_point') {
+          await dbModule.update('sauda_check_point', 'po_no', finalPoNo, syncDatePayload).catch(() => {});
+        }
+      }
 
       // 2. Batch persist details
       await poService.savePoDetails(DETAIL_TABLE, finalPoNo, formData.items, {
@@ -1171,8 +1235,8 @@ export function usePurchaseOrderFormLogic({
         markaList
       });
 
-      // 3. If saved in Sauda Check Point (isTempPo), clean up the source Sauda in parallel
-      if (isTempPo && (formData.no || formData.contract_po_no || finalPoNo)) {
+      // 3. If newly saved in Sauda Check Point (isTempPo and not already in poList), clean up the source Sauda in parallel
+      if (isTempPo && !existingPoInList && (formData.no || formData.contract_po_no || finalPoNo)) {
         const saudaNoRef = (formData.no || formData.contract_po_no || finalPoNo || '').trim().toUpperCase();
         const saudaNoRefDigits = getCleanSaudaDigits(saudaNoRef);
 
@@ -1187,7 +1251,6 @@ export function usePurchaseOrderFormLogic({
 
         const targetSaudaId = matchedSauda?.sauda_id || (matchedSauda as any)?.id;
         const targetSaudaNo = matchedSauda?.sauda_no || saudaNoRef;
-        const cleanDigits = saudaNoRefDigits || getCleanSaudaDigits(targetSaudaNo);
 
         try {
           const deleteOps: Promise<any>[] = [];
@@ -1204,7 +1267,6 @@ export function usePurchaseOrderFormLogic({
               deleteOps.push(Promise.resolve(supabase.from('sauda_quality_details').delete().eq('sauda_no', saudaNoRef)));
               deleteOps.push(Promise.resolve(supabase.from('sauda_master').delete().eq('sauda_no', saudaNoRef)));
             }
-            // Only delete exact targetSaudaId, targetSaudaNo, or saudaNoRef. Never delete with broad wildcards!
           }
           await Promise.allSettled(deleteOps);
         } catch (delErr) {

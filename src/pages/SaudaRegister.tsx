@@ -313,19 +313,14 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     }));
 
     try {
-      if (supabase) {
-        let updateRes = null;
-        if (targetId) {
-          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', targetId).select();
-          if (!error && data && data.length > 0) updateRes = data;
-        }
-        if (!updateRes && saudaNo) {
-          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', saudaNo).eq('financial_year', fYear).select();
-          if (!error && data && data.length > 0) updateRes = data;
-        }
+      const cleanKey = String(saudaNo || targetId || '').trim().toUpperCase();
+      if (cleanKey) {
+        localStorage.setItem(`sauda_check_status_${cleanKey}`, JSON.stringify(updatePayload));
       }
       if (targetId) {
-        await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload).catch(() => {});
+        await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload);
+      } else if (saudaNo) {
+        await dbModule.update('sauda_master', 'sauda_no', saudaNo, updatePayload);
       }
 
       logChange({
@@ -370,19 +365,16 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     }));
 
     try {
-      if (supabase) {
-        let updateRes = null;
-        if (targetId) {
-          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', targetId).select();
-          if (!error && data && data.length > 0) updateRes = data;
-        }
-        if (!updateRes && saudaNo) {
-          const { data, error } = await supabase.from('sauda_master').update(updatePayload).eq('sauda_no', saudaNo).eq('financial_year', fYear).select();
-          if (!error && data && data.length > 0) updateRes = data;
-        }
+      const cleanKey = String(saudaNo || targetId || '').trim().toUpperCase();
+      if (cleanKey) {
+        const existingStr = localStorage.getItem(`sauda_check_status_${cleanKey}`);
+        const existingObj = existingStr ? JSON.parse(existingStr) : {};
+        localStorage.setItem(`sauda_check_status_${cleanKey}`, JSON.stringify({ ...existingObj, ...updatePayload }));
       }
       if (targetId) {
         await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload).catch(() => {});
+      } else if (saudaNo) {
+        await dbModule.update('sauda_master', 'sauda_no', saudaNo, updatePayload).catch(() => {});
       }
     } catch (err) {
       console.error("Error updating rejector name in Supabase:", err);
@@ -440,16 +432,14 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         }));
 
         try {
-          if (supabase) {
-            if (targetId) {
-              await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', targetId);
-            }
-            if (cleanNo) {
-              await supabase.from('sauda_master').update(updatePayload).or(`sauda_no.eq.${saudaNo},sauda_no.eq.${paddedNo},sauda_no.eq.${cleanNo}`);
-            }
+          const cleanKey = String(saudaNo || targetId || '').trim().toUpperCase();
+          if (cleanKey) {
+            localStorage.setItem(`sauda_check_status_${cleanKey}`, JSON.stringify(updatePayload));
           }
           if (targetId) {
-            await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload).catch(() => {});
+            await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload);
+          } else if (saudaNo) {
+            await dbModule.update('sauda_master', 'sauda_no', saudaNo, updatePayload);
           }
 
           logChange({
@@ -508,16 +498,14 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     }));
 
     try {
-      if (supabase) {
-        if (targetId) {
-          await supabase.from('sauda_master').update(updatePayload).eq('sauda_id', targetId);
-        }
-        if (cleanNo) {
-          await supabase.from('sauda_master').update(updatePayload).or(`sauda_no.eq.${saudaNo},sauda_no.eq.${paddedNo},sauda_no.eq.${cleanNo}`);
-        }
+      const cleanKey = String(saudaNo || targetId || '').trim().toUpperCase();
+      if (cleanKey) {
+        localStorage.setItem(`sauda_check_status_${cleanKey}`, JSON.stringify(updatePayload));
       }
       if (targetId) {
-        await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload).catch(() => {});
+        await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload);
+      } else if (saudaNo) {
+        await dbModule.update('sauda_master', 'sauda_no', saudaNo, updatePayload);
       }
 
       logChange({
@@ -869,25 +857,27 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           finalQD = header.quality_details_json;
         }
 
-        header.quality_details = finalQD;
         delete header.quality_details_json;
 
         if (supabase) {
           const { data: existing } = await supabase.from('sauda_master').select('sauda_id').eq('sauda_no', sNo).maybeSingle();
           if (existing?.sauda_id) {
             header.sauda_id = existing.sauda_id;
-            await supabase.from('sauda_master').update(header).eq('sauda_id', existing.sauda_id);
+            await dbModule.update('sauda_master', 'sauda_id', existing.sauda_id, header);
             await supabase.from('sauda_quality_details').delete().eq('sauda_id', existing.sauda_id);
           } else {
-            const { data: inserted } = await supabase.from('sauda_master').insert(header).select();
-            if (inserted && inserted[0]) {
-              header.sauda_id = inserted[0].sauda_id;
+            const inserted = await dbModule.insert('sauda_master', header);
+            if (inserted && inserted.sauda_id) {
+              header.sauda_id = inserted.sauda_id;
+            } else {
+              const { data: fetched } = await supabase.from('sauda_master').select('sauda_id').eq('sauda_no', sNo).maybeSingle();
+              if (fetched?.sauda_id) header.sauda_id = fetched.sauda_id;
             }
           }
 
           if (header.sauda_id && finalQD.length > 0) {
             for (const q of finalQD) {
-              await supabase.from('sauda_quality_details').insert({
+              await dbModule.insert('sauda_quality_details', {
                 sauda_id: header.sauda_id,
                 sauda_no: sNo,
                 financial_year: header.financial_year || '2026-2027',
@@ -896,7 +886,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 agency: q.agency || header.agency || '',
                 marka: q.marka || header.marks || '',
                 rs: q.rs || header.b_rate || 0
-              });
+              }).catch(() => {});
             }
           }
         }
@@ -936,7 +926,21 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         dbModule.fetchAll('sauda_check_point').catch(() => [])
       ]);
 
-      setSaudaList(saudasData || []);
+      const mergedSaudas = (saudasData || []).map((s: any) => {
+        const cleanKey = String(s.sauda_no || s.sauda_id || '').trim().toUpperCase();
+        if (cleanKey) {
+          try {
+            const cachedStr = localStorage.getItem(`sauda_check_status_${cleanKey}`);
+            if (cachedStr) {
+              const cachedObj = JSON.parse(cachedStr);
+              return { ...s, ...cachedObj };
+            }
+          } catch (_e) {}
+        }
+        return s;
+      });
+
+      setSaudaList(mergedSaudas);
       setPoList(posData || []);
       setArrivalsList(arrivalsData || []);
       setScpList(scpData || []);

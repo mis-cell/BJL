@@ -2127,71 +2127,69 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     try {
       if (!supabase) throw new Error("Supabase client is not available.");
 
-      // 1. Insert or Update Master
-      const { error: masterErr } = await supabase
-        .from('mr_settlement_master')
-        .upsert({
-          mr_no: targetMrNo,
-          sett_date: masterData.sett_date,
-          po_type: masterData.po_type,
-          broker: masterData.broker,
-          supplier: masterData.supplier,
-          chn_supplier: masterData.chn_supplier,
-          po_no: masterData.po_no,
-          po_date: masterData.po_date || null,
-          lorry_number: masterData.lorry_number,
-          auto_ho_settlement: masterData.auto_ho_settlement,
-          detention_days: Number(masterData.detention_days) || 0,
-          arrival_no: masterData.arrival_no,
-          arrival_date: masterData.arrival_date || null,
-          arival_apmc_fees: Number(masterData.arival_apmc_fees) || 0,
-          actual_apmc_fees: Number(masterData.actual_apmc_fees) || 0,
-          remarks: masterData.remarks,
-          summary_rate_qtel: Number(masterData.summary_rate_qtel) || 0,
-          summary_rate_aff_cd_cl: Number(masterData.summary_rate_aff_cd_cl) || 0,
-          summary_delivery_claim: Number(masterData.summary_delivery_claim) || 0,
-          summary_rate_wt_claim: Number(masterData.summary_rate_wt_claim) || 0,
-          summary_instl_rate: Number(masterData.summary_premium_wt ?? masterData.summary_instl_rate ?? 0),
-          summary_premium_wt: Number(masterData.summary_premium_wt ?? 0),
-          summary_material_value: Number(masterData.summary_material_value) || 0,
-          summary_misc_add: Number(masterData.summary_misc_add) || 0,
-          summary_misc_less: Number(masterData.summary_misc_less) || 0,
-          summary_premium_amount: Number(masterData.summary_premium_amount) || 0,
-          summary_less_amount: Number(masterData.summary_less_amount) || 0,
-          summary_instl_amount: Number(masterData.summary_instl_amount) || 0,
-          summary_deduction_type: masterData.summary_deduction_type || '',
-          summary_deduction_rate: Number(masterData.summary_deduction_rate) || 0,
-          summary_deduction_qty: Number(masterData.summary_deduction_qty) || 0,
-          summary_deduction_amount: Number(masterData.summary_deduction_amount) || 0,
-          deductions: masterData.deductions || [],
-          val_material_value: Number(masterData.val_material_value) || 0,
-          val_add_amt: Number(masterData.val_add_amt) || 0,
-          val_less_amt: Number(masterData.val_less_amt) || 0,
-          val_premium_amt: Number(masterData.val_premium_amt) || 0,
-          val_less_amount: Number(masterData.val_less_amount) || 0,
-          val_qty_claim: Number(masterData.val_qty_claim) || 0,
-          val_ex_short: Number(masterData.val_ex_short) || 0,
-          final_less_adv: Number(masterData.final_less_adv) || 0,
-          final_on_ac_adv: Number(masterData.final_on_ac_adv) || 0,
-          final_apmc_fees: Number(masterData.final_apmc_fees) || 0,
-          final_cst_pct_amt: Number(masterData.final_cst_pct_amt) || 0,
-          payable_amt: Number(masterData.payable_amt) || 0,
-          payable_bill_no: masterData.payable_bill_no,
-          payable_bill_date: masterData.payable_bill_date || null,
-          wt_ded_wt_1: Number(masterData.wt_ded_wt_1) || 0,
-          wt_ded_wt_2: Number(masterData.wt_ded_wt_2) || 0,
-          wt_ded_wt_3: Number(masterData.wt_ded_wt_3) || 0,
-          rate_qntl: Number(masterData.rate_qntl) || 0,
-          value_amt: Number(masterData.value_amt) || 0,
-          adjustment_amt: Number(masterData.adjustment_amt) || 0,
-          net_amt: Number(masterData.net_amt) || 0,
-          challan_weight: Number(masterData.challan_weight) || 0,
-          supplier_net_wt: Number(masterData.supplier_net_wt) || 0,
-          electronic_scale_net: Number(masterData.electronic_scale_net) || 0,
-          payment_status: masterData.payment_status || 'Pending'
-        }, { onConflict: 'mr_no' });
+      // 1. Insert or Update Master via resilient dbModule.upsert
+      const masterPayload = {
+        mr_no: targetMrNo,
+        sett_date: masterData.sett_date,
+        po_type: masterData.po_type,
+        broker: masterData.broker,
+        supplier: masterData.supplier,
+        chn_supplier: masterData.chn_supplier,
+        po_no: masterData.po_no,
+        po_date: masterData.po_date || null,
+        lorry_number: masterData.lorry_number,
+        auto_ho_settlement: masterData.auto_ho_settlement,
+        detention_days: Number(masterData.detention_days) || 0,
+        arrival_no: masterData.arrival_no,
+        arrival_date: masterData.arrival_date || null,
+        arival_apmc_fees: Number(masterData.arival_apmc_fees) || 0,
+        actual_apmc_fees: Number(masterData.actual_apmc_fees) || 0,
+        remarks: masterData.remarks,
+        summary_rate_qtel: Number(masterData.summary_rate_qtel) || 0,
+        summary_rate_aff_cd_cl: Number(masterData.summary_rate_aff_cd_cl) || 0,
+        summary_delivery_claim: Number(masterData.summary_delivery_claim) || 0,
+        summary_rate_wt_claim: Number(masterData.summary_rate_wt_claim) || 0,
+        summary_instl_rate: Number(masterData.summary_premium_wt ?? masterData.summary_instl_rate ?? 0),
+        summary_premium_wt: Number(masterData.summary_premium_wt ?? 0),
+        summary_material_value: Number(masterData.summary_material_value) || 0,
+        summary_misc_add: Number(masterData.summary_misc_add) || 0,
+        summary_misc_less: Number(masterData.summary_misc_less) || 0,
+        summary_premium_amount: Number(masterData.summary_premium_amount) || 0,
+        summary_less_amount: Number(masterData.summary_less_amount) || 0,
+        summary_instl_amount: Number(masterData.summary_instl_amount) || 0,
+        summary_deduction_type: masterData.summary_deduction_type || '',
+        summary_deduction_rate: Number(masterData.summary_deduction_rate) || 0,
+        summary_deduction_qty: Number(masterData.summary_deduction_qty) || 0,
+        summary_deduction_amount: Number(masterData.summary_deduction_amount) || 0,
+        deductions: masterData.deductions || [],
+        val_material_value: Number(masterData.val_material_value) || 0,
+        val_add_amt: Number(masterData.val_add_amt) || 0,
+        val_less_amt: Number(masterData.val_less_amt) || 0,
+        val_premium_amt: Number(masterData.val_premium_amt) || 0,
+        val_less_amount: Number(masterData.val_less_amount) || 0,
+        val_qty_claim: Number(masterData.val_qty_claim) || 0,
+        val_ex_short: Number(masterData.val_ex_short) || 0,
+        final_less_adv: Number(masterData.final_less_adv) || 0,
+        final_on_ac_adv: Number(masterData.final_on_ac_adv) || 0,
+        final_apmc_fees: Number(masterData.final_apmc_fees) || 0,
+        final_cst_pct_amt: Number(masterData.final_cst_pct_amt) || 0,
+        payable_amt: Number(masterData.payable_amt) || 0,
+        payable_bill_no: masterData.payable_bill_no,
+        payable_bill_date: masterData.payable_bill_date || null,
+        wt_ded_wt_1: Number(masterData.wt_ded_wt_1) || 0,
+        wt_ded_wt_2: Number(masterData.wt_ded_wt_2) || 0,
+        wt_ded_wt_3: Number(masterData.wt_ded_wt_3) || 0,
+        rate_qntl: Number(masterData.rate_qntl) || 0,
+        value_amt: Number(masterData.value_amt) || 0,
+        adjustment_amt: Number(masterData.adjustment_amt) || 0,
+        net_amt: Number(masterData.net_amt) || 0,
+        challan_weight: Number(masterData.challan_weight) || 0,
+        supplier_net_wt: Number(masterData.supplier_net_wt) || 0,
+        electronic_scale_net: Number(masterData.electronic_scale_net) || 0,
+        payment_status: masterData.payment_status || 'Pending'
+      };
 
-      if (masterErr) throw masterErr;
+      await dbModule.upsert('mr_settlement_master', masterPayload, 'mr_no');
 
       // 2. Clear old detail rows 
       await supabase
@@ -2240,75 +2238,55 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           claim_settlement: Number(c.claim_settlement) || 0
         }));
 
-      if (rowsToWrite.length > 0) {
-        const { error: matchErr } = await supabase
-          .from('mr_settlement_detail')
-          .insert(rowsToWrite);
-        if (matchErr) throw matchErr;
+      for (const detailRow of rowsToWrite) {
+        await dbModule.insert('mr_settlement_detail', detailRow).catch((err) => {
+          console.warn("mr_settlement_detail insert warning:", err);
+        });
       }
 
       // Live sync to custom table 'm_r_settlement' with manual weight entries and status checks
       const qualitySummary = `Moisture Claim: ${detailCols.map(c => c.moist_claim).filter(Boolean).join('/') || '0'} | Dust Claim: ${detailCols.map(c => c.dust_claim).filter(Boolean).join('/') || '0'}`;
       const materialDetails = detailCols.map(c => `${c.grade || 'N/A'} (${c.area || 'N/A'} - ${c.agency || 'N/A'})`).filter(g => !g.startsWith('N/A')).join(', ');
 
-      const { error: customTableErr } = await supabase
-        .from('m_r_settlement')
-        .insert({
-          mr_no: targetMrNo,
-          po_no: masterData.po_no,
-          lorry_number: masterData.lorry_number,
-          material_details: materialDetails || 'Material Goods Received',
-          quality: qualitySummary,
-          quantity: totalSettleQty,
-          settlement_date: masterData.sett_date,
-          payment_status: masterData.payment_status || 'Pending',
-          challan_weight: Number(masterData.challan_weight) || 0,
-          supplier_net_wt: Number(masterData.supplier_net_wt) || 0,
-          electronic_scale_net: Number(masterData.electronic_scale_net) || 0,
-          remarks: masterData.remarks
-        });
-      
-      if (customTableErr) {
+      await dbModule.upsert('m_r_settlement', {
+        mr_no: targetMrNo,
+        po_no: masterData.po_no,
+        lorry_number: masterData.lorry_number,
+        material_details: materialDetails || 'Material Goods Received',
+        quality: qualitySummary,
+        quantity: totalSettleQty,
+        settlement_date: masterData.sett_date,
+        payment_status: masterData.payment_status || 'Pending',
+        challan_weight: Number(masterData.challan_weight) || 0,
+        supplier_net_wt: Number(masterData.supplier_net_wt) || 0,
+        electronic_scale_net: Number(masterData.electronic_scale_net) || 0,
+        remarks: masterData.remarks
+      }, 'mr_no').catch((customTableErr) => {
         console.warn("m_r_settlement Sync Notice:", customTableErr);
-      }
+      });
 
       // Mark P.O and M.R status as 'settled' so they move to Settlement table
       if (masterData.po_no) {
-        await supabase
-          .from('purchase_master')
-          .update({ status: 'settled', pending: false })
-          .eq('po_no', masterData.po_no);
-
-        await supabase
-          .from('sauda_master')
-          .update({ status: 'settled', pending: false })
-          .or(`sauda_no.eq.${masterData.po_no},po_no.eq.${masterData.po_no}`);
-
-        await supabase
-          .from('sauda_check_point')
-          .update({ status: 'settled', pending: false })
-          .eq('po_no', masterData.po_no);
+        await dbModule.update('purchase_master', 'po_no', masterData.po_no, { status: 'settled', pending: false }).catch(() => {});
+        await dbModule.update('sauda_master', 'sauda_no', masterData.po_no, { status: 'settled', pending: false }).catch(() => {});
+        await dbModule.update('sauda_master', 'po_no', masterData.po_no, { status: 'settled', pending: false }).catch(() => {});
+        await dbModule.update('sauda_check_point', 'po_no', masterData.po_no, { status: 'settled', pending: false }).catch(() => {});
       }
 
       if (targetMrNo || masterData.po_no) {
-        const filterStr = targetMrNo && masterData.po_no 
-          ? `mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo},po_no.eq.${masterData.po_no}`
-          : targetMrNo ? `mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}` : `po_no.eq.${masterData.po_no}`;
-
-        await supabase
-          .from('mill_inspection_master')
-          .update({ status: 'settled' })
-          .or(filterStr);
-
-        await supabase
-          .from('final_arrival')
-          .update({ status: 'settled' })
-          .or(filterStr);
-
-        await supabase
-          .from('temporary_material_received')
-          .update({ status: 'settled' })
-          .or(filterStr);
+        if (targetMrNo) {
+          await dbModule.update('mill_inspection_master', 'mr_no', targetMrNo, { status: 'settled' }).catch(() => {});
+          await dbModule.update('mill_inspection_master', 'arrival_no', targetMrNo, { status: 'settled' }).catch(() => {});
+          await dbModule.update('final_arrival', 'mr_no', targetMrNo, { status: 'settled' }).catch(() => {});
+          await dbModule.update('final_arrival', 'arrival_no', targetMrNo, { status: 'settled' }).catch(() => {});
+          await dbModule.update('temporary_material_received', 'mr_no', targetMrNo, { status: 'settled' }).catch(() => {});
+          await dbModule.update('temporary_material_received', 'arrival_no', targetMrNo, { status: 'settled' }).catch(() => {});
+        }
+        if (masterData.po_no) {
+          await dbModule.update('mill_inspection_master', 'po_no', masterData.po_no, { status: 'settled' }).catch(() => {});
+          await dbModule.update('final_arrival', 'po_no', masterData.po_no, { status: 'settled' }).catch(() => {});
+          await dbModule.update('temporary_material_received', 'po_no', masterData.po_no, { status: 'settled' }).catch(() => {});
+        }
       }
 
 

@@ -486,6 +486,7 @@ export default function PurchaseOrder({
         info={reopenSuccessInfo}
         onClose={() => setReopenSuccessInfo(null)}
         onEditNow={(po) => handleLoadSelectedPo(po)}
+        onRefresh={fetchPosAndMasters}
       />
 
       {/* Reopen Audit Log View Modal */}

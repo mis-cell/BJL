@@ -748,49 +748,23 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
         if (supabase) {
           if (existingRecordId) {
-            await supabase
-              .from('sauda_check_point_deductions')
-              .update(payload)
-              .eq('id', existingRecordId);
+            await dbModule.update('sauda_check_point_deductions', 'id', existingRecordId, payload).catch(() => {});
           } else {
-            const { data } = await supabase
-              .from('sauda_check_point_deductions')
-              .insert(payload)
-              .select()
-              .single();
+            const data = await dbModule.insert('sauda_check_point_deductions', payload).catch(() => null);
             if (data?.id) setExistingRecordId(data.id);
           }
 
-          await supabase
-            .from('purchase_master')
-            .update({
-              excess_short_deduction: totalCalculatedAmount,
-              excess_short_status: isWithin3PctExemption ? 'within_bounds' : 'settled',
-              final_payable_amount: totalFinalPayable,
-              is_settled: true
-            })
-            .or(`po_no.eq.${poNo},contract_po_no.eq.${poNo}`);
+          const masterSettleUpdate = {
+            excess_short_deduction: totalCalculatedAmount,
+            excess_short_status: isWithin3PctExemption ? 'within_bounds' : 'settled',
+            final_payable_amount: totalFinalPayable,
+            is_settled: true
+          };
 
-          await supabase
-            .from('sauda_check_point')
-            .update({
-              excess_short_deduction: totalCalculatedAmount,
-              excess_short_status: isWithin3PctExemption ? 'within_bounds' : 'settled',
-              final_payable_amount: totalFinalPayable,
-              is_settled: true
-            })
-            .or(`po_no.eq.${poNo},contract_po_no.eq.${poNo}`);
-
+          await dbModule.update('purchase_master', 'po_no', poNo, masterSettleUpdate).catch(() => {});
+          await dbModule.update('sauda_check_point', 'po_no', poNo, masterSettleUpdate).catch(() => {});
           if (saudaNo) {
-            await supabase
-              .from('sauda_master')
-              .update({
-                excess_short_deduction: totalCalculatedAmount,
-                excess_short_status: isWithin3PctExemption ? 'within_bounds' : 'settled',
-                final_payable_amount: totalFinalPayable,
-                is_settled: true
-              })
-              .eq('sauda_no', saudaNo);
+            await dbModule.update('sauda_master', 'sauda_no', saudaNo, masterSettleUpdate).catch(() => {});
           }
         }
       } catch (e) {
@@ -868,16 +842,9 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     try {
       if (supabase) {
         if (existingRecordId) {
-          await supabase
-            .from('sauda_check_point_deductions')
-            .update(payload)
-            .eq('id', existingRecordId);
+          await dbModule.update('sauda_check_point_deductions', 'id', existingRecordId, payload);
         } else {
-          const { data } = await supabase
-            .from('sauda_check_point_deductions')
-            .insert(payload)
-            .select()
-            .single();
+          const data = await dbModule.insert('sauda_check_point_deductions', payload);
           if (data?.id) setExistingRecordId(data.id);
         }
 
@@ -895,37 +862,17 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
           remarks: `${payload.variation_type.toUpperCase()}: ${finalDeductibleQtyQtl.toFixed(2)} Qtl @ ₹${applicableRate}/Qtl for Supplier ${supplierName}`
         });
 
-        // Update purchase_master, sauda_check_point, and sauda_master
-        await supabase
-          .from('purchase_master')
-          .update({
-            excess_short_deduction: totalCalculatedAmount,
-            excess_short_status: isWithin3PctExemption ? 'within_bounds' : 'settled',
-            final_payable_amount: totalFinalPayable,
-            is_settled: true
-          })
-          .or(`po_no.eq.${poNo},contract_po_no.eq.${poNo}`);
+        const masterSettleUpdate = {
+          excess_short_deduction: totalCalculatedAmount,
+          excess_short_status: isWithin3PctExemption ? 'within_bounds' : 'settled',
+          final_payable_amount: totalFinalPayable,
+          is_settled: true
+        };
 
-        await supabase
-          .from('sauda_check_point')
-          .update({
-            excess_short_deduction: totalCalculatedAmount,
-            excess_short_status: isWithin3PctExemption ? 'within_bounds' : 'settled',
-            final_payable_amount: totalFinalPayable,
-            is_settled: true
-          })
-          .or(`po_no.eq.${poNo},contract_po_no.eq.${poNo}`);
-
+        await dbModule.update('purchase_master', 'po_no', poNo, masterSettleUpdate).catch(() => {});
+        await dbModule.update('sauda_check_point', 'po_no', poNo, masterSettleUpdate).catch(() => {});
         if (saudaNo) {
-          await supabase
-            .from('sauda_master')
-            .update({
-              excess_short_deduction: totalCalculatedAmount,
-              excess_short_status: isWithin3PctExemption ? 'within_bounds' : 'settled',
-              final_payable_amount: totalFinalPayable,
-              is_settled: true
-            })
-            .eq('sauda_no', saudaNo);
+          await dbModule.update('sauda_master', 'sauda_no', saudaNo, masterSettleUpdate).catch(() => {});
         }
       } else {
         await dbModule.insert('sauda_check_point_deductions', payload);

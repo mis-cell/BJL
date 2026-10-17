@@ -585,7 +585,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
 
                            const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
                            const receivedLorries = item.received_lorries || 0;
-                           const isClosed = Boolean(item.is_closed || item.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
+                           const isClosed = !item.is_reopened && Boolean(item.is_closed || item.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
 
                            if (isClosed && !isAdminUser) {
                              if (setClosedNoticePo) setClosedNoticePo(item);
@@ -650,7 +650,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                          {(() => {
                             const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
                             const receivedLorries = item.received_lorries || 0;
-                            const isClosed = Boolean(item.is_closed || item.status === "closed" || (contractLorries > 0 && receivedLorries >= contractLorries));
+                            const isClosed = !item.is_reopened && Boolean(item.is_closed || item.status === "closed" || (contractLorries > 0 && receivedLorries >= contractLorries));
                             const isResolved = isPoMismatchResolved(item);
                             const stage = item.workflow_stage || (item.pass_status === "pass" ? "final_po" : item.pass_status) || "temp_arrival_pending";
 
@@ -701,7 +701,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                             const rcvd = Number(item.received_weight_mt || 0);
                             const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
                             const receivedLorries = item.received_lorries || 0;
-                            const isClosed = Boolean(item.is_closed || item.status === "closed" || (contractLorries > 0 && receivedLorries >= contractLorries));
+                            const isClosed = !item.is_reopened && Boolean(item.is_closed || item.status === "closed" || (contractLorries > 0 && receivedLorries >= contractLorries));
 
                             const canShowReopen = isAdminOrL4 && isClosed;
 
@@ -889,7 +889,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                             {(() => {
                               const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
                               const receivedLorries = item.received_lorries || 0;
-                              const isClosed = Boolean(item.is_closed) || (receivedLorries >= contractLorries && contractLorries > 0);
+                              const isClosed = !item.is_reopened && (Boolean(item.is_closed) || (receivedLorries >= contractLorries && contractLorries > 0));
 
                               const isResolved = isPoMismatchResolved(item);
                               const stage = item.workflow_stage || (item.pass_status === "pass" ? "final_po" : item.pass_status) || "temp_arrival_pending";
@@ -927,7 +927,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                             {(() => {
                               const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
                               const receivedLorries = item.received_lorries || 0;
-                              const isClosed = Boolean(item.is_closed) || (receivedLorries >= contractLorries && contractLorries > 0);
+                              const isClosed = !item.is_reopened && (Boolean(item.is_closed) || (receivedLorries >= contractLorries && contractLorries > 0));
 
                               const isAdvDone = checkIsAdvancePaymentDone(item, allPayments);
                               const isSettlementDone = checkIsSettlementDone(item, allSettlements);

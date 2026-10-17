@@ -247,27 +247,165 @@ export const GlobalConfirmModal: React.FC<{
   );
 };
 
-// 4. Reopen Success Info Modal
+// 4. Reopen Success Info & Change Delivery Date Modal
 export const ReopenSuccessModal: React.FC<{
   info: { po: any; openRemarks: any } | null;
   onClose: () => void;
   onEditNow: (po: any) => void;
-}> = ({ info, onClose, onEditNow }) => {
+  onRefresh?: () => void;
+}> = ({ info, onClose, onEditNow, onRefresh }) => {
+  const [deliveryFrom, setDeliveryFrom] = React.useState('');
+  const [deliveryTo, setDeliveryTo] = React.useState('');
+  const [graceDays, setGraceDays] = React.useState('0');
+  const [isSavingDate, setIsSavingDate] = React.useState(false);
+  const [dateSavedSuccess, setDateSavedSuccess] = React.useState(false);
+
+  React.useEffect(() => {
+    if (info?.po) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const cleanPoKey = String(info.po.po_no || '').trim().toUpperCase();
+      let cachedDates: any = null;
+      try {
+        const raw = localStorage.getItem(`sauda_delivery_dates_${cleanPoKey}`);
+        if (raw) cachedDates = JSON.parse(raw);
+      } catch (e) {}
+
+      setDeliveryFrom(
+        cachedDates?.delivery_from ||
+        info.po.delivery_from ||
+        info.po.shipment_date ||
+        info.po.po_date ||
+        info.po.date ||
+        todayStr
+      );
+      setDeliveryTo(
+        cachedDates?.delivery_to ||
+        info.po.delivery_to ||
+        info.po.shipment_date ||
+        info.po.delivery_from ||
+        todayStr
+      );
+      setGraceDays(
+        String(
+          cachedDates?.grace_days ??
+          info.po.grace_days ??
+          info.po.shipment_days ??
+          0
+        )
+      );
+      setDateSavedSuccess(false);
+    }
+  }, [info]);
+
   if (!info) return null;
+
+  const handleSaveDeliveryDate = async () => {
+    setIsSavingDate(true);
+    setDateSavedSuccess(false);
+    try {
+      const { dbModule } = await import('../../services/dbModule');
+      const { supabase } = await import('../../lib/supabase');
+      const poNo = info.po.po_no;
+      const saudaNo = info.po.sauda_no || info.po.contract_po_no || poNo;
+      const cleanPoKey = String(poNo || '').trim().toUpperCase();
+      const cleanSaudaKey = String(saudaNo || '').trim().toUpperCase();
+      const parsedGrace = parseInt(graceDays, 10) || 0;
+
+      const dateCachePayload = {
+        delivery_from: deliveryFrom || null,
+        delivery_to: deliveryTo || null,
+        shipment_date: deliveryTo || deliveryFrom || null,
+        grace_days: parsedGrace,
+        shipment_days: parsedGrace,
+        updated_at: new Date().toISOString()
+      };
+
+      if (cleanPoKey) {
+        localStorage.setItem(`sauda_delivery_dates_${cleanPoKey}`, JSON.stringify(dateCachePayload));
+        localStorage.setItem(`sauda_reopened_${cleanPoKey}`, 'true');
+        localStorage.removeItem(`sauda_closed_${cleanPoKey}`);
+      }
+      if (cleanSaudaKey) {
+        localStorage.setItem(`sauda_delivery_dates_${cleanSaudaKey}`, JSON.stringify(dateCachePayload));
+        localStorage.setItem(`sauda_reopened_${cleanSaudaKey}`, 'true');
+        localStorage.removeItem(`sauda_closed_${cleanSaudaKey}`);
+      }
+
+      const updateData = {
+        delivery_from: deliveryFrom || null,
+        delivery_to: deliveryTo || null,
+        shipment_date: deliveryTo || deliveryFrom || null,
+        grace_days: parsedGrace,
+        shipment_days: parsedGrace,
+        is_closed: false,
+        is_reopened: true,
+        pending: true,
+        status: 'open',
+        open_remarks: info.openRemarks
+      };
+
+      await dbModule.update('sauda_check_point', 'po_no', poNo, updateData).catch(() => {});
+      await dbModule.update('purchase_master', 'po_no', poNo, updateData).catch(() => {});
+      if (saudaNo) {
+        await dbModule.update('sauda_master', 'sauda_no', saudaNo, {
+          shipment_date: deliveryTo || deliveryFrom || null,
+          shipment_days: parsedGrace,
+          is_closed: false,
+          is_reopened: true,
+          status: 'open',
+          open_remarks: info.openRemarks
+        }).catch(() => {});
+      }
+
+      if (supabase && saudaNo) {
+        try {
+          await supabase
+            .from('sauda_master')
+            .update({
+              shipment_date: deliveryTo || deliveryFrom || null,
+              shipment_days: parsedGrace
+            })
+            .or(`sauda_no.eq.${saudaNo},session.eq.${poNo}`);
+        } catch (_e) {}
+      }
+
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sauda_check_point' } }));
+      if (onRefresh) {
+        await onRefresh();
+      }
+      setDateSavedSuccess(true);
+    } catch (err) {
+      console.error('Failed to save delivery date:', err);
+    } finally {
+      setIsSavingDate(false);
+    }
+  };
+
+  const updatedPoObject = {
+    ...info.po,
+    delivery_from: deliveryFrom,
+    delivery_to: deliveryTo,
+    shipment_date: deliveryTo || deliveryFrom,
+    grace_days: parseInt(graceDays, 10) || 0,
+    is_closed: false,
+    is_reopened: true,
+    status: 'open'
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
-        <div className="bg-emerald-600 p-5 text-white text-center">
-          <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3 border border-white/30">
-            <CheckCircle2 className="w-8 h-8 text-white" />
+        <div className="bg-emerald-600 p-4 text-white text-center">
+          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2 border border-white/30">
+            <CheckCircle2 className="w-7 h-7 text-white" />
           </div>
-          <h3 className="text-lg font-black uppercase tracking-wide">Sauda Reopened!</h3>
-          <p className="text-xs text-emerald-100 mt-1 font-mono">Sauda #{info.po.po_no} is now OPEN</p>
+          <h3 className="text-base font-black uppercase tracking-wide">Sauda Reopened!</h3>
+          <p className="text-xs text-emerald-100 mt-0.5 font-mono">Sauda #{info.po.po_no} is now OPEN</p>
         </div>
 
-        <div className="p-5 space-y-4 text-xs">
-          <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-2">
+        <div className="p-5 space-y-3.5 text-xs">
+          <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-1.5">
             <div className="flex justify-between">
               <span className="text-slate-500 font-medium">Reopened By:</span>
               <span className="font-bold text-slate-800">{info.openRemarks.opened_by}</span>
@@ -278,17 +416,75 @@ export const ReopenSuccessModal: React.FC<{
                 {info.openRemarks.formatted_time || info.openRemarks.timestamp}
               </span>
             </div>
-            <div className="border-t border-slate-200 pt-2">
+            <div className="border-t border-slate-200 pt-1.5">
               <span className="text-slate-500 font-medium block mb-1">Remarks:</span>
-              <p className="bg-white p-2.5 rounded-lg border border-slate-200 text-slate-800 italic">
+              <p className="bg-white p-2 rounded-lg border border-slate-200 text-slate-800 italic">
                 "{info.openRemarks.remarks}"
               </p>
             </div>
           </div>
 
-          <p className="text-center text-slate-600 font-medium">
-            The Sauda is now active. You can now edit it or view its details.
-          </p>
+          {/* Change Delivery Date Section */}
+          <div className="bg-amber-50/70 rounded-xl p-3.5 border border-amber-200 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="font-black text-amber-950 uppercase tracking-wide text-[11px]">
+                Change Delivery / Shipment Date
+              </span>
+              {dateSavedSuccess && (
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+                  ✓ Saved
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-700 mb-1">Delivery From</label>
+                <input
+                  type="date"
+                  value={deliveryFrom}
+                  onChange={(e) => {
+                    setDeliveryFrom(e.target.value);
+                    setDateSavedSuccess(false);
+                  }}
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-mono text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-700 mb-1">Delivery To (Shipment By)</label>
+                <input
+                  type="date"
+                  value={deliveryTo}
+                  onChange={(e) => {
+                    setDeliveryTo(e.target.value);
+                    setDateSavedSuccess(false);
+                  }}
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-mono text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-2 pt-0.5">
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] font-bold text-slate-700">Grace Days:</label>
+                <input
+                  type="number"
+                  value={graceDays}
+                  onChange={(e) => {
+                    setGraceDays(e.target.value);
+                    setDateSavedSuccess(false);
+                  }}
+                  className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg font-mono text-xs font-bold text-right text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveDeliveryDate}
+                disabled={isSavingDate}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] rounded-lg shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isSavingDate ? 'Saving...' : 'Save Delivery Date'}
+              </button>
+            </div>
+          </div>
 
           <div className="flex items-center gap-2 pt-1">
             <button
@@ -300,10 +496,10 @@ export const ReopenSuccessModal: React.FC<{
             </button>
             <button
               type="button"
-              onClick={() => {
-                const po = info.po;
+              onClick={async () => {
+                await handleSaveDeliveryDate();
                 onClose();
-                onEditNow(po);
+                onEditNow(updatedPoObject);
               }}
               className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >

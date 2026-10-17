@@ -540,19 +540,29 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
       } else {
          inserted = await dbModule.insert('satta_master', sattaData);
       }
+
+      let resolvedSattaId = inserted?.satta_id || inserted?.id || sattaData.satta_id;
+      if (!resolvedSattaId && sattaData.satta_no) {
+        const allSattasAfter = await dbModule.fetchAll('satta_master').catch(() => []);
+        const matchAfter = allSattasAfter.find((s: any) => String(s.satta_no || '').trim() === String(sattaData.satta_no).trim());
+        if (matchAfter) {
+          resolvedSattaId = matchAfter.satta_id || matchAfter.id;
+        }
+      }
       
-      if (inserted && qd) {
-        // Delete old details if editing, then re-insert
-        if (isEditMode) {
-           await dbModule.delete('satta_quality_details', 'satta_id', inserted.satta_id);
+      if (qd) {
+        // Delete old details if editing and we have a valid satta_id, then re-insert
+        if (isEditMode && resolvedSattaId) {
+           await dbModule.delete('satta_quality_details', 'satta_id', resolvedSattaId).catch(() => {});
         }
 
         for (const row of qd) {
           if (row.quality || row.qty || row.rs || row.marka || row.agency) {
              try {
                 await dbModule.insert('satta_quality_details', {
-                  satta_id: inserted.satta_id,
-                  financial_year: inserted.financial_year || sattaData.financial_year,
+                  satta_id: resolvedSattaId || sattaData.satta_no,
+                  satta_no: sattaData.satta_no,
+                  financial_year: inserted?.financial_year || sattaData.financial_year,
                   quality: row.quality,
                   qty: Number(row.qty) || 0,
                   agency: row.agency || '',

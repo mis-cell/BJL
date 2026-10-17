@@ -156,16 +156,17 @@ export const dbModule = {
       return data;
     }
     let payload = { ...data };
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const { data: result, error } = await supabase
+    for (let attempt = 0; attempt < 25; attempt++) {
+      const { data: resultRows, error } = await supabase
         .from(table)
         .insert(payload)
-        .select()
-        .maybeSingle();
+        .select();
       
+      const result = Array.isArray(resultRows) ? resultRows[0] : resultRows;
+
       if (error) {
         // 1. Check if an empty string caused a type mismatch error
-        if (error.message && (error.message.includes('invalid input syntax for type') || error.message.includes('invalid input syntax for integer') || error.message.includes('invalid input syntax for date'))) {
+        if (error.message && (error.message.includes('invalid input syntax for type') || error.message.includes('invalid input syntax for integer') || error.message.includes('invalid input syntax for date') || error.message.includes('invalid input syntax for numeric'))) {
           let converted = false;
           Object.keys(payload).forEach(k => {
             if (payload[k] === '') {
@@ -199,6 +200,7 @@ export const dbModule = {
       }).catch(() => {});
       return result || payload;
     }
+    return payload;
   },
 
   async upsert(table: string, data: any, idCol?: string) {
@@ -221,15 +223,33 @@ export const dbModule = {
       return data;
     }
     let payload = { ...data };
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const { data: result, error } = await supabase
+    for (let attempt = 0; attempt < 25; attempt++) {
+      const { data: resultRows, error } = await supabase
         .from(table)
         .upsert(payload, idCol ? { onConflict: idCol } : undefined)
-        .select()
-        .maybeSingle();
+        .select();
       
+      const result = Array.isArray(resultRows) ? resultRows[0] : resultRows;
+
       if (error) {
-        if (error.message && (error.message.includes('invalid input syntax for type') || error.message.includes('invalid input syntax for integer') || error.message.includes('invalid input syntax for date'))) {
+        // Fallback if table lacks a UNIQUE constraint on idCol (Postgres 42P10)
+        if (idCol && payload[idCol] !== undefined && error.message && (
+          error.message.includes('no unique or exclusion constraint') ||
+          error.code === '42P10'
+        )) {
+          const { data: existingRows } = await supabase
+            .from(table)
+            .select(idCol)
+            .eq(idCol, payload[idCol])
+            .limit(1);
+          if (existingRows && existingRows.length > 0) {
+            return await this.update(table, idCol, payload[idCol], payload);
+          } else {
+            return await this.insert(table, payload);
+          }
+        }
+
+        if (error.message && (error.message.includes('invalid input syntax for type') || error.message.includes('invalid input syntax for integer') || error.message.includes('invalid input syntax for date') || error.message.includes('invalid input syntax for numeric'))) {
           let converted = false;
           Object.keys(payload).forEach(k => {
             if (payload[k] === '') {
@@ -263,6 +283,7 @@ export const dbModule = {
       }).catch(() => {});
       return result || payload;
     }
+    return payload;
   },
 
   async update(table: string, idCol: string, idVal: any, data: any) {
@@ -285,16 +306,20 @@ export const dbModule = {
       return data;
     }
     let payload = { ...data };
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const { data: result, error } = await supabase
+    for (let attempt = 0; attempt < 25; attempt++) {
+      if (Object.keys(payload).length === 0) {
+        return data;
+      }
+      const { data: resultRows, error } = await supabase
         .from(table)
         .update(payload)
         .eq(idCol, idVal)
-        .select()
-        .maybeSingle();
+        .select();
       
+      const result = Array.isArray(resultRows) ? resultRows[0] : resultRows;
+
       if (error) {
-        if (error.message && (error.message.includes('invalid input syntax for type') || error.message.includes('invalid input syntax for integer') || error.message.includes('invalid input syntax for date'))) {
+        if (error.message && (error.message.includes('invalid input syntax for type') || error.message.includes('invalid input syntax for integer') || error.message.includes('invalid input syntax for date') || error.message.includes('invalid input syntax for numeric'))) {
           let converted = false;
           Object.keys(payload).forEach(k => {
             if (payload[k] === '') {
@@ -328,6 +353,7 @@ export const dbModule = {
       }).catch(() => {});
       return result || payload;
     }
+    return payload;
   },
 
   async delete(table: string, idCol: string, idVal: any) {
@@ -396,11 +422,11 @@ export async function flushOfflineQueue() {
   for (const item of queue) {
     try {
       if (item.action === 'insert') {
-        await supabase.from(item.table).insert(item.data);
+        await dbModule.insert(item.table, item.data);
       } else if (item.action === 'update' && item.idCol && item.idVal) {
-        await supabase.from(item.table).update(item.data).eq(item.idCol, item.idVal);
+        await dbModule.update(item.table, item.idCol, item.idVal, item.data);
       } else if (item.action === 'delete' && item.idCol && item.idVal) {
-        await supabase.from(item.table).delete().eq(item.idCol, item.idVal);
+        await dbModule.delete(item.table, item.idCol, item.idVal);
       }
     } catch (e) {
       console.error(`[SYNC] Failed to process queued action for ${item.table}:`, e);

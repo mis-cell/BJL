@@ -345,11 +345,23 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
     // Save to Supabase `sms_sauda`
     if (supabase) {
       try {
-        const { data: existing } = await supabase
+        const { data: existingById } = await supabase
           .from('sms_sauda')
           .select('id')
-          .or(`sms_id.eq.${sms.id},sauda_no.eq.${saudaNo}`)
+          .eq('sms_id', sms.id)
           .limit(1);
+
+        let existingId = existingById && existingById.length > 0 ? existingById[0].id : null;
+        if (!existingId && saudaNo) {
+          const { data: existingBySauda } = await supabase
+            .from('sms_sauda')
+            .select('id')
+            .eq('sauda_no', saudaNo)
+            .limit(1);
+          if (existingBySauda && existingBySauda.length > 0) {
+            existingId = existingBySauda[0].id;
+          }
+        }
 
         const payload = {
           sms_id: sms.id,
@@ -369,10 +381,10 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
           remarks: `[Verified Match: ${matchScore}%] ${sms.body}`
         };
 
-        if (existing && existing.length > 0) {
-          await supabase.from('sms_sauda').update(payload).eq('id', existing[0].id);
+        if (existingId) {
+          await dbModule.update('sms_sauda', 'id', existingId, payload);
         } else {
-          await supabase.from('sms_sauda').insert([payload]);
+          await dbModule.insert('sms_sauda', payload);
         }
       } catch (dbErr) {
         console.warn("Failed to persist marked SMS link in Supabase:", dbErr);
@@ -401,10 +413,12 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
 
     if (supabase) {
       try {
-        await supabase
-          .from('sms_sauda')
-          .update({ sauda_created: false })
-          .or(`sms_id.eq.${sms.id},raw_sms_body.eq.${sms.body}`);
+        if (sms.id) {
+          await dbModule.update('sms_sauda', 'sms_id', sms.id, { sauda_created: false }).catch(() => {});
+        }
+        if (sms.body) {
+          await dbModule.update('sms_sauda', 'raw_sms_body', sms.body, { sauda_created: false }).catch(() => {});
+        }
       } catch (err) {
         console.warn("Failed to unmark SMS in Supabase:", err);
       }

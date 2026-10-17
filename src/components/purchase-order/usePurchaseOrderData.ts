@@ -500,26 +500,43 @@ export function usePurchaseOrderData({
         const contractLorries = Math.max(1, parseInt(p.total_lorries || p.total_no_of_lorries || p.no_of_lorries || p.lorries || 1, 10) || 1);
 
         const cleanPoKey = String(p.po_no || '').trim().toUpperCase();
+        const cleanSaudaKey = String(p.sauda_no || p.contract_po_no || '').trim().toUpperCase();
         let parsedOpenRemarks = p.open_remarks;
         if (typeof parsedOpenRemarks === 'string') {
           try { parsedOpenRemarks = JSON.parse(parsedOpenRemarks); } catch(e) {}
         }
         if (!parsedOpenRemarks) {
           try {
-            const localRemarks = localStorage.getItem(`sauda_open_remarks_${cleanPoKey}`);
+            const localRemarks = localStorage.getItem(`sauda_open_remarks_${cleanPoKey}`) || (cleanSaudaKey ? localStorage.getItem(`sauda_open_remarks_${cleanSaudaKey}`) : null);
             if (localRemarks) parsedOpenRemarks = JSON.parse(localRemarks);
           } catch(e) {}
         }
 
-        const isExplicitReopened = p.is_reopened === true || 
-                                   p.reopened === true || 
-                                   Boolean(parsedOpenRemarks) ||
-                                   localStorage.getItem(`sauda_reopened_${cleanPoKey}`) === 'true';
+        let cachedDeliveryDates: any = null;
+        try {
+          const rawDates = localStorage.getItem(`sauda_delivery_dates_${cleanPoKey}`) || (cleanSaudaKey ? localStorage.getItem(`sauda_delivery_dates_${cleanSaudaKey}`) : null);
+          if (rawDates) cachedDeliveryDates = JSON.parse(rawDates);
+        } catch (_e) {}
 
-        const isExplicitClosed = p.is_closed === true || 
+        const isCancelledLocal = localStorage.getItem(`sauda_cancelled_${cleanPoKey}`) === 'true' ||
+                                 (cleanSaudaKey ? localStorage.getItem(`sauda_cancelled_${cleanSaudaKey}`) === 'true' : false);
+
+        const isExplicitReopened = !isCancelledLocal && (
+                                   p.is_reopened === true || 
+                                   p.reopened === true || 
+                                   p.status === 'open' ||
+                                   Boolean(parsedOpenRemarks) ||
+                                   localStorage.getItem(`sauda_reopened_${cleanPoKey}`) === 'true' ||
+                                   (cleanSaudaKey ? localStorage.getItem(`sauda_reopened_${cleanSaudaKey}`) === 'true' : false)
+        );
+
+        const isExplicitClosed = !isExplicitReopened && (
+                                 p.is_closed === true || 
                                  p.sauda_closed === true || 
                                  p.status === 'closed' || 
-                                 localStorage.getItem(`sauda_closed_${cleanPoKey}`) === 'true';
+                                 localStorage.getItem(`sauda_closed_${cleanPoKey}`) === 'true' ||
+                                 (cleanSaudaKey ? localStorage.getItem(`sauda_closed_${cleanSaudaKey}`) === 'true' : false)
+        );
 
         const isLorryClosed = contractLorries > 0 && receivedLorries >= contractLorries;
         const isClosed = !isExplicitReopened && (isExplicitClosed || isLorryClosed);
@@ -582,15 +599,24 @@ export function usePurchaseOrderData({
         }
 
         const isPass = isCleared || (workflowStage === 'final_po');
-        const isWeightFulfilled = isExplicitCompleted || isWeightCompleted || isClosed;
+        const isWeightFulfilled = !isExplicitReopened && (isExplicitCompleted || isWeightCompleted || isClosed);
         const isFullyComplete = isTempPo 
           ? (isWeightFulfilled && isPass)
           : isWeightFulfilled;
         const computedPending = !isFullyComplete;
 
+        const effectiveDeliveryFrom = cachedDeliveryDates?.delivery_from || p.delivery_from || p.shipment_date || null;
+        const effectiveDeliveryTo = cachedDeliveryDates?.delivery_to || p.delivery_to || p.shipment_date || effectiveDeliveryFrom || null;
+        const effectiveGraceDays = cachedDeliveryDates?.grace_days !== undefined ? cachedDeliveryDates.grace_days : (p.grace_days ?? p.shipment_days ?? 0);
+
         return {
           ...p,
+          status: isCancelledLocal ? 'cancelled' : (isExplicitReopened ? 'open' : p.status),
           date: p.date || p.po_date || (p.created_at ? p.created_at.slice(0, 10) : ''),
+          delivery_from: effectiveDeliveryFrom,
+          delivery_to: effectiveDeliveryTo,
+          shipment_date: effectiveDeliveryTo || p.shipment_date,
+          grace_days: effectiveGraceDays,
           broker: (p.broker || '').toUpperCase(),
           supplier: (p.supplier || '').toUpperCase(),
           challan_supplier: (p.challan_supplier || p.supplier || '').toUpperCase(),
