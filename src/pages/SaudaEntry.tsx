@@ -1053,7 +1053,15 @@ export default function SaudaEntry({
         }
         inserted = await dbModule.update('sauda_master', 'sauda_id', saudaPayload.sauda_id, saudaPayload);
       } else {
-        inserted = await dbModule.insert('sauda_master', saudaPayload);
+        if (supabase) {
+          const { data: supData, error } = await supabase.from('sauda_master').insert(saudaPayload).select().maybeSingle();
+          if (!error && supData) {
+            inserted = supData;
+          }
+        }
+        if (!inserted) {
+          inserted = await dbModule.insert('sauda_master', saudaPayload);
+        }
       }
 
       if (isWasRejected) {
