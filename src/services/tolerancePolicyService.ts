@@ -11,6 +11,11 @@ export interface TolerancePolicyItem {
   is_active: boolean;
   remarks: string;
   updated_at?: string;
+  policy_name?: string;
+  max_weight_limit_kg?: number;
+  max_weight_limit_mt?: number;
+  applicable_unit?: string;
+  description?: string;
 }
 
 export type TolerancePolicy = TolerancePolicyItem;
@@ -84,17 +89,27 @@ function parseNonNegativeNum(val: any, fallback: number): number {
 }
 
 function normalizePolicyRow(d: any): TolerancePolicyItem {
+  const label = String(d.label || d.policy_name || d.unit_type || 'Standard');
+  const unit_type = String(d.unit_type || d.applicable_unit || 'BALES').toUpperCase();
+  const tolerance_mt = parseNonNegativeNum(d.tolerance_mt ?? d.max_weight_limit_mt, 1.5);
+  const remarks = String(d.remarks || d.description || '');
+
   return {
-    id: String(d.id || `pol_${String(d.unit_type || '').toLowerCase()}`),
-    unit_type: String(d.unit_type || 'BALES').toUpperCase(),
-    label: String(d.label || d.unit_type || 'Standard'),
+    id: String(d.id || `pol_${unit_type.toLowerCase()}`),
+    unit_type,
+    label,
     tolerance_pct: parseNonNegativeNum(d.tolerance_pct, 5),
-    tolerance_mt: parseNonNegativeNum(d.tolerance_mt, 1.5),
+    tolerance_mt,
     min_lorries: parseNonNegativeNum(d.min_lorries, 1),
     max_lorries: parseNonNegativeNum(d.max_lorries, 50),
     is_active: d.is_active !== false,
-    remarks: String(d.remarks || ''),
-    updated_at: d.updated_at
+    remarks,
+    updated_at: d.updated_at,
+    policy_name: label,
+    applicable_unit: unit_type,
+    max_weight_limit_mt: tolerance_mt,
+    max_weight_limit_kg: tolerance_mt * 1000,
+    description: remarks
   };
 }
 

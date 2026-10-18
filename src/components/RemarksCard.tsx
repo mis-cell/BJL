@@ -1,13 +1,12 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
 import SectionHeader from './SectionHeader';
-import FileUploader from './FileUploader';
 import FooterActions from './FooterActions';
 
 interface RemarksCardProps {
   formData: any;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
-  onSignatureChange: (url: string) => void;
+  onSignatureChange?: (url: string) => void;
   onPrint?: () => void;
   onBack?: () => void;
   onSave?: () => void;
@@ -70,13 +69,6 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
               className="bg-white border border-[#FBCFCB] rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-[#F7AFA8] transition-all shadow-2xs cursor-pointer"
             />
           </div>
-
-          {/* Digital Signature Upload */}
-          <FileUploader
-            label="Digital Signature"
-            value={formData.signature_url}
-            onChange={onSignatureChange}
-          />
         </div>
       </div>
 

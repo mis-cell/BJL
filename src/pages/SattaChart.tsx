@@ -747,11 +747,9 @@ export default function SattaChart({
     
     setIsLoading(true);
     try {
-      await ensureSattaTablesExist();
-      await silentSeedHistoricalList();
-      alert("Historic Base Rate range series successfully written to database!");
+      await fetchRateHistory();
+      alert("Historic Base Rate range series successfully refreshed from database!");
       loadChartConfig();
-      fetchRateHistory();
     } catch (err: any) {
       alert("Failed to seed Satta range logs: " + err.message);
     } finally {

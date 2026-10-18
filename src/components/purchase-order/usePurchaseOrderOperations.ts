@@ -193,8 +193,8 @@ export function usePurchaseOrderOperations({
         };
       });
 
-      const sumQty = mappedItems.reduce((s, it) => s + (parseFloat(it.qty) || 0), 0);
-      const sumWt = mappedItems.reduce((s, it) => s + (parseFloat(it.weight) || 0), 0);
+      const sumQty = mappedItems.reduce((s, it) => s + (Number(it.qty) || 0), 0);
+      const sumWt = mappedItems.reduce((s, it) => s + (Number(it.weight) || 0), 0);
 
       const fullPo = {
         no: poHeader.po_no || '',
@@ -1054,8 +1054,8 @@ export function usePurchaseOrderOperations({
         };
       });
 
-      const sumQty = mappedItems.reduce((s, it) => s + (parseFloat(it.qty) || 0), 0);
-      const sumWt = mappedItems.reduce((s, it) => s + (parseFloat(it.weight) || 0), 0);
+      const sumQty = mappedItems.reduce((s, it) => s + (Number(it.qty) || 0), 0);
+      const sumWt = mappedItems.reduce((s, it) => s + (Number(it.weight) || 0), 0);
 
       const fullPo = {
         no: poHeader.po_no || '',
@@ -1133,8 +1133,8 @@ export function usePurchaseOrderOperations({
         };
       });
 
-      const sumQty = mappedItems.reduce((s, it) => s + (parseFloat(it.qty) || 0), 0);
-      const sumWt = mappedItems.reduce((s, it) => s + (parseFloat(it.weight) || 0), 0);
+      const sumQty = mappedItems.reduce((s, it) => s + (Number(it.qty) || 0), 0);
+      const sumWt = mappedItems.reduce((s, it) => s + (Number(it.weight) || 0), 0);
 
       const fullPo = {
         no: poHeader.po_no || '',

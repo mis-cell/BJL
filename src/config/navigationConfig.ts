@@ -55,6 +55,7 @@ export type Page =
   | "inspection"
   | "mr_settlement"
   | "closing_stock"
+  | "closing_stock_entry"
   | "mismatch"
   | "material_mismatch"
   | "club_po_mr"
@@ -100,37 +101,39 @@ export const allSidebarItems = [
 export function getPageMeta(pageId: string) {
   const item = allSidebarItems.find((i) => i.id === pageId);
   if (item) {
-    return { label: item.label, icon: item.icon };
+    return { label: item.label, title: item.label, icon: item.icon };
   }
 
   if (pageId === "main_gate" || pageId === "maingate") {
-    return { label: "Main Gate", icon: Truck };
+    return { label: "Main Gate", title: "Main Gate", icon: Truck };
   }
   if (pageId === "amad_entry") {
-    return { label: "Amad Entry", icon: PlusCircle };
+    return { label: "Amad Entry", title: "Amad Entry", icon: PlusCircle };
   }
   if (pageId === "sauda_entry") {
-    return { label: "Sauda Entry", icon: PlusCircle };
+    return { label: "Sauda Entry", title: "Sauda Entry", icon: PlusCircle };
   }
   if (pageId === "satta_entry") {
-    return { label: "Satta Entry", icon: PlusCircle };
+    return { label: "Satta Entry", title: "Satta Entry", icon: PlusCircle };
   }
   if (pageId === "vyapari" || pageId === "trade" || pageId === "treds" || pageId === "trades" || pageId === "trede") {
-    return { label: "Trade", icon: Wallet };
+    return { label: "Trade", title: "Trade", icon: Wallet };
   }
   if (pageId === "admindesk") {
-    return { label: "Admin Desk", icon: Settings };
+    return { label: "Admin Desk", title: "Admin Desk", icon: Settings };
   }
   if (pageId === "payment") {
-    return { label: "Payment Module", icon: FileText };
+    return { label: "Payment Module", title: "Payment Module", icon: FileText };
   }
 
   const fallbackLabel = pageId
     .replace(/[_-]/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 
+  const label = fallbackLabel === "Ai Assistant" ? "AI Assistant" : fallbackLabel;
   return {
-    label: fallbackLabel === "Ai Assistant" ? "AI Assistant" : fallbackLabel,
+    label,
+    title: label,
     icon: LayoutDashboard,
   };
 }

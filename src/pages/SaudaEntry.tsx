@@ -1356,7 +1356,6 @@ export default function SaudaEntry({
             <RemarksCard
               formData={formData}
               onChange={handleChange}
-              onSignatureChange={(url) => setFormData(prev => ({ ...prev, signature_url: url }))}
               onPrint={() => setShowPrintSlip(true)}
               onBack={onCancel}
               onSave={handleSave}

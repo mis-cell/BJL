@@ -225,9 +225,15 @@ export const dbModule = {
    * Execute an atomic SQL transaction via the database RPC `exec_sql`.
    * Rolls back all statements if any statement fails.
    */
-  async executeTransaction(statements: string | string[]): Promise<any> {
+  async executeTransaction(statementsOrFn: string | string[] | ((client: any) => Promise<any>)): Promise<any> {
     assertOnlineAndConnected("transaction", "exec_sql");
-    const sqlList = (Array.isArray(statements) ? statements : [statements])
+    if (typeof statementsOrFn === "function") {
+      const res = await statementsOrFn(supabase);
+      dataCache.clear();
+      notifyDataChanged();
+      return res ?? { success: true };
+    }
+    const sqlList = (Array.isArray(statementsOrFn) ? statementsOrFn : [statementsOrFn])
       .map((s) => s.trim())
       .filter(Boolean);
     if (sqlList.length === 0) return { success: true };
@@ -392,13 +398,14 @@ export const dbModule = {
   /**
    * Strict upsert that never strips columns and verifies an authoritative returned row.
    */
-  async upsert(table: string, data: any, onConflictColumn: string): Promise<any> {
+  async upsert(table: string, data: any, onConflictColumn?: string): Promise<any> {
     assertOnlineAndConnected("upsert", table);
     const payload = sanitizePayload(data);
 
+    const options = onConflictColumn ? { onConflict: onConflictColumn } : undefined;
     const { data: upsertedRows, error } = await supabase!
       .from(table)
-      .upsert([payload], { onConflict: onConflictColumn })
+      .upsert([payload], options)
       .select();
 
     if (error) {

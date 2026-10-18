@@ -268,7 +268,7 @@ export default function Reports({ onClose }: ReportsProps) {
 
             <button
               type="button"
-              onClick={loadData}
+              onClick={() => loadData(true)}
               disabled={loading}
               className="px-3 py-2 bg-[#F48F8B] hover:bg-[#F06D6C] text-white text-xs font-bold rounded-xl border border-[#E85A5A] transition flex items-center gap-1.5 shadow-sm cursor-pointer"
               title="Reload database"
