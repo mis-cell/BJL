@@ -103,12 +103,10 @@ export function calculateWeightTolerance(
   const activePct = isPolicyActive 
     ? (customPolicy?.tolerance_pct !== undefined ? Number(customPolicy.tolerance_pct) : 3.0) 
     : 0;
-  const hasFixedMax = customPolicy?.max_weight_limit_mt !== undefined && customPolicy?.max_weight_limit_mt !== null;
+  const hasFixedMax = customPolicy?.max_weight_limit_mt !== undefined || customPolicy?.max_weight_limit_kg !== undefined;
   const activeMaxMt = hasFixedMax
-    ? Number(customPolicy?.max_weight_limit_mt)
-    : (customPolicy?.max_weight_limit_kg !== undefined && customPolicy?.max_weight_limit_kg !== null
-        ? Number(customPolicy?.max_weight_limit_kg) / 1000
-        : Infinity);
+    ? (Number(customPolicy?.max_weight_limit_mt) || (Number(customPolicy?.max_weight_limit_kg) ? Number(customPolicy?.max_weight_limit_kg) / 1000 : Infinity))
+    : Infinity;
 
   // 3% Execution Exemption calculation on Sauda contract quantity in MT & Qtl
   const pctRatio = activePct / 100;

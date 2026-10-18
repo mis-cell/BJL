@@ -2417,13 +2417,20 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         await dbModule.update('sauda_check_point', 'po_no', masterData.po_no, { status: 'settled', pending: false }).catch(() => {});
       }
 
-      if (targetMrNo) {
-        await dbModule.update('mill_inspection_master', 'mr_no', targetMrNo, { status: 'settled' }).catch(() => {});
-        await dbModule.update('mill_inspection_master', 'arrival_no', targetMrNo, { status: 'settled' }).catch(() => {});
-        await dbModule.update('final_arrival', 'mr_no', targetMrNo, { status: 'settled' }).catch(() => {});
-        await dbModule.update('final_arrival', 'arrival_no', targetMrNo, { status: 'settled' }).catch(() => {});
-        await dbModule.update('temporary_material_received', 'mr_no', targetMrNo, { status: 'settled' }).catch(() => {});
-        await dbModule.update('temporary_material_received', 'arrival_no', targetMrNo, { status: 'settled' }).catch(() => {});
+      if (targetMrNo || masterData.po_no) {
+        if (targetMrNo) {
+          await dbModule.update('mill_inspection_master', 'mr_no', targetMrNo, { status: 'settled' }).catch(() => {});
+          await dbModule.update('mill_inspection_master', 'arrival_no', targetMrNo, { status: 'settled' }).catch(() => {});
+          await dbModule.update('final_arrival', 'mr_no', targetMrNo, { status: 'settled' }).catch(() => {});
+          await dbModule.update('final_arrival', 'arrival_no', targetMrNo, { status: 'settled' }).catch(() => {});
+          await dbModule.update('temporary_material_received', 'mr_no', targetMrNo, { status: 'settled' }).catch(() => {});
+          await dbModule.update('temporary_material_received', 'arrival_no', targetMrNo, { status: 'settled' }).catch(() => {});
+        }
+        if (masterData.po_no) {
+          await dbModule.update('mill_inspection_master', 'po_no', masterData.po_no, { status: 'settled' }).catch(() => {});
+          await dbModule.update('final_arrival', 'po_no', masterData.po_no, { status: 'settled' }).catch(() => {});
+          await dbModule.update('temporary_material_received', 'po_no', masterData.po_no, { status: 'settled' }).catch(() => {});
+        }
       }
 
 

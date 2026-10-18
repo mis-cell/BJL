@@ -240,12 +240,12 @@ export const dbModule = {
       .filter(Boolean);
     if (sqlList.length === 0) return { success: true };
 
-    const cleanSql = sqlList
+    const wrappedSql = `BEGIN;\n${sqlList
       .map((s) => (s.endsWith(";") ? s : `${s};`))
-      .join("\n");
+      .join("\n")}\nCOMMIT;`;
 
     const { data, error } = await supabase!.rpc("exec_sql", {
-      query: cleanSql,
+      query: wrappedSql,
     });
     if (error) {
       throw new Error(`Atomic transaction failed: ${error.message}`);
@@ -300,18 +300,15 @@ export const dbModule = {
 
     const promise = (async () => {
       try {
-        const effectivePageSize = Math.min(pageSize, maxRows);
+        const pSize = Math.min(Math.max(pageSize, 100), 1000);
         const allRows: any[] = [];
         let offset = 0;
 
         while (offset < maxRows) {
-          const fetchCount = Math.min(effectivePageSize, maxRows - offset);
-          if (fetchCount <= 0) break;
-
           let query = supabase
             .from(table)
             .select("*")
-            .range(offset, offset + fetchCount - 1);
+            .range(offset, offset + pSize - 1);
 
           if (orderBy) {
             query = query.order(orderBy, {
@@ -327,10 +324,10 @@ export const dbModule = {
           const batch = data || [];
           allRows.push(...batch);
 
-          if (batch.length < fetchCount || allRows.length >= maxRows) {
+          if (batch.length < pSize) {
             break;
           }
-          offset += batch.length;
+          offset += pSize;
         }
 
         dataCache.set(cacheKey, {
