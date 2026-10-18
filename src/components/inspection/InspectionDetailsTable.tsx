@@ -98,9 +98,12 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
               </th>
               <th colSpan={3} className="p-2 border-r border-white/20 text-center bg-[#1e40af]">Lorry Moisture Read (%)</th>
               <th colSpan={3} className="p-2 border-r border-white/20 text-center bg-[#1d4ed8]">Insp. Moisture Read (%)</th>
-              <th colSpan={2} className="p-2 border-r border-blue-400 text-center bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white font-black shadow-inner">
+              <th
+                colSpan={2}
+                className="p-2 border-r border-blue-300 text-center bg-gradient-to-r from-sky-100 via-blue-100 to-indigo-100 text-blue-950 font-black shadow-inner"
+              >
                 <div className="flex items-center justify-center gap-1">
-                  <Sparkles className="w-3 h-3 text-cyan-300 fill-cyan-300" />
+                  <Sparkles className="w-3 h-3 text-blue-700 fill-blue-500" />
                   <span className="tracking-wide">Moisture %</span>
                 </div>
               </th>

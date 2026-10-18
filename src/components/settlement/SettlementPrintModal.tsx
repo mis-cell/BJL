@@ -20,6 +20,8 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
 }) => {
   if (!isOpen || !viewModalData) return null;
 
+  alert(JSON.stringify(viewModalData))
+
   return (
     <PrintModal
       isOpen={isOpen}
@@ -95,6 +97,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                   <th className="p-1.5 border-r border-slate-300">Agency</th>
                   <th className="p-1.5 border-r border-slate-300">Marka</th>
                   <th className="p-1.5 border-r border-slate-300 text-center">Moisture (%)</th>
+                  <th className="p-1.5 border-r border-slate-300 text-center">Grade Down (%)</th>
                   <th className="p-1.5 border-r border-slate-300 text-right">Quantity</th>
                   <th className="p-1.5 border-r border-slate-300 text-right">Weight (MT)</th>
                   <th className="p-1.5 border-r border-slate-300 text-right">Rate (₹/Qtl)</th>
@@ -102,7 +105,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {viewModalData.details.filter(c => (Number(c.quantity) > 0 || Number(c.arr_qty_wt) > 0 || Number(c.rate_value) > 0)).map((col, idx) => {
+                {viewModalData.details.filter(c => (Number(c.quantity) > 0 || Number(c.arr_qty_wt) > 0 || Number(c.rate_value) > 0) && getColWtMt(c)>0 ).map((col, idx) => {
                   const wtMt = getColWtMt(col);
                   const amt = getColAmount(col);
                   const moistVal = Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0);
@@ -113,6 +116,9 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                       <td className="p-1.5 border-r border-slate-200">{col.area || '-'}</td>
                       <td className="p-1.5 border-r border-slate-200">{col.agency || '-'}</td>
                       <td className="p-1.5 border-r border-slate-200">{col.marka_crop || '-'}</td>
+                      <td className="p-1.5 border-r border-slate-200 text-center font-mono font-bold text-blue-950">
+                        {moistVal > 0 ? `${moistVal.toFixed(2)}%` : (Number(viewModalData.master.summary_rate_wt_claim) > 0 ? `${Number(viewModalData.master.summary_rate_wt_claim).toFixed(2)}%` : '-')}
+                      </td>
                       <td className="p-1.5 border-r border-slate-200 text-center font-mono font-bold text-blue-950">
                         {moistVal > 0 ? `${moistVal.toFixed(2)}%` : (Number(viewModalData.master.summary_rate_wt_claim) > 0 ? `${Number(viewModalData.master.summary_rate_wt_claim).toFixed(2)}%` : '-')}
                       </td>

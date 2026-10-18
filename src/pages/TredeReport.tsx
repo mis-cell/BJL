@@ -1,887 +1,1143 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
-import {
-  Plus,
-  Search,
-  Trash2,
-  Save,
-  X,
-  Printer,
-  FileText,
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Plus, 
+  Search, 
+  Trash2, 
+  Save, 
+  X, 
+  Printer, 
+  FileText, 
+  TrendingUp,
+  DollarSign,
   RefreshCcw,
   Download,
+  AlertTriangle,
+  ChevronRight,
+  CheckCircle2,
+  Wallet,
   BookOpen,
+  ArrowLeft,
+  Clock,
+  Filter,
+  Calendar,
+  Layers,
   Users,
-  Edit2,
-  Building2,
-  Phone,
-  Mail,
-  MapPin,
-  CreditCard
+  AlertCircle
 } from 'lucide-react';
 import LegacyLayout from '../components/LegacyLayout';
+import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
-import { formatIndianCurrency } from '../lib/utils';
-import { exportToCSV } from '../utils/exportHelpers';
-import { enforceEditOrDeletePermission } from '../lib/permissions';
+import { cn, formatIndianCurrency } from '../lib/utils';
 import { PaginationControls } from '../components/PaginationControls';
+import { enforceEditOrDeletePermission } from '../lib/permissions';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
-export interface TraderRecord {
-  id?: string;
-  supp_code: string;
-  supp_name: string;
-  proprietor_name: string;
-  address: string;
-  city: string;
-  state: string;
-  pin_code: string;
-  phone: string;
-  email: string;
-  gst_no: string;
-  pan_no: string;
+export interface PaymentMaster {
+  payment_id?: string;
+  voucher_no: string;
+  payment_date: string;
+  mr_no: string;
+  po_no: string;
+  po_date: string;
+  sett_date: string;
+  po_type: string;
+  broker: string;
+  supplier: string;
+  party_id: string;
+  party_name: string;
+  chn_supplier: string;
+  lorry_number: string;
+  arrival_no: string;
+  arrival_date: string;
+  arival_apmc_fees: number;
+  remarks: string;
+  payable_amt: number;
+  payable_bill_no: string;
+  payable_bill_date: string;
+  total_amount: number;
+  paid_amount: number;
+  payment_mode: string;
   bank_name: string;
-  account_no: string;
-  ifsc_code: string;
-  opening_balance: number;
+  reference_no: string;
   status: string;
+  payment_status: string;
+  advance_payment_done?: string;
+  advance_payment_from?: string;
+  payment_settlementdate?: string;
+  tenor?: string;
+  repayment_date?: string;
 }
 
-const emptyTrader = (): TraderRecord => ({
-  supp_code: `SUP-${Date.now().toString().slice(-4)}`,
-  supp_name: '',
-  proprietor_name: '',
-  address: '',
-  city: 'KOLKATA',
-  state: 'WEST BENGAL',
-  pin_code: '',
-  phone: '',
-  email: '',
-  gst_no: '',
-  pan_no: '',
-  bank_name: '',
-  account_no: '',
-  ifsc_code: '',
-  opening_balance: 0,
-  status: 'Active'
+export interface PaymentDetailColumn {
+  col_index: number;
+  grade: string;
+  area: string;
+  agency: string;
+  marka_crop: string;
+  quantity: number;
+  arr_qty_wt: number;
+  rate_value: number;
+  amount?: number;
+}
+
+const emptyDetailColumn = (index: number): PaymentDetailColumn => ({
+  col_index: index,
+  grade: '',
+  area: '',
+  agency: '',
+  marka_crop: '',
+  quantity: 0,
+  arr_qty_wt: 0,
+  rate_value: 0
 });
 
-export default function TredeReport({ onClose }: { onClose?: () => void }) {
-  const [traders, setTraders] = useState<TraderRecord[]>([]);
-  const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
-  const [arrivals, setArrivals] = useState<any[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
+const initialMaster = (): PaymentMaster => ({
+  voucher_no: `ADV-${Date.now().toString().slice(-6)}`,
+  payment_date: new Date().toISOString().split('T')[0],
+  mr_no: '',
+  po_no: '',
+  po_date: '',
+  sett_date: new Date().toISOString().split('T')[0],
+  po_type: 'Standard',
+  broker: '',
+  supplier: '',
+  party_id: '',
+  party_name: '',
+  chn_supplier: '',
+  lorry_number: '',
+  arrival_no: '',
+  arrival_date: '',
+  arival_apmc_fees: 0,
+  remarks: '',
+  payable_amt: 0,
+  payable_bill_no: '',
+  payable_bill_date: '',
+  total_amount: 0,
+  paid_amount: 0,
+  payment_mode: 'RXIL',
+  bank_name: '',
+  reference_no: '',
+  status: 'completed',
+  payment_status: 'Paid',
+  advance_payment_done: 'Yes',
+  advance_payment_from: '2',
+  payment_settlementdate: new Date().toISOString().split('T')[0],
+  tenor: '30',
+  repayment_date: ''
+});
+
+export default function PaymentModule({ onClose }: { onClose?: () => void }) {
+  const [viewMode, setViewMode] = useState<'dashboard' | 'entry' | 'ledger'>('dashboard');
   const [loading, setLoading] = useState(false);
+  const [searchFilter, setSearchFilter] = useState('');
+  const [partyFilter, setPartyFilter] = useState('All');
+  const [modeFilter, setModeFilter] = useState('All');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [stateFilter, setStateFilter] = useState('ALL');
+  // Main payment state
+  const [paymentList, setPaymentList] = useState<PaymentMaster[]>([]);
+  const [masterData, setMasterData] = useState<PaymentMaster>(initialMaster());
+  const [detailCols, setDetailCols] = useState<PaymentDetailColumn[]>([
+    emptyDetailColumn(1), emptyDetailColumn(2), emptyDetailColumn(3), emptyDetailColumn(4)
+  ]);
+  const [showSuccessAnim, setShowSuccessAnim] = useState(false);
+
+  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(100);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingTrader, setEditingTrader] = useState<TraderRecord | null>(null);
-  const [formData, setFormData] = useState<TraderRecord>(emptyTrader());
-  const [selectedLedgerTrader, setSelectedLedgerTrader] = useState<TraderRecord | null>(null);
-
-  const loadDirectoryData = async () => {
+  const initPage = async () => {
     setLoading(true);
     try {
-      const [suppData, custData, poData, scpData, arrData, payData] = await Promise.all([
-        dbModule.fetchAll('supply_master').catch(() => []),
-        dbModule.fetchAll('customer_master').catch(() => []),
-        dbModule.fetchAll('purchase_master').catch(() => []),
-        dbModule.fetchAll('sauda_check_point').catch(() => []),
-        dbModule.fetchAll('final_arrival').catch(() => []),
-        dbModule.fetchAll('payment_master').catch(() => [])
-      ]);
-
-      const mergedMap = new Map<string, TraderRecord>();
-
-      (suppData || []).forEach((s: any) => {
-        const code = String(s.supp_code || s.supplier_code || s.code || s.id || '').trim();
-        const name = String(s.supp_name || s.supplier_name || s.firm_name || s.name || '').trim();
-        if (!name && !code) return;
-        const key = (code || name).toUpperCase();
-        mergedMap.set(key, {
-          id: s.id || s.supp_id,
-          supp_code: code || `SUP-${mergedMap.size + 1}`,
-          supp_name: name,
-          proprietor_name: String(s.proprietor_name || s.contact_person || ''),
-          address: String(s.address || s.addr1 || ''),
-          city: String(s.city || s.district || ''),
-          state: String(s.state || 'WEST BENGAL'),
-          pin_code: String(s.pin_code || s.pincode || ''),
-          phone: String(s.phone || s.mobile || s.contact_no || ''),
-          email: String(s.email || ''),
-          gst_no: String(s.gst_no || s.gstin || ''),
-          pan_no: String(s.pan_no || s.pan || ''),
-          bank_name: String(s.bank_name || ''),
-          account_no: String(s.account_no || s.bank_account_no || ''),
-          ifsc_code: String(s.ifsc_code || ''),
-          opening_balance: Number(s.opening_balance || 0),
-          status: String(s.status || 'Active')
-        });
-      });
-
-      (custData || []).forEach((c: any) => {
-        const name = String(c.firm_name || c.supp_name || c.name || '').trim();
-        const code = String(c.cust_code || c.supp_code || c.code || '').trim();
-        if (!name) return;
-        const key = (code || name).toUpperCase();
-        if (!mergedMap.has(key)) {
-          mergedMap.set(key, {
-            id: c.id,
-            supp_code: code || `TRD-${mergedMap.size + 1}`,
-            supp_name: name,
-            proprietor_name: String(c.proprietor_name || ''),
-            address: String(c.address || ''),
-            city: String(c.city || ''),
-            state: String(c.state || 'WEST BENGAL'),
-            pin_code: String(c.pin_code || ''),
-            phone: String(c.phone || c.mobile || ''),
-            email: String(c.email || ''),
-            gst_no: String(c.gst_no || c.gstin || ''),
-            pan_no: String(c.pan_no || ''),
-            bank_name: String(c.bank_name || ''),
-            account_no: String(c.account_no || ''),
-            ifsc_code: String(c.ifsc_code || ''),
-            opening_balance: Number(c.opening_balance || 0),
-            status: String(c.status || 'Active')
-          });
-        }
-      });
-
-      setTraders(Array.from(mergedMap.values()).sort((a, b) => a.supp_name.localeCompare(b.supp_name)));
-      setPurchaseOrders([...(poData || []), ...(scpData || [])]);
-      setArrivals(arrData || []);
-      setPayments(payData || []);
-    } catch (err) {
-      console.error('Failed to load Trader Directory data:', err);
+      let payData: any[] = [];
+      if (supabase) {
+        const { data } = await supabase
+          .from('payment_master')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (data) payData = data;
+      }
+      
+      const localPay = await dbModule.fetchAll('payment_master').catch(() => []);
+      if (localPay && localPay.length > 0) {
+        const map = new Map();
+        payData.forEach(p => map.set(p.voucher_no, p));
+        localPay.forEach(p => { if (!map.has(p.voucher_no)) map.set(p.voucher_no, p); });
+        payData = Array.from(map.values());
+      }
+      setPaymentList(payData);
+    } catch (e) {
+      console.error("Error loading page payments layout:", e);
     } finally {
       setLoading(false);
     }
   };
 
-  useLiveAutoRefresh(loadDirectoryData, [], {
-    tables: ['supply_master', 'customer_master', 'purchase_master', 'final_arrival', 'payment_master']
-  });
+  useLiveAutoRefresh(initPage, [], { tables: ['payment_master'] });
 
-  // Compute financial & operational metrics per trader
-  const traderStatsMap = useMemo(() => {
-    const map: Record<string, {
-      poCount: number;
-      contractedMT: number;
-      receivedMT: number;
-      billedValue: number;
-      paidAmount: number;
-      balancePayable: number;
-      pos: any[];
-      arrivals: any[];
-      payments: any[];
-    }> = {};
+  useEffect(() => {
+    initPage();
+  }, []);
 
-    const ensure = (name: string) => {
-      const k = String(name || '').trim().toUpperCase();
-      if (!map[k]) {
-        map[k] = {
-          poCount: 0,
-          contractedMT: 0,
-          receivedMT: 0,
-          billedValue: 0,
-          paidAmount: 0,
-          balancePayable: 0,
-          pos: [],
-          arrivals: [],
-          payments: []
-        };
-      }
-      return map[k];
-    };
+  const handleModeChange = (e: React.ChangeEvent<HTMLSelectElement>, currentData: PaymentMaster) => {
+    const mode = e.target.value;
+    let fromVal = '1'; 
+    if (mode === 'RXIL') fromVal = '2';
+    if (mode === 'TReDS') fromVal = '3';
+    if (mode === 'Mart') fromVal = '4';
 
-    purchaseOrders.forEach(po => {
-      const sup = String(po.supplier || po.challan_supplier || '').trim();
-      if (!sup) return;
-      const st = ensure(sup);
-      st.poCount += 1;
-      const mt = Number(po.total_contract_mt || po.total_wt_in_ton || 0);
-      st.contractedMT += mt;
-      st.pos.push(po);
+    setMasterData({
+      ...currentData,
+      payment_mode: mode,
+      advance_payment_from: fromVal
     });
+  };
 
-    arrivals.forEach(arr => {
-      const sup = String(arr.supplier || arr.supplier_name || arr.challan_supplier || '').trim();
-      if (!sup) return;
-      const st = ensure(sup);
-      const wt = Number(arr.electronic_net_weight || arr.weight_reduced || (arr.weight_qtl ? arr.weight_qtl / 10 : 0));
-      const rate = Number(arr.rate || arr.b_rate || 6500);
-      st.receivedMT += wt;
-      st.billedValue += wt * 10 * rate;
-      st.arrivals.push(arr);
+  const handleTenorChange = (e: React.ChangeEvent<HTMLInputElement>, currentData: PaymentMaster) => {
+    const tenorDays = Number(e.target.value) || 0;
+    if (currentData.payment_settlementdate) {
+      const settleDate = new Date(currentData.payment_settlementdate);
+      settleDate.setDate(settleDate.getDate() + tenorDays);
+      
+      const yyyy = settleDate.getFullYear();
+      const mm = String(settleDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(settleDate.getDate()).padStart(2, '0');
+
+      setMasterData({
+        ...currentData,
+        tenor: e.target.value,
+        repayment_date: `${yyyy}-${mm}-${dd}`
+      });
+    } else {
+      setMasterData({ ...currentData, tenor: e.target.value });
+    }
+  };
+  const [selectedYear, setSelectedYear] = useState(2026);
+  const [selectedMonth, setSelectedMonth] = useState(null);
+  /* const filteredPayments = useMemo(() => {
+    return paymentList.filter(p => {
+      const matchesSearch = !searchFilter.trim() || 
+        (p.party_name || p.supplier || '').toLowerCase().includes(searchFilter.toLowerCase()) ||
+        (p.mr_no || '').toLowerCase().includes(searchFilter.toLowerCase());
+      
+      const matchesParty = partyFilter === 'All' || (p.party_name || p.supplier) === partyFilter;
+      const matchesMode = modeFilter === 'All' || p.advance_payment_from === modeFilter;
+      
+      return matchesSearch && matchesParty && matchesMode;
     });
+  }, [paymentList, searchFilter, partyFilter, modeFilter]); */
+  /* const filteredPayments = useMemo(() => {
+    return paymentList.filter(p => {
+      const matchesSearch =
+        !searchFilter.trim() ||
+        (p.party_name || p.supplier || '')
+          .toLowerCase()
+          .includes(searchFilter.toLowerCase()) ||
+        (p.mr_no || '')
+          .toLowerCase()
+          .includes(searchFilter.toLowerCase());
 
-    payments.forEach(pay => {
-      const sup = String(pay.supplier || pay.party_name || pay.chn_supplier || '').trim();
-      if (!sup) return;
-      const st = ensure(sup);
-      const paid = Number(pay.paid_amount || pay.payable_amt || pay.total_amount || 0);
-      st.paidAmount += paid;
-      st.payments.push(pay);
-    });
+      const matchesParty =
+        partyFilter === 'All' ||
+        (p.party_name || p.supplier) === partyFilter;
 
-    Object.keys(map).forEach(k => {
-      map[k].balancePayable = Math.max(0, map[k].billedValue - map[k].paidAmount);
-    });
+      const matchesMode =
+        modeFilter === 'All' ||
+        p.advance_payment_from === modeFilter;
 
-    return map;
-  }, [purchaseOrders, arrivals, payments]);
+      // Month filter
+      const matchesMonth =
+        selectedMonth === null ||
+        (
+          p.repayment_date &&
+          new Date(p.repayment_date).getMonth() === selectedMonth &&
+          new Date(p.repayment_date).getFullYear() === selectedYear
+        );
 
-  const availableStates = useMemo(() => {
-    const s = new Set<string>();
-    traders.forEach(t => {
-      if (t.state) s.add(t.state.toUpperCase());
-    });
-    return Array.from(s).sort();
-  }, [traders]);
-
-  const filteredTraders = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    return traders.filter(t => {
-      if (stateFilter !== 'ALL' && t.state.toUpperCase() !== stateFilter) return false;
-      if (!q) return true;
       return (
-        t.supp_name.toLowerCase().includes(q) ||
-        t.supp_code.toLowerCase().includes(q) ||
-        t.city.toLowerCase().includes(q) ||
-        t.gst_no.toLowerCase().includes(q) ||
-        t.phone.toLowerCase().includes(q) ||
-        t.proprietor_name.toLowerCase().includes(q)
+        matchesSearch &&
+        matchesParty &&
+        matchesMode &&
+        matchesMonth
       );
     });
-  }, [traders, searchTerm, stateFilter]);
+    }, [
+    paymentList,
+    searchFilter,
+    partyFilter,
+    modeFilter,
+    selectedMonth,
+    selectedYear
+  ]); */
+  //const matchesYear = p.repayment_date && new Date(p.repayment_date).getFullYear() === selectedYear;
+  const filteredPayments = useMemo(() => {
+    return paymentList.filter(p => {
 
-  const paginatedTraders = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredTraders.slice(start, start + pageSize);
-  }, [filteredTraders, currentPage, pageSize]);
+      const matchesSearch =
+        !searchFilter.trim() ||
+        (p.party_name || p.supplier || '')
+          .toLowerCase()
+          .includes(searchFilter.toLowerCase()) ||
+        (p.mr_no || '')
+          .toLowerCase()
+          .includes(searchFilter.toLowerCase());
 
-  const handleOpenCreate = () => {
-    setEditingTrader(null);
-    setFormData(emptyTrader());
-    setIsModalOpen(true);
-  };
+      const matchesParty =
+        partyFilter === 'All' ||
+        (p.party_name || p.supplier) === partyFilter;
 
-  const handleOpenEdit = (trader: TraderRecord) => {
-    if (!enforceEditOrDeletePermission('edit this trader record')) return;
-    setEditingTrader(trader);
-    setFormData({ ...trader });
-    setIsModalOpen(true);
-  };
+      const matchesMode =
+        modeFilter === 'All' ||
+        p.advance_payment_from === modeFilter;
 
-  const handleSaveTrader = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.supp_name.trim()) {
-      alert('Trader / Supplier Name is required.');
+      // YEAR FILTER
+      const matchesYear =
+        p.repayment_date &&
+        new Date(p.repayment_date).getFullYear() === selectedYear;
+
+      // MONTH FILTER
+      const matchesMonth =
+        selectedMonth === null ||
+        (
+          p.repayment_date &&
+          new Date(p.repayment_date).getMonth() === selectedMonth
+        );
+
+      return (
+        matchesSearch &&
+        matchesParty &&
+        matchesMode &&
+        matchesYear &&
+        matchesMonth
+      );
+    });
+  }, [
+    paymentList,
+    searchFilter,
+    partyFilter,
+    modeFilter,
+    selectedMonth,
+    selectedYear
+  ]);
+
+
+
+  // Derived high fidelity KPI values from the modern MIS spec
+  const metrics = useMemo(() => {
+    const totalAdvancePaid = filteredPayments.reduce((sum, p) => sum + (Number(p.paid_amount || 0)), 0);
+    const totalTransactions = filteredPayments.length;
+    const uniqueParties = new Set(filteredPayments.map(p => p.party_name || p.supplier).filter(Boolean)).size;
+    const pendingAdvance = filteredPayments.reduce((sum, p) => sum + (Math.max(0, Number(p.payable_amt || 0) - Number(p.paid_amount || 0))), 0);
+
+    return {
+      totalAdvancePaid: totalAdvancePaid || 0,
+      totalTransactions: totalTransactions || 0,
+      uniqueParties: uniqueParties || 0,
+      pendingAdvance: pendingAdvance || 0
+    };
+  }, [filteredPayments]);
+
+  const uniquePartyOptions = useMemo(() => {
+    return Array.from(new Set(paymentList.map(p => p.party_name || p.supplier).filter(Boolean))).sort();
+  }, [paymentList]);
+
+  //Export csv
+  const handleExportCsv = () => {
+    if (filteredPayments.length === 0) {
+      alert("No payment records to export.");
       return;
     }
 
-    setLoading(true);
-    try {
-      const payload = {
-        supp_code: formData.supp_code.trim(),
-        supp_name: formData.supp_name.trim().toUpperCase(),
-        proprietor_name: formData.proprietor_name.trim(),
-        address: formData.address.trim(),
-        city: formData.city.trim().toUpperCase(),
-        state: formData.state.trim().toUpperCase(),
-        pin_code: formData.pin_code.trim(),
-        phone: formData.phone.trim(),
-        email: formData.email.trim(),
-        gst_no: formData.gst_no.trim().toUpperCase(),
-        pan_no: formData.pan_no.trim().toUpperCase(),
-        bank_name: formData.bank_name.trim(),
-        account_no: formData.account_no.trim(),
-        ifsc_code: formData.ifsc_code.trim().toUpperCase(),
-        opening_balance: Number(formData.opening_balance || 0),
-        status: formData.status || 'Active'
-      };
-
-      if (editingTrader) {
-        const idCol = editingTrader.id ? 'id' : 'supp_code';
-        const idVal = editingTrader.id || editingTrader.supp_code;
-        await dbModule.update('supply_master', idCol, idVal, payload);
-      } else {
-        await dbModule.insert('supply_master', payload);
-      }
-
-      setIsModalOpen(false);
-      await loadDirectoryData();
-    } catch (err: any) {
-      console.error('Failed to save trader:', err);
-      alert(`Failed to save trader in supply_master: ${err?.message || 'Database write error'}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteTrader = async (trader: TraderRecord) => {
-    if (!enforceEditOrDeletePermission('delete this trader record')) return;
-    if (!window.confirm(`Delete trader "${trader.supp_name}" (${trader.supp_code}) from directory?`)) return;
-
-    setLoading(true);
-    try {
-      const idCol = trader.id ? 'id' : 'supp_code';
-      const idVal = trader.id || trader.supp_code;
-      await dbModule.delete('supply_master', idCol, idVal);
-      await loadDirectoryData();
-    } catch (err: any) {
-      console.error('Failed to delete trader:', err);
-      alert(`Failed to delete trader: ${err?.message || 'Database error'}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleExportCSV = () => {
-    if (filteredTraders.length === 0) return;
     const headers = [
-      'Supplier Code',
-      'Trader / Supplier Name',
-      'Proprietor',
-      'City',
-      'State',
-      'Phone',
-      'Email',
-      'GSTIN',
-      'PAN',
-      'PO Count',
-      'Contracted (MT)',
-      'Received (MT)',
-      'Paid Amount (INR)',
-      'Balance Payable (INR)',
-      'Status'
+      'M.R No',
+      'Supplier Name',
+      'Advance Done',
+      'Payable Amount',
+      'Paid Amount',
+      'Pending Amount',
+      'Payment From',
+      'Payment Settle date',
+      'Tenor',
+      'Re-Payment Date'
     ];
-    const rows = filteredTraders.map(t => {
-      const st = traderStatsMap[t.supp_name.toUpperCase()] || {
-        poCount: 0,
-        contractedMT: 0,
-        receivedMT: 0,
-        paidAmount: 0,
-        balancePayable: 0
-      };
+
+    const tableData = filteredPayments.map(p => {
+      const payablep = Number(p.payable_amt || p.total_amount || 0);
+      const paidp = Number(p.paid_amount || 0);
+      const pendingp = payablep - paidp;
+
+      const isAdvanceYesp =
+        (p.advance_payment_done || 'No').toLowerCase() === 'yes';
+
+      const advance_payment_fromp = p.advance_payment_from || '';
+
+      const paymentFrom =
+        advance_payment_fromp === '' || advance_payment_fromp === '1'
+          ? 'FROM BANK'
+          : advance_payment_fromp === '2'
+          ? 'RXIL'
+          : advance_payment_fromp === '3'
+          ? 'TReDS'
+          : advance_payment_fromp === '4'
+          ? 'Invoice Mart'
+          : '';
+
       return [
-        t.supp_code,
-        t.supp_name,
-        t.proprietor_name,
-        t.city,
-        t.state,
-        t.phone,
-        t.email,
-        t.gst_no,
-        t.pan_no,
-        st.poCount,
-        st.contractedMT.toFixed(3),
-        st.receivedMT.toFixed(3),
-        st.paidAmount.toFixed(2),
-        st.balancePayable.toFixed(2),
-        t.status
+        p.mr_no || '',
+        p.party_name || p.supplier || '',
+        isAdvanceYesp ? 'YES' : 'NO',
+        payablep.toFixed(2),
+        paidp.toFixed(2),
+        pendingp.toFixed(2),
+        paymentFrom,
+        p.payment_settlementdate
+          ? new Date(p.payment_settlementdate).toLocaleDateString('en-IN')
+          : '',
+        p.tenor || '',
+        p.repayment_date
+          ? new Date(p.repayment_date).toLocaleDateString('en-IN')
+          : ''
       ];
     });
-    exportToCSV(`trader_supplier_directory_${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+
+    // Escape CSV values
+    const escapeCsvValue = (value) => {
+      const stringValue = String(value ?? '');
+
+      if (
+        stringValue.includes(',') ||
+        stringValue.includes('"') ||
+        stringValue.includes('\n')
+      ) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+
+      return stringValue;
+    };
+
+    // Create CSV
+    const csvContent = [
+      headers.map(escapeCsvValue).join(','),
+      ...tableData.map(row =>
+        row.map(escapeCsvValue).join(',')
+      )
+    ].join('\r\n');
+
+    // Add BOM for proper Excel UTF-8 support
+    const blob = new Blob(
+      ['\uFEFF' + csvContent],
+      { type: 'text/csv;charset=utf-8;' }
+    );
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Treds_Records_${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
   };
 
-  const handlePrintDirectory = () => {
-    window.print();
+  // Export PDF Ledger / Summary
+  const handleExportPdf = () => {
+    if (filteredPayments.length === 0) {
+      alert("No payment records to export.");
+      return;
+    }
+    const doc = new jsPDF();
+    doc.setFontSize(14);
+    doc.text("Treds Report", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+
+    const tableData = filteredPayments.map(p => {
+      const payablep = Number(p.payable_amt || p.total_amount || 0);
+      const paidp = Number(p.paid_amount || 0);
+      const pendingp = payablep - paidp;
+
+      const isAdvanceYesp =
+        (p.advance_payment_done || 'No').toLowerCase() === 'yes';
+
+      const advance_payment_fromp = p.advance_payment_from || '';
+
+      return [
+        p.mr_no,
+        p.party_name || p.supplier || '',
+        isAdvanceYesp ? 'YES' : 'NO',
+        formatIndianCurrency(payablep),
+        formatIndianCurrency(paidp),
+        formatIndianCurrency(pendingp),
+
+        advance_payment_fromp === '' || advance_payment_fromp === '1'
+          ? 'FROM BANK'
+          : advance_payment_fromp === '2'
+          ? 'RXIL'
+          : advance_payment_fromp === '3'
+          ? 'TReDS'
+          : advance_payment_fromp === '4'
+          ? 'Invoice Mart'
+          : '',
+
+        p.payment_settlementdate
+          ? new Date(p.payment_settlementdate).toLocaleDateString('en-IN')
+          : '',
+
+        p.tenor || '',
+
+        p.repayment_date
+          ? new Date(p.repayment_date).toLocaleDateString('en-IN')
+          : '',
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 28,
+      head: [['M.R No', 'Supplier Name', 'Advance Done', 'Payable Amount', 'Paid Amount', 'Pending Amount', 'Payment From', 'Payment Settle date','Tenor','Re-Payment Date']],
+      body: tableData,
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [79, 70, 229] }
+    });
+
+    doc.save('Treds_Records.pdf');
   };
+  
+  const monthlyTransactions = Array.from({ length: 12 }, (_, monthIndex) => {
+    return filteredPayments.filter((payment) => {
+      if (!payment.repayment_date) return false;
+
+      const date = new Date(payment.repayment_date);
+
+      return (
+        date.getFullYear() === selectedYear &&
+        date.getMonth() === monthIndex
+      );
+    }).length;
+  });
+ 
 
   return (
-    <LegacyLayout title="Trader & Supplier Directory (Supply Master)" onClose={onClose}>
-      <div className="space-y-4 font-sans text-slate-800">
-        {/* Top Action & KPI Banner */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-              <Users className="h-5 w-5" />
+    <LegacyLayout
+      title="Advance Payment Dashboard"
+      subtitle="Bally Jute Mill MIS Dashboard — Real-time Financial Control & Tokenization Register"
+      onClose={onClose}
+    >
+      {/* FILTER TOPBAR BAR */}
+      
+      <div className="bg-gradient-to-r from-[#D94B5A] via-[#F7AFA8] to-[#F7AFA8] p-4 rounded-xl border border-[#FBCFCB] shadow-md flex flex-wrap items-center justify-between gap-4 mb-4">
+
+        <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+
+          <div className="flex items-end gap-2">
+
+            {/* Year Dropdown */}
+            <div className="flex flex-col min-w-[110px]">
+
+              <label className="text-[12px] font-bold text-[#FDE7E6] uppercase tracking-wider mb-1">
+                Year
+              </label>
+
+              <select
+  value={selectedYear}
+  onChange={(e) => {
+    setSelectedYear(Number(e.target.value));
+    setSelectedMonth(null);
+  }}
+  className="border border-[#b9ceb1] rounded-lg px-2 py-1.5 bg-[#dce8d6] text-xs font-semibold text-[#244b2c] outline-none focus:ring-2 focus:ring-[#D94B5A]/40 focus:border-[#D94B5A] transition-all"
+>
+                {Array.from({ length: 10 }, (_, index) => 2026 + index).map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+
             </div>
-            <div>
-              <h2 className="text-base font-black uppercase tracking-wide text-slate-900">
-                Registered Jute Traders & Suppliers Directory
-              </h2>
-              <p className="text-xs text-slate-500 font-semibold">
-                Live Master Directory (`supply_master`) with Contract, Arrival & Payment Ledger
-              </p>
+
+
+            {/* Date Range */}
+            <div className="flex flex-col min-w-[160px]">
+
+              <label className="text-[12px] font-bold text-[#FDE7E6] uppercase tracking-wider mb-1">
+                Date Range
+              </label>
+
+              <div className="flex items-center gap-1 border border-[#b9ceb1] rounded-lg px-2 py-1.5 bg-[#dce8d6] text-xs font-semibold text-[#244b2c]">
+
+                <Calendar className="w-3.5 h-3.5 text-[#4b7658]" />
+
+                <span>
+                  01 Jan {selectedYear} — 31 Dec {selectedYear}
+                </span>
+
+              </div>
+
             </div>
+
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={handleOpenCreate}
-              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-xs cursor-pointer"
+
+          {/* Party Group */}
+          <div className="flex flex-col min-w-[180px]">
+
+            <label className="text-[12px] font-bold text-[#FDE7E6] uppercase tracking-wider mb-1">
+              Party Group
+            </label>
+
+            <select
+              value={partyFilter}
+              onChange={e => setPartyFilter(e.target.value)}
+              className="border border-[#b9ceb1] bg-[#dce8d6] rounded-lg px-2 py-1.5 text-xs font-bold text-[#244b2c] outline-none focus:ring-2 focus:ring-[#D94B5A]/40 focus:border-[#D94B5A] transition-all"
             >
-              <Plus className="h-4 w-4" />
-              Add Trader
-            </button>
-            <button
-              type="button"
-              onClick={handleExportCSV}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-xs cursor-pointer"
+              <option value="All">All Parties</option>
+
+              {uniquePartyOptions.map(pt => (
+                <option key={pt} value={pt}>
+                  {pt}
+                </option>
+              ))}
+
+            </select>
+
+          </div>
+
+
+          {/* Payment Mode */}
+          <div className="flex flex-col min-w-[180px]">
+
+            <label className="text-[12px] font-bold text-[#FDE7E6] uppercase tracking-wider mb-1">
+              Payment Mode
+            </label>
+
+            <select
+              value={modeFilter}
+              onChange={e => setModeFilter(e.target.value)}
+              className="border border-[#b9ceb1] bg-[#dce8d6] rounded-lg px-2 py-1.5 text-xs font-bold text-[#244b2c] outline-none focus:ring-2 focus:ring-[#D94B5A]/40 focus:border-[#D94B5A] transition-all"
             >
-              <Download className="h-4 w-4" />
+              <option value="All">All (Trade / Invoice Mart / RXIL)</option>
+              <option value="1">From Bank</option>
+              <option value="2">RXIL</option>
+              <option value="3">TReDS</option>
+              <option value="4">Invoice Mart</option>
+            </select>
+
+          </div>
+
+        </div>
+
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 pt-4">
+
+          <div className="flex items-center gap-2">
+
+            {/* Export CSV */}
+            <button
+              onClick={handleExportCsv}
+              className="px-3 py-1.5 text-xs font-bold text-[#D94B5A] bg-[#FDE7E6] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
+            >
+              <Download className="w-3.5 h-3.5" />
               Export CSV
             </button>
+
+
+            {/* Export PDF */}
             <button
-              type="button"
-              onClick={handlePrintDirectory}
-              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-xs cursor-pointer"
+              onClick={handleExportPdf}
+              className="px-3 py-1.5 text-xs font-bold text-[#D94B5A] bg-[#FDE7E6] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
             >
-              <Printer className="h-4 w-4" />
-              Print Directory
+              <Download className="w-3.5 h-3.5" />
+              Export PDF
             </button>
+
+
+            {/* Refresh */}
             <button
-              type="button"
-              onClick={loadDirectoryData}
-              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              onClick={initPage}
+              disabled={loading}
+              className="px-3 py-1.5 text-xs font-bold text-[#D94B5A] bg-[#FDE7E6] hover:bg-[#e4c65c] border border-[#b89425] rounded-lg flex items-center gap-1.5 transition-all duration-200 shadow-sm"
+              title="Refresh Table"
             >
-              <RefreshCcw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-          </div>
-        </div>
-
-        {/* Search & State Filter Bar */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="relative w-full sm:w-96">
-            <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={e => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              placeholder="Search by Trader Name, Code, GSTIN, City, Phone..."
-              className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-xs font-bold text-slate-500 uppercase">State:</span>
-            <select
-              value={stateFilter}
-              onChange={e => {
-                setStateFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 font-semibold bg-white"
-            >
-              <option value="ALL">All States ({traders.length})</option>
-              {availableStates.map(st => (
-                <option key={st} value={st}>{st}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Trader Directory Table */}
-        <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-900 text-white text-[11px] font-black uppercase tracking-wider">
-                  <th className="py-2.5 px-3">Code</th>
-                  <th className="py-2.5 px-3">Trader / Supplier Name</th>
-                  <th className="py-2.5 px-3">Location</th>
-                  <th className="py-2.5 px-3">GSTIN / PAN</th>
-                  <th className="py-2.5 px-3">Contact</th>
-                  <th className="py-2.5 px-3 text-right">POs</th>
-                  <th className="py-2.5 px-3 text-right">Contracted (MT)</th>
-                  <th className="py-2.5 px-3 text-right">Received (MT)</th>
-                  <th className="py-2.5 px-3 text-right">Paid (₹)</th>
-                  <th className="py-2.5 px-3 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 text-xs">
-                {paginatedTraders.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="py-8 text-center text-slate-400 font-bold uppercase">
-                      {loading ? 'Loading Trader Directory...' : 'No Traders Found Matching Criteria'}
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedTraders.map(trader => {
-                    const stats = traderStatsMap[trader.supp_name.toUpperCase()] || {
-                      poCount: 0,
-                      contractedMT: 0,
-                      receivedMT: 0,
-                      paidAmount: 0,
-                      balancePayable: 0
-                    };
-                    return (
-                      <tr key={trader.supp_code + trader.supp_name} className="hover:bg-indigo-50/40 transition">
-                        <td className="py-2 px-3 font-mono font-bold text-indigo-700">{trader.supp_code}</td>
-                        <td className="py-2 px-3">
-                          <div className="font-black text-slate-900">{trader.supp_name}</div>
-                          {trader.proprietor_name && (
-                            <div className="text-[10px] text-slate-500 font-semibold">Prop: {trader.proprietor_name}</div>
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-slate-600 font-semibold">
-                          {[trader.city, trader.state].filter(Boolean).join(', ') || '—'}
-                        </td>
-                        <td className="py-2 px-3 font-mono text-[11px]">
-                          <div>{trader.gst_no || '—'}</div>
-                          {trader.pan_no && <div className="text-[10px] text-slate-500">PAN: {trader.pan_no}</div>}
-                        </td>
-                        <td className="py-2 px-3 text-[11px]">
-                          <div>{trader.phone || '—'}</div>
-                          {trader.email && <div className="text-[10px] text-slate-500">{trader.email}</div>}
-                        </td>
-                        <td className="py-2 px-3 text-right font-bold">{stats.poCount}</td>
-                        <td className="py-2 px-3 text-right font-mono font-bold text-slate-800">
-                          {stats.contractedMT.toFixed(3)}
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono font-bold text-emerald-700">
-                          {stats.receivedMT.toFixed(3)}
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono font-bold text-indigo-700">
-                          {formatIndianCurrency(stats.paidAmount)}
-                        </td>
-                        <td className="py-2 px-3">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedLedgerTrader(trader)}
-                              className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded text-[10px] font-black uppercase flex items-center gap-1 cursor-pointer"
-                              title="View Trader Ledger"
-                            >
-                              <BookOpen className="h-3 w-3" />
-                              Ledger
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEdit(trader)}
-                              className="p-1 text-slate-600 hover:text-indigo-700 hover:bg-slate-100 rounded cursor-pointer"
-                              title="Edit Trader"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteTrader(trader)}
-                              className="p-1 text-rose-600 hover:bg-rose-50 rounded cursor-pointer"
-                              title="Delete Trader"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
+              <RefreshCcw
+                className={cn(
+                  "w-4 h-4",
+                  loading && "animate-spin text-[#D94B5A]"
                 )}
-              </tbody>
-            </table>
+              />
+            </button>
+
           </div>
 
-          <div className="p-3 border-t border-slate-200 bg-slate-50">
-            <PaginationControls
-              currentPage={currentPage}
-              pageSize={pageSize}
-              totalItems={filteredTraders.length}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={setPageSize}
-            />
-          </div>
         </div>
 
-        {/* Add / Edit Trader Modal */}
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-2xl w-full overflow-hidden">
-              <div className="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
-                <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-indigo-400" />
-                  {editingTrader ? `Edit Trader: ${editingTrader.supp_name}` : 'Add New Trader / Supplier'}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="text-slate-400 hover:text-white cursor-pointer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleSaveTrader} className="p-5 space-y-4 text-xs">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block font-bold text-slate-700 uppercase mb-1">Supplier Code *</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.supp_code}
-                      onChange={e => setFormData({ ...formData, supp_code: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-1.5 font-mono font-bold"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block font-bold text-slate-700 uppercase mb-1">Trader / Firm Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.supp_name}
-                      onChange={e => setFormData({ ...formData, supp_name: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-1.5 font-bold uppercase"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block font-bold text-slate-700 uppercase mb-1">Proprietor / Contact</label>
-                    <input
-                      type="text"
-                      value={formData.proprietor_name}
-                      onChange={e => setFormData({ ...formData, proprietor_name: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-1.5"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-bold text-slate-700 uppercase mb-1">Phone / Mobile</label>
-                    <input
-                      type="text"
-                      value={formData.phone}
-                      onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-1.5"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-bold text-slate-700 uppercase mb-1">Email</label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={e => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-1.5"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block font-bold text-slate-700 uppercase mb-1">City / Station</label>
-                    <input
-                      type="text"
-                      value={formData.city}
-                      onChange={e => setFormData({ ...formData, city: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-1.5 uppercase"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-bold text-slate-700 uppercase mb-1">State</label>
-                    <input
-                      type="text"
-                      value={formData.state}
-                      onChange={e => setFormData({ ...formData, state: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-1.5 uppercase"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-bold text-slate-700 uppercase mb-1">GSTIN</label>
-                    <input
-                      type="text"
-                      value={formData.gst_no}
-                      onChange={e => setFormData({ ...formData, gst_no: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-1.5 font-mono uppercase"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block font-bold text-slate-700 uppercase mb-1">PAN No</label>
-                    <input
-                      type="text"
-                      value={formData.pan_no}
-                      onChange={e => setFormData({ ...formData, pan_no: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-1.5 font-mono uppercase"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-bold text-slate-700 uppercase mb-1">Bank Name</label>
-                    <input
-                      type="text"
-                      value={formData.bank_name}
-                      onChange={e => setFormData({ ...formData, bank_name: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-1.5"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-bold text-slate-700 uppercase mb-1">Account No</label>
-                    <input
-                      type="text"
-                      value={formData.account_no}
-                      onChange={e => setFormData({ ...formData, account_no: e.target.value })}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-1.5 font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-black uppercase flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Save className="h-4 w-4" />
-                    {editingTrader ? 'Update Trader' : 'Save Trader'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Trader Ledger Modal */}
-        {selectedLedgerTrader && (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden">
-              <div className="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-wider">
-                    Trader Account Ledger: {selectedLedgerTrader.supp_name} ({selectedLedgerTrader.supp_code})
-                  </h3>
-                  <p className="text-[11px] text-slate-300">
-                    GSTIN: {selectedLedgerTrader.gst_no || 'N/A'} • City: {selectedLedgerTrader.city || 'N/A'}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedLedgerTrader(null)}
-                  className="text-slate-400 hover:text-white cursor-pointer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              {(() => {
-                const lStats = traderStatsMap[selectedLedgerTrader.supp_name.toUpperCase()] || {
-                  poCount: 0,
-                  contractedMT: 0,
-                  receivedMT: 0,
-                  billedValue: 0,
-                  paidAmount: 0,
-                  balancePayable: 0,
-                  pos: [],
-                  arrivals: [],
-                  payments: []
-                };
-                return (
-                  <div className="p-5 overflow-y-auto space-y-4 text-xs">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                        <div className="text-[10px] font-bold uppercase text-slate-500">Contracted MT</div>
-                        <div className="text-base font-black text-slate-900 mt-0.5">
-                          {lStats.contractedMT.toFixed(3)} MT
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-                        <div className="text-[10px] font-bold uppercase text-emerald-700">Received MT</div>
-                        <div className="text-base font-black text-emerald-900 mt-0.5">
-                          {lStats.receivedMT.toFixed(3)} MT
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200">
-                        <div className="text-[10px] font-bold uppercase text-indigo-700">Total Paid</div>
-                        <div className="text-base font-black text-indigo-900 mt-0.5">
-                          {formatIndianCurrency(lStats.paidAmount)}
-                        </div>
-                      </div>
-                      <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
-                        <div className="text-[10px] font-bold uppercase text-amber-700">Balance Payable</div>
-                        <div className="text-base font-black text-amber-900 mt-0.5">
-                          {formatIndianCurrency(lStats.balancePayable)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-black uppercase text-slate-700 mb-2">Purchase Orders ({lStats.pos.length})</h4>
-                      <div className="border border-slate-200 rounded-lg overflow-hidden max-h-44 overflow-y-auto">
-                        <table className="w-full text-left border-collapse">
-                          <thead className="bg-slate-100 text-[10px] font-black uppercase">
-                            <tr>
-                              <th className="p-2">PO No</th>
-                              <th className="p-2">Date</th>
-                              <th className="p-2">Broker</th>
-                              <th className="p-2 text-right">Contract MT</th>
-                              <th className="p-2 text-right">Rate</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {lStats.pos.length === 0 ? (
-                              <tr><td colSpan={5} className="p-3 text-center text-slate-400">No POs recorded</td></tr>
-                            ) : (
-                              lStats.pos.map((p: any, idx: number) => (
-                                <tr key={idx}>
-                                  <td className="p-2 font-mono font-bold">{p.po_no || p.sauda_no}</td>
-                                  <td className="p-2">{p.po_date || p.date || '—'}</td>
-                                  <td className="p-2">{p.broker || 'DIRECT'}</td>
-                                  <td className="p-2 text-right font-mono">{Number(p.total_contract_mt || 0).toFixed(3)}</td>
-                                  <td className="p-2 text-right font-mono">₹{Number(p.b_rate || 0).toLocaleString('en-IN')}</td>
-                                </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-black uppercase text-slate-700 mb-2">Payment Vouchers ({lStats.payments.length})</h4>
-                      <div className="border border-slate-200 rounded-lg overflow-hidden max-h-44 overflow-y-auto">
-                        <table className="w-full text-left border-collapse">
-                          <thead className="bg-slate-100 text-[10px] font-black uppercase">
-                            <tr>
-                              <th className="p-2">Voucher No</th>
-                              <th className="p-2">Date</th>
-                              <th className="p-2">MR / PO No</th>
-                              <th className="p-2">Mode</th>
-                              <th className="p-2 text-right">Paid Amount</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {lStats.payments.length === 0 ? (
-                              <tr><td colSpan={5} className="p-3 text-center text-slate-400">No payments recorded</td></tr>
-                            ) : (
-                              lStats.payments.map((pay: any, idx: number) => (
-                                <tr key={idx}>
-                                  <td className="p-2 font-mono font-bold">{pay.voucher_no || '—'}</td>
-                                  <td className="p-2">{pay.payment_date || '—'}</td>
-                                  <td className="p-2">{pay.mr_no || pay.po_no || '—'}</td>
-                                  <td className="p-2">{pay.payment_mode || 'BANK'}</td>
-                                  <td className="p-2 text-right font-mono font-bold text-emerald-700">
-                                    {formatIndianCurrency(Number(pay.paid_amount || pay.payable_amt || 0))}
-                                  </td>
-                                </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* METRIC KPI TILES SECTION */}
+      {viewMode === 'dashboard' && (
+        <div className="space-y-4">
+          
+          <div className="space-y-3">
+            {/* Main Summary Cards */}
+            <div className="bg-gradient-to-br from-[#e8eee2] via-[#dfe8d9] to-[#d4e1ce] rounded-2xl p-3 border border-[#cbdac4] shadow-[0_4px_16px_rgba(23,76,44,0.06)]">
+
+              {/* ================= SUMMARY CARDS ================= */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+
+                {/* Total Advance Paid - Green */}
+                <div className="group relative overflow-hidden bg-gradient-to-br from-[#e8f5e9] to-[#c8e6c9] px-3 py-3 rounded-xl border border-[#a5c9a8] shadow-[0_3px_12px_rgba(23,76,44,0.06)] flex items-center justify-between min-w-0 hover:border-[#D94B5A]/40 hover:shadow-[0_8px_20px_rgba(23,76,44,0.12)] transition-all duration-300">
+
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#D94B5A] to-[#4d8a5c]" />
+
+                  <div className="min-w-0 pl-1">
+                    <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#4f7054] block truncate">
+                      Total Advance Paid
+                    </span>
+
+                    <h3 className="text-base font-black text-[#17351f] mt-0.5 truncate">
+                      ₹ {metrics.totalAdvancePaid.toLocaleString('en-IN')}
+                    </h3>
+                  </div>
+
+                  <div className="p-2 bg-[#b7d8ba] rounded-lg text-[#D94B5A] shrink-0 group-hover:bg-[#D94B5A] group-hover:text-white transition-all duration-300 shadow-sm">
+                    <FileText className="w-4 h-4" />
+                  </div>
+
+                </div>
+
+
+                {/* Total Transactions - Blue */}
+                <div className="group relative overflow-hidden bg-gradient-to-br from-[#e3f2f8] to-[#c5e1eb] px-3 py-3 rounded-xl border border-[#a9cbd7] shadow-[0_3px_12px_rgba(30,90,110,0.06)] flex items-center justify-between min-w-0 hover:border-[#28718a]/40 hover:shadow-[0_8px_20px_rgba(40,113,138,0.12)] transition-all duration-300">
+
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#17617a] to-[#3c8990]" />
+
+                  <div className="min-w-0 pl-1">
+                    <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#527784] block truncate">
+                      Total Transactions
+                    </span>
+
+                    <h3 className="text-base font-black text-[#173b42] mt-0.5">
+                      {metrics.totalTransactions}
+                    </h3>
+                  </div>
+
+                  <div className="p-2 bg-[#b8dce5] rounded-lg text-[#286b78] shrink-0 group-hover:bg-[#286b78] group-hover:text-white transition-all duration-300 shadow-sm">
+                    <FileText className="w-4 h-4" />
+                  </div>
+
+                </div>
+
+
+                {/* Total Parties - Purple */}
+                <div className="group relative overflow-hidden bg-gradient-to-br from-[#f0eafa] to-[#ddd3ef] px-3 py-3 rounded-xl border border-[#c9b9df] shadow-[0_3px_12px_rgba(90,70,130,0.06)] flex items-center justify-between min-w-0 hover:border-[#7565a5]/40 hover:shadow-[0_8px_20px_rgba(80,70,130,0.12)] transition-all duration-300">
+
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#66539a] to-[#8b72b8]" />
+
+                  <div className="min-w-0 pl-1">
+                    <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#75678d] block truncate">
+                      Total Parties
+                    </span>
+
+                    <h3 className="text-base font-black text-[#302d4b] mt-0.5">
+                      {metrics.uniqueParties}
+                    </h3>
+                  </div>
+
+                  <div className="p-2 bg-[#d3c7e7] rounded-lg text-[#7565a5] shrink-0 group-hover:bg-[#7565a5] group-hover:text-white transition-all duration-300 shadow-sm">
+                    <Users className="w-4 h-4" />
+                  </div>
+
+                </div>
+
+
+                {/* Pending Advance - Gold */}
+                <div className="group relative overflow-hidden bg-gradient-to-br from-[#fff8df] to-[#f1e3b5] px-3 py-3 rounded-xl border border-[#dfce96] shadow-[0_3px_12px_rgba(176,138,34,0.06)] flex items-center justify-between min-w-0 hover:border-[#d4af37]/60 hover:shadow-[0_8px_20px_rgba(176,138,34,0.14)] transition-all duration-300">
+
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#d4af37] to-[#b78b24]" />
+
+                  <div className="min-w-0 pl-1">
+                    <span className="text-[9px] uppercase tracking-wide font-extrabold text-[#8d7947] block truncate">
+                      Pending Advance
+                    </span>
+
+                    <h3 className="text-base font-black text-[#493c1e] mt-0.5 truncate">
+                      ₹ {metrics.pendingAdvance.toLocaleString('en-IN')}
+                    </h3>
+                  </div>
+
+                  <div className="p-2 bg-[#ead9a5] rounded-lg text-[#a47d19] shrink-0 group-hover:bg-[#d4af37] group-hover:text-white transition-all duration-300 shadow-sm">
+                    <Clock className="w-4 h-4" />
+                  </div>
+
+                </div>
+
+              </div>
+
+              {/* Month Cards */}
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2 mt-3">
+
+                {[
+                  "Jan",
+                  "Feb",
+                  "Mar",
+                  "Apr",
+                  "May",
+                  "Jun",
+                  "Jul",
+                  "Aug",
+                  "Sep",
+                  "Oct",
+                  "Nov",
+                  "Dec",
+                ]
+                  .map((month, index) => ({ month, index }))
+                  .filter(({ index }) => monthlyTransactions[index] > 0)
+                  .map(({ month, index }) => (
+
+                    <div
+                      key={month}
+                      onClick={() =>
+                        setSelectedMonth(
+                          selectedMonth === index ? null : index
+                        )
+                      }
+                      className={`group relative overflow-hidden px-2 py-3 rounded-xl border text-center min-w-0 cursor-pointer transition-all duration-300 ${
+                        selectedMonth === index
+                          ? "border-[#D94B5A] bg-gradient-to-br from-[#D94B5A] via-[#205b35] to-[#347346] shadow-[0_6px_16px_rgba(23,76,44,0.25)] scale-[1.02]"
+                          : "border-[#b8cdb0] bg-gradient-to-br from-[#dce8d5] to-[#cbdcc4] hover:from-[#d1e3cb] hover:to-[#bdd2b5] hover:border-[#8eaf8b] hover:shadow-[0_5px_14px_rgba(23,76,44,0.14)]"
+                      }`}
+                    >
+
+                      {/* Top Accent */}
+                      <div
+                        className={`absolute top-0 left-0 right-0 h-0.5 ${
+                          selectedMonth === index
+                            ? "bg-[#e4c65c]"
+                            : "bg-[#aec5a6] group-hover:bg-[#D94B5A]"
+                        }`}
+                      />
+
+                      {/* Month */}
+                      <span
+                        className={`text-[10px] uppercase tracking-wide font-extrabold block ${
+                          selectedMonth === index
+                            ? "text-[#f4d76a]"
+                            : "text-[#466b4b]"
+                        }`}
+                      >
+                        {month}
+                      </span>
+
+                      {/* Count */}
+                      <h3
+                        className={`text-xl font-black mt-1 leading-tight ${
+                          selectedMonth === index
+                            ? "text-white"
+                            : "text-[#17351f]"
+                        }`}
+                      >
+                        {monthlyTransactions[index]}
+                      </h3>
+
+                      {/* Label */}
+                      <span
+                        className={`text-[9px] font-semibold ${
+                          selectedMonth === index
+                            ? "text-[#e1eadf]"
+                            : "text-[#6b8870]"
+                        }`}
+                      >
+                        Transactions
+                      </span>
+
+                    </div>
+
+                  ))}
+
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* MAIN DATATABLE */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-3.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+              <div className="relative min-w-[260px]">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by Supplier Name, M.R No..."
+                  value={searchFilter}
+                  onChange={e => setSearchFilter(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={initPage} className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600">
+                  <RefreshCcw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-100/80 border-b border-slate-200 text-[10px] uppercase font-black text-slate-600">
+                    <th className="p-2.5">M.R No</th>
+                    <th className="p-2.5">Supplier</th>
+                    <th className="p-2.5 text-center">Advance Done</th>
+                    <th className="p-2.5 text-right">Payable Amount</th>
+                    <th className="p-2.5 text-right">Paid Amount</th>
+                    <th className="p-2.5 text-right">Pending Amount</th>
+                    <th className="p-2.5 text-right">Payment From</th>
+                    <th className="p-2.5">Payment Settle date</th>
+                    <th className="p-2.5">Tenor</th>
+                    <th className="p-2.5">Re-Payment Date </th>
+                    {/* <th className="p-2.5 text-center">Actions</th> */}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  {filteredPayments.length > 0 ? (
+                    filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((p, idx) => {
+                      const payable = Number(p.payable_amt || p.total_amount || 0);
+                      const paid = Number(p.paid_amount || 0);
+                      const pending = payable - paid;
+                      const isAdvanceYes = (p.advance_payment_done || 'No').toLowerCase() === 'yes';
+                      const advance_payment_from = p.advance_payment_from || '';
+                      return (
+                        <tr key={p.payment_id || p.voucher_no || idx} className="hover:bg-purple-50/40 transition-colors">
+                          <td className="p-2.5 font-mono text-slate-600">
+                            <div className="text-[11px] font-bold text-slate-700">{p.mr_no || '-'}</div>
+                            {p.po_no && <div className="text-[9px] text-slate-400">P.O: {p.po_no}</div>}
+                          </td>
+                          
+                          <td className="p-2.5 font-semibold text-slate-800">
+                            {p.party_name || p.supplier || '-'}
+                          </td>
+                          
+                          <td className="p-2.5 text-center">
+                            <span className={cn(
+                              "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border inline-flex items-center gap-1",
+                              isAdvanceYes
+                                ? "bg-green-100 text-green-900 border-green-300"
+                                : "bg-slate-100 text-slate-600 border-slate-200"
+                            )}>
+                              {isAdvanceYes ? 'YES' : 'NO'}
+                            </span>
+                          </td>
+                          <td className="p-2.5 text-right font-bold text-slate-700">
+                            {formatIndianCurrency(payable)}
+                          </td>
+                          <td className="p-2.5 text-right font-extrabold text-emerald-700">
+                            {formatIndianCurrency(paid)}
+                          </td>
+                          <td className="p-2.5 text-right">
+                            {pending > 0 ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
+                                {formatIndianCurrency(pending)}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
+                                ₹0 (Cleared)
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-2.5 text-center">
+                            {(advance_payment_from === '' || advance_payment_from ==='1') &&(
+                              <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">FROM BANK</span>
+                            )}
+                            {advance_payment_from ==='2' &&(
+                              <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">RXIL</span>
+                            )}
+                            {advance_payment_from ==='3' &&(
+                              <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">TReDS</span>
+                            )}
+                            {advance_payment_from ==='4' &&(
+                              <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">Invoice Mart</span>
+                            )} 
+                          </td>
+                          <td className="p-2.5 font-medium text-slate-600 text-center">
+                            {p.payment_settlementdate ? new Date(p.payment_settlementdate).toLocaleDateString('en-IN') : '-'}
+                          </td>
+                          <td className="p-2.5 font-medium text-slate-600 text-center">
+                            {p.tenor }
+                          </td>
+                          <td className="p-2.5 font-medium text-slate-600 text-center">
+                            {p.repayment_date ? new Date(p.repayment_date).toLocaleDateString('en-IN') : '-'}
+                          </td>
+                          {/* <td className="p-2.5 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => handleEditPayment(p)}
+                                className="px-2 py-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded border border-indigo-200 transition-colors"
+                              >
+                                Payment Check
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedLedgerParty(p.party_name || p.supplier || '');
+                                  setViewMode('ledger');
+                                }}
+                                className="px-2 py-1 text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded border border-purple-200 transition-colors"
+                                title="View Party Ledger"
+                              >
+                                Ledger
+                              </button>
+                              <button
+                                onClick={() => handleDeletePayment(p.voucher_no)}
+                                className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Delete Record"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button> 
+                            </div>
+                          </td> */}
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={9} className="p-8 text-center text-slate-400 italic text-xs">
+                        No payment records found in `payment_master`. Click "New Payment Voucher" to create one.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            
+          </div>
+        </div>
+      )}
+
+      {/* ENTRY SHEET SHEET */}
+      {viewMode === 'entry' && (
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b pb-3">
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide">Advance Token Disbursal Configuration</h3>
+            <span className="text-xs font-mono font-bold px-2 py-0.5 bg-slate-100 text-slate-700 rounded border">
+              Ref: {masterData.voucher_no}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-xs">
+            <div>
+              <label className="block font-bold text-slate-500 mb-1">Voucher No *</label>
+              <input
+                type="text"
+                value={masterData.voucher_no}
+                onChange={e => setMasterData({ ...masterData, voucher_no: e.target.value })}
+                className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 font-mono font-bold"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-500 mb-1">Disbursal Date *</label>
+              <input
+                type="date"
+                value={masterData.payment_date}
+                onChange={e => setMasterData({ ...masterData, payment_date: e.target.value })}
+                className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-500 mb-1">Supplier Party Account *</label>
+              <input
+                type="text"
+                value={masterData.party_name}
+                onChange={e => setMasterData({ ...masterData, party_name: e.target.value, supplier: e.target.value })}
+                placeholder="Type Supplier Name"
+                className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 font-bold"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-500 mb-1">Platform Token Route</label>
+              <select
+                value={masterData.payment_mode}
+                onChange={e => handleModeChange(e, masterData)}
+                className="w-full p-2 border border-slate-200 rounded-lg font-bold"
+              >
+                <option value="RXIL">RXIL Token Platform</option>
+                <option value="Trade Invoice">Trade Invoice standard</option>
+                <option value="Mart">Invoice Mart Portal</option>
+                <option value="TReDS">TReDS Hub Network</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="p-4 bg-slate-50 border rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div>
+              <label className="block font-bold text-slate-600 mb-1">Full Gross Amount (₹)</label>
+              <input
+                type="number"
+                value={masterData.payable_amt}
+                onChange={e => setMasterData({ ...masterData, payable_amt: Number(e.target.value) })}
+                className="w-full p-2 font-black text-sm border border-slate-200 rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-600 mb-1">Disbursed Advance (₹)</label>
+              <input
+                type="number"
+                value={masterData.paid_amount}
+                onChange={e => setMasterData({ ...masterData, paid_amount: Number(e.target.value) })}
+                className="w-full p-2 font-black text-sm border border-slate-200 rounded-lg bg-emerald-50/50 text-emerald-900"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-600 mb-1">Tenor Maturity (Days)</label>
+              <input
+                type="number"
+                value={masterData.tenor}
+                onChange={e => handleTenorChange(e, masterData)}
+                placeholder="e.g. 30, 45, 60"
+                className="w-full p-2 border border-slate-200 rounded-lg font-bold font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => { setViewMode('dashboard'); setMasterData(initialMaster()); }}
+              className="px-4 py-2 border rounded-lg text-xs font-bold hover:bg-slate-50 text-slate-600"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  if (supabase) {
+                    await supabase.from('payment_master').insert([masterData]);
+                  }
+                  await dbModule.upsert('payment_master', masterData).catch(() => {});
+                  setShowSuccessAnim(true);
+                  setTimeout(() => {
+                    setShowSuccessAnim(false);
+                    initPage();
+                    setViewMode('dashboard');
+                  }, 1200);
+                } catch (err) {
+                  setErrorMessage("Error executing transaction token block injection mapping code sync.");
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-black shadow-xs"
+            >
+              Commit Disbursal Token
+            </button>
+          </div>
+        </div>
+      )}
     </LegacyLayout>
   );
 }

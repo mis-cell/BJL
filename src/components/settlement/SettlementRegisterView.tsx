@@ -547,7 +547,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
                           {row.broker}
                         </td>
                         <td className="px-3 py-2.5 border-r border-slate-100 font-mono text-slate-700 whitespace-nowrap">
-                          {row.lorry_number}
+                          {row.lorry_number.toUpperCase()}
                         </td>
                         <td className="px-3 py-2.5 border-r border-slate-100 text-right font-mono font-black text-emerald-700 whitespace-nowrap">
                           ₹{" "}
