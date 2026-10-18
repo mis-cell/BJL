@@ -1,3 +1,4 @@
+import { authFetch } from '../lib/auth';
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, Mail, Send, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
@@ -131,7 +132,7 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
       const safeName = (title || "Document").replace(/[^a-z0-9]+/gi, "_");
 
       // Trigger the backend email sender
-      const response = await fetch(getApiUrl("/api/send-email"), {
+      const response = await authFetch(getApiUrl("/api/send-email"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

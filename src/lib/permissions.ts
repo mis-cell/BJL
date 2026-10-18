@@ -628,15 +628,6 @@ export function setCurrentUserContext(context: Partial<UserContext> | null | und
       allowedModules: normalizedMods,
     };
     
-    // Save to localStorage for persistence
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem('bally_user_context', JSON.stringify(currentUserContext));
-      }
-    } catch (e) {
-      console.warn("Could not save user context to localStorage:", e);
-    }
-
     // Notify all subscribers (safely without recursive loops)
     if (notify && !isNotifyingListeners) {
       isNotifyingListeners = true;
@@ -658,102 +649,12 @@ export function setCurrentUserContext(context: Partial<UserContext> | null | und
   }
 }
 
-export function getCurrentUserContext(): UserContext {
-  if (typeof window !== 'undefined') {
-    try {
-      const savedCtx = window.localStorage.getItem('bally_user_context');
-      const savedSess = window.localStorage.getItem('bally_auth_session');
-      let merged: any = { ...currentUserContext };
-
-      if (savedCtx) {
-        const parsed = JSON.parse(savedCtx);
-        if (parsed && typeof parsed === 'object') {
-          merged = { ...merged, ...parsed };
-        }
-      }
-
-      if (savedSess) {
-        const parsed = JSON.parse(savedSess);
-        if (parsed && typeof parsed === 'object') {
-          const nameVal = parsed.userName || parsed.username || parsed.name || parsed.userId || parsed.user_id;
-          if (nameVal) {
-            merged.userName = merged.userName || nameVal;
-            merged.username = merged.username || nameVal;
-          }
-          if (parsed.role) merged.userRole = merged.userRole || parsed.role;
-          if (parsed.level) merged.userLevel = merged.userLevel || parsed.level;
-          if (parsed.userId) merged.userId = merged.userId || parsed.userId;
-        }
-      }
-
-      if (merged.userName || merged.username) {
-        merged.userName = merged.userName || merged.username;
-        merged.username = merged.username || merged.userName;
-      }
-
-      currentUserContext = {
-        ...merged,
-        allowedModules: normalizeAllowedModules(merged.allowedModules || merged.allowed_modules || []),
-      };
-    } catch {
-      // Ignore fallback errors
-    }
-  }
-  return currentUserContext;
-}
+export function getCurrentUserContext(): UserContext { return currentUserContext; }
 
 export function isUserAdmin(roleOrContext?: string | UserContext): boolean {
-  let role = '';
-  let level = '';
-  let username = '';
-  let allowed: string[] = [];
-  let isAdmFlag = false;
-
-  if (typeof roleOrContext === 'string') {
-    role = roleOrContext.toUpperCase();
-  } else if (roleOrContext && typeof roleOrContext === 'object') {
-    role = (roleOrContext.userRole || (roleOrContext as any).role || '').toUpperCase();
-    level = (roleOrContext.userLevel || (roleOrContext as any).level || '').toUpperCase();
-    username = (roleOrContext.username || roleOrContext.userName || (roleOrContext as any).userId || (roleOrContext as any).user_id || '').toUpperCase();
-    allowed = normalizeAllowedModules(roleOrContext.allowedModules || (roleOrContext as any).allowed_modules || []);
-    isAdmFlag = Boolean((roleOrContext as any).isAdmin || (roleOrContext as any).is_admin);
-  } else {
-    const ctx = getCurrentUserContext();
-    role = (ctx?.userRole || (ctx as any)?.role || '').toUpperCase();
-    level = (ctx?.userLevel || (ctx as any)?.level || '').toUpperCase();
-    username = (ctx?.username || ctx?.userName || (ctx as any)?.userId || '').toUpperCase();
-    allowed = normalizeAllowedModules(ctx?.allowedModules || []);
-    isAdmFlag = Boolean((ctx as any)?.isAdmin || (ctx as any)?.is_admin);
-  }
-
-  // Check stored auth session from localStorage if memory context was reset or unhydrated
-  if (!isAdmFlag && role !== 'ADMIN' && role !== 'ADMINISTRATOR' && level !== 'ADMIN' && username !== 'ADMIN') {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const sessionRaw = window.localStorage.getItem('bally_auth_session');
-        if (sessionRaw) {
-          const parsed = JSON.parse(sessionRaw);
-          const sRole = String(parsed.role || '').toUpperCase();
-          const sLevel = String(parsed.level || '').toUpperCase();
-          const sUser = String(parsed.username || parsed.userId || '').toUpperCase();
-          if (sRole === 'ADMIN' || sRole === 'ADMINISTRATOR' || sLevel === 'ADMIN' || sUser === 'ADMIN' || parsed.allowed_modules === '*') {
-            return true;
-          }
-        }
-      }
-    } catch {}
-  }
-
-  const isRoleAdmin = 
-    role === 'ADMIN' || 
-    role === 'ADMINISTRATOR' || 
-    level === 'ADMIN' || 
-    level === 'ADMINISTRATOR' || 
-    level === 'MAX' || 
-    username === 'ADMIN' || 
-    isAdmFlag;
-
-  return isRoleAdmin || allowed.includes('*');
+  const ctx = typeof roleOrContext === 'object' ? roleOrContext : getCurrentUserContext();
+  const role = typeof roleOrContext === 'string' ? roleOrContext : ctx.userRole;
+  return ['ADMIN', 'ADMINISTRATOR'].includes(String(role).toUpperCase()) || ctx.userLevel === 'L5';
 }
 
 export function isL5OrAdmin(): boolean {
@@ -777,25 +678,10 @@ export function isUserId10(roleOrContext?: any): boolean {
     uname = String(ctx?.username || ctx?.userName || '').trim().toLowerCase();
   }
 
-  let sessionUid = '';
-  let sessionUname = '';
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const rawSess = window.localStorage.getItem('bally_auth_session');
-      if (rawSess) {
-        const parsed = JSON.parse(rawSess);
-        sessionUid = String(parsed?.userId || parsed?.user_id || '').trim().toLowerCase();
-        sessionUname = String(parsed?.username || parsed?.userName || '').trim().toLowerCase();
-      }
-    }
-  } catch {}
-
   const targets = ['010', '10', 'user010', 'user 010', 'user10', 'user 10'];
   return (
     targets.includes(uid) ||
-    targets.includes(uname) ||
-    targets.includes(sessionUid) ||
-    targets.includes(sessionUname)
+    targets.includes(uname)
   );
 }
 
@@ -814,25 +700,10 @@ export function isUserId2(roleOrContext?: any): boolean {
     uname = String(ctx?.username || ctx?.userName || '').trim().toLowerCase();
   }
 
-  let sessionUid = '';
-  let sessionUname = '';
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const rawSess = window.localStorage.getItem('bally_auth_session');
-      if (rawSess) {
-        const parsed = JSON.parse(rawSess);
-        sessionUid = String(parsed?.userId || parsed?.user_id || '').trim().toLowerCase();
-        sessionUname = String(parsed?.username || parsed?.userName || '').trim().toLowerCase();
-      }
-    }
-  } catch {}
-
   const targets = ['02', '2', '002', 'user02', 'user 02', 'user2', 'user 2', 'user 002'];
   return (
     targets.includes(uid) ||
-    targets.includes(uname) ||
-    targets.includes(sessionUid) ||
-    targets.includes(sessionUname)
+    targets.includes(uname)
   );
 }
 

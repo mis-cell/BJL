@@ -1,3 +1,5 @@
+import { getApiUrl } from '../../lib/utils';
+import { authFetch } from '../../lib/auth';
 import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
@@ -44,9 +46,7 @@ export default function SmsSaudaModal({ isOpen, onClose }: SmsSaudaModalProps) {
     setIsGoogleSheetLoading(true);
     setGoogleSheetError(null);
     try {
-      const res = await fetch(
-        "https://sheets.googleapis.com/v4/spreadsheets/1WignMNJ2p2Qu5V34nuuthPItahIlNnQtBiJJ8KYgG9k/values/sauda!A:C?key=AIzaSyBLQaMfurS0w11dgPRPLIpUfAs6lOHRMgA"
-      );
+      const res = await authFetch(getApiUrl('/api/sms-feed'));
       if (!res.ok) {
         throw new Error(`Google Sheets API responded with status ${res.status}`);
       }

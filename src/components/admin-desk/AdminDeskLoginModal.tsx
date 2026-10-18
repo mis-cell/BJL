@@ -1,3 +1,4 @@
+import { verifyPrivilegedPassword } from '../../lib/auth';
 import React, { useState } from 'react';
 import { Lock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -30,63 +31,9 @@ export const AdminDeskLoginModal: React.FC<AdminDeskLoginModalProps> = ({
     setError('');
 
     try {
-      let matchedUser: any = null;
-
-      if (supabase) {
-        const { data } = await supabase
-          .from('user_master')
-          .select('*')
-          .or(`user_id.ilike.${cleanUser},username.ilike.${cleanUser}`)
-          .limit(1)
-          .maybeSingle();
-
-        if (data) matchedUser = data;
-      }
-
-      if (!matchedUser) {
-        const localUsers = await dbModule.fetchAll('user_master').catch(() => []);
-        if (Array.isArray(localUsers)) {
-          matchedUser = localUsers.find((u: any) =>
-            String(u.user_id || '').trim().toLowerCase() === cleanUser.toLowerCase() ||
-            String(u.username || '').trim().toLowerCase() === cleanUser.toLowerCase()
-          );
-        }
-      }
-
-      if (matchedUser) {
-        const role = String(matchedUser.role || '').toUpperCase();
-        const level = String(matchedUser.level || '').toUpperCase();
-        const isAdminPrivileged = role === 'ADMIN' || role === 'ADMINISTRATOR' || level === 'ADMIN' || level === 'L5';
-
-        if (!isAdminPrivileged) {
-          setError('AUTHENTICATION DENIED: ADMIN PRIVILEGES REQUIRED.');
-          setIsVerifying(false);
-          return;
-        }
-
-        if (String(matchedUser.password || '') === cleanPass) {
-          onSuccess();
-          if (onLogin) onLogin();
-          setIsVerifying(false);
-          return;
-        } else {
-          setError('AUTHENTICATION DENIED: INVALID PASSWORD.');
-          setIsVerifying(false);
-          return;
-        }
-      }
-
-      // Fallback for Master Admin
-      if (cleanUser.toUpperCase() === 'ADMIN') {
-        if (cleanPass === 'Admin@1234' || cleanPass === 'Admin@4321' || cleanPass === 'ADMIN') {
-          onSuccess();
-          if (onLogin) onLogin();
-          setIsVerifying(false);
-          return;
-        }
-      }
-
-      setError('AUTHENTICATION DENIED: INVALID SYSTEM CREDENTIALS.');
+      await verifyPrivilegedPassword(cleanUser, loginPass);
+      onSuccess();
+      onLogin?.();
     } catch (err) {
       console.error(err);
       setError('AUTHENTICATION FAULT: PLEASE RETRY.');
@@ -114,11 +61,11 @@ export const AdminDeskLoginModal: React.FC<AdminDeskLoginModalProps> = ({
             <input
               id="operator_id_input"
               name="operator_id"
-              aria-label="Operator ID"
+              aria-label="Current account email"
               value={loginUser}
               onChange={(e) => setLoginUser(e.target.value)}
               className="w-full bg-white border border-slate-300 p-2 text-sm uppercase outline-none placeholder:text-slate-300 font-bold"
-              placeholder="Operator ID"
+              placeholder="Current account email"
             />
             <input
               id="password_input"

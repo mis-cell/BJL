@@ -1,3 +1,4 @@
+import { authFetch } from '../lib/auth';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { 
@@ -219,7 +220,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
     setIsGoogleSheetLoading(true);
     setGoogleSheetError(null);
     try {
-      const res = await fetch("https://sheets.googleapis.com/v4/spreadsheets/1WignMNJ2p2Qu5V34nuuthPItahIlNnQtBiJJ8KYgG9k/values/sauda!A:E?key=AIzaSyBLQaMfurS0w11dgPRPLIpUfAs6lOHRMgA");
+      const res = await authFetch(getApiUrl('/api/sms-feed'));
       if (!res.ok) {
         throw new Error(`Google Sheets API responded with status ${res.status}`);
       }
@@ -275,7 +276,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
   const fetchEmails = async () => {
     setIsFetchingGmail(true);
     try {
-      const res = await fetch(getApiUrl(`/api/emails?t=${Date.now()}`));
+      const res = await authFetch(getApiUrl(`/api/emails?t=${Date.now()}`));
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.emails)) {
@@ -292,7 +293,7 @@ export default function SmsSaudaDesk({ onClose, onNavigate }: { onClose?: () => 
   const syncGmailNow = async () => {
     setIsSyncing(true);
     try {
-      await fetch(getApiUrl(`/api/sync-emails?t=${Date.now()}`), { method: 'POST' }).catch(() => {});
+      await authFetch(getApiUrl(`/api/sync-emails?t=${Date.now()}`), { method: 'POST' }).catch(() => {});
     } finally {
       await fetchEmails();
       setIsSyncing(false);

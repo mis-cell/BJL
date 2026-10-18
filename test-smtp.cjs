@@ -7,7 +7,7 @@ async function test() {
     secure: true,
     auth: {
       user: "rawjute@ballyjute.com",
-      pass: "ochhyhnjlkhdlpot",
+      pass: "REPLACE_WITH_ROTATED_APP_PASSWORD",
     },
     tls: {
       rejectUnauthorized: false

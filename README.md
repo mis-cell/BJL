@@ -18,3 +18,11 @@ View your app in AI Studio: https://ai.studio/apps/def84b34-813c-44a3-9726-81882
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+## Authentication and production deployment
+
+Read [AUTHENTICATION.md](AUTHENTICATION.md) before deploying this release.
+Login now uses Supabase Auth email/password accounts and requires the coordinated
+profile/RLS migration. Legacy fallback credentials are removed. Backend secrets
+belong in `.env`; public browser configuration belongs in `.env.local`.
+Run `npm run test:auth` for authentication middleware tests.

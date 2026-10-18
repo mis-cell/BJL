@@ -2,7 +2,7 @@ const { google } = require('googleapis');
 
 const gmail = google.gmail({
     version: 'v1',
-    auth: 'AIzaSyBbA1sPH8w8_rKUx8sP72uV-BulSSMNydA'
+    auth: 'REMOVED_ROTATE_PROVIDER_KEY'
 });
 
 gmail.users.messages.list({

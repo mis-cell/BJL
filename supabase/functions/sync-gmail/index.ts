@@ -1,3 +1,4 @@
+import { authorized } from '../_shared/auth.ts';
 // Supabase Edge Function: sync-gmail
 // -----------------------------------------------------------------------------
 // Pulls the Gmail inbox using the Gmail REST API and upserts messages into the
@@ -147,7 +148,7 @@ async function fetchAttachmentB64(
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-sync-key",
 };
 
 Deno.serve(async (req) => {
@@ -155,20 +156,13 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: CORS });
   }
 
-  // Access control: allow either the scheduler (?key=SYNC_KEY) OR the app
-  // (which sends the public anon key, same as every other Supabase call).
-  const syncKey = Deno.env.get("SYNC_KEY");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const providedKey = new URL(req.url).searchParams.get("key");
-  const headerKey = req.headers.get("apikey") ||
-    (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
-  const okByKey = !!syncKey && providedKey === syncKey;
-  const okByAnon = !!anonKey && headerKey === anonKey;
-  if (!okByKey && !okByAnon) {
-    return json({ error: "Unauthorized" }, 401);
+  // Schedulers use a server-held secret header; browser operators need a real JWT.
+  const syncKey = Deno.env.get('SYNC_KEY');
+  const scheduler = !!syncKey && syncKey.length >= 32 && req.headers.get('x-sync-key') === syncKey;
+  if (!scheduler && !await authorized(req, ['sauda'])) {
+    return json({ error: 'Unauthorized' }, 401);
   }
-
-  const supaUrl = Deno.env.get("SUPABASE_URL");
+  const supaUrl = Deno.env.get('SUPABASE_URL');
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supaUrl || !serviceKey) {
     return json({ error: "Supabase env not available" }, 500);

@@ -1,3 +1,4 @@
+import { verifyPrivilegedPassword } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 
 export interface AdminAuthResult {
@@ -11,148 +12,11 @@ export interface AdminAuthResult {
   error?: string;
 }
 
-export const verifyAdminOrSuperPassword = async (
-  username: string,
-  pass: string
-): Promise<AdminAuthResult> => {
-  const cleanPass = pass.trim();
-  const cleanUser = (username || '').trim().toLowerCase();
-
-  if (!cleanPass) {
-    return { success: false, error: 'Please enter Admin or Super User password.' };
-  }
-
-  // 1. Query user_master in Supabase first
-  if (supabase) {
-    try {
-      const { data, error } = await supabase.from('user_master').select('*');
-      if (!error && Array.isArray(data) && data.length > 0) {
-        if (cleanUser) {
-          const userMatch = data.find((u: any) => {
-            const uId = String(u.user_id || '').trim().toLowerCase();
-            const uName = String(u.username || '').trim().toLowerCase();
-            return (uId === cleanUser || uName === cleanUser) && String(u.password || '') === cleanPass;
-          });
-
-          if (userMatch) {
-            const role = String(userMatch.role || '').toUpperCase();
-            const level = String(userMatch.level || '').toUpperCase();
-            const isPrivileged =
-              role === 'ADMIN' ||
-              role === 'ADMINISTRATOR' ||
-              role === 'SUPER' ||
-              role === 'SUPERUSER' ||
-              level === 'L4' ||
-              level === 'L5' ||
-              level === 'MAX' ||
-              level === 'ADMIN' ||
-              level === 'SUPER';
-            if (isPrivileged) {
-              return {
-                success: true,
-                user: {
-                  username: userMatch.username || userMatch.user_id || 'ADMIN',
-                  user_id: userMatch.user_id || userMatch.username,
-                  role: userMatch.role || 'ADMIN',
-                  level: userMatch.level || 'L5'
-                }
-              };
-            } else {
-              return {
-                success: false,
-                error: 'The entered user does not have Admin or Super User authorization.'
-              };
-            }
-          }
-        }
-
-        // Check if password matches any admin/superuser in user_master
-        const anyAdminMatch = data.find((u: any) => {
-          const role = String(u.role || '').toUpperCase();
-          const level = String(u.level || '').toUpperCase();
-          const isPrivileged =
-            role === 'ADMIN' ||
-            role === 'ADMINISTRATOR' ||
-            role === 'SUPER' ||
-            role === 'SUPERUSER' ||
-            level === 'L4' ||
-            level === 'L5' ||
-            level === 'MAX' ||
-            level === 'ADMIN' ||
-            level === 'SUPER';
-          return isPrivileged && String(u.password || '') === cleanPass;
-        });
-
-        if (anyAdminMatch) {
-          return {
-            success: true,
-            user: {
-              username: anyAdminMatch.username || anyAdminMatch.user_id || 'ADMIN',
-              user_id: anyAdminMatch.user_id || anyAdminMatch.username,
-              role: anyAdminMatch.role || 'ADMIN',
-              level: anyAdminMatch.level || 'L5'
-            }
-          };
-        }
-      }
-    } catch (e) {
-      console.warn('Error checking user_master for admin credentials:', e);
-    }
-  }
-
-  // 2. Fallback to Master Admin Passwords if not matched in DB
-  if (cleanPass === 'Admin@1234' || cleanPass === 'Admin@4321' || cleanPass === 'ADMIN') {
-    return {
-      success: true,
-      user: {
-        username: username.trim().toUpperCase() || 'ADMIN',
-        user_id: username.trim().toLowerCase() || 'admin',
-        role: 'ADMIN',
-        level: 'L5'
-      }
-    };
-  }
-
-  // 3. Check localStorage user_master
+export const verifyAdminOrSuperPassword = async (username: string, pass: string): Promise<AdminAuthResult> => {
   try {
-    const raw = localStorage.getItem('user_master');
-    if (raw) {
-      const localList = JSON.parse(raw);
-      if (Array.isArray(localList)) {
-        const matched = localList.find((u: any) => {
-          const role = String(u.role || '').toUpperCase();
-          const level = String(u.level || '').toUpperCase();
-          const isPrivileged =
-            role === 'ADMIN' ||
-            role === 'ADMINISTRATOR' ||
-            role === 'SUPER' ||
-            role === 'SUPERUSER' ||
-            level === 'L4' ||
-            level === 'L5' ||
-            level === 'MAX' ||
-            level === 'ADMIN' ||
-            level === 'SUPER';
-          return isPrivileged && String(u.password || '') === cleanPass;
-        });
-        if (matched) {
-          return {
-            success: true,
-            user: {
-              username: matched.username || matched.user_id || 'ADMIN',
-              user_id: matched.user_id || matched.username,
-              role: matched.role || 'ADMIN',
-              level: matched.level || 'L5'
-            }
-          };
-        }
-      }
-    }
-  } catch (e) {}
-
-  return {
-    success: false,
-    error: 'Invalid Admin or Super User Password. Please try again.'
-  };
+    const p = await verifyPrivilegedPassword(username, pass, true);
+    return { success: true, user: { username: p.username, user_id: p.user_id, role: p.role, level: p.level } };
+  } catch (e: any) { return { success: false, error: e.message }; }
 };
 
 export const checkIsAdvancePaymentDone = (item: any, paymentsList: any[]): boolean => {

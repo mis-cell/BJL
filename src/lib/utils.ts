@@ -54,11 +54,6 @@ export function getApiUrl(apiPath: string): string {
       hostname.endsWith('.pages.dev') ||
       hostname.endsWith('.surge.sh');
 
-    const SUPABASE_FUNCTIONS_BASE = (import.meta as any).env?.VITE_SUPABASE_FUNCTIONS_URL || 'https://lxuapkccxaadwixjpirs.supabase.co/functions/v1';
-    if (!isLocalhost && cleanPath.endsWith('api/send-email') && !configuredBase) {
-      return `${SUPABASE_FUNCTIONS_BASE}/send-email`;
-    }
-
     if (isStaticHost) {
       throw new Error(
         `Backend API unavailable on static host (${hostname}) for "/${cleanPath}". Set VITE_API_BASE_URL to your backend server URL.`

@@ -1,3 +1,4 @@
+import { authorized } from '../_shared/auth.ts';
 // Supabase Edge Function: send-email
 // -----------------------------------------------------------------------------
 // Sends email from the Bally Jute PO Desk using Gmail SMTP.
@@ -83,6 +84,10 @@ Deno.serve(async (req) => {
       status: 405,
       headers: { ...cors, "Content-Type": "application/json" },
     });
+  }
+
+  if (!await authorized(req, ['sauda', 'final_po'])) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } });
   }
 
   let body: any;

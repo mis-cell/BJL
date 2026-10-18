@@ -12,7 +12,7 @@ interface AuthScreenProps {
 
 export function AuthScreen({ onLogin }: AuthScreenProps) {
   const [year, setYear] = useState("2026-2027");
-  const [username, setUsername] = useState("ADMIN");
+  const [username, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [bgSrc, setBgSrc] = useState(CLOUDINARY_BG_URL);
@@ -60,19 +60,19 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
                 className="space-y-2.5 sm:space-y-3"
               >
 
-                {/* Financial Session */}
+                {/* Financial Year */}
                 <div>
                   <label
                     htmlFor="financial_session_374"
                     className="text-[9px] sm:text-[10px] font-bold text-[#404040] uppercase tracking-wider block mb-1"
                   >
-                    Financial Session
+                    Financial Year
                   </label>
 
                   <select
                     id="financial_session_374"
                     name="financial_session"
-                    aria-label="Financial Session"
+                    aria-label="Financial Year"
                     className="w-full p-2.5 sm:p-3 rounded-[9px] sm:rounded-[10px] border border-[#CBD5E1] bg-white text-xs sm:text-sm font-semibold text-[#111111] outline-none focus:border-[#D94B5A] focus:ring-2 focus:ring-[#D94B5A]/20 transition-all appearance-none cursor-pointer"
                     value={year}
                     onChange={(e) => setYear(e.target.value)}
@@ -86,23 +86,24 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
                   </select>
                 </div>
 
-                {/* Username */}
+                {/* Email */}
                 <div>
                   <label
                     htmlFor="username_389"
                     className="text-[9px] sm:text-[10px] font-bold text-[#404040] uppercase tracking-wider block mb-1"
                   >
-                    Username
+                    Email
                   </label>
 
                   <input
                     id="username_389"
                     name="username"
-                    aria-label="Username"
-                    type="text"
-                    placeholder="Username"
+                    aria-label="Email"
+                    type="email"
+                    autoComplete="username"
+                    placeholder="Email"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="w-full p-2.5 sm:p-3 rounded-[9px] sm:rounded-[10px] border border-[#CBD5E1] bg-white text-xs sm:text-sm font-medium text-[#111111] placeholder:text-[#64748B] outline-none focus:border-[#D94B5A] focus:ring-2 focus:ring-[#D94B5A]/20 transition-all"
                     required
                   />
@@ -133,6 +134,7 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
                     id="password_413"
                     name="password"
                     aria-label="Password"
+                    autoComplete="current-password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Password"
                     value={password}
@@ -148,7 +150,7 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
                     href="#forgot"
                     onClick={(e) => {
                       e.preventDefault();
-                      alert("Please contact the System Administrator (L5) to reset your operator credentials.");
+                      alert("Please contact your administrator to reset your password.");
                     }}
                     className="text-[10px] sm:text-[11px] text-[#404040] hover:text-[#D94B5A] font-medium transition-colors"
                   >
@@ -199,13 +201,13 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
               className="space-y-4"
             >
 
-              {/* Financial Session */}
+              {/* Financial Year */}
               <div>
                 <label
                   htmlFor="mobile_financial_session"
                   className="text-[11px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1.5"
                 >
-                  Financial Session
+                  Financial Year
                 </label>
 
                 <select
@@ -226,22 +228,23 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
               </div>
 
 
-              {/* Username */}
+              {/* Email */}
               <div>
                 <label
                   htmlFor="mobile_username"
                   className="text-[11px] font-bold text-[#5A6855] uppercase tracking-wider block mb-1.5"
                 >
-                  Username
+                  Email
                 </label>
 
                 <input
                   id="mobile_username"
                   name="username"
-                  type="text"
-                  placeholder="Username"
+                  type="email"
+                  autoComplete="username"
+                  placeholder="Email"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full h-12 px-3 rounded-[10px] border border-[#ccc] bg-white text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#2e5b25] focus:ring-2 focus:ring-[#2e5b25]/20"
                   required
                 />
@@ -273,7 +276,8 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
                 <input
                   id="mobile_password"
                   name="password"
-                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                    type={showPassword ? "text" : "password"}
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

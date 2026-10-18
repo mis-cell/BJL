@@ -1,3 +1,4 @@
+import { authFetch } from '../../lib/auth';
 import { useState } from 'react';
 import { dbModule } from '../../services/dbModule';
 import { poService } from '../../services/poService';
@@ -284,7 +285,7 @@ export function usePurchaseOrderOperations({
     setEmailSendingStatus(prev => ({ ...prev, [poNo]: 'sending' }));
 
     try {
-      const res = await fetch(getApiUrl("/api/send-email"), {
+      const res = await authFetch(getApiUrl("/api/send-email"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

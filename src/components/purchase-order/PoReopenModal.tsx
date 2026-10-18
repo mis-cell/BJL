@@ -184,7 +184,7 @@ export const PoReopenModal: React.FC<PoReopenModalProps> = ({
                       type={showReopenPassword ? "text" : "password"}
                       value={reopenPassword}
                       onChange={(e) => setReopenPassword(e.target.value)}
-                      placeholder="Enter Admin Password (e.g. Admin@1234)"
+                      placeholder="Enter your administrator password"
                       autoFocus
                       className="w-full px-3 py-2 pr-10 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />

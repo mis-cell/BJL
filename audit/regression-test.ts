@@ -156,8 +156,8 @@ async function runRegressionTests() {
     const appSrc = readSource('src/App.tsx');
     const utilsSrc = readSource('src/lib/utils.ts');
     return (
-      !authSrc.includes('Admin@1234') &&
-      !serverSrc.includes('ochhyhnjlkhdlpot') &&
+      !authSrc.includes('REMOVED_LEGACY_PASSWORD') &&
+      !serverSrc.includes('REPLACE_WITH_ROTATED_APP_PASSWORD') &&
       serverSrc.includes('/api/auth/verify') &&
       appSrc.includes('preserveGateData') &&
       utilsSrc.includes('VITE_API_BASE_URL')

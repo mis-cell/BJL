@@ -1,3 +1,4 @@
+import { createAuthMiddleware, serverSupabase } from './src/server/auth.ts';
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -9,14 +10,8 @@ import imaps from 'imap-simple';
 import { simpleParser } from 'mailparser';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://lxuapkccxaadwixjpirs.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4dWFwa2NjeGFhZHdpeGpwaXJzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4MzQ4NDksImV4cCI6MjA5NDQxMDg0OX0.rzjJFNOb1gx0Z4cMSfkW9yDe4rI8oO6TLTzcVXswPek';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-
-
-
 dotenv.config();
+const supabase = serverSupabase();
 
 process.on('uncaughtException', (err) => {
   console.error('[Process] Uncaught Exception:', err);
@@ -59,7 +54,7 @@ async function runImapSync() {
       host: process.env.IMAP_HOST || "imap.gmail.com",
       port: Number(process.env.IMAP_PORT) || 993,
       tls: true,
-      tlsOptions: { rejectUnauthorized: false },
+      tlsOptions: { rejectUnauthorized: true },
       authTimeout: 10000,
       connTimeout: 15000
     }
@@ -219,21 +214,6 @@ async function syncEmailsBackground() {
   }, 60000);
 }
 
-// Server-side Session Token Registry & Login Rate Limiter
-interface ServerSessionRecord {
-  token: string;
-  userId: string;
-  username: string;
-  role: string;
-  level: string;
-  modules: string[];
-  issuedAt: number;
-  expiresAt: number;
-}
-
-const activeSessionTokens = new Map<string, ServerSessionRecord>();
-const loginAttemptTracker = new Map<string, { count: number; lockUntil: number }>();
-
 const ALLOWED_CORS_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
   .map((s) => s.trim())
@@ -246,9 +226,7 @@ function isAllowedOrigin(origin?: string): boolean {
     const u = new URL(origin);
     return (
       u.hostname === "localhost" ||
-      u.hostname === "127.0.0.1" ||
-      u.hostname.endsWith(".run.app") ||
-      u.hostname.endsWith(".github.io")
+      u.hostname === "127.0.0.1"
     );
   } catch {
     return false;
@@ -286,101 +264,41 @@ async function startServer() {
   // 2. Body Parser
   app.use(express.json({ limit: "50mb" }));
 
-  // 3. Session Token Issuing, Verification, Revocation & Login Rate-Limiting Routes
-  app.post(["/api/auth/session", "/Jute-Purchase-Automation/api/auth/session"], (req, res) => {
-    const clientIp = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "local");
-    const now = Date.now();
-    const attempt = loginAttemptTracker.get(clientIp) || { count: 0, lockUntil: 0 };
-
-    if (attempt.lockUntil > now) {
-      return res.status(429).json({
-        success: false,
-        error: "Too many login attempts. Please wait before trying again.",
-      });
-    }
-
-    const { userId, username, role, level, modules } = req.body || {};
-    if (!userId && !username) {
-      attempt.count += 1;
-      if (attempt.count >= 10) {
-        attempt.lockUntil = now + 5 * 60 * 1000;
-      }
-      loginAttemptTracker.set(clientIp, attempt);
-      return res.status(400).json({ success: false, error: "Missing userId or username" });
-    }
-
-    loginAttemptTracker.delete(clientIp);
-    const token = `bjl_sess_${now}_${Math.random().toString(36).substring(2, 15)}`;
-    const sessionRecord: ServerSessionRecord = {
-      token,
-      userId: String(userId || username),
-      username: String(username || userId),
-      role: String(role || "USER").toUpperCase(),
-      level: String(level || "L1").toUpperCase(),
-      modules: Array.isArray(modules) ? modules : [],
-      issuedAt: now,
-      expiresAt: now + 12 * 60 * 60 * 1000,
-    };
-    activeSessionTokens.set(token, sessionRecord);
-
-    return res.json({
-      success: true,
-      token,
-      expiresAt: sessionRecord.expiresAt,
-      session: sessionRecord,
-    });
-  });
-
-  app.post(["/api/auth/verify", "/Jute-Purchase-Automation/api/auth/verify"], (req, res) => {
-    const authHeader = String(req.headers.authorization || "");
-    const token =
-      (authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "") ||
-      String(req.headers["x-session-token"] || req.body?.token || "").trim();
-
-    if (!token) {
-      return res.status(401).json({ valid: false, error: "Missing session token" });
-    }
-
-    const record = activeSessionTokens.get(token);
-    if (!record || record.expiresAt < Date.now()) {
-      activeSessionTokens.delete(token);
-      return res.status(401).json({ valid: false, error: "Session token expired or invalid" });
-    }
-
-    return res.json({ valid: true, session: record });
-  });
-
-  app.post(["/api/auth/logout", "/Jute-Purchase-Automation/api/auth/logout"], (req, res) => {
-    const authHeader = String(req.headers.authorization || "");
-    const token =
-      (authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "") ||
-      String(req.headers["x-session-token"] || req.body?.token || "").trim();
-
-    if (token) {
-      activeSessionTokens.delete(token);
-    }
-    return res.json({ success: true, revoked: Boolean(token) });
-  });
-
-  // 4. API Authorization & Audit Middleware
+  // All application APIs require a verified Auth JWT and an active database profile.
+  const requireAuth = createAuthMiddleware(supabase);
   app.use((req, res, next) => {
-    if (req.url.startsWith('/api') || req.url.includes('/api/')) {
-      console.log(`[API] ${req.method} ${req.url}`);
-      const authHeader = String(req.headers.authorization || "");
-      const token =
-        (authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "") ||
-        String(req.headers["x-session-token"] || "").trim();
-      if (token && activeSessionTokens.has(token)) {
-        (req as any).userSession = activeSessionTokens.get(token);
-      }
+    if (req.path.startsWith('/api/') || req.path.startsWith('/Jute-Purchase-Automation/api/')) {
+      return requireAuth(req, res, next);
     }
     next();
+  });
+  app.post(['/api/auth/session', '/Jute-Purchase-Automation/api/auth/session'], (_req, res) => {
+    res.status(410).json({ error: 'Use Supabase Auth signInWithPassword.' });
+  });
+  app.post(['/api/auth/verify', '/Jute-Purchase-Automation/api/auth/verify'], (req, res) => {
+    res.json({ valid: true, session: (req as any).userSession });
+  });
+  app.post(['/api/auth/logout', '/Jute-Purchase-Automation/api/auth/logout'], async (req, res) => {
+    const token = req.headers.authorization!.slice(7);
+    const { error } = await supabase.auth.admin.signOut(token, 'global');
+    res.status(error ? 503 : 200).json({ success: !error });
   });
 
   console.log("Environment:", process.env.NODE_ENV || "development");
 
   // System Intelligence Route securely delegated to AI Gateway
   app.use(["/api/chat", "/Jute-Purchase-Automation/api/chat"], aiGatewayRouter);
+
+  app.get(['/api/sms-feed', '/Jute-Purchase-Automation/api/sms-feed'], async (_req, res) => {
+    const key = process.env.GOOGLE_SHEETS_API_KEY;
+    const id = process.env.GOOGLE_SHEETS_ID;
+    if (!key || !id) return res.status(503).json({ error: 'SMS feed is not configured' });
+    try {
+      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(id)}/values/sauda!A:E?key=${encodeURIComponent(key)}`);
+      if (!response.ok) return res.status(502).json({ error: 'SMS feed unavailable' });
+      return res.json(await response.json());
+    } catch { return res.status(502).json({ error: 'SMS feed unavailable' }); }
+  });
 
   // Send Email Route
   app.post(["/api/send-email", "/Jute-Purchase-Automation/api/send-email"], async (req, res) => {
@@ -608,7 +526,7 @@ async function startServer() {
             pass: smtpPass,
           },
           tls: {
-            rejectUnauthorized: false
+            rejectUnauthorized: true
           }
         });
         const info = await transporter.sendMail({
@@ -643,7 +561,7 @@ async function startServer() {
             pass: smtpPass,
           },
           tls: {
-            rejectUnauthorized: false
+            rejectUnauthorized: true
           }
         });
         const info = await transporter.sendMail({
@@ -681,7 +599,7 @@ async function startServer() {
   });
 
   // Fetch Email Route via IMAP or Supabase cache
-  app.get(["/api/fetch-emails", "/Jute-Purchase-Automation/api/fetch-emails"], async (req, res) => {
+  app.get(["/api/fetch-emails", "/Jute-Purchase-Automation/api/fetch-emails", "/api/emails", "/Jute-Purchase-Automation/api/emails"], async (req, res) => {
     try {
       console.log("Serving /api/fetch-emails from Supabase cache...");
       const { data, error } = await supabase
@@ -766,7 +684,7 @@ async function startServer() {
         pass: pass || process.env.GMAIL_APP_PASSWORD || "",
       },
       tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: true
       },
       logger: {
         level: 'trace',

@@ -1,3 +1,4 @@
+import { signIn, verifiedProfile } from './lib/auth';
 import React, { useState } from "react";
 import { dbModule } from "./services/dbModule";
 import {
@@ -154,186 +155,64 @@ export default function App() {
   const [selectedAmadForFinalMr, setSelectedAmadForFinalMr] = useState<any>(null);
 
   const clearAuthSessionSelective = React.useCallback(async () => {
-    try {
-      const preserveGateData = true; // Gate lorries, Gate settings, and Tolerance policies preserved
-      if (!preserveGateData) return;
-      const rawSession = localStorage.getItem("bally_auth_session");
-      const parsed = rawSession ? JSON.parse(rawSession) : null;
-      const token = parsed?.token || localStorage.getItem("bally_session_token") || "";
-      if (token) {
-        fetch(getApiUrl("/api/auth/logout"), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ token }),
-        }).catch(() => {});
-      }
-      // Selectively remove auth session keys while preserving Gate lorries, Gate settings, and Tolerance policies
-      localStorage.removeItem("bally_auth_session");
-      localStorage.removeItem("bally_session_token");
-    } catch (_e) {}
+    await supabase?.auth.signOut();
+    sessionStorage.removeItem('bjl_auth_v2');
+    for (const key of ['bally_auth_session', 'bally_session_token', 'bally_user_context', 'user_master']) localStorage.removeItem(key);
+    setCurrentUserContext({ userId: '', username: '', userName: '', userRole: '', userLevel: '', allowedModules: [] });
   }, []);
 
-  // Restore and verify authenticated session & module permissions
+  const applyProfile = (profile: any, year?: string) => {
+    const admin = ['ADMIN', 'ADMINISTRATOR'].includes(String(profile.role).toUpperCase()) || profile.level === 'L5';
+    setIsAdmin(admin);
+    setUserRole(profile.role || 'USER');
+    setUserLevel(profile.level || 'L1');
+    setAllowedModules(profile.modules);
+    setCurrentUserContext({ userId: profile.user_id, username: profile.username,
+      userName: profile.username, userRole: profile.role, userLevel: profile.level,
+      allowedModules: profile.modules });
+    setIsLoggedIn(true);
+    if (year) setSelectedYear(year);
+    setCurrentPage(getFirstAllowedPage(profile.modules, admin) as Page);
+  };
+
   React.useEffect(() => {
-    let isMounted = true;
-    const verifyAndRestoreSession = async () => {
+    let mounted = true;
+    const restore = async () => {
+      // Legacy localStorage identities and tokens are never trusted.
+      for (const key of ['bally_auth_session', 'bally_session_token', 'bally_user_context', 'user_master']) localStorage.removeItem(key);
       try {
-        const rawSession = localStorage.getItem("bally_auth_session");
-        if (rawSession) {
-          const sess = JSON.parse(rawSession);
-          if (sess && sess.username) {
-            let verifiedRole = String(sess.role || "L1").toUpperCase();
-            let verifiedLevel = String(sess.level || "L1").toUpperCase();
-            let rawMods = sess.allowed_modules;
-
-            // Verify against backend session endpoint or authoritative user_master table
-            if (sess.token) {
-              try {
-                const verifyRes = await fetch(getApiUrl("/api/auth/verify"), {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${sess.token}`,
-                  },
-                  body: JSON.stringify({ token: sess.token }),
-                });
-                if (verifyRes.ok) {
-                  const vData = await verifyRes.json();
-                  if (vData?.valid && vData?.session) {
-                    verifiedRole = String(vData.session.role || verifiedRole).toUpperCase();
-                    verifiedLevel = String(vData.session.level || verifiedLevel).toUpperCase();
-                  }
-                }
-              } catch (_verifyErr) {}
-            }
-
-            if (supabase && sess.username && sess.username.toUpperCase() !== "ADMIN") {
-              const { data: dbUser } = await supabase
-                .from("user_master")
-                .select("user_id, username, role, level, allowed_modules, status")
-                .or(`user_id.ilike.${sess.userId || sess.username},username.ilike.${sess.username}`)
-                .limit(1)
-                .maybeSingle();
-
-              if (dbUser) {
-                if (dbUser.status && String(dbUser.status).toLowerCase() !== "active") {
-                  await clearAuthSessionSelective();
-                  if (isMounted) setSessionStatus("ready");
-                  return;
-                }
-                verifiedRole = String(dbUser.role || verifiedRole).toUpperCase();
-                verifiedLevel = String(dbUser.level || verifiedLevel).toUpperCase();
-                rawMods = dbUser.allowed_modules ?? rawMods;
-              }
-            }
-
-            if (!isMounted) return;
-            const isAdminUser =
-              verifiedRole === "ADMIN" ||
-              verifiedRole === "ADMINISTRATOR" ||
-              verifiedLevel === "L5" ||
-              verifiedLevel === "ADMIN";
-            setIsAdmin(isAdminUser);
-            setUserRole(verifiedRole);
-            setUserLevel(verifiedLevel);
-            const mods =
-              rawMods !== undefined &&
-              rawMods !== null &&
-              String(rawMods).trim() !== "" &&
-              String(rawMods).trim() !== "[]"
-                ? normalizeAllowedModules(rawMods)
-                : ["*"];
-            const finalMods = mods.length === 0 ? ["*"] : mods;
-
-            setCurrentUserContext({
-              userId: sess.userId || "op_1",
-              username: sess.username,
-              userName: sess.username,
-              userRole: verifiedRole,
-              userLevel: verifiedLevel,
-              allowedModules: finalMods,
-            });
-
-            setAllowedModules(finalMods);
-            setIsLoggedIn(true);
-            if (sess.year) setSelectedYear(sess.year);
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const qPage =
-              urlParams.get("page") ||
-              (window.location.hash ? window.location.hash.replace("#", "") : null);
-            if (qPage && hasModulePermission(qPage, finalMods, isAdminUser)) {
-              setCurrentPage(qPage as Page);
-            } else {
-              const firstAllowed = getFirstAllowedPage(finalMods, isAdminUser) as Page;
-              setCurrentPage(firstAllowed);
-            }
-          }
-        }
-        if (isMounted) setSessionStatus("ready");
-      } catch (e) {
-        console.warn("Session restore error:", e);
-        if (isMounted) setSessionStatus("error");
-      }
+        const profile = await verifiedProfile();
+        if (mounted) applyProfile(profile);
+      } catch {
+        if (mounted) { setIsLoggedIn(false); await clearAuthSessionSelective(); }
+      } finally { if (mounted) setSessionStatus('ready'); }
     };
-    verifyAndRestoreSession();
-    return () => {
-      isMounted = false;
-    };
-  }, [clearAuthSessionSelective]);
-
-  // Subscribe to live permission updates (e.g. when Admin updates allowed modules in Admin Desk)
-  React.useEffect(() => {
-    return subscribeToPermissions((detail) => {
-      const currentCtx = getCurrentUserContext();
-      if (
-        detail.userId === currentCtx.userId ||
-        detail.username?.toLowerCase() === currentCtx.username?.toLowerCase() ||
-        detail.username?.toLowerCase() === currentCtx.userName?.toLowerCase() ||
-        detail.userId === 'all'
-      ) {
-        const newMods = detail.allowed_modules === "*"
-          ? ["*"]
-          : normalizeAllowedModules(detail.allowed_modules || "");
-        setAllowedModules(newMods);
-        const isAdm = detail.role?.toUpperCase() === "ADMIN" || detail.role?.toUpperCase() === "ADMINISTRATOR";
-        if (detail.role) {
-          setIsAdmin(isAdm);
-          setUserRole(detail.role.toUpperCase());
-        }
-        if (detail.level) {
-          setUserLevel(detail.level.toUpperCase());
-        }
-        setCurrentUserContext({
-          allowedModules: newMods,
-          userRole: detail.role ? detail.role.toUpperCase() : currentCtx.userRole,
-          userLevel: detail.level ? detail.level.toUpperCase() : currentCtx.userLevel,
-        }, false);
-
-        try {
-          const raw = localStorage.getItem("bally_auth_session");
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            localStorage.setItem("bally_auth_session", JSON.stringify({
-              ...parsed,
-              allowed_modules: detail.allowed_modules,
-              role: detail.role || parsed.role,
-              level: detail.level || parsed.level,
-            }));
-          }
-        } catch {}
-
-        // Auto-redirect if currently open page is no longer permitted
-        if (!hasModulePermission(currentPage, newMods, isAdm)) {
-          const fallback = getFirstAllowedPage(newMods, isAdm) as Page;
-          setCurrentPage('dashboard');
-        }
+    restore();
+    const subscription = supabase?.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        setIsLoggedIn(false);
+        setAllowedModules([]);
+        setCurrentUserContext({ userId: '', username: '', userName: '', userRole: '', userLevel: '', allowedModules: [] });
       }
     });
-  }, [currentPage]);
+    return () => { mounted = false; subscription?.data.subscription.unsubscribe(); };
+  }, [clearAuthSessionSelective]);
+
+  // Notifications request a refresh; their identity/permission payload is not trusted.
+  React.useEffect(() => {
+    return subscribeToPermissions(async () => {
+      try {
+        const profile = await verifiedProfile();
+        setAllowedModules(profile.modules);
+        setUserRole(profile.role);
+        setUserLevel(profile.level);
+        setIsAdmin(['ADMIN', 'ADMINISTRATOR'].includes(profile.role?.toUpperCase()) || profile.level === 'L5');
+        setCurrentUserContext({ userId: profile.user_id, username: profile.username,
+          userName: profile.username, userRole: profile.role, userLevel: profile.level,
+          allowedModules: profile.modules }, false);
+      } catch { setIsLoggedIn(false); await clearAuthSessionSelective(); }
+    });
+  }, [clearAuthSessionSelective]);
 
   // Sync current page to URL for bookmarking and page refresh preservation
   React.useEffect(() => {
@@ -691,6 +570,7 @@ export default function App() {
           "SYSTEM_DEPART",
           "Session ended - operator exited login screen",
         );
+        clearAuthSessionSelective();
         setIsLoggedIn(false);
       }
     };
@@ -708,6 +588,7 @@ export default function App() {
           "SYSTEM_DEPART",
           "Session ended - operator exited login screen",
         );
+        clearAuthSessionSelective();
         setIsLoggedIn(false);
       }
     };
@@ -729,189 +610,12 @@ export default function App() {
     };
   }, [currentPage, allowedModules, isAdmin]);
 
-  const handleLogin = async (year: string, user: string, pass: string) => {
-    const trimmedUser = user.trim();
-    const cleanPass = pass.trim();
-
-    if (!trimmedUser || !cleanPass) {
-      alert("Please enter both User ID / Username and Password.");
-      return;
-    }
-
+  const handleLogin = async (year: string, email: string, password: string) => {
     try {
-      let data: any = null;
-
-      // 1. Try querying user_master in Supabase
-      if (supabase) {
-        const { data: remoteData, error } = await supabase
-          .from("user_master")
-          .select("*")
-          .or(`user_id.ilike.${trimmedUser},username.ilike.${trimmedUser}`)
-          .limit(1)
-          .maybeSingle();
-
-        if (!error && remoteData) {
-          data = remoteData;
-        }
-      }
-
-      // 2. Try querying local client dbModule if not found in Supabase
-      if (!data) {
-        try {
-          const localUsers = await dbModule.fetchAll('user_master');
-          if (Array.isArray(localUsers)) {
-            data = localUsers.find((u: any) => 
-              String(u.user_id || '').trim().toLowerCase() === trimmedUser.toLowerCase() ||
-              String(u.username || '').trim().toLowerCase() === trimmedUser.toLowerCase()
-            );
-          }
-        } catch (e) {}
-      }
-
-      // 3. If user found in database (user_master), check database password
-      if (data) {
-        if (data.status && data.status.toLowerCase() !== "active") {
-          alert("Access denied: Your account is currently inactive. Please contact Administrator.");
-          return;
-        }
-
-        if (String(data.password || '') === cleanPass) {
-          const isAdminUser =
-            data.role?.toUpperCase() === "ADMIN" ||
-            data.role?.toUpperCase() === "ADMINISTRATOR" ||
-            data.level?.toUpperCase() === "L5" ||
-            data.level?.toUpperCase() === "ADMIN";
-
-          setIsAdmin(isAdminUser);
-          setUserRole(data.role?.toUpperCase() || "L1");
-          setUserLevel(data.level?.toUpperCase() || "L1");
-          const rawMods = data.allowed_modules;
-          const modules = (rawMods !== undefined && rawMods !== null && String(rawMods).trim() !== "" && String(rawMods).trim() !== "[]")
-            ? normalizeAllowedModules(rawMods)
-            : ["*"];
-          const finalMods = modules.length === 0 ? ["*"] : modules;
-
-          setCurrentUserContext({
-            userId: data.user_id || data.username,
-            username: data.username || data.user_id,
-            userName: data.username || data.user_id,
-            userRole: data.role?.toUpperCase() || "L1",
-            userLevel: data.level?.toUpperCase() || "L1",
-            allowedModules: finalMods,
-          });
-
-          setAllowedModules(finalMods);
-          setIsLoggedIn(true);
-          setSelectedYear(year);
-
-          const firstLanding = getFirstAllowedPage(finalMods, isAdminUser) as Page;
-          setCurrentPage(firstLanding);
-
-          // Issue backend session token and persist session
-          let issuedToken = "";
-          try {
-            const sessRes = await fetch(getApiUrl("/api/auth/session"), {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                userId: data.user_id,
-                username: data.username,
-                role: data.role?.toUpperCase() || "L1",
-                level: data.level?.toUpperCase() || "L1",
-                modules: finalMods,
-              }),
-            });
-            if (sessRes.ok) {
-              const sJson = await sessRes.json();
-              issuedToken = sJson?.token || "";
-            }
-          } catch (_e) {}
-
-          try {
-            if (issuedToken) localStorage.setItem("bally_session_token", issuedToken);
-            localStorage.setItem("bally_auth_session", JSON.stringify({
-              userId: data.user_id,
-              username: data.username,
-              role: data.role?.toUpperCase() || "L1",
-              level: data.level?.toUpperCase() || "L1",
-              allowed_modules: data.allowed_modules || "*",
-              year: year,
-              token: issuedToken,
-            }));
-          } catch (e) {}
-
-          // Update last login timestamp in database
-          if (supabase && data.user_id) {
-            supabase.from('user_master').update({ last_login: new Date().toISOString() }).eq('user_id', data.user_id).then(() => {});
-          }
-          
-          logEvent(
-            "LOGIN_HISTORY",
-            `Operator account: ${data.username} [Role: ${data.role || "USER"}] successfully logged in under session year: ${year}`,
-          );
-          setSessionStatus('ready');
-          return;
-        } else {
-          alert("Access denied: Invalid password entered for " + (data.username || trimmedUser) + ".");
-          return;
-        }
-      }
-
-      // 4. Master Admin Fallback (only if user not found in database)
-      if (trimmedUser.toLowerCase() === "admin") {
-        if (cleanPass === "Admin@4321" || cleanPass === "Admin@1234" || cleanPass === "ADMIN") {
-          setIsAdmin(true);
-          setUserRole("ADMIN");
-          setUserLevel("ADMIN");
-          setIsLoggedIn(true);
-          setSelectedYear(year);
-          setAllowedModules(["*"]);
-          setCurrentPage("dashboard");
-          setCurrentUserContext({ userId: "admin", username: "ADMIN", userName: "ADMIN", userRole: "ADMIN", userLevel: "ADMIN", allowedModules: ["*"] });
-          let issuedToken = "";
-          try {
-            const sessRes = await fetch(getApiUrl("/api/auth/session"), {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                userId: "admin",
-                username: "ADMIN",
-                role: "ADMIN",
-                level: "ADMIN",
-                modules: ["*"],
-              }),
-            });
-            if (sessRes.ok) {
-              const sJson = await sessRes.json();
-              issuedToken = sJson?.token || "";
-            }
-          } catch (_e) {}
-          try {
-            if (issuedToken) localStorage.setItem("bally_session_token", issuedToken);
-            localStorage.setItem("bally_auth_session", JSON.stringify({
-              userId: "admin",
-              username: "ADMIN",
-              role: "ADMIN",
-              level: "ADMIN",
-              allowed_modules: "*",
-              year: year,
-              token: issuedToken,
-            }));
-          } catch (e) {}
-          logEvent(
-            "LOGIN_HISTORY",
-            `Administrator fallback login verified under session year: ${year}`,
-          );
-          setSessionStatus('ready');
-          return;
-        }
-      }
-
-      alert("Invalid system credentials. User not found.");
-    } catch (err) {
-      console.error("Login fault:", err);
-      alert("Internal security fault. Verify DB connection.");
-    }
+      const profile = await signIn(email, password);
+      applyProfile(profile, year);
+      setSessionStatus('ready');
+    } catch (error: any) { alert(error.message || 'Unable to sign in.'); }
   };
 
   if (sessionStatus === 'loading') {
@@ -1034,11 +738,10 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => {
-                            localStorage.removeItem("bally_auth_session");
-                            localStorage.removeItem("bally_user_context");
+                            clearAuthSessionSelective();
                             setIsLoggedIn(false);
                             setIsAdmin(false);
-                            setAllowedModules(["*"]);
+                            setAllowedModules([]);
                           }}
                           className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-200 transition-all cursor-pointer"
                         >

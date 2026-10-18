@@ -1,3 +1,4 @@
+import { authFetch } from '../lib/auth';
 import React, { useState, useEffect } from 'react';
 import { 
   Database, 
@@ -293,7 +294,7 @@ export default function ConfigGuide({ onClose }: { onClose?: () => void }) {
                       btn.innerText = "TESTING...";
                       btn.disabled = true;
                       try {
-                        const res = await fetch(getApiUrl("/api/send-email"), {
+                        const res = await authFetch(getApiUrl("/api/send-email"), {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
