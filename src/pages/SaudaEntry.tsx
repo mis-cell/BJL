@@ -196,7 +196,6 @@ export default function SaudaEntry({
       b_rate: 0,
       b_date: today,
       superior_normal_marks: 'New (F2)',
-      signature_url: '',
       status: 'pending',
       quality_details: [{ quality: '', qty: 0, agency: '', marka: '', rs: 0, agencies: [], markas: [], applicableCombinations: [] }]
     };
@@ -934,7 +933,6 @@ export default function SaudaEntry({
         'b_rate',
         'b_date',
         'superior_normal_marks',
-        'signature_url',
         'status',
         'approval_status',
         'created_by',
@@ -970,6 +968,9 @@ export default function SaudaEntry({
           saudaPayload[field] = (saudaData as any)[field];
         }
       });
+
+      delete saudaPayload.signature_url;
+      delete saudaPayload.digital_signature;
 
       // Save complete raw quality details array (preserving multi-select agencies, markas, applicableCombinations)
       saudaPayload.quality_details = (formData.quality_details || []).map((q: any) => ({

@@ -550,71 +550,23 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
         }
       }
 
-      if (!supabase) {
-        if (isNew) {
-          await dbModule.insert(selectedTable.name, editingRow);
-        } else {
-          await dbModule.update(
-            selectedTable.name,
-            pk,
-            editingRow[pk],
-            editingRow
-          );
-        }
-      } else {
-        if (selectedTable.name === "user_master") {
-          const userPayload: any = {
-            user_id: editingRow.user_id,
-            username: editingRow.username,
-            password: editingRow.password,
-            role: editingRow.role,
-            status: editingRow.status,
-            allowed_modules: editingRow.allowed_modules,
-            level: editingRow.level,
-            created_at: editingRow.created_at || new Date().toISOString()
-          };
-          if (editingRow.last_login && String(editingRow.last_login).trim() !== "" && String(editingRow.last_login).trim() !== "null") {
-            userPayload.last_login = editingRow.last_login;
-          }
-
-          // Guaranteed local client store save
-          await dbModule.insert("user_master", userPayload).catch(() =>
-            dbModule.update("user_master", "user_id", userPayload.user_id, userPayload).catch(() => {})
-          );
-
-          // Remote Supabase store upsert
-          const { error } = await supabase
-            .from("user_master")
-            .upsert(userPayload, { onConflict: "user_id" });
-          if (error) {
-            const { error: err2 } = await supabase
-              .from("user_master")
-              .upsert(userPayload, { onConflict: "username" });
-            if (err2) {
-              console.warn("Supabase user_master save warning:", err2);
-            }
-          }
-        } else if (isNew) {
-          const insertPayload = { ...editingRow };
-          if (insertPayload.id === "" || insertPayload.id === null) {
-            delete insertPayload.id;
-          }
-          const { error } = await supabase
-            .from(selectedTable.name)
-            .insert(insertPayload);
-          if (error) throw error;
-        } else {
-          const updatePayload = { ...editingRow };
-          const pkVal = updatePayload[pk];
-          const { error } = await supabase
-            .from(selectedTable.name)
-            .update(updatePayload)
-            .eq(pk, pkVal);
-          if (error) throw error;
-        }
-      }
-
       if (selectedTable.name === "user_master") {
+        const userPayload: any = {
+          user_id: editingRow.user_id,
+          username: editingRow.username,
+          password: editingRow.password,
+          role: editingRow.role,
+          status: editingRow.status,
+          allowed_modules: editingRow.allowed_modules,
+          level: editingRow.level,
+          created_at: editingRow.created_at || new Date().toISOString()
+        };
+        if (editingRow.last_login && String(editingRow.last_login).trim() !== "" && String(editingRow.last_login).trim() !== "null") {
+          userPayload.last_login = editingRow.last_login;
+        }
+
+        await dbModule.upsert("user_master", userPayload, "user_id");
+
         broadcastPermissionsUpdated({
           userId: editingRow?.user_id,
           username: editingRow?.username,
@@ -622,35 +574,28 @@ export function useAdminDeskData({ isAuthenticated }: UseAdminDeskDataProps) {
           role: editingRow?.role,
           level: editingRow?.level
         });
+      } else {
+        const savePayload = { ...editingRow };
+        if (savePayload.id === "" || savePayload.id === null) {
+          delete savePayload.id;
+        }
+        delete savePayload.signature_url;
+        delete savePayload.digital_signature;
+
+        if (isNew) {
+          await dbModule.insert(selectedTable.name, savePayload);
+        } else {
+          const pkVal = savePayload[pk];
+          await dbModule.update(selectedTable.name, pk, pkVal, savePayload);
+        }
       }
 
       setEditingRow(null);
       await fetchData();
       alert("Changes committed to database successfully.");
     } catch (err: any) {
-      console.error("Save error:", err);
-      try {
-        const pk = selectedTable.pk;
-        if (isNewRow) {
-          await dbModule.insert(selectedTable.name, editingRow);
-        } else {
-          await dbModule.update(selectedTable.name, pk, editingRow[pk], editingRow);
-        }
-        if (selectedTable.name === "user_master") {
-          broadcastPermissionsUpdated({
-            userId: editingRow?.user_id,
-            username: editingRow?.username,
-            allowed_modules: editingRow?.allowed_modules,
-            role: editingRow?.role,
-            level: editingRow?.level
-          });
-        }
-        setEditingRow(null);
-        await fetchData();
-        alert("Changes saved to local client database successfully.");
-        return;
-      } catch (e) {}
-      alert(`Operation Failed: ${err.message || String(err)}`);
+      console.error("Admin Desk Save Error:", err);
+      alert(`Save Failed: ${err.message || String(err)}`);
     } finally {
       setLoading(false);
     }

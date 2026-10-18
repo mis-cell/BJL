@@ -85,6 +85,8 @@ function sanitizePayload(data: Record<string, any>): Record<string, any> {
   const payload = { ...data };
   delete payload._offline_queued;
   delete payload._stripped_columns;
+  delete payload.signature_url;
+  delete payload.digital_signature;
   Object.keys(payload).forEach((k) => {
     if (payload[k] === undefined) {
       delete payload[k];
