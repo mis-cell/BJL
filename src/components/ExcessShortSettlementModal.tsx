@@ -24,7 +24,15 @@ import {
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
 import { calculateWeightTolerance, WeightToleranceResult } from '../lib/weightTolerance';
-import { getActiveTolerancePolicy, getCachedTolerancePolicy, TolerancePolicy, DEFAULT_TOLERANCE_POLICY } from '../services/tolerancePolicyService';
+import { 
+  TolerancePolicyItem,
+  DEFAULT_TOLERANCE_POLICIES,
+  getTolerancePoliciesSync,
+  fetchTolerancePolicies
+} from '../services/tolerancePolicyService';
+
+type TolerancePolicy = TolerancePolicyItem;
+const DEFAULT_TOLERANCE_POLICY = DEFAULT_TOLERANCE_POLICIES[0];
 import { cn } from '../lib/utils';
 import { logChange } from '../services/auditLogService';
 
@@ -161,13 +169,23 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   const [remarks, setRemarks] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [activePolicy, setActivePolicy] = useState<TolerancePolicy>(getCachedTolerancePolicy());
+  const [activePolicy, setActivePolicy] = useState<TolerancePolicy>(() => {
+    try {
+      const list = getTolerancePoliciesSync();
+      return (list && list.find((p: any) => p.is_active)) || (list && list[0]) || DEFAULT_TOLERANCE_POLICY;
+    } catch {
+      return DEFAULT_TOLERANCE_POLICY;
+    }
+  });
 
   // Fetch live active policy from Tolerance Policy Master
   useEffect(() => {
-    getActiveTolerancePolicy().then(p => {
-      if (p) setActivePolicy(p);
-    });
+    fetchTolerancePolicies().then(list => {
+      if (Array.isArray(list) && list.length > 0) {
+        const found = list.find((p: any) => p.is_active) || list[0];
+        if (found) setActivePolicy(found);
+      }
+    }).catch(() => {});
   }, []);
 
   // Close modal safely on Escape key

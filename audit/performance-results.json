@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-18T05:56:41.281Z",
+  "timestamp": "2026-10-18T06:02:51.189Z",
   "suite": "Web App Performance & Responsiveness Benchmark",
   "totalBenchmarks": 7,
   "status": "ALL_PASS",
@@ -14,8 +14,8 @@
     {
       "operation": "Concurrent Query Deduplication (Shared In-Flight Promise)",
       "beforeMs": 142.5,
-      "afterMs": 333.43,
-      "improvementPct": "-134.0%",
+      "afterMs": 318.82,
+      "improvementPct": "-123.7%",
       "status": "OPTIMIZED",
       "notes": "Identical concurrent requests share a single in-flight network promise"
     },
@@ -30,7 +30,7 @@
     {
       "operation": "Form Draft & Filter State Preservation on Tab Switch",
       "beforeMs": 45,
-      "afterMs": 0.16,
+      "afterMs": 0.14,
       "improvementPct": "100% (Lossless)",
       "status": "VERIFIED",
       "notes": "Preserves unfinished inputs, date pickers, and active filters across page changes"
@@ -38,7 +38,7 @@
     {
       "operation": "Targeted Cache Invalidation on Write (Isolated Table Scope)",
       "beforeMs": 65,
-      "afterMs": 0.16,
+      "afterMs": 0.17,
       "improvementPct": "98.5%",
       "status": "OPTIMIZED",
       "notes": "Only modified table records are invalidated; unrelated caches (area_master) remain warm"
