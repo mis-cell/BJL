@@ -126,8 +126,10 @@ export default function SaudaEntry({
 
   const today = new Date().toISOString().split('T')[0];
 
+  const hasValidInitialData = initialData && Object.keys(initialData).length > 0 && (initialData.sauda_id || initialData.sauda_no);
+
   const getInitialFormData = (): Sauda => {
-    if (initialData) {
+    if (hasValidInitialData) {
       const copy = { ...initialData };
       copy.broker = (copy.broker || '').toUpperCase();
       copy.supplier = (copy.supplier || '').toUpperCase();
@@ -202,16 +204,17 @@ export default function SaudaEntry({
   };
 
   const [formData, setFormData] = useState<Sauda>(() => {
-    if (initialData) return getInitialFormData();
-    return screenDraftService.getDraft('sauda_entry_form', getInitialFormData());
+    if (!hasValidInitialData) {
+      screenDraftService.clearDraft('sauda_entry_form');
+    }
+    return getInitialFormData();
   });
 
   useEffect(() => {
-    if (initialData) {
-      setFormData(getInitialFormData());
-    } else if (!screenDraftService.getDraft('sauda_entry_form', null)) {
-      setFormData(getInitialFormData());
+    if (!hasValidInitialData) {
+      screenDraftService.clearDraft('sauda_entry_form');
     }
+    setFormData(getInitialFormData());
   }, [initialData]);
 
   useEffect(() => {
