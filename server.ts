@@ -287,7 +287,7 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
 
   // 3. Session Token Issuing, Verification, Revocation & Login Rate-Limiting Routes
-  app.post(["/api/auth/session", "/Jute-Purchase-Automation/api/auth/session"], (req, res) => {
+  app.post(["/api/auth/session", "/api/auth/login", "/Jute-Purchase-Automation/api/auth/session", "/Jute-Purchase-Automation/api/auth/login"], async (req, res) => {
     const clientIp = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "local");
     const now = Date.now();
     const attempt = loginAttemptTracker.get(clientIp) || { count: 0, lockUntil: 0 };
@@ -295,29 +295,67 @@ async function startServer() {
     if (attempt.lockUntil > now) {
       return res.status(429).json({
         success: false,
-        error: "Too many login attempts. Please wait before trying again.",
+        error: "Too many login attempts. Please wait 5 minutes before trying again.",
       });
     }
 
-    const { userId, username, role, level, modules } = req.body || {};
-    if (!userId && !username) {
+    const { userId, username, password, role, level, modules } = req.body || {};
+    const targetUser = String(username || userId || '').trim();
+
+    if (!targetUser) {
       attempt.count += 1;
-      if (attempt.count >= 10) {
-        attempt.lockUntil = now + 5 * 60 * 1000;
-      }
+      if (attempt.count >= 10) attempt.lockUntil = now + 5 * 60 * 1000;
       loginAttemptTracker.set(clientIp, attempt);
-      return res.status(400).json({ success: false, error: "Missing userId or username" });
+      return res.status(400).json({ success: false, error: "Missing username or user_id" });
+    }
+
+    let verifiedRole = String(role || "USER").toUpperCase();
+    let verifiedLevel = String(level || "L1").toUpperCase();
+    let verifiedModules = Array.isArray(modules) ? modules : ["*"];
+    let verifiedUserId = String(userId || targetUser);
+
+    // If password or database connection exists, verify credentials against user_master
+    if (password || supabase) {
+      const { data: dbUser } = await supabase
+        .from("user_master")
+        .select("user_id, username, password, role, level, allowed_modules, status")
+        .or(`username.ilike.${targetUser},user_id.ilike.${targetUser}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (dbUser) {
+        if (dbUser.status && String(dbUser.status).toLowerCase() !== "active") {
+          return res.status(403).json({ success: false, error: "Account is inactive. Please contact administrator." });
+        }
+        if (password && String(dbUser.password || '').trim() !== String(password).trim()) {
+          attempt.count += 1;
+          if (attempt.count >= 10) attempt.lockUntil = now + 5 * 60 * 1000;
+          loginAttemptTracker.set(clientIp, attempt);
+          return res.status(401).json({ success: false, error: "Invalid credentials" });
+        }
+        verifiedUserId = dbUser.user_id || verifiedUserId;
+        verifiedRole = String(dbUser.role || "USER").toUpperCase();
+        verifiedLevel = String(dbUser.level || "L1").toUpperCase();
+        if (dbUser.allowed_modules) {
+          verifiedModules = String(dbUser.allowed_modules).split(',').map((x: string) => x.trim()).filter(Boolean);
+        }
+      } else if (password) {
+        attempt.count += 1;
+        if (attempt.count >= 10) attempt.lockUntil = now + 5 * 60 * 1000;
+        loginAttemptTracker.set(clientIp, attempt);
+        return res.status(401).json({ success: false, error: "Invalid credentials" });
+      }
     }
 
     loginAttemptTracker.delete(clientIp);
     const token = `bjl_sess_${now}_${Math.random().toString(36).substring(2, 15)}`;
     const sessionRecord: ServerSessionRecord = {
       token,
-      userId: String(userId || username),
-      username: String(username || userId),
-      role: String(role || "USER").toUpperCase(),
-      level: String(level || "L1").toUpperCase(),
-      modules: Array.isArray(modules) ? modules : [],
+      userId: verifiedUserId,
+      username: targetUser.toUpperCase(),
+      role: verifiedRole,
+      level: verifiedLevel,
+      modules: verifiedModules,
       issuedAt: now,
       expiresAt: now + 12 * 60 * 60 * 1000,
     };
