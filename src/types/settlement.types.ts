@@ -158,6 +158,9 @@ export const getColWtMt = (col?: SettlementDetailColumn): number => {
   if (qty > 0 && wtPerQty > 0) {
     return Number(((qty * wtPerQty) / 1000).toFixed(3));
   }
+  if (qty > 0) {
+    return Number((qty / 10).toFixed(3));
+  }
   return 0;
 };
 
