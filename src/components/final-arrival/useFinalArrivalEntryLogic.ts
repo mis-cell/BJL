@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { enforceEditOrDeletePermission } from '../../lib/permissions';
 import { sanitizeDate } from '../../lib/utils';
 import { useKeyboardNavigation } from '../../hooks/useKeyboardNavigation';
+import { screenDraftService } from '../../services/screenDraftService';
 
 interface UseFinalArrivalEntryLogicProps {
   initialData?: any;
@@ -1333,6 +1334,10 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
           ]).catch(() => {});
         }
       }
+
+      localStorage.removeItem('final_arrival_draft');
+      screenDraftService.clearDraft('final_arrival_entry');
+      screenDraftService.clearDraft('final_arrival_details');
 
       if (onSave) onSave(payload);
     } catch (e: any) {

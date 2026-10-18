@@ -53,22 +53,22 @@ export const PaymentReportDashboard: React.FC<PaymentReportDashboardProps> = ({
 }) => {
   return (
     <div className="space-y-4">
-      {/* Dashboard Summary Cards (Light & Colorful) */}
+      {/* Dashboard Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 auto-rows-fr">
-        {/* Total Vouchers (Light Indigo/Blue) */}
-        <div className="h-full min-w-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50/60 p-3 rounded-xl border border-blue-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
+        {/* Total Vouchers (BJCL Theme Rose) */}
+        <div className="h-full min-w-0 bg-gradient-to-br from-rose-50 via-white to-red-50/60 p-3 rounded-xl border border-rose-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
           <div className="min-w-0">
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-blue-700">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-rose-800">
               Total Vouchers
             </p>
-            <h3 className="text-xl font-black text-blue-950 font-mono mt-0.5">
+            <h3 className="text-xl font-black text-rose-950 font-mono mt-0.5">
               {paymentList.length}
             </h3>
-            <p className="text-[9px] text-blue-600 font-semibold mt-0.5 truncate">
+            <p className="text-[9px] text-rose-700 font-semibold mt-0.5 truncate">
               Vouchers Registered
             </p>
           </div>
-          <div className="shrink-0 ml-2 p-2.5 bg-blue-100/80 border border-blue-200 rounded-xl text-blue-600 shadow-xs">
+          <div className="shrink-0 ml-2 p-2.5 bg-rose-100/80 border border-rose-200 rounded-xl text-rose-700 shadow-xs">
             <Wallet className="w-5 h-5" />
           </div>
         </div>
@@ -170,7 +170,7 @@ export const PaymentReportDashboard: React.FC<PaymentReportDashboardProps> = ({
           </button>
           <button
             onClick={onExportPdf}
-            className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg flex items-center gap-1.5 transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
             Export PDF
@@ -178,130 +178,11 @@ export const PaymentReportDashboard: React.FC<PaymentReportDashboardProps> = ({
           <button
             onClick={onRefresh}
             disabled={loading}
-            className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors disabled:opacity-50"
-            title="Refresh Table"
+            className="p-1.5 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors disabled:opacity-50"
+            title="Refresh Data"
           >
-            <RefreshCcw className={cn("w-4 h-4", loading && "animate-spin text-purple-600")} />
+            <RefreshCcw className={cn("w-4 h-4", loading && "animate-spin")} />
           </button>
-        </div>
-      </div>
-
-      {/* Payment Master Data Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-          <h3 className="text-xs font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-purple-600" />
-            Payment Records ({filteredPayments.length})
-          </h3>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-100/80 border-b border-slate-200 text-[10px] uppercase font-black text-slate-600">
-                <th className="p-2.5">M.R No</th>
-                <th className="p-2.5">Supplier</th>
-                <th className="p-2.5 text-center">Advance Done</th>
-                <th className="p-2.5 text-right">Payable Amount</th>
-                <th className="p-2.5 text-right">Paid Amount</th>
-                <th className="p-2.5 text-right">Pending Amount</th>
-                <th className="p-2.5 text-right">Payment From</th>
-                <th className="p-2.5">Payment Settle date</th>
-                <th className="p-2.5">Tenor</th>
-                <th className="p-2.5">Re-Payment Date </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-xs">
-              {filteredPayments.length > 0 ? (
-                filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((p, idx) => {
-                  const payable = Number(p.payable_amt || (p as any).total_amount || 0);
-                  const paid = Number((p as any).paid_amount || 0);
-                  const pending = payable - paid;
-                  const isAdvanceYes = (p.advance_payment_done || 'No').toLowerCase() === 'yes';
-                  const advance_payment_from = p.advance_payment_from || '';
-                  return (
-                    <tr key={p.payment_id || p.voucher_no || idx} className="hover:bg-purple-50/40 transition-colors">
-                      <td className="p-2.5 font-mono text-slate-600">
-                        <div className="text-[11px] font-bold text-slate-700">{p.mr_no || '-'}</div>
-                        {p.po_no && <div className="text-[9px] text-slate-400">P.O: {p.po_no}</div>}
-                      </td>
-                      
-                      <td className="p-2.5 font-semibold text-slate-800">
-                        {p.party_name || p.supplier || '-'}
-                      </td>
-                      
-                      <td className="p-2.5 text-center">
-                        <span className={cn(
-                          "px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border inline-flex items-center gap-1",
-                          isAdvanceYes
-                            ? "bg-green-100 text-green-900 border-green-300"
-                            : "bg-slate-100 text-slate-600 border-slate-200"
-                        )}>
-                          {isAdvanceYes ? 'YES' : 'NO'}
-                        </span>
-                      </td>
-                      <td className="p-2.5 text-right font-bold text-slate-700">
-                        {formatIndianCurrency(payable)}
-                      </td>
-                      <td className="p-2.5 text-right font-extrabold text-emerald-700">
-                        {formatIndianCurrency(paid)}
-                      </td>
-                      <td className="p-2.5 text-right">
-                        {pending > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
-                            {formatIndianCurrency(pending)}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
-                            ₹0 (Cleared)
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-2.5 text-center">
-                        {(advance_payment_from === '' || advance_payment_from === '1') && (
-                          <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">FROM BANK</span>
-                        )}
-                        {advance_payment_from === '2' && (
-                          <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">RXIL</span>
-                        )}
-                        {advance_payment_from === '3' && (
-                          <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">TReDS</span>
-                        )}
-                        {advance_payment_from === '4' && (
-                          <span className="font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">Invoice Mart</span>
-                        )} 
-                      </td>
-                      <td className="p-2.5 font-medium text-slate-600 text-center">
-                        {p.payment_settlementdate ? new Date(p.payment_settlementdate).toLocaleDateString('en-IN') : '-'}
-                      </td>
-                      <td className="p-2.5 font-medium text-slate-600 text-center">
-                        {p.tenor || '-'}
-                      </td>
-                      <td className="p-2.5 font-medium text-slate-600 text-center">
-                        {p.repayment_date ? new Date(p.repayment_date).toLocaleDateString('en-IN') : '-'}
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={10} className="p-8 text-center text-slate-400 italic text-xs">
-                    No payment records found in `payment_master`.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-2">
-          <PaginationControls
-            currentPage={currentPage}
-            totalItems={filteredPayments.length}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-          />
         </div>
       </div>
     </div>

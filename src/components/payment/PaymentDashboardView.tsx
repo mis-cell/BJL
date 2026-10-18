@@ -17,7 +17,8 @@ import {
   CheckCircle2,
   Layers,
   X,
-  ArrowRight
+  ArrowRight,
+  FileText
 } from 'lucide-react';
 import { PaymentMaster } from '../../types/payment.types';
 import { cn, formatIndianCurrency, formatIndianCompactCurrency } from '../../lib/utils';
@@ -366,15 +367,17 @@ export function PaymentDashboardView({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {/* Card 1: Total Vouchers (Light Indigo/Blue) */}
-          <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50/60 rounded-xl p-3 border border-blue-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
+          {/* Card 1: Total Vouchers (BJCL Theme Rose) */}
+          <div className="bg-gradient-to-br from-rose-50 via-white to-red-50/60 rounded-xl p-3 border border-rose-200 shadow-xs hover:shadow-md transition-all flex items-center justify-between">
             <div className="min-w-0">
-              <p className="text-[10px] font-extrabold uppercase tracking-wider text-blue-700">Total Vouchers</p>
-              <h3 className="text-xl font-black text-blue-950 font-mono mt-0.5">{yearMonthFilteredPayments.length}</h3>
-              <p className="text-[9px] text-blue-600 font-semibold mt-0.5 truncate">Total Voucher Count</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-rose-800">Total Vouchers</p>
+              <h3 className="text-xl font-black text-rose-950 font-mono mt-0.5 truncate tracking-tight">
+                {paymentList.length}
+              </h3>
+              <p className="text-[9px] text-rose-700 font-semibold mt-0.5 truncate">Vouchers Registered</p>
             </div>
-            <div className="p-2.5 bg-blue-100/80 border border-blue-200 rounded-xl text-blue-600 shadow-xs shrink-0 ml-2">
-              <Wallet className="w-5 h-5" />
+            <div className="p-2.5 bg-rose-100/80 border border-rose-200 rounded-xl text-rose-700 shadow-xs shrink-0 ml-2">
+              <FileText className="w-5 h-5" />
             </div>
           </div>
 

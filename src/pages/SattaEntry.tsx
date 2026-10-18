@@ -145,7 +145,15 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
   });
 
   useEffect(() => {
-    if (!initialData) {
+    if (initialData) {
+      setFormData(getInitialFormData());
+    } else if (!screenDraftService.getDraft('satta_entry_form', null)) {
+      setFormData(getInitialFormData());
+    }
+  }, [initialData]);
+
+  useEffect(() => {
+    if (!initialData && formData) {
       screenDraftService.saveDraft('satta_entry_form', formData);
     }
   }, [formData, initialData]);
@@ -609,6 +617,7 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
       }
       
       screenDraftService.clearDraft('satta_entry_form');
+      setFormData(getInitialFormData());
       alert("Satta Trade Contract saved successfully!");
       onSave?.(sattaData);
     } catch (err: any) {

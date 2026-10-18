@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { ArrowLeft, FileText, Lock, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { Sauda } from '../types';
-import { dbModule } from '../services/dbModule';
+import { dbModule, notifyDataChanged } from '../services/dbModule';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, getCurrentUserContext, isUserId10, isUserAdmin, isSaudaApproved } from '../lib/permissions';
 import { resolveDisplayName } from '../lib/userResolver';
@@ -207,7 +207,15 @@ export default function SaudaEntry({
   });
 
   useEffect(() => {
-    if (!initialData) {
+    if (initialData) {
+      setFormData(getInitialFormData());
+    } else if (!screenDraftService.getDraft('sauda_entry_form', null)) {
+      setFormData(getInitialFormData());
+    }
+  }, [initialData]);
+
+  useEffect(() => {
+    if (!initialData && formData) {
       screenDraftService.saveDraft('sauda_entry_form', formData);
     }
   }, [formData, initialData]);
@@ -532,6 +540,42 @@ export default function SaudaEntry({
     });
   };
 
+  const toNumericOrNull = (v: any) => {
+    if (v === null || v === undefined || String(v).trim() === '') return null;
+    const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+    return isNaN(n) ? null : n;
+  };
+
+  const handleDeleteQualityRow = (index?: number) => {
+    setFormData(prev => {
+      const qd = [...(prev.quality_details || [])];
+      if (qd.length <= 1) return prev;
+      if (typeof index === 'number') {
+        qd.splice(index, 1);
+      } else {
+        qd.pop();
+      }
+      return { ...prev, quality_details: qd };
+    });
+  };
+
+  const handleRemoveQualityRowAt = (index?: number) => {
+    if (typeof index === 'number') {
+      handleDeleteQualityRow(index);
+    } else {
+      setFormData(prev => {
+        const qd = [...(prev.quality_details || [])];
+        if (qd.length <= 1) return prev;
+        qd.pop();
+        return { ...prev, quality_details: qd };
+      });
+    }
+  };
+
+  const handleSave = () => {
+    handleSubmit({ preventDefault: () => {} } as any);
+  };
+
   const handleSelectChange = (field: string, val: string) => {
     handleChange({
       target: { name: field, value: val }
@@ -600,231 +644,50 @@ export default function SaudaEntry({
       const defaultAgency = firstRow.agency || defaultAgencies[0] || '';
       const defaultMarka = firstRow.marka || defaultMarkas[0] || '';
 
+      const newRow = {
+        quality: '',
+        agencies: defaultAgencies,
+        markas: defaultMarkas,
+        agency: defaultAgency,
+        marka: defaultMarka,
+        rs: 0,
+        qty: 0,
+        applicableCombinations: []
+      };
       return {
         ...prev,
-        quality_details: [
-          ...qdList,
-          { 
-            quality: '', 
-            qty: 0, 
-            agency: defaultAgency, 
-            marka: defaultMarka, 
-            rs: 0, 
-            agencies: defaultAgencies, 
-            markas: defaultMarkas, 
-            applicableCombinations: undefined 
-          }
-        ]
+        quality_details: [...qdList, newRow]
       };
     });
   };
 
-  const handleDeleteQualityRow = () => {
-    setFormData(prev => {
-      const current = prev.quality_details || [];
-      if (current.length <= 1) return prev;
-      return {
-        ...prev,
-        quality_details: current.slice(0, -1)
-      };
-    });
-  };
-
-  const handleRemoveQualityRowAt = (index: number) => {
-    setFormData(prev => {
-      const current = [...(prev.quality_details || [])];
-      if (current.length <= 1) {
-        current[0] = { quality: '', qty: 0, agency: '', marka: '', rs: 0, agencies: [], markas: [], applicableCombinations: [] };
-        return { ...prev, quality_details: current };
-      }
-      current.splice(index, 1);
-      return { ...prev, quality_details: current };
-    });
-  };
-
-  const handleSave = async () => {
-    if (isLockedForCurrentUser || (isSaudaApproved(formData) && !isAdmin)) {
-      alert("🔒 Permission Denied: This Sauda contract has been approved by User 010 (Checker).\n\nPer company policy, it cannot be edited by any user. Only Admin can edit this contract.");
-      return;
-    }
-
-    if ((formData.sauda_id || initialData) && !enforceEditOrDeletePermission("Edit")) {
-      return;
-    }
-
-    if (!isUser010) {
-      if (!formData.sauda_no) {
-        alert("Please fill in the Order No.");
-        return;
-      }
-
-      if (!formData.broker) {
-        alert("Please fill in or select a Broker.");
-        return;
-      }
-
-      if (!formData.supplier) {
-        alert("Please fill in or select a Supplier.");
-        return;
-      }
-
-      if (!formData.challan_supplier) {
-        alert("Please fill in or select an supplier.");
-        return;
-      }
-
-      if (!formData.area) {
-        alert("Please fill in or select an Area.");
-        return;
-      }
-
-      if (!formData.no_of_lorries) {
-        alert("Please fill no of lorries.");
-        return;
-      }
-
-      if (!formData.unit_type) {
-        alert("Please fill in or select an type.");
-        return;
-      }
-
-      if (formData.unit_type === 'BALES'|| formData.unit_type === 'DRUMS') {
-        if(!formData.units_per_lorry){
-          alert("Please fill in or unit per lorry.");
-          return;
-        }
-      }
-
-      if (formData.unit_type === 'LOOSE') {
-        if(!formData.wt_per_lorry){
-          alert("Please fill in or WT per lorry.");
-          return;
-        }
-      }
-
-      if (!formData.shipment_date) {
-        alert("Please fill in or shipment date.");
-        return;
-      }
-      
-      // Validate Quality Details rows
-      const qdRows = formData.quality_details || [];
-      for (let i = 0; i < qdRows.length; i++) {
-        const row = qdRows[i];
-        if(row.agencies && row.agencies.length === 0){
-           alert(`Please select or fill agency in Row ${i + 1}.`);
-           return;
-        }
-        if(formData.unit_type === 'BALES' && row.markas && row.markas.length === 0){
-           alert(`Please select or fill marks in Row ${i + 1}.`);
-           return;
-        }
-        if (!row.quality || row.quality.trim() === "") {
-          alert(`Please select or fill in Quality in Row ${i + 1}.`);
-          return;
-        }
-        
-        if (row.rs === null || row.rs === undefined || Number(row.rs) === 0) {
-          alert(`Please select or fill in RS in Row ${i + 1}.`);
-          return;
-        }
-        /* if (row.quality || row.qty || row.rs || row.agency || row.marka || (row.agencies && row.agencies.length > 0) || (row.markas && row.markas.length > 0)) {
-          if (!row.quality) {
-            alert(`Please select or fill in Quality in Row ${i + 1}.`);
-            return;
-          }
-        } */
-      }
-      
-
-      if (!formData.b_rate || Number(formData.b_rate) <= 0) {
-        alert("B. Rate (Rs.) is required.");
-        return;
-      }
-
-      if (!formData.b_date) {
-        alert("B. Date is required.");
-        return;
-      }
-    }
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     try {
-      const saudaData = { ...formData };
 
-      // For User 010: apply safe fallbacks for hidden/non-mandatory fields
-      if (isUser010) {
-        if (!saudaData.sauda_no) {
-          saudaData.sauda_no = '0153';
-        }
-        if (!saudaData.date) {
-          saudaData.date = today;
-        }
-        if (!saudaData.broker) {
-          saudaData.broker = 'DIRECT';
-        }
-        if (!saudaData.supplier) {
-          saudaData.supplier = saudaData.broker || 'DIRECT';
-        }
-        if (!saudaData.area) {
-          saudaData.area = 'LOCAL';
-        }
-        if (!saudaData.b_rate || Number(saudaData.b_rate) <= 0) {
-          const firstRs = Number(saudaData.quality_details?.[0]?.rs) || 0;
-          saudaData.b_rate = firstRs;
-        }
-        if (!saudaData.b_date) {
-          saudaData.b_date = saudaData.date || today;
-        }
-      }
+    const saudaData = { ...formData };
+    const qualityDetails = saudaData.quality_details || [];
 
-      const toNumericOrNull = (v: any) => {
-        if (v === null || v === undefined || String(v).trim() === '') return null;
-        const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
-        return isNaN(n) ? null : n;
-      };
+    const flatCombinations: any[] = [];
+    qualityDetails.forEach((row: any) => {
+      const rowQuality = String(row.quality || '').trim();
+      const rowRs = toNumericOrNull(row.rs) ?? 0;
+      const rowQty = toNumericOrNull(row.qty) ?? 0;
 
-      const qd = saudaData.quality_details;
-
-      const primaryQuality = (
-        (qd || []).find((r: any) => r.quality && String(r.quality).trim() !== '')?.quality || 
-        (saudaData as any).quality || 
-        'TD5'
-      );
-      const primaryRs = (
-        toNumericOrNull((qd || []).find((r: any) => r.rs && Number(r.rs) > 0)?.rs) ?? 
-        toNumericOrNull(saudaData.b_rate) ?? 
-        13500
-      );
-
-      // Extract and normalize all applicable combinations
-      const flatCombinations: Array<{
-        quality: string;
-        agency: string;
-        marka: string;
-        rs: number;
-        qty: number;
-      }> = [];
-
-      (qd || []).forEach((row: any) => {
-        const rowQuality = String(row.quality || primaryQuality).trim();
-        const rowRs = toNumericOrNull(row.rs) ?? primaryRs;
-        const rowQty = toNumericOrNull(row.qty) ?? 0;
-
-        // 1. If row has customized applicableCombinations array
-        if (Array.isArray(row.applicableCombinations) && row.applicableCombinations.length > 0) {
-          row.applicableCombinations.forEach((comb: any) => {
-            if (comb.enabled !== false && (comb.agency || comb.marka || comb.quality)) {
-              flatCombinations.push({
-                quality: String(comb.quality || rowQuality).trim(),
-                agency: String(comb.agency || '').trim(),
-                marka: String(comb.marka || '').trim(),
-                rs: toNumericOrNull(comb.rs) ?? rowRs,
-                qty: toNumericOrNull(comb.qty) ?? rowQty
-              });
-            }
-          });
-        } else {
+      if (Array.isArray(row.applicableCombinations) && row.applicableCombinations.length > 0) {
+        row.applicableCombinations.forEach((comb: any) => {
+          if (comb.enabled !== false && (comb.agency || comb.marka || comb.quality)) {
+            flatCombinations.push({
+              quality: String(comb.quality || rowQuality).trim(),
+              agency: String(comb.agency || '').trim(),
+              marka: String(comb.marka || '').trim(),
+              rs: toNumericOrNull(comb.rs) ?? rowRs,
+              qty: toNumericOrNull(comb.qty) ?? rowQty
+            });
+          }
+        });
+      } else {
           // 2. Generate combinations from agencies and markas arrays
           const rowAgencies: string[] = (
             Array.isArray(row.agencies) && row.agencies.length > 0
@@ -1150,7 +1013,9 @@ export default function SaudaEntry({
       }
 
       screenDraftService.clearDraft('sauda_entry_form');
+      setFormData(getInitialFormData());
       alert("Sauda Contract saved successfully!");
+      notifyDataChanged('sauda_master');
       window.dispatchEvent(new CustomEvent('app-data-updated'));
       onSave?.(saudaData);
     } catch (err: any) {

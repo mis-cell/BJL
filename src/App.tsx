@@ -173,6 +173,7 @@ export default function App() {
       // Selectively remove auth session keys while preserving Gate lorries, Gate settings, and Tolerance policies
       localStorage.removeItem("bally_auth_session");
       localStorage.removeItem("bally_session_token");
+      dbModule.invalidateCache();
     } catch (_e) {}
   }, []);
 

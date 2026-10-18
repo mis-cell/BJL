@@ -4,6 +4,7 @@ import MaterialIssueEntry from '../components/MaterialIssueEntry';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { enforceEditOrDeletePermission } from '../lib/permissions';
 import { dbModule } from '../services/dbModule';
+import { screenDraftService } from '../services/screenDraftService';
 import { supabase } from '../lib/supabase';
 import PrintModal from '../components/PrintModal';
 import { DEFAULT_DEPARTMENTS } from '../utils/materialIssueConstants';
@@ -434,6 +435,9 @@ export default function MaterialIssue({
         showToast(`Material Issue Voucher "${formData.issue_no}" successfully saved!`);
       }
 
+      screenDraftService.clearDraft('material_issue_form');
+      screenDraftService.clearDraft('material_issue_items');
+      handleNew();
       await fetchRecords();
       setViewState('list');
       onSave?.(formData);

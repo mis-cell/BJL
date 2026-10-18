@@ -47,6 +47,13 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     return screenDraftService.getDraft('amad_entry_details', getPaddedDetails(initialData));
   });
   const [unitList, setUnitList] = useState<string[]>(['BALES', 'DRUMS', 'LOOSE', 'P.BALES', 'H.BALES']);
+  const emptyDetailRow = (): ArrivalDetailRow => ({
+    quality: '',
+    agency: '',
+    marka: '',
+    bales: 0,
+    wt: 0
+  } as any);
 
   const handleAddRow = () => {
     setDetails(prev => [
@@ -135,60 +142,77 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     return { prefix, suffix };
   };
 
-  const [formData, setFormData] = useState(() => {
-    const lorryInfo = parseLorry(initialData?.lorry_number || (initialData as any)?.lorry_no || (initialData as any)?.vehicle_no);
-    const defaultData = {
-      financial_year: initialData?.financial_year || '2026-2027',
-      arrival_no: initialData?.temporary_arrival_no || initialData?.amad_no || 'MR',
-      po_no: initialData?.po_no || '',
-      date: initialData?.date || '',
-      jci: initialData?.jci || 'No',
-      challan_supplier: (initialData?.challan_supplier || '').toUpperCase(),
-      supplier: (initialData?.supplier || '').toUpperCase(),
-      broker: (initialData?.broker || '').toUpperCase(),
-      transporter_name: initialData?.transporter_name || '',
-      challan_rr_no: initialData?.challan_rr_no || initialData?.challan_railway_receipt_no || '',
-      challan_railway_receipt_no: initialData?.challan_railway_receipt_no || initialData?.challan_rr_no || '',
+  const createDefaultFormData = (data?: any) => {
+    const lorryInfo = parseLorry(data?.lorry_number || (data as any)?.lorry_no || (data as any)?.vehicle_no);
+    return {
+      financial_year: data?.financial_year || '2026-2027',
+      arrival_no: data?.temporary_arrival_no || data?.amad_no || 'MR',
+      po_no: data?.po_no || '',
+      date: data?.date || '',
+      jci: data?.jci || 'No',
+      challan_supplier: (data?.challan_supplier || '').toUpperCase(),
+      supplier: (data?.supplier || '').toUpperCase(),
+      broker: (data?.broker || '').toUpperCase(),
+      transporter_name: data?.transporter_name || '',
+      challan_rr_no: data?.challan_rr_no || data?.challan_railway_receipt_no || '',
+      challan_railway_receipt_no: data?.challan_railway_receipt_no || data?.challan_rr_no || '',
       lorry_prefix: lorryInfo.prefix,
       lorry_suffix: lorryInfo.suffix,
-      pan_no: initialData?.pan_no || '',
-      lorry_date: initialData?.lorry_date || '',
-      consignment_note: initialData?.consignment_note || initialData?.consignment_note_no || '',
-      consignment_note_no: initialData?.consignment_note || initialData?.consignment_note_no || '',
-      di_no: initialData?.di_no || '',
-      di_date: initialData?.di_date || '',
-      invoice_no: initialData?.invoice_no || '',
-      invoice_date: initialData?.invoice_date || '',
-      ptf: initialData?.ptf || 'No',
-      lorry_returned: initialData?.lorry_returned || 'No',
-      lorry_returned_other_mill: initialData?.lorry_returned_other_mill || 'No',
-      arrival_area_code: initialData?.arrival_area_code || '',
-      arrival_area_name: (initialData?.arrival_area_name || '').toUpperCase(),
-      unit_code: initialData?.unit_code || 'I',
-      unit_name: initialData?.unit_name || 'BALES',
-      way_bill_no: initialData?.way_bill_no || '',
-      way_bill_date: initialData?.way_bill_date || '',
-      apmc_fees: Number(initialData?.apmc_fees ?? (initialData as any)?.arival_apmc_fees ?? 0),
-      remarks: initialData?.remarks || '',
+      pan_no: data?.pan_no || '',
+      lorry_date: data?.lorry_date || '',
+      consignment_note: data?.consignment_note || data?.consignment_note_no || '',
+      consignment_note_no: data?.consignment_note || data?.consignment_note_no || '',
+      di_no: data?.di_no || '',
+      di_date: data?.di_date || '',
+      invoice_no: data?.invoice_no || '',
+      invoice_date: data?.invoice_date || '',
+      ptf: data?.ptf || 'No',
+      lorry_returned: data?.lorry_returned || 'No',
+      lorry_returned_other_mill: data?.lorry_returned_other_mill || 'No',
+      arrival_area_code: data?.arrival_area_code || '',
+      arrival_area_name: (data?.arrival_area_name || '').toUpperCase(),
+      unit_code: data?.unit_code || 'I',
+      unit_name: data?.unit_name || 'BALES',
+      way_bill_no: data?.way_bill_no || '',
+      way_bill_date: data?.way_bill_date || '',
+      apmc_fees: Number(data?.apmc_fees ?? (data as any)?.arival_apmc_fees ?? 0),
+      remarks: data?.remarks || '',
 
       // Bottom weights
-      challan_material_weight: initialData?.challan_material_weight || 0,
-      actual_gross_weight: initialData?.actual_gross_weight || 0,
-      actual_tare_weight: initialData?.actual_tare_weight || 0,
-      supplier_net_weight: initialData?.supplier_net_weight || 0,
-      supplier_challan_gross: initialData?.supplier_challan_gross || 0,
-      supplier_tare_weight: initialData?.supplier_tare_weight || 0,
-      electronic_net_weight: initialData?.electronic_net_weight || 0,
-      electronic_gross_weight: initialData?.electronic_gross_weight || 0,
-      electronic_tare_weight: initialData?.electronic_tare_weight || 0,
-      weight_reduced: initialData?.weight_reduced || 0
+      challan_material_weight: data?.challan_material_weight || 0,
+      actual_gross_weight: data?.actual_gross_weight || 0,
+      actual_tare_weight: data?.actual_tare_weight || 0,
+      supplier_net_weight: data?.supplier_net_weight || 0,
+      supplier_challan_gross: data?.supplier_challan_gross || 0,
+      supplier_tare_weight: data?.supplier_tare_weight || 0,
+      electronic_net_weight: data?.electronic_net_weight || 0,
+      electronic_gross_weight: data?.electronic_gross_weight || 0,
+      electronic_tare_weight: data?.electronic_tare_weight || 0,
+      weight_reduced: data?.weight_reduced || 0
     };
+  };
+
+
+
+  const [formData, setFormData] = useState(() => {
+    const defaultData = createDefaultFormData(initialData);
     if (initialData) return defaultData;
     return screenDraftService.getDraft('amad_entry_form', defaultData);
   });
 
   useEffect(() => {
-    if (!initialData) {
+    if (initialData) {
+      setFormData(createDefaultFormData(initialData));
+    } else {
+      screenDraftService.clearDraft('amad_entry_form');
+      screenDraftService.clearDraft('amad_entry_details');
+      setFormData(createDefaultFormData());
+      setDetails([emptyDetailRow()]);
+    }
+  }, [initialData]);
+
+  useEffect(() => {
+    if (!initialData && formData) {
       screenDraftService.saveDraft('amad_entry_form', formData);
       screenDraftService.saveDraft('amad_entry_details', details);
     }
@@ -1374,8 +1398,12 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
       localStorage.removeItem('amad_draft_form');
       localStorage.removeItem('amad_draft_details');
+      screenDraftService.clearDraft('amad_entry_form');
+      screenDraftService.clearDraft('amad_entry_details');
       notifyDataChanged('temporary_material_received');
       notifyDataChanged('purchase_master');
+      setFormData(createDefaultFormData());
+      setDetails([emptyDetailRow()]);
       onSave?.(payload);
     } catch (e: any) {
       console.error(e);

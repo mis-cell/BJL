@@ -790,7 +790,7 @@ export function usePurchaseOrderOperations({
         if (closeModalPo.sauda_no) {
           await client.from('sauda_master').update(closeDbPayload).eq('sauda_no', closeModalPo.sauda_no);
         }
-        if (e1 && e2) throw e1 || e2;
+        if (e1 || e2) throw e1 || e2;
       });
 
       markPoClosedInLocalStorage(cleanPo, cleanSauda, closeRemarksPayload);

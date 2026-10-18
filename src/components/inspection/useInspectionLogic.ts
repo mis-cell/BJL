@@ -1245,6 +1245,8 @@ export function useInspectionLogic() {
     setViewMode("form");
   };
 
+  const handleCreateNewInspection = handleOpenNewForm;
+
   const handleEditRecord = async (record: InspectionMasterRecord) => {
     const actMoist = Number(record.actual_moisture) || 0;
     const clmMoist = Number(record.claim_moisture) || 0;
@@ -1665,6 +1667,7 @@ export function useInspectionLogic() {
 
       alert("Data Saved Successfully.");
       showToast("Data Saved Successfully.");
+      handleCreateNewInspection();
       setViewMode("dashboard");
       fetchInspectionRecords(true);
     } catch (err: any) {
@@ -1891,6 +1894,7 @@ export function useInspectionLogic() {
     handleAddDeductionRow,
     handleRemoveDeductionRow,
     handleDeductionChange,
-    handleDeductionTypeChange
+    handleDeductionTypeChange,
+    handleCreateNewInspection
   };
 }
