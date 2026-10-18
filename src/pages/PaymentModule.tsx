@@ -118,13 +118,13 @@ export default function PaymentModule({ onClose }: { onClose?: () => void }) {
       onClose={onClose}
     >
       {/* Top Header Actions Bar */}
-      <div className="mb-4 bg-gradient-to-r from-purple-950 via-purple-900 to-indigo-950 text-white p-3 rounded-xl shadow-md flex items-center justify-between flex-wrap gap-2">
+      <div className="mb-4 bg-gradient-to-r from-[#8B1E2B] via-[#D94B5A] to-[#8B1E2B] text-white p-3 rounded-xl shadow-md border border-[#F06D6C]/40 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-500/20 rounded-lg text-purple-300">
+          <div className="p-2 bg-white/20 rounded-lg text-white">
             <Wallet className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm font-black uppercase tracking-wider">Payment Operations</h2>
+            <h2 className="text-sm font-black uppercase tracking-wider text-white">Payment Operations</h2>
           </div>
         </div>
 
