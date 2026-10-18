@@ -23,6 +23,7 @@ import LegacyLayout, { LegacyFieldset, LegacyButton } from '../components/Legacy
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission, getCurrentUserContext } from '../lib/permissions';
+import { screenDraftService } from '../services/screenDraftService';
 
 export default function TemporaryArrival({ onSave, onCancel, initialData }: { onSave?: (d: any) => void; onCancel?: () => void; initialData?: Amad }) {
   const [loading, setLoading] = useState(false);
@@ -41,7 +42,10 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
   const [markas, setMarkas] = useState<any[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
 
-  const [details, setDetails] = useState<ArrivalDetailRow[]>(() => getPaddedDetails(initialData));
+  const [details, setDetails] = useState<ArrivalDetailRow[]>(() => {
+    if (initialData) return getPaddedDetails(initialData);
+    return screenDraftService.getDraft('amad_entry_details', getPaddedDetails(initialData));
+  });
   const [unitList, setUnitList] = useState<string[]>(['BALES', 'DRUMS', 'LOOSE', 'P.BALES', 'H.BALES']);
 
   const handleAddRow = () => {
@@ -133,7 +137,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
   const [formData, setFormData] = useState(() => {
     const lorryInfo = parseLorry(initialData?.lorry_number || (initialData as any)?.lorry_no || (initialData as any)?.vehicle_no);
-    return {
+    const defaultData = {
       financial_year: initialData?.financial_year || '2026-2027',
       arrival_no: initialData?.temporary_arrival_no || initialData?.amad_no || 'MR',
       po_no: initialData?.po_no || '',
@@ -179,7 +183,16 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       electronic_tare_weight: initialData?.electronic_tare_weight || 0,
       weight_reduced: initialData?.weight_reduced || 0
     };
+    if (initialData) return defaultData;
+    return screenDraftService.getDraft('amad_entry_form', defaultData);
   });
+
+  useEffect(() => {
+    if (!initialData) {
+      screenDraftService.saveDraft('amad_entry_form', formData);
+      screenDraftService.saveDraft('amad_entry_details', details);
+    }
+  }, [formData, details, initialData]);
 
   const fetchPurchaseOrders = async () => {
     try {
@@ -1262,6 +1275,8 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           console.error("Failed to write update log:", e);
         });
 
+        screenDraftService.clearDraft('amad_entry_form');
+        screenDraftService.clearDraft('amad_entry_details');
         alert(`Arrival Register Voucher #${formData.arrival_no} updated successfully!`);
       } else {
         let insertAmadError: any = null;
@@ -1289,6 +1304,8 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           console.error("Failed to write insert log:", e);
         });
 
+        screenDraftService.clearDraft('amad_entry_form');
+        screenDraftService.clearDraft('amad_entry_details');
         alert(`Arrival Register Saved successfully!\nAdded under Arrival Voucher #${formData.arrival_no}`);
       }
 

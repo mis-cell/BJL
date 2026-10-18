@@ -115,17 +115,16 @@ import { setCurrentUserContext, getCurrentUserContext, hasModulePermission, getF
 import { supabase } from "./lib/supabase";
 import { getApiUrl } from "./lib/utils";
 import { useIdleTimer } from "./hooks/useIdleTimer";
-
-
+import { ScreenErrorBoundary } from "./components/ScreenErrorBoundary";
 import { AuthScreen } from "./components/auth/AuthScreen";
 
-const PageLoadingFallback = () => (
+const PageLoadingFallback = ({ moduleName }: { moduleName?: string }) => (
   <div className="flex-1 flex flex-col items-center justify-center h-full w-full min-h-[350px] p-8 text-slate-500">
     <div className="flex flex-col items-center gap-3">
       <div className="w-9 h-9 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin shadow-sm" />
       <div className="flex flex-col items-center">
         <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
-          Loading Module...
+          {moduleName ? `Loading ${moduleName}...` : "Loading Module..."}
         </span>
         <span className="text-[10px] text-slate-400 font-medium mt-0.5">
           Preparing workspace data
@@ -154,25 +153,10 @@ export default function App() {
   const [runningPages, setRunningPages] = useState<Page[]>([]);
   const [selectedAmadForFinalMr, setSelectedAmadForFinalMr] = useState<any>(null);
 
-  const [currentTime, setCurrentTime] = useState(() => new Date());
-
-  React.useEffect(() => {
-    try {
-      if (typeof window !== "undefined") {
-        // Preserving local storage/session storage to maintain login sessions and schema sync flags.
-        if ("caches" in window) {
-          caches.keys().then((names) => {
-            names.forEach((name) => caches.delete(name));
-          });
-        }
-      }
-    } catch (e) {
-      console.warn("Cache purge error:", e);
-    }
-  }, []);
-
   const clearAuthSessionSelective = React.useCallback(async () => {
     try {
+      const preserveGateData = true; // Gate lorries, Gate settings, and Tolerance policies preserved
+      if (!preserveGateData) return;
       const rawSession = localStorage.getItem("bally_auth_session");
       const parsed = rawSession ? JSON.parse(rawSession) : null;
       const token = parsed?.token || localStorage.getItem("bally_session_token") || "";
@@ -360,11 +344,6 @@ export default function App() {
       window.history.replaceState(null, "", url.toString());
     } catch {}
   }, [currentPage, isLoggedIn]);
-
-  React.useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [keyState, setKeyState] = useState({ num: true, caps: false, scrl: false });
@@ -1070,282 +1049,304 @@ export default function App() {
                   </div>
                 </LegacyLayout>
               ) : (
-                <React.Suspense fallback={<PageLoadingFallback />}>
-                  <div
-                    className={currentPage === "dashboard" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-                  >
-                <Dashboard
-                  isActive={currentPage === "dashboard"}
-                  onNavigate={globalNavigate}
-                  isAdmin={isAdmin}
-                  allowedModules={allowedModules}
-                  currentTab={dashboardTab}
-                  setCurrentTab={setDashboardTab}
-                />
-              </div>
-              <div
-                className={currentPage === "main_gate" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <LorryDispatchSystem
-                  onNavigate={(page) => globalNavigate(page as Page)}
-                />
-              </div>
-              <div
-                className={currentPage === "amad" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <AmadRegister
-                  onClose={() => closePage("amad", "dashboard")}
-                  onNew={() => globalNavigate("amad_entry")}
-                  onNavigate={(page) => globalNavigate(page as Page)}
-                  onCreateFinalMr={(amad) => {
-                    setSelectedAmadForFinalMr(amad);
-                    globalNavigate("final_arrival");
-                  }}
-                />
-              </div>
-              {currentPage === "amad_entry" && (
-                <div className="flex-1 flex flex-col h-full w-full min-h-0 overflow-auto">
-                  <TemporaryArrival
-                    onCancel={() => closePage("amad_entry", "amad")}
-                    onSave={() => closePage("amad_entry", "amad")}
-                  />
-                </div>
-              )}
-              <div
-                className={currentPage === "sms_sauda" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <SmsSaudaDesk
-                  onClose={() => closePage("sms_sauda", "dashboard")}
-                  onNavigate={(page) => globalNavigate(page as Page)}
-                />
-              </div>
-              <div
-                className={currentPage === "sauda" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <SaudaRegister
-                  isActive={currentPage === "sauda"}
-                  onClose={() => closePage("sauda", "dashboard")}
-                  onNew={() => globalNavigate("sauda_entry")}
-                />
-              </div>
-              {currentPage === "sauda_entry" && (
-                <div className="flex-1 flex flex-col h-full w-full min-h-0 overflow-auto">
-                  <SaudaEntry
-                    onCancel={() => closePage("sauda_entry", "sauda")}
-                    onSave={() => closePage("sauda_entry", "sauda")}
-                    onNavigate={(page) => globalNavigate(page as Page)}
-                  />
-                </div>
-              )}
-              <div
-                className={currentPage === "satta" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <SattaChart onClose={() => closePage("satta", "dashboard")} />
-              </div>
-              {currentPage === "satta_entry" && (
-                <div className="flex-1 flex flex-col h-full w-full min-h-0 overflow-auto">
-                  <SattaEntry
-                    onCancel={() => closePage("satta_entry", "satta")}
-                    onSave={() => closePage("satta_entry", "satta")}
-                  />
-                </div>
-              )}
-              <div
-                className={currentPage === "satta_chart" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <SattaChart
-                  onNavigate={(p) => globalNavigate(p as Page)}
-                  onClose={() => {
-                    if (currentPage === "satta_chart") {
-                      closePage("satta_chart", "dashboard");
-                    } else {
-                      closePage("satta_chart", "satta");
-                    }
-                  }}
-                />
-              </div>
-              <div
-                className={currentPage === "po" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <PurchaseOrder
-                  onClose={() => closePage("po", "dashboard")}
-                  selectedYear={selectedYear}
-                  isTempPo={true}
-                />
-              </div>
-              <div
-                className={currentPage === "final_po" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <PurchaseOrder
-                  onClose={() => closePage("final_po", "dashboard")}
-                  selectedYear={selectedYear}
-                  isTempPo={false}
-                />
-              </div>
-              {currentPage === "issue" && (
-                <div className="flex-1 flex flex-col h-full w-full min-h-0 overflow-auto">
-                  <MaterialIssue
-                    onCancel={() => closePage("issue", "dashboard")}
-                    onSave={() => closePage("issue", "dashboard")}
-                    setCurrentPage={globalNavigate}
-                    closePage={closePage}
-                  />
-                </div>
-              )}
-              <div
-                className={currentPage === "bardana" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <BardanaVouchers
-                  onClose={() => closePage("bardana", "dashboard")}
-                />
-              </div>
-              <div
-                className={(currentPage === "vyapari" || (currentPage as string) === "trade") ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <DirectoryView
-                  title="Trade (Traders Directory)"
-                  type="vyapari"
-                  onClose={() => closePage("vyapari", "dashboard")}
-                />
-              </div>
-              <div
-                className={currentPage === "reports" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <Reports onClose={() => closePage("reports", "dashboard")} />
-              </div>
-              <div
-                className={(currentPage === "treds" || (currentPage as string) === "trade" || (currentPage as string) === "trades" || (currentPage as string) === "trede") ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <TredeReport onClose={() => closePage(currentPage, "dashboard")} />
-              </div>
-              <div
-                className={currentPage === "payment" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <PaymentModule onClose={() => closePage("payment", "dashboard")} />
-              </div>
-              <div
-                className={currentPage === "stock" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <StockSummary
-                  onClose={() => closePage("stock", "dashboard")}
-                />
-              </div>
-              <div
-                className={currentPage === "settings" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <ConfigGuide
-                  onClose={() => closePage("settings", "dashboard")}
-                />
-              </div>
-              <div
-                className={(currentPage === "system_change_logs" || (currentPage as string) === "system_change_log" || (currentPage as string) === "change_log") ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <SystemChangeLogPage
-                  onClose={() => closePage(currentPage, "dashboard")}
-                  onNavigate={(p) => globalNavigate(p as Page)}
-                />
-              </div>
-              <div
-                className={currentPage === "admindesk" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <AdminDesk
-                  onClose={() => closePage("admindesk", "dashboard")}
-                  onLogin={() => setIsAdmin(true)}
-                  isAdmin={isAdmin}
-                  systemLogs={systemLogs}
-                  onClearLogs={() => setSystemLogs([])}
-                  onNavigate={(page) => globalNavigate(page)}
-                />
-              </div>
-              <div
-                className={currentPage === "ai_assistant" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <AIPortal
-                  onClose={() => closePage("ai_assistant", "dashboard")}
-                />
-              </div>
-              <div
-                className={currentPage === "material_inspection" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <MaterialInspection
-                  onClose={() => closePage("material_inspection", "dashboard")}
-                  onLogEvent={logEvent}
-                />
-              </div>
-              <div
-                className={currentPage === "inspection" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <Inspection
-                  onNavigate={(page) => globalNavigate(page as Page)}
-                />
-              </div>
-              <div
-                className={currentPage === "mr_settlement" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <MrSettlement
-                  onClose={() => closePage("mr_settlement", "dashboard")}
-                  onLogEvent={logEvent}
-                />
-              </div>
-              <div
-                className={currentPage === "closing_stock" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <ClosingStockEntry
-                  onClose={() => closePage("closing_stock", "dashboard")}
-                />
-              </div>
-              <div
-                className={currentPage === "mismatch" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <MismatchCase
-                  variant="satta"
-                  onClose={() => closePage("mismatch", "dashboard")}
-                />
-              </div>
-              <div
-                className={currentPage === "material_mismatch" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <MismatchCase
-                  variant="material"
-                  onClose={() => closePage("material_mismatch", "dashboard")}
-                />
-              </div>
-              <div
-                className={currentPage === "club_po_mr" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <ClubPOMR
-                  onClose={() => closePage("club_po_mr", "dashboard")}
-                />
-              </div>
-              <div
-                className={currentPage === "final_arrival" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <FinalArrival
-                  initialData={selectedAmadForFinalMr}
-                  onClose={() => {
-                    setSelectedAmadForFinalMr(null);
-                    closePage("final_arrival", "dashboard");
-                  }}
-                />
-              </div>
+                (() => {
+                  const meta = getPageMeta(currentPage);
+                  const title = meta?.title || currentPage;
 
-              <div
-                className={currentPage === "requisition_desk" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <RequisitionDesk
-                  onClose={() => closePage("requisition_desk", "dashboard")}
-                />
-              </div>
-              <div
-                className={currentPage === "weight_bridge" ? "flex-1 flex flex-col h-full w-full min-h-0 overflow-auto" : "hidden"}
-              >
-                <WeightBridge
-                  currentUser={getCurrentUserContext()}
-                  allowedModules={allowedModules}
-                  onNavigate={(page) => globalNavigate(page as Page)}
-                />
-              </div>
-                </React.Suspense>
+                  let content: React.ReactNode = null;
+
+                  switch (currentPage) {
+                    case "dashboard":
+                      content = (
+                        <Dashboard
+                          isActive={currentPage === "dashboard"}
+                          onNavigate={globalNavigate}
+                          isAdmin={isAdmin}
+                          allowedModules={allowedModules}
+                          currentTab={dashboardTab}
+                          setCurrentTab={setDashboardTab}
+                        />
+                      );
+                      break;
+                    case "main_gate":
+                      content = (
+                        <LorryDispatchSystem
+                          onNavigate={(page) => globalNavigate(page as Page)}
+                        />
+                      );
+                      break;
+                    case "amad":
+                      content = (
+                        <AmadRegister
+                          onClose={() => closePage("amad", "dashboard")}
+                          onNew={() => globalNavigate("amad_entry")}
+                          onNavigate={(page) => globalNavigate(page as Page)}
+                          onCreateFinalMr={(amad) => {
+                            setSelectedAmadForFinalMr(amad);
+                            globalNavigate("final_arrival");
+                          }}
+                        />
+                      );
+                      break;
+                    case "amad_entry":
+                      content = (
+                        <TemporaryArrival
+                          onCancel={() => closePage("amad_entry", "amad")}
+                          onSave={() => closePage("amad_entry", "amad")}
+                        />
+                      );
+                      break;
+                    case "sms_sauda":
+                      content = (
+                        <SmsSaudaDesk
+                          onClose={() => closePage("sms_sauda", "dashboard")}
+                          onNavigate={(page) => globalNavigate(page as Page)}
+                        />
+                      );
+                      break;
+                    case "sauda":
+                      content = (
+                        <SaudaRegister
+                          isActive={currentPage === "sauda"}
+                          onClose={() => closePage("sauda", "dashboard")}
+                          onNew={() => globalNavigate("sauda_entry")}
+                        />
+                      );
+                      break;
+                    case "sauda_entry":
+                      content = (
+                        <SaudaEntry
+                          onCancel={() => closePage("sauda_entry", "sauda")}
+                          onSave={() => closePage("sauda_entry", "sauda")}
+                          onNavigate={(page) => globalNavigate(page as Page)}
+                        />
+                      );
+                      break;
+                    case "satta":
+                      content = (
+                        <SattaChart onClose={() => closePage("satta", "dashboard")} />
+                      );
+                      break;
+                    case "satta_entry":
+                      content = (
+                        <SattaEntry
+                          onCancel={() => closePage("satta_entry", "satta")}
+                          onSave={() => closePage("satta_entry", "satta")}
+                        />
+                      );
+                      break;
+                    case "satta_chart":
+                      content = (
+                        <SattaChart
+                          onNavigate={(p) => globalNavigate(p as Page)}
+                          onClose={() => closePage("satta_chart", "dashboard")}
+                        />
+                      );
+                      break;
+                    case "po":
+                      content = (
+                        <PurchaseOrder
+                          onClose={() => closePage("po", "dashboard")}
+                          selectedYear={selectedYear}
+                          isTempPo={true}
+                        />
+                      );
+                      break;
+                    case "final_po":
+                      content = (
+                        <PurchaseOrder
+                          onClose={() => closePage("final_po", "dashboard")}
+                          selectedYear={selectedYear}
+                          isTempPo={false}
+                        />
+                      );
+                      break;
+                    case "issue":
+                      content = (
+                        <MaterialIssue
+                          onCancel={() => closePage("issue", "dashboard")}
+                          onSave={() => closePage("issue", "dashboard")}
+                          setCurrentPage={globalNavigate}
+                          closePage={closePage}
+                        />
+                      );
+                      break;
+                    case "bardana":
+                      content = (
+                        <BardanaVouchers
+                          onClose={() => closePage("bardana", "dashboard")}
+                        />
+                      );
+                      break;
+                    case "vyapari":
+                    case "trade" as any:
+                      content = (
+                        <DirectoryView
+                          title="Trade (Traders Directory)"
+                          type="vyapari"
+                          onClose={() => closePage("vyapari", "dashboard")}
+                        />
+                      );
+                      break;
+                    case "reports":
+                      content = (
+                        <Reports onClose={() => closePage("reports", "dashboard")} />
+                      );
+                      break;
+                    case "treds":
+                    case "trades" as any:
+                    case "trede" as any:
+                      content = (
+                        <TredeReport onClose={() => closePage(currentPage, "dashboard")} />
+                      );
+                      break;
+                    case "payment":
+                      content = (
+                        <PaymentModule onClose={() => closePage("payment", "dashboard")} />
+                      );
+                      break;
+                    case "stock":
+                      content = (
+                        <StockSummary
+                          onClose={() => closePage("stock", "dashboard")}
+                        />
+                      );
+                      break;
+                    case "settings":
+                      content = (
+                        <ConfigGuide
+                          onClose={() => closePage("settings", "dashboard")}
+                        />
+                      );
+                      break;
+                    case "system_change_logs":
+                    case "system_change_log" as any:
+                    case "change_log" as any:
+                      content = (
+                        <SystemChangeLogPage
+                          onClose={() => closePage(currentPage, "dashboard")}
+                          onNavigate={(p) => globalNavigate(p as Page)}
+                        />
+                      );
+                      break;
+                    case "admindesk":
+                      content = (
+                        <AdminDesk
+                          onClose={() => closePage("admindesk", "dashboard")}
+                          onLogin={() => setIsAdmin(true)}
+                          isAdmin={isAdmin}
+                          systemLogs={systemLogs}
+                          onClearLogs={() => setSystemLogs([])}
+                          onNavigate={(page) => globalNavigate(page)}
+                        />
+                      );
+                      break;
+                    case "ai_assistant":
+                      content = (
+                        <AIPortal
+                          onClose={() => closePage("ai_assistant", "dashboard")}
+                        />
+                      );
+                      break;
+                    case "material_inspection":
+                      content = (
+                        <MaterialInspection
+                          onClose={() => closePage("material_inspection", "dashboard")}
+                          onLogEvent={logEvent}
+                        />
+                      );
+                      break;
+                    case "inspection":
+                      content = (
+                        <Inspection
+                          onNavigate={(page) => globalNavigate(page as Page)}
+                        />
+                      );
+                      break;
+                    case "mr_settlement":
+                      content = (
+                        <MrSettlement
+                          onClose={() => closePage("mr_settlement", "dashboard")}
+                          onLogEvent={logEvent}
+                        />
+                      );
+                      break;
+                    case "closing_stock":
+                    case 'closing_stock_entry':
+                      content = (
+                        <ClosingStockEntry
+                          onClose={() => closePage("closing_stock", "dashboard")}
+                        />
+                      );
+                      break;
+                    case "mismatch":
+                      content = (
+                        <MismatchCase
+                          variant="satta"
+                          onClose={() => closePage("mismatch", "dashboard")}
+                        />
+                      );
+                      break;
+                    case "material_mismatch":
+                      content = (
+                        <MismatchCase
+                          variant="material"
+                          onClose={() => closePage("material_mismatch", "dashboard")}
+                        />
+                      );
+                      break;
+                    case "club_po_mr":
+                      content = (
+                        <ClubPOMR
+                          onClose={() => closePage("club_po_mr", "dashboard")}
+                        />
+                      );
+                      break;
+                    case "final_arrival":
+                      content = (
+                        <FinalArrival
+                          initialData={selectedAmadForFinalMr}
+                          onClose={() => {
+                            setSelectedAmadForFinalMr(null);
+                            closePage("final_arrival", "dashboard");
+                          }}
+                        />
+                      );
+                      break;
+                    case "requisition_desk":
+                      content = (
+                        <RequisitionDesk
+                          onClose={() => closePage("requisition_desk", "dashboard")}
+                        />
+                      );
+                      break;
+                    case "weight_bridge":
+                      content = (
+                        <WeightBridge
+                          currentUser={getCurrentUserContext()}
+                          allowedModules={allowedModules}
+                          onNavigate={(page) => globalNavigate(page as Page)}
+                        />
+                      );
+                      break;
+                    default:
+                      content = (
+                        <div className="flex-1 flex items-center justify-center p-8 text-slate-500">
+                          <span className="text-xs uppercase font-bold tracking-wider">Module [{currentPage}] Not Found</span>
+                        </div>
+                      );
+                  }
+
+                  return (
+                    <ScreenErrorBoundary key={currentPage} moduleName={title}>
+                      <React.Suspense fallback={<PageLoadingFallback moduleName={title} />}>
+                        <div className="flex-1 flex flex-col h-full w-full min-h-0 overflow-auto">
+                          {content}
+                        </div>
+                      </React.Suspense>
+                    </ScreenErrorBoundary>
+                  );
+                })()
               )}
             </div>
           </div>

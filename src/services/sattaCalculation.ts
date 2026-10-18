@@ -90,6 +90,8 @@ export interface SattaDeductionResult {
   explanation: string;       // Formatted explanation for tooltips & verification
   rateNotFound?: boolean;    // Flag indicating rate was not found
   error?: string;            // Clear error description if missing
+  effectiveDiscountPct: number;
+  deductionRsPerQtl: number;
 }
 
 /**
@@ -187,7 +189,9 @@ export function calculateSattaDeduction(
       settPct,
       origRate,
       settRate: origRate,
-      explanation: settPct <= 0 ? 'No settlement / claim % applied (0%)' : 'No lower grade in hierarchy'
+      explanation: settPct <= 0 ? 'No settlement / claim % applied (0%)' : 'No lower grade in hierarchy',
+      effectiveDiscountPct: settPct,
+      deductionRsPerQtl: 0
     };
   }
 
@@ -266,7 +270,9 @@ export function calculateSattaDeduction(
       settPct,
       origRate,
       settRate,
-      explanation
+      explanation,
+      effectiveDiscountPct: settPct,
+      deductionRsPerQtl: deduction
     };
   }
 
@@ -294,7 +300,9 @@ export function calculateSattaDeduction(
       settPct,
       origRate,
       settRate,
-      explanation
+      explanation,
+      effectiveDiscountPct: settPct,
+      deductionRsPerQtl: deduction
     };
   }
 
@@ -312,6 +320,8 @@ export function calculateSattaDeduction(
     settRate: origRate,
     rateNotFound: true,
     error: errorMsg,
-    explanation: errorMsg
+    explanation: errorMsg,
+    effectiveDiscountPct: settPct,
+    deductionRsPerQtl: 0
   };
 }

@@ -56,9 +56,10 @@ function initGlobalRealtimeMultiplexer() {
 }
 
 export interface UseLiveAutoRefreshOptions {
-  tables?: string[];   // Specific Supabase tables to listen for
-  enabled?: boolean;   // Conditionally enable/disable (default true)
-  debounceMs?: number; // Custom debounce in ms (default 350)
+  tables?: string[];        // Specific Supabase tables to listen for
+  enabled?: boolean;        // Conditionally enable/disable (default true)
+  debounceMs?: number;      // Custom debounce in ms (default 350)
+  skipInitialLoad?: boolean; // Skip duplicate initial load if parent already loads on mount
 }
 
 /**
@@ -75,11 +76,12 @@ export function useLiveAutoRefresh(
     ? { tables: options }
     : options;
 
-  const { tables = [], enabled = true, debounceMs = 350 } = normalizedOptions;
+  const { tables = [], enabled = true, debounceMs = 350, skipInitialLoad = false } = normalizedOptions;
   const callbackRef = useRef(refreshCallback);
   const debounceTimerRef = useRef<any>(null);
   const isExecutingRef = useRef<boolean>(false);
   const hasPendingExecutionRef = useRef<boolean>(false);
+  const generationRef = useRef<number>(0);
 
   useEffect(() => {
     callbackRef.current = refreshCallback;
@@ -92,9 +94,11 @@ export function useLiveAutoRefresh(
     initGlobalRealtimeMultiplexer();
 
     let isSubscribed = true;
+    generationRef.current += 1;
+    const currentGen = generationRef.current;
 
     const executeCallback = async (payload?: any) => {
-      if (!isSubscribed) return;
+      if (!isSubscribed || currentGen !== generationRef.current) return;
       if (isExecutingRef.current) {
         hasPendingExecutionRef.current = true;
         return;
@@ -108,7 +112,7 @@ export function useLiveAutoRefresh(
         console.warn('[Realtime Auto Refresh] Error executing callback:', e);
       } finally {
         isExecutingRef.current = false;
-        if (isSubscribed && hasPendingExecutionRef.current) {
+        if (isSubscribed && currentGen === generationRef.current && hasPendingExecutionRef.current) {
           hasPendingExecutionRef.current = false;
           executeCallback();
         }
@@ -116,7 +120,7 @@ export function useLiveAutoRefresh(
     };
 
     const triggerDebounced = (payload?: any) => {
-      if (!isSubscribed) return;
+      if (!isSubscribed || currentGen !== generationRef.current) return;
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
@@ -125,8 +129,10 @@ export function useLiveAutoRefresh(
       }, debounceMs);
     };
 
-    // 1. Initial execution on component mount (immediate)
-    executeCallback();
+    // 1. Initial execution on component mount (unless skipInitialLoad is set)
+    if (!skipInitialLoad) {
+      executeCallback();
+    }
 
     // 2. Custom Event Listener for local table updates & broadcasted realtime events
     const normalizedTables = tables.map(t => t.toLowerCase());

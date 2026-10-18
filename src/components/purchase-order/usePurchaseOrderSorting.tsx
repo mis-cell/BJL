@@ -23,6 +23,7 @@ export function usePurchaseOrderSorting({
   isPoMismatchResolved
 }: UsePurchaseOrderSortingProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const deferredSearchTerm = React.useDeferredValue(searchTerm);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export function usePurchaseOrderSorting({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, startDate, endDate, statusFilter, selectedMonth]);
+  }, [deferredSearchTerm, startDate, endDate, statusFilter, selectedMonth]);
 
   const [sortConfig, setSortConfig] = useState<{
     key: SortKey;
@@ -65,16 +66,17 @@ export function usePurchaseOrderSorting({
 
   // Filter POs in register
   const filteredPos = useMemo(() => {
+    const term = deferredSearchTerm.trim().toLowerCase();
     return poList.filter(p => {
-      const term = searchTerm.toLowerCase();
-      const poNo = String(p.po_no || '').toLowerCase();
-      const ptfNo = String(p.ptf_no || '').toLowerCase();
-      const bName = String(p.broker || '').toLowerCase();
-      const sName = String(p.supplier || '').toLowerCase();
-      const aName = String(p.area || '').toLowerCase();
-      const matchesSearch = poNo.includes(term) || ptfNo.includes(term) || bName.includes(term) || sName.includes(term) || aName.includes(term);
-      
-      if (!matchesSearch) return false;
+      if (term) {
+        const poNo = String(p.po_no || '').toLowerCase();
+        const ptfNo = String(p.ptf_no || '').toLowerCase();
+        const bName = String(p.broker || '').toLowerCase();
+        const sName = String(p.supplier || '').toLowerCase();
+        const aName = String(p.area || '').toLowerCase();
+        const matchesSearch = poNo.includes(term) || ptfNo.includes(term) || bName.includes(term) || sName.includes(term) || aName.includes(term);
+        if (!matchesSearch) return false;
+      }
 
       const rowDate = p.date || p.po_date || p.contract_date || p.created_at;
       if (startDate && (!rowDate || new Date(rowDate) < new Date(startDate))) return false;

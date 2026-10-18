@@ -10,7 +10,8 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test:regression": "tsx audit/regression-test.ts",
-    "test:database": "tsx audit/database-test.ts"
+    "test:database": "tsx audit/database-test.ts",
+    "test:performance": "tsx audit/performance-test.ts"
   },
   "dependencies": {
     "@google/genai": "^1.52.0",

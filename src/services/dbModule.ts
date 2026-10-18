@@ -29,7 +29,36 @@ const MODULE_LABELS: Record<string, string> = {
   clubbed_pomr: "Clubbed PO/MR",
 };
 
+// In-flight request deduplication map to prevent multiple identical concurrent queries
+const inFlightRequests = new Map<string, Promise<any>>();
+
+// Shared in-memory query cache with TTL (15-30s default)
+interface CacheEntry {
+  data: any;
+  expiry: number;
+  table: string;
+}
+const dataCache = new Map<string, CacheEntry>();
+
+export function invalidateTableCache(table?: string) {
+  if (!table) {
+    dataCache.clear();
+    return;
+  }
+  const cleanTable = table.trim().toLowerCase();
+  for (const [key, entry] of dataCache.entries()) {
+    if (entry.table === cleanTable || key.includes(cleanTable)) {
+      dataCache.delete(key);
+    }
+  }
+}
+
 export function notifyDataChanged(table?: string) {
+  if (table) {
+    invalidateTableCache(table);
+  } else {
+    dataCache.clear();
+  }
   if (typeof window !== "undefined") {
     window.dispatchEvent(
       new CustomEvent(APP_DATA_UPDATED_EVENT, {
@@ -66,6 +95,133 @@ function sanitizePayload(data: Record<string, any>): Record<string, any> {
 
 export const dbModule = {
   /**
+   * Invalidate cached table results
+   */
+  invalidateCache(table?: string) {
+    invalidateTableCache(table);
+  },
+
+  /**
+   * Fast server-side count query using Supabase exact count with head: true
+   * Returns exact row count in milliseconds without fetching row bodies.
+   */
+  async fetchCount(table: string, filter?: Record<string, any>): Promise<number> {
+    if (!supabase) return 0;
+    const cacheKey = `count:${table}:${JSON.stringify(filter || {})}`;
+    const cached = dataCache.get(cacheKey);
+    if (cached && cached.expiry > Date.now()) {
+      return cached.data;
+    }
+
+    if (inFlightRequests.has(cacheKey)) {
+      return inFlightRequests.get(cacheKey)!;
+    }
+
+    const promise = (async () => {
+      try {
+        let q = supabase.from(table).select("*", { count: "exact", head: true });
+        if (filter) {
+          Object.entries(filter).forEach(([k, v]) => {
+            if (v !== undefined && v !== null) {
+              q = q.eq(k, v);
+            }
+          });
+        }
+        const { count, error } = await q;
+        if (error) {
+          console.warn(`fetchCount failed on "${table}":`, error.message);
+          return 0;
+        }
+        const result = count || 0;
+        dataCache.set(cacheKey, {
+          data: result,
+          expiry: Date.now() + 20000,
+          table: table.toLowerCase(),
+        });
+        return result;
+      } finally {
+        inFlightRequests.delete(cacheKey);
+      }
+    })();
+
+    inFlightRequests.set(cacheKey, promise);
+    return promise;
+  },
+
+  /**
+   * Targeted database-side filtered query with column selection, sorting, and pagination.
+   */
+  async fetchQuery(
+    table: string,
+    options?: {
+      select?: string;
+      where?: Record<string, any>;
+      orderBy?: string;
+      ascending?: boolean;
+      limit?: number;
+      offset?: number;
+      ttlMs?: number;
+    }
+  ): Promise<any[]> {
+    if (!supabase) {
+      throw new Error(`Database client is not initialized to read "${table}".`);
+    }
+
+    const cacheKey = `query:${table}:${JSON.stringify(options || {})}`;
+    const cached = dataCache.get(cacheKey);
+    if (cached && cached.expiry > Date.now()) {
+      return cached.data;
+    }
+
+    if (inFlightRequests.has(cacheKey)) {
+      return inFlightRequests.get(cacheKey)!;
+    }
+
+    const promise = (async () => {
+      try {
+        let q = supabase.from(table).select(options?.select || "*");
+        if (options?.where) {
+          Object.entries(options.where).forEach(([k, v]) => {
+            if (v !== undefined && v !== null) {
+              q = q.eq(k, v);
+            }
+          });
+        }
+        if (options?.orderBy) {
+          q = q.order(options.orderBy, {
+            ascending: options.ascending ?? true,
+          });
+        }
+        if (options?.offset !== undefined && options?.limit !== undefined) {
+          q = q.range(options.offset, options.offset + options.limit - 1);
+        } else if (options?.limit !== undefined) {
+          q = q.limit(options.limit);
+        }
+
+        const { data, error } = await q;
+        if (error) {
+          throw new Error(`Query on "${table}" failed: ${error.message}`);
+        }
+        const result = data || [];
+        const ttl = options?.ttlMs ?? 15000;
+        if (ttl > 0) {
+          dataCache.set(cacheKey, {
+            data: result,
+            expiry: Date.now() + ttl,
+            table: table.toLowerCase(),
+          });
+        }
+        return result;
+      } finally {
+        inFlightRequests.delete(cacheKey);
+      }
+    })();
+
+    inFlightRequests.set(cacheKey, promise);
+    return promise;
+  },
+
+  /**
    * Execute an atomic SQL transaction via the database RPC `exec_sql`.
    * Rolls back all statements if any statement fails.
    */
@@ -89,53 +245,97 @@ export const dbModule = {
     if (data && typeof data === "object" && data.error) {
       throw new Error(`Atomic transaction rejected: ${data.error}`);
     }
+    dataCache.clear();
+    notifyDataChanged();
     return data ?? { success: true };
   },
 
   /**
-   * Paginated fetchAll that retrieves all rows in deterministic 1000-row pages
-   * without silent truncation or unbounded memory spikes.
+   * Shared fetchAll that retrieves rows with in-flight deduplication, caching,
+   * and flexible options or positional arguments.
    */
   async fetchAll(
     table: string,
-    options?: { pageSize?: number; maxRows?: number; orderBy?: string; ascending?: boolean }
+    optionsOrOrderBy?: any,
+    maybeAscending?: boolean,
+    maybeMaxRows?: number
   ): Promise<any[]> {
     if (!supabase) {
       throw new Error(`Database client is not initialized to read "${table}".`);
     }
 
-    const pageSize = Math.min(Math.max(options?.pageSize || 1000, 100), 1000);
-    const maxRows = options?.maxRows || 50000;
-    const allRows: any[] = [];
-    let offset = 0;
+    let orderBy: string | undefined;
+    let ascending: boolean | undefined;
+    let maxRows = 50000;
+    let pageSize = 1000;
 
-    while (offset < maxRows) {
-      let query = supabase
-        .from(table)
-        .select("*")
-        .range(offset, offset + pageSize - 1);
-
-      if (options?.orderBy) {
-        query = query.order(options.orderBy, {
-          ascending: options.ascending ?? true,
-        });
-      }
-
-      const { data, error } = await query;
-      if (error) {
-        throw new Error(`Failed to fetch records from "${table}": ${error.message}`);
-      }
-
-      const batch = data || [];
-      allRows.push(...batch);
-
-      if (batch.length < pageSize) {
-        break;
-      }
-      offset += pageSize;
+    if (typeof optionsOrOrderBy === "object" && optionsOrOrderBy !== null) {
+      orderBy = optionsOrOrderBy.orderBy;
+      ascending = optionsOrOrderBy.ascending;
+      maxRows = optionsOrOrderBy.maxRows || maxRows;
+      pageSize = optionsOrOrderBy.pageSize || pageSize;
+    } else if (typeof optionsOrOrderBy === "string") {
+      orderBy = optionsOrOrderBy;
+      ascending = maybeAscending;
+      if (typeof maybeMaxRows === "number") maxRows = maybeMaxRows;
     }
 
-    return allRows;
+    const cacheKey = `all:${table}:${orderBy || "none"}:${ascending ?? true}:${maxRows}`;
+    const cached = dataCache.get(cacheKey);
+    if (cached && cached.expiry > Date.now()) {
+      return cached.data;
+    }
+
+    if (inFlightRequests.has(cacheKey)) {
+      return inFlightRequests.get(cacheKey)!;
+    }
+
+    const promise = (async () => {
+      try {
+        const pSize = Math.min(Math.max(pageSize, 100), 1000);
+        const allRows: any[] = [];
+        let offset = 0;
+
+        while (offset < maxRows) {
+          let query = supabase
+            .from(table)
+            .select("*")
+            .range(offset, offset + pSize - 1);
+
+          if (orderBy) {
+            query = query.order(orderBy, {
+              ascending: ascending ?? true,
+            });
+          }
+
+          const { data, error } = await query;
+          if (error) {
+            throw new Error(`Failed to fetch records from "${table}": ${error.message}`);
+          }
+
+          const batch = data || [];
+          allRows.push(...batch);
+
+          if (batch.length < pSize) {
+            break;
+          }
+          offset += pSize;
+        }
+
+        dataCache.set(cacheKey, {
+          data: allRows,
+          expiry: Date.now() + 20000,
+          table: table.toLowerCase(),
+        });
+
+        return allRows;
+      } finally {
+        inFlightRequests.delete(cacheKey);
+      }
+    })();
+
+    inFlightRequests.set(cacheKey, promise);
+    return promise;
   },
 
   /**

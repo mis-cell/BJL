@@ -304,22 +304,55 @@ function getFinancialYear(dateStr: string): string {
   }
 }
 
+let cachedReportResult: {
+  data: {
+    allTransactions: ReportTransactionLine[];
+    allPoSummary: AllPoSummary;
+    brokerSettlementMap?: SystemReportDataset['brokerSettlementMap'];
+    masterLists: SystemReportDataset['masterLists'];
+  };
+  timestamp: number;
+} | null = null;
+
+let inFlightReportPromise: Promise<{
+  allTransactions: ReportTransactionLine[];
+  allPoSummary: AllPoSummary;
+  brokerSettlementMap?: SystemReportDataset['brokerSettlementMap'];
+  masterLists: SystemReportDataset['masterLists'];
+}> | null = null;
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('app-data-updated', () => {
+    cachedReportResult = null;
+  });
+}
+
 function getYearMonth(dateStr: string): string {
   const iso = normalizeToISODate(dateStr);
   return iso.substring(0, 7) || '2026-09';
 }
 
-export async function loadAndProcessSystemReportData(): Promise<{
+export async function loadAndProcessSystemReportData(forceRefresh = false): Promise<{
   allTransactions: ReportTransactionLine[];
   allPoSummary: AllPoSummary;
   brokerSettlementMap?: SystemReportDataset['brokerSettlementMap'];
   masterLists: SystemReportDataset['masterLists'];
 }> {
-  try {
-    const [
-      pos,
-      poDetails,
-      scps,
+  const now = Date.now();
+  if (!forceRefresh && cachedReportResult && (now - cachedReportResult.timestamp) < 30000) {
+    return cachedReportResult.data;
+  }
+
+  if (inFlightReportPromise) {
+    return inFlightReportPromise;
+  }
+
+  inFlightReportPromise = (async () => {
+    try {
+      const [
+        pos,
+        poDetails,
+        scps,
       scpDetails,
       amad,
       finals,
@@ -1982,7 +2015,7 @@ export async function loadAndProcessSystemReportData(): Promise<{
       finalPoMT
     };
 
-    return {
+    const result = {
       allTransactions: transactionLines,
       allPoSummary,
       brokerSettlementMap,
@@ -1998,6 +2031,8 @@ export async function loadAndProcessSystemReportData(): Promise<{
         pos: Array.from(poSet).sort()
       }
     };
+    cachedReportResult = { data: result, timestamp: Date.now() };
+    return result;
   } catch (error) {
     console.error('Failed to load system report data:', error);
     return {
@@ -2027,7 +2062,11 @@ export async function loadAndProcessSystemReportData(): Promise<{
       },
       brokerSettlementMap: {}
     };
+  } finally {
+    inFlightReportPromise = null;
   }
+  })();
+  return inFlightReportPromise;
 }
 
 // Compute all aggregated metrics from filtered transaction records

@@ -259,12 +259,16 @@ async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
-  // 1. Restricted CORS & No-Cache middleware
+  // 1. Restricted CORS & Context-Aware Caching middleware
   app.use((req, res, next) => {
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
-    res.setHeader("Surrogate-Control", "no-store");
+    if (req.path.startsWith('/api') || req.path.includes('/auth') || req.path.includes('/sync')) {
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+      res.setHeader("Surrogate-Control", "no-store");
+    } else if (req.path.startsWith('/assets/') || req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    }
 
     const origin = req.headers.origin;
     if (origin && isAllowedOrigin(origin)) {

@@ -28,6 +28,21 @@ interface UsePurchaseOrderOperationsProps {
   todayStr: string;
 }
 
+export function markPoClosedInLocalStorage(cleanPo: string, cleanSauda: string, closeRemarksPayload: any) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(`sauda_closed_${cleanPo}`, 'true');
+  localStorage.removeItem(`sauda_reopened_${cleanPo}`);
+  localStorage.removeItem(`sauda_open_remarks_${cleanPo}`);
+  localStorage.setItem(`sauda_close_remarks_${cleanPo}`, JSON.stringify(closeRemarksPayload));
+
+  if (cleanSauda) {
+    localStorage.setItem(`sauda_closed_${cleanSauda}`, 'true');
+    localStorage.removeItem(`sauda_reopened_${cleanSauda}`);
+    localStorage.removeItem(`sauda_open_remarks_${cleanSauda}`);
+    localStorage.setItem(`sauda_close_remarks_${cleanSauda}`, JSON.stringify(closeRemarksPayload));
+  }
+}
+
 export function usePurchaseOrderOperations({
   isTempPo,
   MASTER_TABLE,
@@ -769,37 +784,16 @@ export function usePurchaseOrderOperations({
         close_remarks: closeRemarksPayload
       };
 
-      const closedRows: any[] = [];
-      try {
-        const r1 = await dbModule.update('sauda_check_point', 'po_no', closeModalPo.po_no, closeDbPayload);
-        if (r1) closedRows.push(r1);
-      } catch (_e) {}
-      try {
-        const r2 = await dbModule.update('purchase_master', 'po_no', closeModalPo.po_no, closeDbPayload);
-        if (r2) closedRows.push(r2);
-      } catch (_e) {}
-      if (closeModalPo.sauda_no || closeModalPo.po_no) {
-        try {
-          const r3 = await dbModule.update('sauda_master', 'sauda_no', closeModalPo.sauda_no || closeModalPo.po_no, closeDbPayload);
-          if (r3) closedRows.push(r3);
-        } catch (_e) {}
-      }
+      await dbModule.executeTransaction(async (client) => {
+        const { error: e1 } = await client.from('sauda_check_point').update(closeDbPayload).eq('po_no', closeModalPo.po_no);
+        const { error: e2 } = await client.from('purchase_master').update(closeDbPayload).eq('po_no', closeModalPo.po_no);
+        if (closeModalPo.sauda_no) {
+          await client.from('sauda_master').update(closeDbPayload).eq('sauda_no', closeModalPo.sauda_no);
+        }
+        if (e1 && e2) throw e1 || e2;
+      });
 
-      if (closedRows.length === 0) {
-        throw new Error(`Close failed: no authoritative database record updated for PO #${closeModalPo.po_no}.`);
-      }
-
-      localStorage.setItem(`sauda_closed_${cleanPo}`, 'true');
-      localStorage.removeItem(`sauda_reopened_${cleanPo}`);
-      localStorage.removeItem(`sauda_open_remarks_${cleanPo}`);
-      localStorage.setItem(`sauda_close_remarks_${cleanPo}`, JSON.stringify(closeRemarksPayload));
-
-      if (cleanSauda) {
-        localStorage.setItem(`sauda_closed_${cleanSauda}`, 'true');
-        localStorage.removeItem(`sauda_reopened_${cleanSauda}`);
-        localStorage.removeItem(`sauda_open_remarks_${cleanSauda}`);
-        localStorage.setItem(`sauda_close_remarks_${cleanSauda}`, JSON.stringify(closeRemarksPayload));
-      }
+      markPoClosedInLocalStorage(cleanPo, cleanSauda, closeRemarksPayload);
 
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('sauda_status_changed', {

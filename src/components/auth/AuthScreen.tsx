@@ -292,7 +292,7 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
                   onClick={(e) => {
                     e.preventDefault();
                     alert(
-                      "Bally Jute Mill Operator Credentials:\nID: ADMIN\nPassword: Admin@1234"
+                      "Please contact the Bally Jute IT administrator to reset your account password or verify permissions."
                     );
                   }}
                   className="text-xs text-[#5D6B58] font-medium"

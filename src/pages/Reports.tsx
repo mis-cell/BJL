@@ -35,6 +35,9 @@ import { DrillDownModal, DrillDownViewMode } from '../components/system-reports/
 import { SimpleReportView } from '../components/system-reports/SimpleReportView';
 import { AllPoReportView } from '../components/system-reports/AllPoReportView';
 
+import { screenDraftService } from '../services/screenDraftService';
+import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
+
 export type ReportNavSection = 
   | 'dashboard'
   | 'business_analysis'
@@ -82,7 +85,13 @@ export default function Reports({ onClose }: ReportsProps) {
     pos: []
   });
 
-  const [filters, setFilters] = useState<ReportFilterCriteria>({});
+  const [filters, setFilters] = useState<ReportFilterCriteria>(() => 
+    screenDraftService.getFilters('system_reports', {})
+  );
+
+  useEffect(() => {
+    screenDraftService.saveFilters('system_reports', filters);
+  }, [filters]);
 
   // Drill-down Modal State
   const [drillDownInfo, setDrillDownInfo] = useState<{
@@ -104,11 +113,15 @@ export default function Reports({ onClose }: ReportsProps) {
   // Month Inspection Summaries for Pipeline Reports
   const [monthSummaries, setMonthSummaries] = useState<any[]>([]);
 
-  // Load Data
-  const loadData = async () => {
-    setLoading(true);
+  // Load Data with non-blanking background refresh
+  const loadData = async (forceRefresh = false) => {
+    // Keep previously loaded data visible during background refreshes
+    if (allTransactions.length === 0) {
+      setLoading(true);
+    }
     try {
-      const { allTransactions: txns, masterLists: lists, allPoSummary: poSum, brokerSettlementMap: bMap } = await loadAndProcessSystemReportData();
+      const { allTransactions: txns, masterLists: lists, allPoSummary: poSum, brokerSettlementMap: bMap } = 
+        await loadAndProcessSystemReportData(forceRefresh);
       setAllTransactions(txns);
       setMasterLists(lists);
       if (poSum) setAllPoSummary(poSum);
@@ -121,8 +134,15 @@ export default function Reports({ onClose }: ReportsProps) {
   };
 
   useEffect(() => {
-    loadData();
+    loadData(false);
   }, []);
+
+  useLiveAutoRefresh(() => {
+    loadData(true);
+  }, [], {
+    tables: ['sauda_master', 'purchase_master', 'temporary_material_received', 'final_arrival', 'material_inspection', 'payment_master', 'm_r_settlement'],
+    skipInitialLoad: true
+  });
 
   // Filter transactions dynamically
   const filteredTransactions = useMemo(() => {

@@ -124,8 +124,10 @@ export function useDashboardData(isActive: boolean = true) {
   }, []);
 
   const loadStats = React.useCallback(async () => {
-    setLoading(true);
-    setQuickReportData(prev => ({ ...prev, loading: true }));
+    if (!isActive) return;
+    // Keep previously loaded information visible during background refreshes to eliminate UI flicker
+    setStats(prev => (prev.arrivals === '...' ? prev : prev));
+    setLoading(prev => (prev ? true : false));
     try {
       const [
         arrivals, 
@@ -572,9 +574,7 @@ export function useDashboardData(isActive: boolean = true) {
     } finally {
       setLoading(false);
     }
-  }, []);
-
-
+  }, [isActive]);
 
   useLiveAutoRefresh(() => {
     if (isActive) loadStats();
@@ -594,7 +594,8 @@ export function useDashboardData(isActive: boolean = true) {
       'godown_wise_stock',
       'mill_issue_master',
       'mill_issue_detail'
-    ] 
+    ],
+    enabled: isActive
   });
 
   const arrivalTrendsData = React.useMemo(() => {

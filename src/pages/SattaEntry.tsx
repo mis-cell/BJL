@@ -14,6 +14,7 @@ import { supabase } from '../lib/supabase';
 import { enforceEditOrDeletePermission } from '../lib/permissions';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { resolveSattaRate } from '../services/sattaRateService';
+import { screenDraftService } from '../services/screenDraftService';
 
 const UNIT_OPTIONS = ["DRUMS", "BALES", "LOOSE", "P.BALES", "H.BALES"];
 
@@ -138,7 +139,16 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
     };
   };
 
-  const [formData, setFormData] = useState<Satta>(getInitialFormData());
+  const [formData, setFormData] = useState<Satta>(() => {
+    if (initialData) return getInitialFormData();
+    return screenDraftService.getDraft('satta_entry_form', getInitialFormData());
+  });
+
+  useEffect(() => {
+    if (!initialData) {
+      screenDraftService.saveDraft('satta_entry_form', formData);
+    }
+  }, [formData, initialData]);
   const [unitOptions, setUnitOptions] = useState<string[]>(UNIT_OPTIONS);
 
   useEffect(() => {
@@ -598,6 +608,7 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
         }
       }
       
+      screenDraftService.clearDraft('satta_entry_form');
       alert("Satta Trade Contract saved successfully!");
       onSave?.(sattaData);
     } catch (err: any) {

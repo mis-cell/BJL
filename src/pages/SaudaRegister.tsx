@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useDeferredValue } from 'react';
 import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
+import { screenDraftService } from '../services/screenDraftService';
 import { createPortal } from 'react-dom';
 import Papa from 'papaparse';
 import { 
@@ -243,10 +244,18 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(() => screenDraftService.getFilters('sauda_search', ''));
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [statusTab, setStatusTab] = useState<'pending' | 'checked' | 'rejected' | 'all'>('pending');
+  const [statusTab, setStatusTab] = useState<'pending' | 'checked' | 'rejected' | 'all'>(() =>
+    screenDraftService.getFilters('sauda_status_tab', 'pending')
+  );
+
+  useEffect(() => {
+    screenDraftService.saveFilters('sauda_search', searchTerm);
+    screenDraftService.saveFilters('sauda_status_tab', statusTab);
+  }, [searchTerm, statusTab]);
 
   const isUser10 = isUserId10();
   const isUser2 = isUserId2();

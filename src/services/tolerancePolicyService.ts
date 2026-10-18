@@ -13,6 +13,8 @@ export interface TolerancePolicyItem {
   updated_at?: string;
 }
 
+export type TolerancePolicy = TolerancePolicyItem;
+
 export const DEFAULT_TOLERANCE_POLICIES: TolerancePolicyItem[] = [
   {
     id: 'pol_bales',
@@ -172,6 +174,59 @@ export async function saveTolerancePolicies(policies: TolerancePolicyItem[]): Pr
     window.dispatchEvent(new CustomEvent('tolerance-policy-updated', { detail: confirmedPolicies }));
   }
 
+  return true;
+}
+
+export const DEFAULT_TOLERANCE_POLICY = DEFAULT_TOLERANCE_POLICIES[0];
+
+export function getCachedTolerancePolicy(): TolerancePolicy {
+  const policies = getTolerancePoliciesSync();
+  return policies.find(p => p.is_active) || policies[0] || DEFAULT_TOLERANCE_POLICY;
+}
+
+export async function getActiveTolerancePolicy(): Promise<TolerancePolicy> {
+  const policies = await fetchTolerancePolicies();
+  return policies.find(p => p.is_active) || policies[0] || DEFAULT_TOLERANCE_POLICY;
+}
+
+export const getAllTolerancePolicies = fetchTolerancePolicies;
+
+export async function saveTolerancePolicy(policy: Partial<TolerancePolicy>): Promise<boolean> {
+  const current = await fetchTolerancePolicies();
+  const id = policy.id || `pol_${String(policy.unit_type || 'custom').toLowerCase()}`;
+  const existingIdx = current.findIndex(p => p.id === id);
+  const updatedItem: TolerancePolicy = normalizePolicyRow({
+    ...(existingIdx >= 0 ? current[existingIdx] : DEFAULT_TOLERANCE_POLICY),
+    ...policy,
+    id,
+  });
+
+  const nextList = [...current];
+  if (existingIdx >= 0) {
+    nextList[existingIdx] = updatedItem;
+  } else {
+    nextList.push(updatedItem);
+  }
+  return saveTolerancePolicies(nextList);
+}
+
+export async function toggleTolerancePolicyActive(id: string, isActive: boolean): Promise<boolean> {
+  const current = await fetchTolerancePolicies();
+  const nextList = current.map(p => p.id === id ? { ...p, is_active: isActive } : p);
+  return saveTolerancePolicies(nextList);
+}
+
+export async function deleteTolerancePolicy(id: string): Promise<boolean> {
+  const current = await fetchTolerancePolicies();
+  const nextList = current.filter(p => p.id !== id);
+  if (supabase) {
+    await supabase.from('tolerance_policy_master').delete().eq('id', id);
+  }
+  cachedPolicies = nextList;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(nextList));
+    window.dispatchEvent(new CustomEvent('tolerance-policy-updated', { detail: nextList }));
+  }
   return true;
 }
 

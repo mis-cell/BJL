@@ -10,6 +10,7 @@ import { logChange } from '../services/auditLogService';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { resolveSattaRate } from '../services/sattaRateService';
 import { cleanSaudaNo } from '../lib/utils';
+import { screenDraftService } from '../services/screenDraftService';
 
 import LegacyLayout from '../components/LegacyLayout';
 import BasicDetailsCard from '../components/BasicDetailsCard';
@@ -201,7 +202,16 @@ export default function SaudaEntry({
     };
   };
 
-  const [formData, setFormData] = useState<Sauda>(getInitialFormData());
+  const [formData, setFormData] = useState<Sauda>(() => {
+    if (initialData) return getInitialFormData();
+    return screenDraftService.getDraft('sauda_entry_form', getInitialFormData());
+  });
+
+  useEffect(() => {
+    if (!initialData) {
+      screenDraftService.saveDraft('sauda_entry_form', formData);
+    }
+  }, [formData, initialData]);
 
   const formContainerRef = useRef<HTMLDivElement>(null);
   useKeyboardNavigation(formContainerRef);
@@ -1138,6 +1148,7 @@ export default function SaudaEntry({
         }).catch(() => {});
       }
 
+      screenDraftService.clearDraft('sauda_entry_form');
       alert("Sauda Contract saved successfully!");
       window.dispatchEvent(new CustomEvent('app-data-updated'));
       onSave?.(saudaData);
