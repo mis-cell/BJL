@@ -101,70 +101,14 @@ export default function Dashboard({
   };
 
   const handleUpdatePassword = async () => {
-    if (!newPassword || !newPassword.trim()) {
-      alert("Please enter a valid new password.");
-      return;
-    }
-    const cleanPass = newPassword.trim();
     try {
-      const activeUser = getCurrentUserContext().username || "ADMIN";
-      const cleanUser = activeUser.trim();
-
-      let updateSuccess = false;
-
-      // 1. Update in Supabase user_master
-      if (supabase) {
-        const { error } = await supabase
-          .from('user_master')
-          .update({ password: cleanPass })
-          .or(`username.ilike.${cleanUser},user_id.ilike.${cleanUser}`);
-
-        if (!error) {
-          updateSuccess = true;
-        } else {
-          console.warn("Supabase password update notice:", error);
-          // Try upserting if single update didn't match
-          const { error: upsertErr } = await supabase
-            .from('user_master')
-            .upsert({
-              user_id: getCurrentUserContext().userId || '001',
-              username: cleanUser.toUpperCase(),
-              password: cleanPass,
-              role: getCurrentUserContext().userRole || 'ADMIN',
-              level: getCurrentUserContext().userLevel || 'L5',
-              status: 'Active',
-              allowed_modules: '*'
-            }, { onConflict: 'username' });
-
-          if (!upsertErr) updateSuccess = true;
-        }
-      }
-
-      // 2. Update in client dbModule store
-      await dbModule.update('user_master', 'username', cleanUser.toUpperCase(), { password: cleanPass }).catch(() => {});
-      updateSuccess = true;
-
-      // 3. Update localStorage bally_auth_session
-      try {
-        const sessionStr = localStorage.getItem("bally_auth_session");
-        if (sessionStr) {
-          const parsed = JSON.parse(sessionStr);
-          parsed.password = cleanPass;
-          localStorage.setItem("bally_auth_session", JSON.stringify(parsed));
-        }
-      } catch (e) {}
-
-      if (updateSuccess) {
-        setUpdatePasswordSuccess('Password updated successfully! Your new password is now active.');
-        setNewPassword('');
-        setTimeout(() => setUpdatePasswordSuccess(''), 4000);
-      } else {
-        alert('Failed to update password. Please check database connection.');
-      }
-    } catch (e: any) {
-      console.error(e);
-      alert('Password Update Error: ' + (e.message || String(e)));
-    }
+      if (!supabase) throw new Error('Authentication is not configured.');
+      if (newPassword.length < 12) throw new Error('Use at least 12 characters.');
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setNewPassword('');
+      setUpdatePasswordSuccess('Password updated successfully.');
+    } catch (e: any) { alert(e.message || 'Unable to update password.'); }
   };
 
   return (

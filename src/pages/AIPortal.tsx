@@ -18,7 +18,7 @@ import {
   Key
 } from 'lucide-react';
 import LegacyLayout, { LegacyFieldset } from '../components/LegacyLayout';
-import { askAI, getInMemoryGeminiApiKey, setInMemoryGeminiApiKey } from '../services/aiService';
+import { askAI } from '../services/aiService';
 import { supabase } from '../lib/supabase';
 
 export default function AIPortal({ onClose }: { onClose: () => void }) {
@@ -28,36 +28,6 @@ export default function AIPortal({ onClose }: { onClose: () => void }) {
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // Direct Browser Key state in memory
-  const [localKey, setLocalKey] = useState(() => {
-    try {
-      const obscureDefault = "AdyNMSSluB-Vu27Ps8xUKr_8w8HPs1AbBySazIA";
-      const getDecodedDefault = () => obscureDefault.split("").reverse().join("");
-      return getInMemoryGeminiApiKey() || getDecodedDefault();
-    } catch (e) {
-      return '';
-    }
-  });
-
-  const saveLocalKey = (key: string) => {
-    const trimmed = key.trim().replace(/^["']|["']$/g, '');
-    try {
-      const obscureDefault = "AdyNMSSluB-Vu27Ps8xUKr_8w8HPs1AbBySazIA";
-      const getDecodedDefault = () => obscureDefault.split("").reverse().join("");
-      const decodedDefaultKey = getDecodedDefault();
-
-      if (trimmed && trimmed !== decodedDefaultKey) {
-        setInMemoryGeminiApiKey(trimmed);
-        setLocalKey(trimmed);
-      } else {
-        setInMemoryGeminiApiKey('');
-        setLocalKey(decodedDefaultKey);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   // Tab 2: System Knowledge Base / Database Query States
   const [dbQueryText, setDbQueryText] = useState('');
@@ -432,62 +402,8 @@ export default function AIPortal({ onClose }: { onClose: () => void }) {
             </div>
           </LegacyFieldset>
 
-          <LegacyFieldset legend="Model Status">
-            <div className="p-2 bg-indigo-900/10 border border-indigo-950/20 text-indigo-950 text-[9px] font-bold uppercase rounded-sm space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Cpu className="h-3.5 w-3.5 text-indigo-950 animate-pulse" />
-                  <span>Jarves Core v2.0</span>
-                </div>
-                <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-sm border ${
-                  localKey 
-                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
-                    : 'bg-amber-100 text-amber-800 border-amber-300'
-                }`}>
-                  {localKey ? 'DIRECT GATE' : 'SERVER MODE'}
-                </span>
-              </div>
-              <p className="text-[7.5px] font-normal leading-normal normal-case text-slate-600">Active intelligence engine parses natural language queries and extracts precise database parameters to run secure queries.</p>
-              
-              <div className="border-t border-slate-300/60 pt-2.5 space-y-1.5">
-                <label className="text-[8px] font-black text-indigo-950 flex items-center gap-1 uppercase tracking-tight">
-                  <Key className="h-3 w-3 text-indigo-700" />
-                  <span>Configure Direct Key:</span>
-                </label>
-                <div className="flex gap-1">
-                  <input
- id="enter_free_gemini_key_aiz_458" name="enter_free_gemini_key_aiz" aria-label="Enter free Gemini Key (AIzaSy...)"                    type="password"
-                    placeholder="Enter free Gemini Key (AIzaSy...)"
-                    value={localKey}
-                    onChange={(e) => setLocalKey(e.target.value)}
-                    className="flex-1 bg-white border border-slate-400 p-1 text-[8.5px] font-mono font-bold placeholder:normal-case shadow-inner outline-none focus:border-indigo-900"
-                    onKeyDown={(e) => e.key === 'Enter' && saveLocalKey(localKey)}
-                  />
-                  <button
-                    onClick={() => saveLocalKey(localKey)}
-                    className="bg-indigo-950 hover:bg-indigo-900 text-white font-extrabold text-[8.5px] px-2 py-1 uppercase rounded-xs cursor-pointer border border-indigo-900 transition-all active:translate-y-px"
-                  >
-                    Set
-                  </button>
-                  {localKey && (
-                    <button
-                      onClick={() => {
-                        saveLocalKey('');
-                      }}
-                      className="bg-rose-700 hover:bg-rose-600 text-white font-extrabold text-[8.5px] px-1.5 py-1 uppercase rounded-xs cursor-pointer border border-rose-900 transition-all active:translate-y-px"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-                <p className="text-[7px] leading-normal font-medium normal-case text-slate-500">
-                  {localKey 
-                    ? "✓ Saved in private local browser memory. Chatting directly with Google Cloud."
-                    : "No local key set. Running on a static host like GitHub Pages? Standard Express route might be offline. Supply your free Gemini API token above to bypass the server."
-                  }
-                </p>
-              </div>
-            </div>
+          <LegacyFieldset legend="AI Service">
+            <p className="p-2 text-xs">AI requests use your signed-in account. Contact your administrator if the service is unavailable.</p>
           </LegacyFieldset>
         </div>
 

@@ -1,3 +1,4 @@
+import { authFetch } from '../lib/auth';
 import React, { useState, useEffect, useDeferredValue } from 'react';
 import { useLiveAutoRefresh } from '../hooks/useLiveAutoRefresh';
 import { screenDraftService } from '../services/screenDraftService';
@@ -603,7 +604,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         }
       }
 
-      const res = await fetch(getApiUrl("/api/send-email"), {
+      const res = await authFetch(getApiUrl("/api/send-email"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

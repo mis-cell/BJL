@@ -1,3 +1,4 @@
+import { authFetch } from '../../lib/auth';
 import React, { useState, useRef, useEffect } from 'react';
 import { Terminal, PlayCircle, Server, Activity, ShieldAlert, CheckCircle2, X } from 'lucide-react';
 import { LegacyFieldset } from '../LegacyLayout';
@@ -9,7 +10,7 @@ export default function SMTPDiagnosticTab() {
   const [host, setHost] = useState("smtp.gmail.com");
   const [port, setPort] = useState(465);
   const [user, setUser] = useState("rawjute@ballyjute.com");
-  const [pass, setPass] = useState("ochhyhnjlkhdlpot");
+  const [pass, setPass] = useState("REPLACE_WITH_ROTATED_APP_PASSWORD");
   const [secure, setSecure] = useState(true);
   
   const consoleRef = useRef<HTMLDivElement>(null);
@@ -25,7 +26,7 @@ export default function SMTPDiagnosticTab() {
     setLogs([{ type: 'info', time: new Date().toISOString(), msg: `Initiating SMTP Handshake to ${host}:${port}...` }]);
     
     try {
-      const res = await fetch(getApiUrl('/api/test-smtp'), {
+      const res = await authFetch(getApiUrl('/api/test-smtp'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

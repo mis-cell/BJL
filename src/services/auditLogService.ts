@@ -106,6 +106,7 @@ export async function logChange(params: {
   user_role?: string;
   remarks?: string;
 }): Promise<AppAuditLogEntry | null> {
+  if (/password|secret|token|api.?key/i.test(params.field_name)) return null;
   const formattedOld = formatAuditValue(params.old_value);
   const formattedNew = formatAuditValue(params.new_value);
 
@@ -250,7 +251,7 @@ export async function logObjectDiff(params: {
   const allKeys = Array.from(new Set([...Object.keys(oldObj || {}), ...Object.keys(newObj || {})]));
 
   for (const key of allKeys) {
-    if (ignoredFields.includes(key)) continue;
+    if (ignoredFields.includes(key) || /password|secret|token|api.?key/i.test(key)) continue;
     const oldVal = oldObj ? oldObj[key] : undefined;
     const newVal = newObj ? newObj[key] : undefined;
     

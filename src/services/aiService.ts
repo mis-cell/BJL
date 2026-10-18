@@ -1,16 +1,11 @@
+import { authFetch } from '../lib/auth';
 
 import { supabase } from '../lib/supabase';
 import { getApiUrl } from '../lib/utils';
 
-let inMemoryGeminiApiKey = "";
-
-export function setInMemoryGeminiApiKey(key: string) {
-  inMemoryGeminiApiKey = key;
-}
-
-export function getInMemoryGeminiApiKey(): string {
-  return inMemoryGeminiApiKey;
-}
+// Provider keys are configured by the backend administrator only.
+export function setInMemoryGeminiApiKey(_key: string) { throw new Error('Configure the AI key on the backend.'); }
+export function getInMemoryGeminiApiKey(): string { return ''; }
 
 export async function askAI(prompt: string, context?: string) {
   let dynamicContext = context || "The user is browsing the system.";
@@ -255,7 +250,7 @@ export async function askAI(prompt: string, context?: string) {
 
   try {
     console.log("CLIENT: Sending request to /api/chat");
-    const response = await fetch(getApiUrl("/api/chat"), {
+    const response = await authFetch(getApiUrl("/api/chat"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -275,85 +270,6 @@ export async function askAI(prompt: string, context?: string) {
     const data = await response.json();
     return data.text;
   } catch (error: any) {
-    console.warn("CLIENT: API endpoint offline or unreachable. Prompting direct client-side fallback query...", error.message);
-
-    // Retrieve Gemini Key check from in-memory store or pre-built bundler environment
-    const obscureDefault = "AdyNMSSluB-Vu27Ps8xUKr_8w8HPs1AbBySazIA";
-    const getDecodedDefault = () => obscureDefault.split("").reverse().join("");
-
-    let apiKey = getInMemoryGeminiApiKey() || (process as any).env?.GEMINI_API_KEY || getDecodedDefault();
- 
-    // Strip out quotes just in case the key was saved or passed with them
-    apiKey = apiKey.replace(/^["']|["']$/g, '').trim();
- 
-    if (!apiKey) {
-      return `### ⚠️ STATIC HOSTING & CLIENT MODULE LINK MISSING
-Your request was aborted because **Jarves AI** failed to contact the active backend server (\`/api/chat\`). 
-
-**Why has this happened?**
-The current portal is running on a static hosting environment (such as **GitHub Pages**). Static page servers only host compiled single-page files and cannot execute server-side Node.js / Express logic.
-
-**How to correct this for 100% free?**
-To bypass server dependencies, you can route Jarves AI requests safely from your browser to Google Cloud:
-1. Generate a **free** Gemini API key at [Google AI Studio (aistudio.google.com)](https://aistudio.google.com/).
-2. Hover/Click the **"Set Key"** or **"Update Key"** button inside the *API SYSTEM LINK* status bar above in this Jarves Console.
-3. Paste your free key. It will be stored safely in your browser's private local state (\`localStorage\`) to query **gemini-3.5-flash** directly.`;
-    }
- 
-    // Try multiple models, fallback to modern, ultra-stable models if we encounter 503 or transient errors
-    const modelsToTry = ["gemini-3.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"];
-    let lastError: any = null;
-
-    for (const modelName of modelsToTry) {
-      try {
-        const trimmedKey = apiKey.trim();
-        const directTargetUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${trimmedKey}`;
-
-        console.log(`CLIENT FALLBACK: Initiating direct transaction to Google Gemini REST Gateway with model: ${modelName}`);
-        const directResponse = await fetch(directTargetUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: prompt }]
-              }
-            ],
-            systemInstruction: {
-              parts: [{ text: systemInstruction }]
-            }
-          })
-        });
-
-        if (!directResponse.ok) {
-          const errorDetail = await directResponse.text();
-          throw new Error(`Cloud connection rejected: ${directResponse.status} - ${errorDetail || 'Invalid API Token'}`);
-        }
-
-        const rawResult = await directResponse.json();
-        const generatedText = rawResult.candidates?.[0]?.content?.parts?.[0]?.text;
-        
-        if (!generatedText) {
-          throw new Error("Empty candidate parts returned from Google Cloud Service.");
-        }
-
-        return generatedText;
-      } catch (fallbackError: any) {
-        lastError = fallbackError;
-        console.warn(`CLIENT FALLBACK FAILED for model ${modelName}:`, fallbackError.message);
-        // Continue to the next model in the list
-      }
-    }
-
-    console.error("CLIENT SYSTEM FAILURE: Standard gateway and client bypass collapsed", lastError);
-    return `### ❌ INTEL INTEGRATION FAULT
-Double systems failed to process the request:
-1. **Local Express Connection Router:** Unreachable / Static Host Mode.
-2. **Client-side Direct Gateway Fallback:** Failed with: \`${lastError?.message || 'Key Signature Validation Rejected'}\`.
-
-*Please check the accuracy of your Gemini API Token using the "Update Key" control bar above.*`;
+    throw new Error('AI service unavailable. Contact your administrator to check the backend configuration.');
   }
 }
