@@ -20,7 +20,13 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
 }) => {
   if (!isOpen || !viewModalData) return null;
 
-  //alert(JSON.stringify(viewModalData))
+  const settDate = viewModalData.master.sett_date
+  ? new Date(viewModalData.master.sett_date).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    })
+  : "";
 
   return (
     <PrintModal
@@ -46,7 +52,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
           </div>
           <div>
             <span className="text-[10px] text-slate-500 font-bold uppercase block">Settlement Date</span>
-            <span className="font-bold">{viewModalData.master.sett_date || '-'}</span>
+            <span className="font-bold">{settDate || '-'}</span>
           </div>
           <div>
             <span className="text-[10px] text-slate-500 font-bold uppercase block">Purchase Order No</span>
@@ -71,9 +77,15 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
             <span className="font-bold text-slate-700">{viewModalData.master.broker || '-'}</span>
           </div>
           <div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase block">Bill No &amp; Date</span>
+            <span className="text-[10px] text-slate-500 font-bold uppercase block">Pay Bill No</span>
             <span className="font-mono">
-              {viewModalData.master.payable_bill_no ? `${viewModalData.master.payable_bill_no} (${viewModalData.master.payable_bill_date || '-'})` : '-'}
+              {viewModalData.master.payable_bill_no ? `${viewModalData.master.payable_bill_no}` : '-'}
+            </span>
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-500 font-bold uppercase block">Pay Bill Date</span>
+            <span className="font-mono">
+              {settDate || '-'}
             </span>
           </div>
           {/* <div>
@@ -97,6 +109,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                   <th className="p-1.5 border-r border-slate-300">Agency</th>
                   <th className="p-1.5 border-r border-slate-300">Marka</th>
                   <th className="p-1.5 border-r border-slate-300 text-center">Moisture (%)</th>
+                  <th className="p-1.5 border-r border-slate-300 text-center">Dust (%)</th>
                   <th className="p-1.5 border-r border-slate-300 text-center">Grade Down (%)</th>
                   <th className="p-1.5 border-r border-slate-300 text-right">Quantity</th>
                   <th className="p-1.5 border-r border-slate-300 text-right">Weight (MT)</th>
@@ -108,19 +121,25 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                 {viewModalData.details.filter(c => (Number(c.quantity) > 0 || Number(c.arr_qty_wt) > 0 || Number(c.rate_value) > 0) && getColWtMt(c)>0 ).map((col, idx) => {
                   const wtMt = getColWtMt(col);
                   const amt = getColAmount(col);
-                  const moistVal = Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0);
+                  const moistVal = Number(col.moist_claim) > 0 ? Number(col.moist_claim) : Number(col.moist_claim || 0);
+                  const dustVal = Number(col.dust_claim) > 0 ? Number(col.dust_claim) : Number(col.dust_claim || 0);
+                  const marka_crop_val = col.marka_crop.split("/")[0].trim();
+                 //{moistVal > 0 ? `${moistVal.toFixed(2)}%` : (Number(viewModalData.master.summary_rate_wt_claim) > 0 ? `${Number(viewModalData.master.summary_rate_wt_claim).toFixed(2)}%` : '-')}
                   return (
                     <tr key={idx} className="hover:bg-slate-50">
                       <td className="p-1.5 border-r border-slate-200 font-bold">{col.col_index || idx + 1}</td>
                       <td className="p-1.5 border-r border-slate-200 font-bold text-blue-900">{resolveGradeName(col.grade)}</td>
                       <td className="p-1.5 border-r border-slate-200">{col.area || '-'}</td>
                       <td className="p-1.5 border-r border-slate-200">{col.agency || '-'}</td>
-                      <td className="p-1.5 border-r border-slate-200">{col.marka_crop || '-'}</td>
+                      <td className="p-1.5 border-r border-slate-200">{ marka_crop_val || '-'}</td>
                       <td className="p-1.5 border-r border-slate-200 text-center font-mono font-bold text-blue-950">
-                        {moistVal > 0 ? `${moistVal.toFixed(2)}%` : (Number(viewModalData.master.summary_rate_wt_claim) > 0 ? `${Number(viewModalData.master.summary_rate_wt_claim).toFixed(2)}%` : '-')}
+                        {moistVal}
                       </td>
                       <td className="p-1.5 border-r border-slate-200 text-center font-mono font-bold text-blue-950">
-                        {moistVal > 0 ? `${moistVal.toFixed(2)}%` : (Number(viewModalData.master.summary_rate_wt_claim) > 0 ? `${Number(viewModalData.master.summary_rate_wt_claim).toFixed(2)}%` : '-')}
+                        {dustVal}
+                      </td>
+                      <td className="p-1.5 border-r border-slate-200 text-center font-mono font-bold text-blue-950">
+                        {col.gd_claim}
                       </td>
                       <td className="p-1.5 border-r border-slate-200 text-right font-mono">{col.quantity || 0}</td>
                       <td className="p-1.5 border-r border-slate-200 text-right font-mono font-bold">{wtMt.toFixed(3)}</td>
@@ -236,11 +255,11 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
             <p className="font-black text-slate-700 uppercase text-[10px] border-b border-slate-200 pb-1">Final Settlement Outflow</p>
             <div className="flex justify-between">
               <span className="text-slate-600">Less Advance (-):</span>
-              <span className="font-mono font-bold">₹ {Number(viewModalData.master.final_less_adv || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span className="font-mono font-bold">₹ {Number(viewModalData.master.final_on_ac_adv || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-600">On Account Advance (-):</span>
-              <span className="font-mono font-bold">₹ {Number(viewModalData.master.final_on_ac_adv || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span className="font-mono font-bold">₹ {Number(viewModalData.master.final_less_adv || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-600">APMC Fees (-):</span>
