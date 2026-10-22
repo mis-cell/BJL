@@ -20,7 +20,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
 }) => {
   if (!isOpen || !viewModalData) return null;
 
-  alert(JSON.stringify(viewModalData))
+  //alert(JSON.stringify(viewModalData))
 
   return (
     <PrintModal
