@@ -473,11 +473,11 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               disabled
               className="bg-[#f1f5f9] border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-900 shadow-2xs w-full"
               //value={((Number(masterData.arival_apmc_fees) || 0) - (Number(masterData.actual_apmc_fees) || 0)).toFixed(2)}
-              value={Math.max(0,Number((
-                  (Number(masterData.actual_apmc_fees) || 0) -
-                  (Number(masterData.arival_apmc_fees) || 0)
-                ).toFixed(2))
-              )}
+              value={Math.min(
+                0,
+                (Number(masterData.arival_apmc_fees) || 0) -
+                (Number(masterData.actual_apmc_fees) || 0)
+              ).toFixed(2)}
             />
           </div>
 
