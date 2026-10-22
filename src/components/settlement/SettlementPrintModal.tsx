@@ -275,7 +275,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
         {/* Signature Area */}
         <div className="pt-6 grid grid-cols-2 gap-12 text-center text-xs font-bold text-slate-700">
           <div className="border-t border-slate-400 pt-1">Prepared By</div>
-          <div className="border-t border-slate-400 pt-1">Quality Inspector</div>
+          <div className="border-t border-slate-400 pt-1">Authorised Signatory</div>
         </div>
       </div>
     </PrintModal>

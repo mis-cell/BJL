@@ -1940,7 +1940,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const calculatedApmcFees = Number((adjustedMaterialValue * 0.01).toFixed(2));
     const arrivalApmcFees = Number(masterData.arival_apmc_fees) || 0;
     const actualApmcFees = calculatedApmcFees;
-    const finalApmcFees = Number((arrivalApmcFees - actualApmcFees).toFixed(2));
+    //const finalApmcFees = Number((arrivalApmcFees - actualApmcFees).toFixed(2));
+    const finalApmcFees = Math.max( 0,Number((Number(actualApmcFees) - Number(arrivalApmcFees)).toFixed(2)));
 
     // Valuation calculation = Material Value + Add Amt + Premium Amt - Val Less Amt - Qty Claim
     const calculatedValuationVal = Number((
