@@ -258,10 +258,7 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                 <span className="text-[8.5px] text-emerald-800 font-mono">(₹)</span>
               </td>
               {visibleSpecCols.map((idx) => {
-                const colAmt = getColAmount(
-                  detailCols[idx - 1],
-                  Number(masterData.rate_qntl) || Number(selectedPoData?.b_rate) || 0
-                );
+                const colAmt = getColAmount(detailCols[idx - 1]);
                 return (
                   <td key={idx} className="p-1 border-r border-gray-300 text-center font-mono font-bold text-emerald-950 text-[11px] bg-[#eef7f2]">
                     ₹{colAmt.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 0 })}

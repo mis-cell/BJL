@@ -506,32 +506,66 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
   // Derived options for P.O. and P.O.-filtered FA (Final Arrival / MR) searchable dropdowns
   const poOptions = React.useMemo(() => {
-    return purchaseOrders.map((po: any) => {
+    const cleanPo = (s: string) => (s || '').replace(/^#/, '').replace(/[\s\-\/]/g, '').trim().toUpperCase();
+    const boundPoSet = new Set<string>();
+    inspections.forEach((insp: any) => {
+      const p = String(insp.po_no || insp.mill_po_no || insp.contract_no || '').trim().replace(/^#/, '').toUpperCase();
+      if (p && p !== 'NO' && p !== 'N/A' && p !== 'NONE') {
+        boundPoSet.add(p);
+        boundPoSet.add(cleanPo(p));
+      }
+    });
+    purchaseOrders.forEach((po: any) => {
+      const mr = String(po.mr_no || po.final_arrival_no || po.temporary_arrival_no || '').trim().toUpperCase();
+      if (mr && mr !== 'NO' && mr !== 'N/A' && mr !== 'NONE') {
+        const p = String(po.po_no || '').trim().replace(/^#/, '').toUpperCase();
+        if (p) {
+          boundPoSet.add(p);
+          boundPoSet.add(cleanPo(p));
+        }
+      }
+    });
+
+    const boundPos = purchaseOrders.filter((po: any) => {
+      const p = String(po.po_no || '').trim().replace(/^#/, '').toUpperCase();
+      if (!p) return false;
+      if (selectedPoNo && cleanPo(p) === cleanPo(selectedPoNo)) return true;
+      return boundPoSet.has(p) || boundPoSet.has(cleanPo(p));
+    });
+
+    const listToUse = boundPos.length > 0 ? boundPos : purchaseOrders;
+    return listToUse.map((po: any) => {
       const isDone = po.isCompleted || po.status === 'completed' || po.status === 'settled';
       return {
         value: po.po_no,
         label: `#${po.po_no} (${po.supplier || 'PO'})${isDone ? ' - [COMPLETED]' : ''}`
       };
     });
-  }, [purchaseOrders]);
+  }, [purchaseOrders, inspections, selectedPoNo]);
 
   const faOptionsForSelectedPo = React.useMemo(() => {
     if (!selectedPoNo) return [];
 
     const cleanTargetPo = selectedPoNo.trim().replace(/^#/, '').toUpperCase();
+    const cleanPo = (s: string) => (s || '').replace(/^#/, '').replace(/[\s\-\/]/g, '').trim().toUpperCase();
+    const targetPoNormalized = cleanPo(cleanTargetPo);
+    if (!targetPoNormalized) return [];
 
     const matched = inspections.filter((insp: any) => {
       const mrVal = insp.mr_no || insp.final_arrival_no || insp.arrival_no;
       if (!mrVal) return false;
 
-      const inspPo = (insp.po_no || '').trim().replace(/^#/, '').toUpperCase();
-      const cleanPo = (s: string) => (s || '').replace(/^#/, '').replace(/[\s\-\/]/g, '').trim().toUpperCase();
-      const isPoMatch = inspPo === cleanTargetPo ||
-        cleanPo(inspPo) === cleanPo(cleanTargetPo) ||
-        inspPo.includes(cleanTargetPo) ||
-        cleanTargetPo.includes(inspPo) ||
-        (selectedPoData?.id && insp.po_id === selectedPoData.id) ||
-        (selectedPoData?.purchase_order_id && (insp.po_id === selectedPoData.purchase_order_id || insp.purchase_order_id === selectedPoData.purchase_order_id));
+      const inspPo = String(insp.po_no || insp.mill_po_no || insp.contract_no || '').trim().replace(/^#/, '').toUpperCase();
+      if (!inspPo || inspPo === 'NO' || inspPo === 'N/A' || inspPo === 'NONE') return false;
+
+      const inspPoNormalized = cleanPo(inspPo);
+      if (!inspPoNormalized) return false;
+
+      const isPoMatch =
+        inspPo === cleanTargetPo ||
+        inspPoNormalized === targetPoNormalized ||
+        (selectedPoData?.id && insp.po_id && insp.po_id === selectedPoData.id) ||
+        (selectedPoData?.purchase_order_id && insp.po_id && (insp.po_id === selectedPoData.purchase_order_id || insp.purchase_order_id === selectedPoData.purchase_order_id));
 
       if (!isPoMatch) return false;
 
@@ -601,7 +635,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       'payment_master', 
       'temporary_material_received', 
       'sauda_check_point', 
-      'sauda_master'
+      'sauda_master',
+      'clubbed_pomr'
     ] 
   });
 
@@ -639,11 +674,55 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         const payList = payRes.data && payRes.data.length > 0 ? payRes.data : await dbModule.fetchAll('payment_master').catch(() => []);
         setPaymentList(payList);
 
-        // 2. Fetch completed inspections from Mill Inspection Section (material_inspection, final_arrival)
-        const [matInspRes, faRes] = await Promise.all([
+        // 2. Fetch completed inspections from Mill Inspection Section (material_inspection, final_arrival, clubbed_pomr)
+        const [matInspRes, faRes, clubbedRes] = await Promise.all([
           supabase.from('material_inspection').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
           supabase.from('final_arrival').select('*').order('date', { ascending: false }).then(r => r.data || [], () => []),
+          dbModule.fetchAll('clubbed_pomr').catch(() => [])
         ]);
+
+        // Map any bound PO numbers from final_arrival and clubbed_pomr by MR/Arrival number
+        const mrToBoundPoMap = new Map<string, string>();
+        const registerBoundPo = (mrCandidate: any, poCandidate: any) => {
+          const mrStr = String(mrCandidate || '').trim().toUpperCase();
+          const poStr = String(poCandidate || '').trim();
+          const poUpper = poStr.toUpperCase();
+          if (mrStr && poStr && poUpper !== 'NO' && poUpper !== 'N/A' && poUpper !== 'NONE') {
+            if (!mrToBoundPoMap.has(mrStr)) {
+              mrToBoundPoMap.set(mrStr, poStr);
+            }
+          }
+        };
+
+        if (faRes) {
+          for (const fa of faRes) {
+            registerBoundPo(fa.mr_no, fa.po_no || fa.contract_no);
+            registerBoundPo(fa.final_arrival_no, fa.po_no || fa.contract_no);
+            registerBoundPo(fa.arrival_no, fa.po_no || fa.contract_no);
+            registerBoundPo(fa.temporary_arrival_no, fa.po_no || fa.contract_no);
+          }
+        }
+        if (clubbedRes && Array.isArray(clubbedRes)) {
+          for (const c of clubbedRes) {
+            registerBoundPo(c.mr_no, c.po_no);
+          }
+        }
+
+        const resolveBoundPoForItem = (item: any): string => {
+          const existingPo = String(item.po_no || item.mill_po_no || item.contract_no || '').trim();
+          const existingUpper = existingPo.toUpperCase();
+          if (existingPo && existingUpper !== 'NO' && existingUpper !== 'N/A' && existingUpper !== 'NONE') {
+            return existingPo;
+          }
+          const candidates = [item.mr_no, item.final_arrival_no, item.arrival_no, item.temporary_arrival_no, item.ref_arrival_no];
+          for (const cand of candidates) {
+            const key = String(cand || '').trim().toUpperCase();
+            if (key && mrToBoundPoMap.has(key)) {
+              return mrToBoundPoMap.get(key)!;
+            }
+          }
+          return '';
+        };
 
         const combinedInspections: any[] = [];
         const seenMrNos = new Set<string>();
@@ -654,7 +733,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             const mrKey = item.mr_no || item.arrival_no || item.final_arrival_no;
             if (mrKey && !seenMrNos.has(mrKey)) {
               seenMrNos.add(mrKey);
-              combinedInspections.push(item);
+              const boundPo = resolveBoundPoForItem(item);
+              combinedInspections.push(boundPo ? { ...item, po_no: boundPo } : item);
             }
           }
         }
@@ -667,7 +747,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
               seenMrNos.add(mrKey);
               if (!item.mr_no) item.mr_no = mrKey;
               if (!item.final_arrival_no) item.final_arrival_no = mrKey;
-              combinedInspections.push(item);
+              const boundPo = resolveBoundPoForItem(item);
+              combinedInspections.push(boundPo ? { ...item, po_no: boundPo } : item);
             }
           }
         }
@@ -682,7 +763,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                 const mrKey = item.mr_no || item.arrival_no || item.final_arrival_no;
                 if (mrKey && !seenMrNos.has(mrKey)) {
                   seenMrNos.add(mrKey);
-                  combinedInspections.push(item);
+                  const boundPo = resolveBoundPoForItem(item);
+                  combinedInspections.push(boundPo ? { ...item, po_no: boundPo } : item);
                 }
               });
             }
@@ -1498,8 +1580,28 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             ? inspDeductionAmount
             : ((Number(existingMaster.summary_deduction_amount) > 0) ? existingMaster.summary_deduction_amount : inspDeductionAmount);
 
+          const toMtWeight = (primaryVal: any, fallbackQtlVal?: any): number => {
+            const p = Number(primaryVal) || 0;
+            if (p > 0) {
+              if (p > 500) return Number((p / 1000).toFixed(3));
+              if (p > 50) return Number((p / 10).toFixed(3));
+              return Number(p.toFixed(3));
+            }
+            const q = Number(fallbackQtlVal) || 0;
+            if (q > 0) {
+              return Number((q / 10).toFixed(3));
+            }
+            return 0;
+          };
+
           const mergedMaster = {
             ...existingMaster,
+            challan_weight: toMtWeight(existingMaster.challan_weight || faMaster?.challan_material_weight || inspMaster?.challan_material_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
+            supplier_net_wt: toMtWeight(existingMaster.supplier_net_wt || faMaster?.supplier_net_weight || inspMaster?.supplier_net_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
+            electronic_scale_net: toMtWeight(existingMaster.electronic_scale_net || faMaster?.electronic_net_weight || inspMaster?.electronic_net_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
+            wt_ded_wt_1: toMtWeight(existingMaster.wt_ded_wt_1 || existingMaster.challan_weight || faMaster?.challan_material_weight || inspMaster?.challan_material_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
+            wt_ded_wt_2: toMtWeight(existingMaster.wt_ded_wt_2 || existingMaster.supplier_net_wt || faMaster?.supplier_net_weight || inspMaster?.supplier_net_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
+            wt_ded_wt_3: toMtWeight(existingMaster.wt_ded_wt_3 || existingMaster.electronic_scale_net || faMaster?.electronic_net_weight || inspMaster?.electronic_net_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
             summary_deduction_type: existingMaster.summary_deduction_type || deductionSummaryText || '',
             summary_deduction_rate: (Number(existingMaster.summary_deduction_rate) > 0) ? existingMaster.summary_deduction_rate : inspDeductionRate,
             summary_deduction_qty: (Number(existingMaster.summary_deduction_qty) > 0) ? existingMaster.summary_deduction_qty : (inspDeductionQty || (deductionSummaryText ? 1 : 0)),
@@ -1594,10 +1696,37 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         }
       }
 
+      const toMtWeightNew = (primaryVal: any, fallbackQtlVal?: any): number => {
+        const p = Number(primaryVal) || 0;
+        if (p > 0) {
+          if (p > 500) return Number((p / 1000).toFixed(3));
+          if (p > 50) return Number((p / 10).toFixed(3));
+          return Number(p.toFixed(3));
+        }
+        const q = Number(fallbackQtlVal) || 0;
+        if (q > 0) {
+          return Number((q / 10).toFixed(3));
+        }
+        return 0;
+      };
+
       // 2. Build new settlement from final_arrival / mill_inspection_master
       if (faMaster || inspMaster) {
         setIsEdit(false);
         const resolvedMrNo = faMaster?.mr_no || faMaster?.final_arrival_no || inspMaster?.mr_no || inspMaster?.arrival_no || targetMrNo;
+
+        const challanMt = toMtWeightNew(
+          faMaster?.challan_material_weight || inspMaster?.challan_material_weight,
+          faMaster?.weight_qtl || inspMaster?.weight_qtl
+        );
+        const supplierNetMt = toMtWeightNew(
+          faMaster?.supplier_net_weight || inspMaster?.supplier_net_weight || ((Number(faMaster?.supplier_challan_gross) || 0) - (Number(faMaster?.supplier_tare_weight) || 0)),
+          faMaster?.weight_qtl || inspMaster?.weight_qtl
+        );
+        const electronicNetMt = toMtWeightNew(
+          faMaster?.electronic_net_weight || inspMaster?.electronic_net_weight || ((Number(faMaster?.electronic_gross_weight) || 0) - (Number(faMaster?.electronic_tare_weight) || 0)),
+          faMaster?.weight_qtl || inspMaster?.weight_qtl
+        );
 
         const prefilledMaster: SettlementMaster = {
           ...initialMaster(),
@@ -1613,18 +1742,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           arrival_no: faMaster?.final_arrival_no || faMaster?.arrival_no || inspMaster?.arrival_no || '',
           arrival_date: formatToInputDate(faMaster?.date || faMaster?.arrival_date || inspMaster?.arrival_date) || '',
           remarks: faMaster?.remarks || inspMaster?.remarks || '',
-          challan_weight: Number(faMaster?.challan_material_weight || faMaster?.weight_qtl || inspMaster?.challan_material_weight || inspMaster?.weight_qtl) || 0,
-          supplier_net_wt: Number(faMaster?.supplier_net_weight || faMaster?.weight_qtl || inspMaster?.supplier_net_weight || inspMaster?.weight_qtl) || 0,
-          electronic_scale_net: Number(faMaster?.electronic_net_weight || faMaster?.weight_qtl || inspMaster?.electronic_net_weight || inspMaster?.weight_qtl) || 0,
-          wt_ded_wt_1: Number(faMaster?.challan_material_weight || inspMaster?.challan_material_weight || faMaster?.weight_qtl || inspMaster?.weight_qtl || 0) > 50 
-            ? Number(((Number(faMaster?.challan_material_weight || inspMaster?.challan_material_weight || faMaster?.weight_qtl || inspMaster?.weight_qtl || 0)) / 10).toFixed(3))
-            : Number(Number(faMaster?.challan_material_weight || inspMaster?.challan_material_weight || faMaster?.weight_qtl || inspMaster?.weight_qtl || 0).toFixed(3)),
-          wt_ded_wt_2: Number(faMaster?.supplier_net_weight || inspMaster?.supplier_net_weight || 0) > 50
-            ? Number(((Number(faMaster?.supplier_net_weight || inspMaster?.supplier_net_weight || 0)) / 10).toFixed(3))
-            : Number(Number(faMaster?.supplier_net_weight || inspMaster?.supplier_net_weight || 0).toFixed(3)),
-          wt_ded_wt_3: Number(faMaster?.electronic_net_weight || inspMaster?.electronic_net_weight || 0) > 50
-            ? Number(((Number(faMaster?.electronic_net_weight || inspMaster?.electronic_net_weight || 0)) / 10).toFixed(3))
-            : Number(Number(faMaster?.electronic_net_weight || inspMaster?.electronic_net_weight || 0).toFixed(3)),
+          challan_weight: challanMt,
+          supplier_net_wt: supplierNetMt,
+          electronic_scale_net: electronicNetMt,
+          wt_ded_wt_1: challanMt,
+          wt_ded_wt_2: supplierNetMt,
+          wt_ded_wt_3: electronicNetMt,
           summary_deduction_type: deductionSummaryText || '',
           summary_deduction_rate: inspDeductionRate,
           summary_deduction_qty: inspDeductionQty > 0 ? inspDeductionQty : (deductionSummaryText ? 1 : 0),
@@ -1704,6 +1827,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
 
       setIsEdit(false);
+      const fbChallanMt = toMtWeightNew(inspMaster.challan_material_weight, inspMaster.weight_qtl);
+      const fbSupplierMt = toMtWeightNew(inspMaster.supplier_net_weight, inspMaster.weight_qtl);
+      const fbElectronicMt = toMtWeightNew(inspMaster.electronic_net_weight, inspMaster.weight_qtl);
+
       const prefilledMaster: SettlementMaster = {
         ...initialMaster(),
         mr_no: inspMaster.mr_no || '',
@@ -1719,18 +1846,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         arrival_no: inspMaster.arrival_no || '',
         arrival_date: formatToInputDate(inspMaster.arrival_date) || '',
         remarks: inspMaster.remarks || '',
-        challan_weight: Number(inspMaster.challan_material_weight || inspMaster.weight_qtl || 0),
-        supplier_net_wt: Number(inspMaster.supplier_net_weight || inspMaster.weight_qtl || 0),
-        electronic_scale_net: Number(inspMaster.electronic_net_weight || inspMaster.weight_qtl || 0),
-        wt_ded_wt_1: Number(inspMaster.challan_material_weight || inspMaster.weight_qtl || 0) > 50 
-          ? Number(((Number(inspMaster.challan_material_weight || inspMaster.weight_qtl || 0)) / 10).toFixed(3))
-          : Number(Number(inspMaster.challan_material_weight || inspMaster.weight_qtl || 0).toFixed(3)),
-        wt_ded_wt_2: Number(inspMaster.supplier_net_weight || 0) > 50
-          ? Number(((Number(inspMaster.supplier_net_weight || 0)) / 10).toFixed(3))
-          : Number(Number(inspMaster.supplier_net_weight || 0).toFixed(3)),
-        wt_ded_wt_3: Number(inspMaster.electronic_net_weight || 0) > 50
-          ? Number(((Number(inspMaster.electronic_net_weight || 0)) / 10).toFixed(3))
-          : Number(Number(inspMaster.electronic_net_weight || 0).toFixed(3)),
+        challan_weight: fbChallanMt,
+        supplier_net_wt: fbSupplierMt,
+        electronic_scale_net: fbElectronicMt,
+        wt_ded_wt_1: fbChallanMt,
+        wt_ded_wt_2: fbSupplierMt,
+        wt_ded_wt_3: fbElectronicMt,
         summary_deduction_type: deductionSummaryText || '',
         summary_deduction_rate: inspDeductionRate,
         summary_deduction_qty: inspDeductionQty > 0 ? inspDeductionQty : (deductionSummaryText ? 1 : 0),
@@ -1885,12 +2006,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       ? Number(masterData.summary_delivery_claim)
       : autoDeliveryClaimAmt;
 
-    // 1. Grand Total = Sum of Gross Column Values (WT in MT * Recon Rate)
-    let grandTotal = 0;
-    detailCols.forEach(col => {
-      const calculatedValueCol = getColAmount(col, nextRatePerMt);
-      grandTotal += calculatedValueCol;
+    // 1. Grand Total = Sum of Gross Column Values from active visible columns (matching Grand Total card)
+    const grandTotal = visibleSpecCols.reduce((sum, idx) => sum + getColAmount(detailCols[idx - 1]), 0);
 
+    detailCols.forEach(col => {
       // Total Claim calculation for column: Grade Down (%) + Moisture (%) + Dust (%) + NCV (%)
       const gdVal = Number(col.gd_sett) > 0 ? Number(col.gd_sett) : Number(col.gd_claim || 0);
       const mVal = Number(col.moist_sett) > 0 ? Number(col.moist_sett) : Number(col.moist_claim || 0);
@@ -1906,16 +2025,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       totalQtyWeightClaims += colClaimValue;
     });
 
-    if (grandTotal <= 0 && totalArrWeightMt > 0 && nextRatePerMt > 0) {
-      grandTotal = Number((totalArrWeightMt * nextRatePerMt).toFixed(2));
-    }
-
     // Material valuation summaries
     const finalExShort = Number(masterData.val_ex_short) || 0;
     const finalLessAmount = 0;
     const calculatedDeductionAmount = Number(masterData.summary_deduction_amount) || 0;
 
-    // 2. Material Value / Grand Total
+    // 2. Material Value / Grand Total (Show only Grand Total value)
     const calculatedMaterialValue = Number(grandTotal.toFixed(2));
 
     // Calculate Premium Amount: Premium Rate (₹/Qtl) * Premium WT (in Qtl)
@@ -2031,7 +2146,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       return prev;
     });
 
-  }, [detailCols, masterData.electronic_scale_net, masterData.summary_rate_aff_cd_cl, masterData.summary_rate_qtel, masterData.summary_premium_amount, masterData.summary_premium_wt, masterData.summary_deduction_amount, masterData.summary_delivery_claim, masterData.val_add_amt, masterData.val_less_amt, masterData.val_qty_claim, masterData.val_ex_short, masterData.summary_less_amount, masterData.final_less_adv, masterData.final_on_ac_adv, masterData.final_cst_pct_amt, masterData.actual_apmc_fees, masterData.arival_apmc_fees, masterData.arrival_date, masterData.sett_date, selectedPoData]);
+  }, [detailCols, visibleSpecCols, masterData.electronic_scale_net, masterData.summary_rate_aff_cd_cl, masterData.summary_rate_qtel, masterData.summary_premium_amount, masterData.summary_premium_wt, masterData.summary_deduction_amount, masterData.summary_delivery_claim, masterData.val_add_amt, masterData.val_less_amt, masterData.val_qty_claim, masterData.val_ex_short, masterData.summary_less_amount, masterData.final_less_adv, masterData.final_on_ac_adv, masterData.final_cst_pct_amt, masterData.actual_apmc_fees, masterData.arival_apmc_fees, masterData.arrival_date, masterData.sett_date, selectedPoData]);
 
   // Handle master updates
   const handleMasterChange = (field: keyof SettlementMaster, value: any) => {

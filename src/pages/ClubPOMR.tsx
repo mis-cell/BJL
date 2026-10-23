@@ -218,6 +218,22 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
         ).catch(() => {});
       }
 
+      // Also update material_inspection and mill_inspection_master for this arrival/MR so Settlement links it directly
+      const candidateMrKeys = Array.from(new Set([
+        faNo,
+        selectedArrivalForBind.mr_no,
+        selectedArrivalForBind.final_arrival_no,
+        selectedArrivalForBind.arrival_no,
+        selectedArrivalForBind.temporary_arrival_no
+      ].filter(Boolean)));
+
+      for (const mrKey of candidateMrKeys) {
+        await dbModule.update('material_inspection', 'mr_no', mrKey, { po_no: poNo }).catch(() => {});
+        await dbModule.update('material_inspection', 'arrival_no', mrKey, { po_no: poNo }).catch(() => {});
+        await dbModule.update('mill_inspection_master', 'mr_no', mrKey, { po_no: poNo }).catch(() => {});
+        await dbModule.update('mill_inspection_master', 'arrival_no', mrKey, { po_no: poNo }).catch(() => {});
+      }
+
       // 2. Update sauda_check_point & purchase_master
       await dbModule.update('sauda_check_point', 'po_no', poNo, { 
         mr_no: faNo, 
