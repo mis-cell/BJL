@@ -3,7 +3,7 @@ import { dbModule } from '../../services/dbModule';
 import { poService } from '../../services/poService';
 import { supabase } from '../../lib/supabase';
 import { getApiUrl, canDeleteData } from '../../lib/utils';
-import { getCurrentUserContext, isUserAdmin, isL5OrAdmin } from '../../lib/permissions';
+import { getCurrentUserContext, isUserAdmin, isL5OrAdmin, isUserId2, isLevel4OrAbove } from '../../lib/permissions';
 import { generatePoPdf, downloadPoPdfFile } from '../../utils/purchaseOrderPdfGenerator';
 import { generatePoHtmlEmail } from './PoPrintSlipHelper';
 import { EmailPreviewState } from './PoEmailPreviewModal';
@@ -335,6 +335,13 @@ export function usePurchaseOrderOperations({
   };
 
   const handleDeletePo = async (poNo: string) => {
+    const userCtx = getCurrentUserContext();
+    const isUser002Only = isUserId2(userCtx) && !isLevel4OrAbove(userCtx);
+    if (isUser002Only && isTempPo) {
+      alert("🔒 Access Denied: Only Level 4 users or Admin can delete saved records in Sauda Check Point.");
+      return;
+    }
+
     if (!canDeleteData()) {
       setEmailNotification({
         type: 'warning',

@@ -31,7 +31,7 @@ import {
 import { cn } from '../../lib/utils';
 import { PaginationControls } from '../PaginationControls';
 import { calculateWeightTolerance } from '../../lib/weightTolerance';
-import { getCurrentUserContext, isUserAdmin, isL5OrAdmin } from '../../lib/permissions';
+import { getCurrentUserContext, isUserAdmin, isL5OrAdmin, isUserId2, isLevel4OrAbove } from '../../lib/permissions';
 import { PoHistogramHistoryModal } from './PoHistogramHistoryModal';
 
 export interface PurchaseOrderRegisterViewProps {
@@ -579,6 +579,12 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                      onDoubleClick={() => { 
                         if (!isVoid) {
                            const userCtx = getCurrentUserContext();
+                           const isUser002Only = isUserId2(userCtx) && !isLevel4OrAbove(userCtx);
+                           if (isUser002Only && isTempPo) {
+                             alert("🔒 Access Denied: Only Level 4 or Admin can edit saved records in Sauda Check Point Dashboard.");
+                             return;
+                           }
+
                            const currentUserRole = (userCtx?.userRole || (userCtx as any)?.role || "USER").toUpperCase();
                            const currentUserLevel = (userCtx?.userLevel || (userCtx as any)?.level || "L1").toUpperCase();
                            const isAdminUser = isUserAdmin(userCtx) || currentUserRole === "ADMIN" || currentUserRole === "ADMINISTRATOR" || Boolean((userCtx as any)?.isAdmin) || currentUserLevel === "ADMIN" || currentUserLevel === "L5" || isL5OrAdmin();

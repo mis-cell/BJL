@@ -762,6 +762,14 @@ export function isL5OrAdmin(): boolean {
   return isUserAdmin() || level === 'L5' || level === 'L4';
 }
 
+export function isLevel4OrAbove(roleOrContext?: any): boolean {
+  const ctx = (roleOrContext && typeof roleOrContext === 'object') ? roleOrContext : getCurrentUserContext();
+  if (isUserAdmin(ctx)) return true;
+  const level = String(ctx?.userLevel || (ctx as any)?.level || '').trim().toUpperCase();
+  const role = String(ctx?.userRole || (ctx as any)?.role || '').trim().toUpperCase();
+  return level === 'L4' || level === 'L5' || level === 'MAX' || role === 'ADMIN' || role === 'ADMINISTRATOR' || role === 'SUPER_ADMIN';
+}
+
 export function isUserId10(roleOrContext?: any): boolean {
   let uid = '';
   let uname = '';

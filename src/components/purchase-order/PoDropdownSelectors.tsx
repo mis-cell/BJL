@@ -451,7 +451,8 @@ export const DualComboBox = ({
   hasSaudaHighlight = false,
   isRequired = false,
   placeholder = "-- TYPE TO SEARCH --",
-  label = ""
+  label = "",
+  disabled = false
 }: {
   code: string;
   name: string;
@@ -465,6 +466,7 @@ export const DualComboBox = ({
   isRequired?: boolean;
   placeholder?: string;
   label?: string;
+  disabled?: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -648,6 +650,7 @@ export const DualComboBox = ({
 
   // Background and border styling consistent with standard field color rules
   const getContainerBg = () => {
+    if (disabled) return "bg-slate-100 border-slate-300 text-slate-400";
     if (isInvalid) return "bg-[#FDE7E6] border-rose-500 ring-1 ring-rose-300";
     if (isRequired) return "bg-[#FDE7E6] border-rose-300";
     if (hasSaudaHighlight) return "bg-[#FDE7E6] border-sky-300";
@@ -655,6 +658,7 @@ export const DualComboBox = ({
   };
 
   const getTextColor = () => {
+    if (disabled) return "text-slate-400";
     if (isInvalid || isRequired) return "text-slate-900";
     if (hasSaudaHighlight) return "text-sky-950 font-bold";
     return "text-slate-800";
@@ -669,9 +673,12 @@ export const DualComboBox = ({
             aria-label={`${label || 'Field'} Code`}
             type="text"
             readOnly
+            disabled={disabled}
             placeholder="CODE"
             className={`w-16 p-0.5 outline-none border text-center font-bold font-mono text-xs transition-colors duration-150 cursor-pointer ${
-              hasSaudaHighlight
+              disabled
+                ? "bg-slate-100 border-slate-300 text-slate-400"
+                : hasSaudaHighlight
                 ? "bg-[#FDE7E6] border-sky-300 text-sky-950"
                 : isRequired
                 ? "bg-[#FDE7E6] border-rose-300 text-slate-900"
@@ -679,8 +686,10 @@ export const DualComboBox = ({
             }`}
             value={code || (selectedOption ? selectedOption[codeField] : '')}
             onClick={() => {
-              setIsOpen(true);
-              inputRef.current?.focus();
+              if (!disabled) {
+                setIsOpen(true);
+                inputRef.current?.focus();
+              }
             }}
             title="Auto-filled Code from selection"
           />
@@ -691,29 +700,32 @@ export const DualComboBox = ({
             id={`search_${(nameField || 'field')}_${Math.random().toString(36).substring(2, 6)}`}
             aria-label={label || placeholder}
             type="text"
+            disabled={disabled}
             className={`flex-1 p-0.5 outline-none text-left bg-transparent uppercase font-semibold text-xs pr-1 ${getTextColor()}`}
             value={searchQuery}
             placeholder={placeholder}
             autoComplete="off"
             onChange={(e) => {
+              if (disabled) return;
               const upperVal = e.target.value.toUpperCase();
               setSearchQuery(upperVal);
               setIsTyping(true);
               setIsOpen(true);
               setHighlightedIndex(0);
               setShowInvalidError(false);
-              // Note: strictly do NOT call onNameChange here, as manual typing is for search only!
             }}
             onFocus={() => {
-              setIsOpen(true);
-              setHighlightedIndex(-1);
+              if (!disabled) {
+                setIsOpen(true);
+                setHighlightedIndex(-1);
+              }
             }}
             onKeyDown={handleKeyDown}
           />
 
           {/* Action buttons inside input */}
           <div className="flex items-center gap-0.5 pr-1">
-            {name && (
+            {name && !disabled && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -736,15 +748,20 @@ export const DualComboBox = ({
 
             <button
               type="button"
+              disabled={disabled}
               onClick={() => {
-                setIsOpen(!isOpen);
-                if (!isOpen) {
-                  setHighlightedIndex(-1);
-                  inputRef.current?.focus();
+                if (!disabled) {
+                  setIsOpen(!isOpen);
+                  if (!isOpen) {
+                    setHighlightedIndex(-1);
+                    inputRef.current?.focus();
+                  }
                 }
               }}
               className={`p-0.5 rounded cursor-pointer transition-colors ${
-                hasSaudaHighlight
+                disabled
+                  ? "text-slate-300"
+                  : hasSaudaHighlight
                   ? "text-sky-800 hover:text-sky-950"
                   : "text-slate-500 hover:text-slate-800"
               }`}
@@ -756,7 +773,7 @@ export const DualComboBox = ({
           </div>
         </div>
 
-        {isOpen && (
+        {isOpen && !disabled && (
           <div
             ref={listRef}
             className={`absolute top-full ${showCode ? 'left-17' : 'left-0'} right-0 bg-white border border-slate-400 shadow-2xl z-[150] max-h-52 overflow-y-auto mt-0.5 rounded-sm`}

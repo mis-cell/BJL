@@ -158,6 +158,28 @@ export function getAgenciesForArea(selectedAreaCodeOrName: string | null | undef
 }
 
 /**
+ * Returns deduplicated agencies for an area by unique AGENCY_NAME without codes.
+ */
+export function getUniqueAgenciesForArea(selectedAreaCodeOrName: string | null | undefined): MappedAgency[] {
+  const all = getAgenciesForArea(selectedAreaCodeOrName);
+  const uniqueMap = new Map<string, MappedAgency>();
+
+  all.forEach(item => {
+    let name = String(item.AGENCY_NAME || item.agency_name || item.name || '').trim();
+    // Clean agency name: strip trailing "(Code X)", "Code X", or trailing numbers after "No agency"
+    name = name.replace(/\s*\(Code\s*\d+\)$/i, '').replace(/\s*Code\s*\d+$/i, '').trim();
+    if (name) {
+      const norm = name.toUpperCase();
+      if (!uniqueMap.has(norm)) {
+        uniqueMap.set(norm, { ...item, AGENCY_NAME: name, agency_name: name, name: name });
+      }
+    }
+  });
+
+  return Array.from(uniqueMap.values()).sort((a, b) => a.AGENCY_NAME.localeCompare(b.AGENCY_NAME));
+}
+
+/**
  * Validates whether an AREA_CODE / AREA_NAME and AGENCY_CODE / AGENCY_NAME combination exists in area_logic.
  */
 export function validateAreaAgencyCombination(

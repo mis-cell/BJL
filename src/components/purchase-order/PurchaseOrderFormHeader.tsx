@@ -2,7 +2,7 @@ import React from "react";
 import { LegacyFieldset } from "../LegacyLayout";
 import { SingleComboBox, SearchablePoContractDropdown, DualComboBox } from "./PoDropdownSelectors";
 import { PoFormData } from "../../types/purchaseOrder";
-import { Calculator } from "lucide-react";
+import { getCurrentUserContext, isUserId2, isLevel4OrAbove } from "../../lib/permissions";
 import { getAgenciesForArea } from "../../services/areaLogicService";
 
 export interface PurchaseOrderFormHeaderProps {
@@ -52,10 +52,19 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
   setIsCalcOpen,
   lookupSattaBaseRate,
 }) => {
+  const userCtx = getCurrentUserContext();
+  const isUser002Only = isUserId2(userCtx) && !isLevel4OrAbove(userCtx);
+  const isReadOnlyForUser002 = isUser002Only && !formData.is_ptf;
+
   return (
             <LegacyFieldset legend="Purchase Order Information Header">
               <div className="grid grid-cols-12 gap-x-2 gap-y-1">
-                {isSaudaActive && (
+                {isReadOnlyForUser002 && (
+                  <div className="col-span-12 mb-1 p-1.5 bg-amber-50 border border-amber-300 text-[10.5px] text-amber-900 flex items-center gap-1.5 font-semibold rounded-sm">
+                    <span>🔒 User 002 Notice: In P.O Contract Mode, fields are populated from approved Sauda. Select P.O Contract dropdown option to save. (Check P.T.F Mode for direct edit).</span>
+                  </div>
+                )}
+                {isSaudaActive && !isReadOnlyForUser002 && (
                   <div className="col-span-12 mb-1 p-1 bg-amber-50 border border-amber-300 text-[10px] text-amber-850 flex items-center gap-1.5 font-normal rounded-sm">
                     <span className="font-bold">⚡ Sauda Live Link Connected:</span> Sauda details automatically pull into form fields below.
                   </div>
@@ -174,6 +183,7 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                     hasSaudaHighlight={isSaudaActive} 
                     showCode={false} 
                     isRequired={true}
+                    disabled={isReadOnlyForUser002}
                     label="Broker"
                     placeholder="-- SEARCH OR SELECT BROKER * --"
                     code={formData.broker_code} 
@@ -191,6 +201,7 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                     hasSaudaHighlight={isSaudaActive} 
                     showCode={false} 
                     isRequired={true}
+                    disabled={isReadOnlyForUser002}
                     label="Supplier"
                     placeholder="-- SEARCH OR SELECT SUPPLIER * --"
                     code={formData.supplier_code} 
@@ -210,6 +221,7 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                      hasSaudaHighlight={isSaudaActive} 
                      showCode={false} 
                      isRequired={false}
+                     disabled={isReadOnlyForUser002}
                      label="Challan Supplier"
                      placeholder="-- SEARCH OR SELECT CHALLAN SUPPLIER --"
                      code={formData.challan_supplier_code} 
@@ -229,6 +241,7 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                     hasSaudaHighlight={isSaudaActive} 
                     showCode={true}
                     isRequired={true}
+                    disabled={isReadOnlyForUser002}
                     label="Area"
                     placeholder="-- SEARCH OR SELECT AREA * --"
                     code={formData.area_code} 

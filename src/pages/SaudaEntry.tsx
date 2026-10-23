@@ -1257,42 +1257,7 @@ export default function SaudaEntry({
           </div>
         )}
 
-        {/* 3. Rejected Contract Alert Banner with Mandatory Remarks */}
-        {!isContractApproved && isRejectedContract && (
-          <div className="bg-rose-50 border-2 border-rose-400 rounded-xl p-4 shadow-md animate-in fade-in space-y-2.5">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <span className="bg-rose-700 text-white font-black text-[11px] px-2.5 py-0.5 rounded tracking-wider uppercase shadow-2xs">
-                  REJECTED BY USER 010 (CHECKER)
-                </span>
-                <span className="text-xs font-bold text-rose-900">
-                  Returned to User 002 for Correction
-                </span>
-                {initialData?.resubmission_count ? (
-                  <span className="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded">
-                    Resubmission #{initialData.resubmission_count}
-                  </span>
-                ) : null}
-              </div>
-              {initialData?.rejected_at && (
-                <span className="text-[11px] font-mono text-rose-700 bg-rose-100 px-2 py-0.5 rounded border border-rose-300">
-                  Rejected on: {new Date(initialData.rejected_at).toLocaleString('en-GB')}
-                </span>
-              )}
-            </div>
-            <div className="bg-white border-2 border-rose-300 rounded-xl p-3.5 text-xs text-rose-950 shadow-xs">
-              <p className="font-black text-rose-900 uppercase tracking-wide text-[10px] mb-1 flex items-center gap-1.5">
-                <span>⚠ Mandatory Rejection Remarks from User 010:</span>
-              </p>
-              <p className="font-bold text-rose-800 text-sm italic bg-rose-50/60 p-2.5 rounded-lg border border-rose-200">
-                "{initialData?.rejection_remarks || 'Mistakes identified in submitted data. Please correct all details and resubmit for approval.'}"
-              </p>
-            </div>
-            <p className="text-xs text-rose-800 font-semibold">
-              ✎ User 002: Please correct the mistakes based on the remarks above, and click <strong className="font-extrabold text-rose-950 uppercase">"RESUBMIT FOR APPROVAL"</strong> at the bottom of the form.
-            </p>
-          </div>
-        )}
+
 
         {/* 4. Checker Review Mode Notice for User 010 */}
         {isUser010 && initialData && !isContractApproved && (

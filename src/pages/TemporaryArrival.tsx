@@ -3,7 +3,7 @@ import { TemporaryArrivalGrid } from "../components/temporary-arrival/TemporaryA
 import { TemporaryArrivalWeightCard } from "../components/temporary-arrival/TemporaryArrivalWeightCard";
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLiveAutoRefresh, notifyDataChanged } from '../hooks/useLiveAutoRefresh';
-import { getAgenciesForArea, validateAreaAgencyCombination } from '../services/areaLogicService';
+import { getAgenciesForArea, getUniqueAgenciesForArea, validateAreaAgencyCombination } from '../services/areaLogicService';
 import { 
   Save, 
   X, 
@@ -205,7 +205,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
   const filteredArrivalAgencies = useMemo(() => {
     const currentArea = (formData.arrival_area_name || formData.arrival_area_code || '').trim();
     if (!currentArea) return [];
-    return getAgenciesForArea(currentArea);
+    return getUniqueAgenciesForArea(currentArea);
   }, [formData.arrival_area_name, formData.arrival_area_code]);
 
   useEffect(() => {
@@ -848,13 +848,13 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           const markaName = matchingMarka ? matchingMarka.marka_name : (rawMarka || 'NO MARK');
           const markaCode = matchingMarka ? matchingMarka.marka_code : (rawMarka || '01');
 
-          const rawAgency = String(fd.agency_code || fd.agency_name || fd.agency || '').trim();
+          const rawAgency = String(fd.agency_name || fd.agency || fd.agency_code || '').trim().replace(/\s*\(Code\s*\d+\)$/i, '').replace(/\s*Code\s*\d+$/i, '').trim();
           const matchingAgency = agencies.find(a =>
-            String(a.agency_code || '').trim().toUpperCase() === rawAgency.toUpperCase() ||
-            String(a.agency_name || '').trim().toUpperCase() === rawAgency.toUpperCase()
+            String(a.agency_code || a.AGENCY_CODE || '').trim().toUpperCase() === rawAgency.toUpperCase() ||
+            String(a.agency_name || a.AGENCY_NAME || '').trim().replace(/\s*\(Code\s*\d+\)$/i, '').toUpperCase() === rawAgency.toUpperCase()
           );
-          const agencyName = matchingAgency ? matchingAgency.agency_name : rawAgency;
-          const agencyCode = matchingAgency ? matchingAgency.agency_code : rawAgency;
+          const agencyName = matchingAgency ? (matchingAgency.agency_name || matchingAgency.AGENCY_NAME) : rawAgency;
+          const agencyCode = matchingAgency ? (matchingAgency.agency_code || matchingAgency.AGENCY_CODE) : (fd.agency_code || rawAgency);
 
           const weightVal = parseFloat(fd.weight_mt || fd.netto_pnto || fd.weight || fd.weight_reduced || (fd.weight_qtl ? (parseFloat(fd.weight_qtl) / 10) : 0) || 0) || 0;
           const qtyVal = parseInt(fd.quantity || fd.quantity_rcpt || fd.quantity_chln || 0, 10) || 0;
@@ -972,14 +972,14 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       }
 
       if (field === 'agency_name') {
-        const inputVal = (value || '').trim().toUpperCase();
-        const foundAgency = agencies.find(a => (a.agency_name || '').trim().toUpperCase() === inputVal);
+        const inputVal = (value || '').trim().replace(/\s*\(Code\s*\d+\)$/i, '').replace(/\s*Code\s*\d+$/i, '').trim().toUpperCase();
+        const foundAgency = agencies.find(a => (a.agency_name || a.AGENCY_NAME || '').trim().replace(/\s*\(Code\s*\d+\)$/i, '').toUpperCase() === inputVal);
         if (foundAgency) {
-          updated[index].agency_code = foundAgency.agency_code || '';
-          updated[index].agency_name = foundAgency.agency_name;
+          updated[index].agency_code = foundAgency.agency_code || foundAgency.AGENCY_CODE || '';
+          updated[index].agency_name = foundAgency.agency_name || foundAgency.AGENCY_NAME;
         } else {
           updated[index].agency_code = updated[index].agency_code || '';
-          updated[index].agency_name = value ? value.toUpperCase() : '';
+          updated[index].agency_name = value ? inputVal : '';
         }
       }
 
@@ -2346,9 +2346,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
           <datalist id="agencies_list">
             {filteredArrivalAgencies.map((a, aIdx) => (
-              <option key={a.AGENCY_CODE || aIdx} value={a.AGENCY_NAME}>
-                {a.AGENCY_NAME} {a.AGENCY_CODE ? `(Code ${a.AGENCY_CODE})` : ''}
-              </option>
+              <option key={a.AGENCY_NAME || aIdx} value={a.AGENCY_NAME} />
             ))}
           </datalist>
         </div>

@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { poService } from '../../services/poService';
 import { notifyDataChanged } from '../../hooks/useLiveAutoRefresh';
 import { calculateWeightTolerance } from '../../lib/weightTolerance';
-import { getCurrentUserContext, isUserAdmin, isL5OrAdmin, canAccess, canEditOrDelete } from '../../lib/permissions';
+import { getCurrentUserContext, isUserAdmin, isL5OrAdmin, canAccess, canEditOrDelete, isUserId2, isLevel4OrAbove } from '../../lib/permissions';
 import { formatPoNumber, compareQualities, resolveSattaRate } from '../../utils/purchaseOrderCalculations';
 import { validateAreaAgencyCombination, getAgenciesForArea } from '../../services/areaLogicService';
 import { PoFormData, PoCalcData, PoItemRow } from '../../types/purchaseOrder';
@@ -712,6 +712,12 @@ export function usePurchaseOrderFormLogic({
 
   const handleLoadSelectedPo = async (poHeader: any) => {
     const userCtx = getCurrentUserContext();
+    const isUser002Only = isUserId2(userCtx) && !isLevel4OrAbove(userCtx);
+    if (isUser002Only && isTempPo) {
+      alert("🔒 Access Denied: Only Level 4 users or Admin can edit saved records in Sauda Check Point Dashboard.");
+      return;
+    }
+
     const currentUserRole = (userCtx.userRole || (userCtx as any).role || "USER").toUpperCase();
     const currentUserLevel = (userCtx.userLevel || (userCtx as any).level || "L1").toUpperCase();
     const isAdminUser = isUserAdmin(userCtx) || currentUserRole === "ADMIN" || currentUserRole === "ADMINISTRATOR" || Boolean((userCtx as any).isAdmin) || currentUserLevel === "ADMIN";
@@ -1054,6 +1060,13 @@ export function usePurchaseOrderFormLogic({
 
   const handleSave = async () => {
     const userCtx = getCurrentUserContext();
+    const isUser002Only = isUserId2(userCtx) && !isLevel4OrAbove(userCtx);
+    const isEditingExistingSavedPo = (poList || []).some((p: any) => p.po_no === formData.no || p.po_no === formData.ptf_no);
+    if (isUser002Only && isTempPo && isEditingExistingSavedPo) {
+      alert("🔒 Access Denied: Saved records in Sauda Check Point Dashboard can only be edited or modified by Level 4 or Admin.");
+      return;
+    }
+
     const currentUserRole = (userCtx?.userRole || (userCtx as any)?.role || "USER").toUpperCase();
     const currentUserLevel = (userCtx?.userLevel || (userCtx as any)?.level || "L1").toUpperCase();
     const isAdminUser = isUserAdmin(userCtx) || currentUserRole === "ADMIN" || currentUserRole === "ADMINISTRATOR" || Boolean((userCtx as any)?.isAdmin) || currentUserLevel === "ADMIN" || currentUserLevel === "L5" || isL5OrAdmin();
