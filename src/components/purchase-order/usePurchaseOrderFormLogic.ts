@@ -1119,6 +1119,12 @@ export function usePurchaseOrderFormLogic({
 
     setLoading(true);
     try {
+      if (!formData.is_ptf && !formData.no) {
+        alert("Validation Error: Please select a P.O Contract / Sauda from the dropdown list before saving, or check 'P.T.F Mode' for direct PTF entry.");
+        setLoading(false);
+        return;
+      }
+
       let finalPoNo = String(formData.no || (formData.is_ptf ? formData.ptf_no : '') || '').trim();
       if (!finalPoNo) {
         finalPoNo = formData.is_ptf && formData.ptf_no
