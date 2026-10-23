@@ -3,6 +3,7 @@ import { LegacyFieldset } from "../LegacyLayout";
 import { SingleComboBox, SearchablePoContractDropdown, DualComboBox } from "./PoDropdownSelectors";
 import { PoFormData } from "../../types/purchaseOrder";
 import { Calculator } from "lucide-react";
+import { getAgenciesForArea } from "../../services/areaLogicService";
 
 export interface PurchaseOrderFormHeaderProps {
   formData: PoFormData;
@@ -235,7 +236,20 @@ export const PurchaseOrderFormHeader: React.FC<PurchaseOrderFormHeaderProps> = (
                     onCodeChange={(val) => setFormData(prev => ({...prev, area_code: val}))} 
                     onNameChange={(val) => {
                       if (val && val.trim().toUpperCase() !== (formData.area || '').trim().toUpperCase()) {
-                        const updatedItems = recalculateAllRates(formData.items, formData.s_date, formData.b_rate, sattaBaseRates, sattaCalculatedRates, sattaDifferentials, val);
+                        const validAgencies = getAgenciesForArea(val);
+                        const validSet = new Set([
+                          ...validAgencies.map(a => a.AGENCY_NAME.toUpperCase()),
+                          ...validAgencies.map(a => a.AGENCY_CODE.toUpperCase())
+                        ]);
+                        const updatedItems = recalculateAllRates(formData.items, formData.s_date, formData.b_rate, sattaBaseRates, sattaCalculatedRates, sattaDifferentials, val)
+                          .map(item => {
+                            const agName = (item.agency_name || '').trim().toUpperCase();
+                            const agCode = (item.agency_code || '').trim().toUpperCase();
+                            if ((agName && !validSet.has(agName)) || (agCode && !validSet.has(agCode))) {
+                              return { ...item, agency_name: '', agency_code: '' };
+                            }
+                            return item;
+                          });
                         setFormData(prev => ({
                           ...prev, 
                           area: val,

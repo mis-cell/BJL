@@ -23,6 +23,7 @@ interface QualityDetailsTableProps {
   grades: any[];
   agencies: any[];
   markas: any[];
+  formDataArea?: string;
   isUser010?: boolean;
 }
 
@@ -35,6 +36,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
   grades,
   agencies,
   markas,
+  formDataArea,
   isUser010 = false
 }) => {
   // Format options lists
@@ -50,13 +52,30 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
   }, [grades]);
 
   const agencyOptions = useMemo(() => {
+    if (!agencies || agencies.length === 0) return [];
+
+    const nameCounts: Record<string, number> = {};
+    agencies.forEach(a => {
+      const name = String(a.AGENCY_NAME || a.agency_name || a.name || (typeof a === 'string' ? a : '')).trim();
+      if (name) nameCounts[name] = (nameCounts[name] || 0) + 1;
+    });
+
     const list: string[] = [];
-    [...agencies]
-      .sort((a, b) => (a.agency_name || a.name || "").localeCompare(b.agency_name || b.name || ""))
-      .forEach(a => {
-        const val = a.agency_name || a.name || (typeof a === 'string' ? a : '');
-        if (val && !list.includes(val)) list.push(val);
-      });
+    agencies.forEach(a => {
+      const name = String(a.AGENCY_NAME || a.agency_name || a.name || (typeof a === 'string' ? a : '')).trim();
+      const code = String(a.AGENCY_CODE || a.agency_code || '').trim();
+      if (!name) return;
+
+      let displayName = name;
+      if (nameCounts[name] > 1 && code) {
+        displayName = `${name} (Code ${code})`;
+      }
+
+      if (!list.includes(displayName)) {
+        list.push(displayName);
+      }
+    });
+
     return list;
   }, [agencies]);
 
@@ -387,7 +406,14 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                             selectedValues={currentAgencies}
                             onChange={(vals) => onQualityChange(i, 'agencies', vals)}
                             options={agencyOptions}
-                            placeholder="Select / search Agencies..."
+                            placeholder={
+                              !formDataArea || !formDataArea.trim()
+                                ? "Select Area first..."
+                                : agencyOptions.length === 0
+                                ? "No Agency Found for Selected Area"
+                                : "Select / search Agencies..."
+                            }
+                            disabled={!formDataArea || !formDataArea.trim() || agencyOptions.length === 0}
                             badgeTheme="emerald"
                           />
                         </td>

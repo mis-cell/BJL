@@ -1,8 +1,9 @@
 import { getPaddedDetails, calculateProportionalNetto } from "../utils/temporaryArrivalCalculations";
 import { TemporaryArrivalGrid } from "../components/temporary-arrival/TemporaryArrivalGrid";
 import { TemporaryArrivalWeightCard } from "../components/temporary-arrival/TemporaryArrivalWeightCard";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLiveAutoRefresh, notifyDataChanged } from '../hooks/useLiveAutoRefresh';
+import { getAgenciesForArea, validateAreaAgencyCombination } from '../services/areaLogicService';
 import { 
   Save, 
   X, 
@@ -47,6 +48,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     return screenDraftService.getDraft('amad_entry_details', getPaddedDetails(initialData));
   });
   const [unitList, setUnitList] = useState<string[]>(['BALES', 'DRUMS', 'LOOSE', 'P.BALES', 'H.BALES']);
+
   const emptyDetailRow = (): ArrivalDetailRow => ({
     quality: '',
     agency: '',
@@ -199,6 +201,12 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     if (initialData) return defaultData;
     return screenDraftService.getDraft('amad_entry_form', defaultData);
   });
+
+  const filteredArrivalAgencies = useMemo(() => {
+    const currentArea = (formData.arrival_area_name || formData.arrival_area_code || '').trim();
+    if (!currentArea) return [];
+    return getAgenciesForArea(currentArea);
+  }, [formData.arrival_area_name, formData.arrival_area_code]);
 
   useEffect(() => {
     if (initialData) {
@@ -1095,6 +1103,23 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         Number(row.quantity_rcpt) > 0 || 
         Number(row.quantity_chln) > 0
       );
+
+      // Validate selected Area and Agency combination against area_logic
+      if (formData.arrival_area_name) {
+        for (const row of activeRows) {
+          if (row.agency_name || row.agency_code) {
+            const isValid = validateAreaAgencyCombination(
+              formData.arrival_area_name,
+              row.agency_code || row.agency_name
+            );
+            if (!isValid) {
+              alert(`Selected Agency "${row.agency_name || row.agency_code}" is not valid for Area "${formData.arrival_area_name}" according to area_logic.`);
+              setLoading(false);
+              return;
+            }
+          }
+        }
+      }
 
       // Check if there are any new manual marks to insert into the database
       const uniqueNewMarkas: string[] = [];
@@ -2071,16 +2096,28 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       name="arrival_area_name"
                       value={formData.arrival_area_name}
                       onChange={(e) => {
-                        const matchedArea = areas.find(
-                          a => a.area_name === e.target.value
-                        );
+                        const areaVal = e.target.value;
+                        const matchedArea = areas.find(a => a.area_name === areaVal);
+
+                        const validAgencies = areaVal ? getAgenciesForArea(areaVal) : [];
+                        const validSet = new Set([
+                          ...validAgencies.map(a => a.AGENCY_NAME.toUpperCase()),
+                          ...validAgencies.map(a => a.AGENCY_CODE.toUpperCase())
+                        ]);
+
+                        setDetails(prev => prev.map(d => {
+                          const agName = (d.agency_name || '').trim().toUpperCase();
+                          const agCode = (d.agency_code || '').trim().toUpperCase();
+                          if ((agName && !validSet.has(agName)) || (agCode && !validSet.has(agCode))) {
+                            return { ...d, agency_name: '', agency_code: '' };
+                          }
+                          return d;
+                        }));
 
                         setFormData(prev => ({
                           ...prev,
-                          arrival_area_name: e.target.value,
-                          arrival_area_code: matchedArea
-                            ? matchedArea.area_code
-                            : prev.arrival_area_code
+                          arrival_area_name: areaVal,
+                          arrival_area_code: matchedArea ? matchedArea.area_code : prev.arrival_area_code
                         }));
                       }}
                       required
@@ -2244,8 +2281,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           details={details}
           unitName={formData.unit_name}
           grades={grades}
-          agencies={agencies}
+          agencies={filteredArrivalAgencies}
           markas={markas}
+          formDataArea={formData.arrival_area_name}
           onAddRow={handleAddRow}
           onDeleteRow={handleDeleteRow}
           onDeleteRowAt={handleDeleteRowAt}
@@ -2300,8 +2338,10 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           </datalist>
 
           <datalist id="agencies_list">
-            {agencies.map((a, aIdx) => (
-              <option key={a.id || aIdx} value={a.agency_name} />
+            {filteredArrivalAgencies.map((a, aIdx) => (
+              <option key={a.AGENCY_CODE || aIdx} value={a.AGENCY_NAME}>
+                {a.AGENCY_NAME} {a.AGENCY_CODE ? `(Code ${a.AGENCY_CODE})` : ''}
+              </option>
             ))}
           </datalist>
         </div>

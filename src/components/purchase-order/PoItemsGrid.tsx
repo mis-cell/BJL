@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { RefreshCcw, Plus, Trash2 } from 'lucide-react';
 import { PoItemRow, PoFormData } from '../../types/purchaseOrder';
+import { getAgenciesForArea } from '../../services/areaLogicService';
 
 const TableComboBox = ({
   value,
@@ -111,6 +112,12 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
   getCropYear,
   isSaudaActive
 }) => {
+  const filteredAgencies = useMemo(() => {
+    const activeArea = (formData.area || formData.area_code || '').trim();
+    if (!activeArea) return [];
+    return getAgenciesForArea(activeArea);
+  }, [formData.area, formData.area_code]);
+
   return (
     <div className="border border-slate-400 bg-white rounded-md overflow-hidden shadow-xs">
       <div className="flex items-center gap-2 p-1.5 bg-[#F7AFA8] border-b border-[#F06D6C] justify-between text-white">
@@ -287,13 +294,19 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
                 <td className={`px-2 py-0.5 font-normal w-44 ${isSaudaActive ? 'bg-[#fffdf2] text-[#7c2d12]' : ''}`}>
                   <TableComboBox 
                     value={row.agency_name || ''}
-                    options={agencyList}
-                    textField="agency_name"
-                    valueField="agency_code"
-                    placeholder="Agency Name"
+                    options={filteredAgencies}
+                    textField="AGENCY_NAME"
+                    valueField="AGENCY_CODE"
+                    placeholder={
+                      !formData.area && !formData.area_code
+                        ? "Select Area first..."
+                        : filteredAgencies.length === 0
+                        ? "No Agency Found for Selected Area"
+                        : "Agency Name"
+                    }
                     onChange={(nameVal) => {
-                      const match = agencyList.find(a => a.agency_name.toUpperCase() === nameVal.toUpperCase());
-                      const aCode = match ? match.agency_code : row.agency_code;
+                      const match = filteredAgencies.find(a => (a.AGENCY_NAME || a.agency_name || '').toUpperCase() === nameVal.toUpperCase());
+                      const aCode = match ? (match.AGENCY_CODE || match.agency_code) : row.agency_code;
                       const computedRate = getSattaRateForRow(nameVal, row.grade_name, formData.s_date, formData.b_rate);
                       const updated = formData.items.map((item, idx) => idx === index ? {
                         ...item,

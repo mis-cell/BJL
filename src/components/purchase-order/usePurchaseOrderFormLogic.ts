@@ -6,6 +6,7 @@ import { notifyDataChanged } from '../../hooks/useLiveAutoRefresh';
 import { calculateWeightTolerance } from '../../lib/weightTolerance';
 import { getCurrentUserContext, isUserAdmin, isL5OrAdmin, canAccess, canEditOrDelete } from '../../lib/permissions';
 import { formatPoNumber, compareQualities, resolveSattaRate } from '../../utils/purchaseOrderCalculations';
+import { validateAreaAgencyCombination, getAgenciesForArea } from '../../services/areaLogicService';
 import { PoFormData, PoCalcData, PoItemRow } from '../../types/purchaseOrder';
 
 interface UsePurchaseOrderFormLogicProps {
@@ -1104,6 +1105,16 @@ export function usePurchaseOrderFormLogic({
     if (!upperArea || !isValidArea) {
       alert("Please select a valid option for Area.");
       return;
+    }
+
+    if (upperArea) {
+      for (const item of (formData.items || [])) {
+        const itemAgency = (item.agency_name || item.agency_code || '').trim();
+        if (itemAgency && itemAgency.toUpperCase() !== 'NO AGENCY' && !validateAreaAgencyCombination(upperArea, itemAgency)) {
+          alert(`Validation Error: Selected agency "${itemAgency}" in item row #${item.srl || 1} is not mapped to Area "${upperArea}" in area_logic table.`);
+          return;
+        }
+      }
     }
 
     setLoading(true);

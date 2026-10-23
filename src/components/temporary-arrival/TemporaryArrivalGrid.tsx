@@ -9,6 +9,7 @@ export interface TemporaryArrivalGridProps {
   grades: any[];
   agencies: any[];
   markas: any[];
+  formDataArea?: string;
   onAddRow: () => void;
   onDeleteRow: () => void;
   onDeleteRowAt?: (index: number) => void;
@@ -21,6 +22,7 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
   grades,
   agencies,
   markas,
+  formDataArea,
   onAddRow,
   onDeleteRow,
   onDeleteRowAt,
@@ -208,10 +210,17 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
                 <td className="p-0.5 border border-gray-300 w-34">
                   <input
                     list="agencies_list"
-                    placeholder="Type/Select Agency..."
+                    placeholder={
+                      !formDataArea || !formDataArea.trim()
+                        ? "Select Area First"
+                        : agencies.length === 0
+                        ? "No Agency Found for Selected Area"
+                        : "Type/Select Agency..."
+                    }
+                    disabled={!formDataArea || !formDataArea.trim() || agencies.length === 0}
                     value={detail.agency_name || ''}
                     onChange={(e) => onDetailChange(idx, 'agency_name', e.target.value)}
-                    className="w-full bg-white text-left font-bold text-gray-900 outline-none px-1 h-6 uppercase font-mono border-0"
+                    className="w-full bg-white text-left font-bold text-gray-900 outline-none px-1 h-6 uppercase font-mono border-0 disabled:bg-gray-100 disabled:text-gray-400"
                   />
                 </td>
 

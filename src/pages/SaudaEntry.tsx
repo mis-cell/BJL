@@ -11,6 +11,7 @@ import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { resolveSattaRate } from '../services/sattaRateService';
 import { cleanSaudaNo } from '../lib/utils';
 import { screenDraftService } from '../services/screenDraftService';
+import { getAgenciesForArea, validateAreaAgencyCombination } from '../services/areaLogicService';
 
 import LegacyLayout from '../components/LegacyLayout';
 import BasicDetailsCard from '../components/BasicDetailsCard';
@@ -508,22 +509,36 @@ export default function SaudaEntry({
         }
       }
 
-      // Automatically update quality rates if area or date changes
+      // Automatically update quality rates and filter agencies if area or date changes
       if ((name === 'area' || name === 'date') && finalValue) {
         const currentArea = name === 'area' ? finalValue : prev.area;
         const currentDate = name === 'date' ? finalValue : prev.date;
 
         if (currentArea) {
+          const validAgencies = getAgenciesForArea(currentArea);
+          const validSet = new Set(validAgencies.map(a => a.AGENCY_NAME.toUpperCase()).concat(validAgencies.map(a => a.AGENCY_CODE.toUpperCase())));
+
           let firstCalculated = null;
           const updatedQD = (updated.quality_details || []).map((row: any, i: number) => {
+            let filteredRowAgencies = Array.isArray(row.agencies)
+              ? row.agencies.filter((ag: string) => validSet.has(ag.trim().toUpperCase()))
+              : (row.agency && validSet.has(row.agency.trim().toUpperCase()) ? [row.agency] : []);
+
+            let newRs = row.rs;
             if (row.quality) {
               const calculatedPrice = recalculateRowRate(currentDate || today, currentArea, row.quality);
               if (calculatedPrice !== null) {
                 if (i === 0) firstCalculated = calculatedPrice;
-                return { ...row, rs: calculatedPrice };
+                newRs = calculatedPrice;
               }
             }
-            return row;
+
+            return {
+              ...row,
+              agencies: filteredRowAgencies,
+              agency: filteredRowAgencies[0] || '',
+              rs: newRs
+            };
           });
           updated.quality_details = updatedQD;
           if (firstCalculated !== null) updated.b_rate = firstCalculated;
@@ -779,6 +794,16 @@ export default function SaudaEntry({
 
       const allUniqueAgencies = Array.from(new Set(flatCombinations.map(c => c.agency).filter(Boolean)));
       const allUniqueMarkas = Array.from(new Set(flatCombinations.map(c => c.marka).filter(Boolean)));
+
+      if (formData.area) {
+        for (const ag of allUniqueAgencies) {
+          if (ag && ag !== 'No agency' && !validateAreaAgencyCombination(formData.area, ag)) {
+            alert(`Validation Error: Selected agency "${ag}" is not mapped to Area "${formData.area}" in area_logic table.`);
+            setLoading(false);
+            return;
+          }
+        }
+      }
 
       if (allUniqueAgencies.length > 0) {
         saudaData.agency = allUniqueAgencies.join(', ');
@@ -1318,7 +1343,8 @@ export default function SaudaEntry({
               onDeleteRow={handleDeleteQualityRow}
               onRemoveRowAt={handleRemoveQualityRowAt}
               grades={grades}
-              agencies={agencies}
+              agencies={getAgenciesForArea(formData.area)}
+              formDataArea={formData.area}
               markas={markas}
               isUser010={isUser010}
             />
