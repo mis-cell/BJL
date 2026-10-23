@@ -1466,7 +1466,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Temporary M.R No. */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="arrival_no_1077" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Temporary M.R No.
+                    Temporary M.R No. <span className="text-rose-600 font-black text-sm">*</span>
                   </label>
                   <input
                     id="arrival_no_1077" aria-label="Temporary M.R No."
@@ -1481,7 +1481,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* P.O Number */}
                 <div className="flex items-center gap-2 relative">
                   <label htmlFor="po_no_1094" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    P.O. Number <span className="text-rose-600 font-black">*</span>
+                    P.O. Number <span className="text-rose-600 font-black"></span>
                   </label>
 
                   <div className="flex-1 flex gap-1 relative overflow-visible">
@@ -1503,7 +1503,8 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                         onBlur={() => setTimeout(() => setShowPoDropdown(false), 200)}
                         autoComplete="off"
                         placeholder="-- TYPE OR SELECT P.O. * --"
-                        className="w-full border-2 border-rose-300 rounded bg-[#FDE7E6] text-slate-900 px-2.5 h-7 font-bold uppercase font-mono text-[11px] pr-7 focus:border-rose-500 focus:outline-none"
+                        style={{ backgroundColor: '#FFFFFF' }}
+                        className="w-full border-2 border-rose-300 rounded bg-white text-slate-900 px-2.5 h-7 font-bold uppercase font-mono text-[11px] pr-7 focus:border-rose-500 focus:outline-none"
                       />
 
                       <div
@@ -1649,7 +1650,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Receipt Date */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="date_1140" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Temporary Date <span className="text-rose-600 font-black">*</span>
+                    Temporary Date <span className="text-rose-600 font-black text-sm">*</span>
                   </label>
 
                   <div className="flex-1 flex gap-2">
@@ -1683,11 +1684,11 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Challan Supplier */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="challan_supplier_1171" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Challan Supplier
+                    Challan Supplier <span className="text-rose-600 font-black text-sm">*</span>
                   </label>
 
                   <div className="flex-1">
-                    <input
+                    {/* <input
                       id="challan_supplier_1171" aria-label="Challan Supplier"
                       type="text"
                       name="challan_supplier"
@@ -1697,6 +1698,22 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       placeholder="-- TYPE OR SELECT CHALLAN SUPPLIER --"
                       className={`w-full border rounded px-2.5 h-7 uppercase font-bold font-mono text-[11px] ${
                         formData.challan_supplier ? 'bg-[#FDE7E6] border-sky-300 text-sky-950' : 'bg-white border-gray-400'
+                      }`}
+                    /> */}
+                    <input
+                      id="challan_supplier_1171"
+                      aria-label="Challan Supplier"
+                      type="text"
+                      name="challan_supplier"
+                      value={formData.challan_supplier}
+                      onChange={handleChange}
+                      list="challan_supplier_list"
+                      placeholder="-- TYPE OR SELECT CHALLAN SUPPLIER --"
+                      required
+                      className={`w-full border rounded px-2.5 h-7 uppercase font-bold font-mono text-[11px] ${
+                        formData.challan_supplier
+                          ? 'bg-[#FDE7E6] border-sky-300 text-sky-950'
+                          : 'bg-white border-gray-400'
                       }`}
                     />
 
@@ -1713,7 +1730,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Supplier */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="supplier_1198" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Supplier
+                    Supplier <span className="text-rose-600 font-black text-sm">*</span>
                   </label>
 
                   <div className="flex-1">
@@ -1726,7 +1743,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       list="supplier_list"
                       placeholder="-- TYPE OR SELECT ACTUAL SUPPLIER --"
                       className={`w-full border rounded px-2.5 h-7 uppercase font-bold font-mono text-[11px] ${
-                        formData.supplier ? 'bg-[#FDE7E6] border-sky-300 text-sky-950' : 'bg-white border-gray-400'
+                        formData.supplier
+                          ? 'bg-[#FDE7E6] border-sky-300 text-sky-950'
+                          : 'bg-white border-gray-400'
                       }`}
                     />
 
@@ -1748,7 +1767,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Broker */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="broker_1230" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Broker
+                    Broker <span className="text-rose-600 font-black text-sm">*</span>
                   </label>
 
                   <div className="flex-1">
@@ -2047,7 +2066,8 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     />
 
                     <select
-                      id="arrival_area_name_1497" aria-label="arrival area name"
+                      id="arrival_area_name_1497"
+                      aria-label="Arrival area name"
                       name="arrival_area_name"
                       value={formData.arrival_area_name}
                       onChange={(e) => {
@@ -2063,6 +2083,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                             : prev.arrival_area_code
                         }));
                       }}
+                      required
                       className="flex-1 h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                     >
                       <option value="">-- SELECT AREA --</option>

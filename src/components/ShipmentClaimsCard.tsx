@@ -47,7 +47,7 @@ export const ShipmentClaimsCard: React.FC<ShipmentClaimsCardProps> = ({ formData
           <input id="shipment_penalty_43" aria-label="Penalty/Day" type="number"
             step="0.01"
             name="shipment_penalty"
-            value={formData.shipment_penalty ?? 5}
+            value={formData.shipment_penalty ?? 0}
             onChange={onChange}
             className="bg-white border border-[#FBCFCB] rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 text-right outline-none focus:border-[#F7AFA8] focus:ring-2 focus:ring-[#F7AFA8]/20 transition-all shadow-2xs"
           />

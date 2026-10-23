@@ -31,7 +31,7 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
       {/* Header */}
       <div className="bg-[#D94B5A] text-white px-4 py-2 flex items-center justify-between border-b border-[#FBCFCB]">
         <h3 className="text-sm font-bold tracking-wide uppercase">
-          Arrival Item Details Grid
+          Arrival Item Details
         </h3>
         <div className="flex items-center gap-1.5">
           <button
@@ -91,7 +91,51 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
                 </td>
 
                 {/* Receipt Grade Name */}
+                
                 <td className="p-0.5 border border-gray-300 w-36">
+                  <input
+                    list={`grade-list-${idx}`}
+                    type="text"
+                    value={detail.receipt_grade_name || detail.receipt_grade_code || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+
+                      const match = grades.find(
+                        g =>
+                          String(g.grade_code || '').trim().toUpperCase() === val.trim().toUpperCase() ||
+                          String(g.grade_name || '').trim().toUpperCase() === val.trim().toUpperCase()
+                      );
+
+                      onDetailChange(idx, 'receipt_grade_name', match ? match.grade_name : val);
+                      onDetailChange(idx, 'receipt_grade_code', match ? match.grade_code : '');
+                    }}
+                    placeholder="Select Grade"
+                    className="w-full h-6 px-1 bg-white border border-gray-300 text-left font-bold text-gray-900 text-xs uppercase outline-none focus:border-blue-500"
+                  />
+
+                  <datalist id={`grade-list-${idx}`}>
+                    {grades
+                      .slice()
+                      .filter((g, index, arr) =>
+                        arr.findIndex(
+                          item =>
+                            (item.grade_name || '').trim().toLowerCase() ===
+                            (g.grade_name || '').trim().toLowerCase()
+                        ) === index
+                      )
+                      .sort((a, b) =>
+                        (a.grade_name || '').localeCompare(b.grade_name || '')
+                      )
+                      .map(g => (
+                        <option
+                          key={g.id || g.grade_code || g.grade_name}
+                          value={g.grade_name || g.grade_code}
+                        />
+                      ))}
+                  </datalist>
+                </td>
+
+                {/* <td className="p-0.5 border border-gray-300 w-36">
                   <select
                     value={detail.receipt_grade_name}
                     onChange={(e) => onDetailChange(idx, 'receipt_grade_name', e.target.value)}
@@ -101,11 +145,24 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
                     {detail.receipt_grade_name && !grades.some(g => g.grade_name === detail.receipt_grade_name) && (
                       <option value={detail.receipt_grade_name}>{detail.receipt_grade_name}</option>
                     )}
-                    {grades.map(g => (
-                      <option key={g.id || g.grade_code} value={g.grade_name}>{g.grade_name}</option>
+                    {grades
+                    .slice()
+                    .filter((g, index, arr) =>
+                      arr.findIndex(
+                        item => (item.grade_name || '').trim().toLowerCase() ===
+                                (g.grade_name || '').trim().toLowerCase()
+                      ) === index
+                    )
+                    .sort((a, b) =>
+                      (a.grade_name || '').localeCompare(b.grade_name || '')
+                    )
+                    .map(g => (
+                      <option key={g.id || g.grade_code} value={g.grade_name}>
+                        {g.grade_name}
+                      </option>
                     ))}
                   </select>
-                </td>
+                </td> */}
 
                 {/* Crop Year */}
                 <td className="p-0.5 border border-gray-300 w-24">
@@ -267,6 +324,23 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
                 </td>
               </tr>
             ))}
+            <tr className="h-9 bg-slate-100 font-bold border-t-2 border-slate-300">
+              <td colSpan={9} className="text-right px-3 uppercase text-[11px] font-black text-slate-700 border-r border-slate-300">
+                Summary Totals:
+              </td>
+              <td className="px-2 text-right font-black text-slate-900 border-r border-slate-300">
+               
+              </td>
+              <td className="px-2 text-right font-black text-blue-900 border-r border-slate-300">
+                
+              </td>
+              <td className="px-2 text-right font-black text-rose-700 border-r border-slate-300">
+                
+              </td>
+              <td colSpan={2} className="px-2 text-slate-500 text-[10px]">
+                
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>

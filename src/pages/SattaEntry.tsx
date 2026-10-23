@@ -127,7 +127,7 @@ export default function SattaEntry({ initialData, onSave, onCancel }: { initialD
       total_wt_in_ton: 0,
       shipment_date: today,
       shipment_days: 0,
-      shipment_penalty: 5,
+      shipment_penalty: 0,
       marks_claim: 0,
       quantity_claim: 0,
       remarks: 'Area, Agency Grade, Grade differential can change as per market.',

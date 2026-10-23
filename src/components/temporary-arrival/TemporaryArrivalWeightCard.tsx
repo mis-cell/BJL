@@ -27,7 +27,7 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
           </h4>
 
           <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold">CHALLAN GROSS</span>
+            <span className="text-[10px] font-bold">CHALLAN GROSS <b> (Party)</b></span>
             <input
               id="actual_gross_weight_1948"
               aria-label="actual gross weight"
@@ -76,7 +76,7 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
           </h4>
 
           <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold">CHALLAN TARE</span>
+            <span className="text-[10px] font-bold">CHALLAN TARE <b> (Party)</b></span>
             <input
               id="actual_tare_weight_1991"
               aria-label="actual tare weight"
@@ -125,7 +125,7 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
           </h4>
 
           <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold">CHALLAN WT</span>
+            <span className="text-[10px] font-bold">CHALLAN WT <b> (Party)</b></span>
             <input
               id="challan_material_weight_1905"
               aria-label="challan material weight"

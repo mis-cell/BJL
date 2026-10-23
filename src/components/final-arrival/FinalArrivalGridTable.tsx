@@ -262,7 +262,7 @@ export function FinalArrivalGridTable({
                 {totalNettoWeight.toFixed(3)}
               </td>
               <td colSpan={3} className="px-2 text-slate-500 text-[10px]">
-                Active Grid Records
+                
               </td>
             </tr>
           </tbody>
