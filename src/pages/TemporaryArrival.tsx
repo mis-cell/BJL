@@ -1515,7 +1515,6 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                         id="po_no_1094" aria-label="P.O. Number"
                         type="text"
                         name="po_no"
-                        required
                         value={formData.po_no}
                         onChange={(e) => {
                           handleChange(e);
@@ -1766,6 +1765,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       value={formData.supplier}
                       onChange={handleChange}
                       list="supplier_list"
+                      required
                       placeholder="-- TYPE OR SELECT ACTUAL SUPPLIER --"
                       className={`w-full border rounded px-2.5 h-7 uppercase font-bold font-mono text-[11px] ${
                         formData.supplier
@@ -1804,6 +1804,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       onChange={handleChange}
                       list="broker_list"
                       placeholder="-- TYPE OR SELECT BROKER --"
+                      required
                       className={`w-full border rounded px-2.5 h-7 uppercase font-bold font-mono text-[11px] ${
                         formData.broker ? 'bg-[#FDE7E6] border-sky-300 text-sky-950' : 'bg-white border-gray-400'
                       }`}
@@ -1839,7 +1840,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Challan */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="challan_rr_no_1272" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Challan No & Date.
+                    Challan No & Date. <span className="text-rose-600 font-black text-sm">*</span>
                   </label>
 
                   <input
@@ -1848,6 +1849,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     name="challan_rr_no"
                     value={formData.challan_rr_no}
                     onChange={handleChange}
+                    required
                     className="flex-1 border border-gray-400 rounded bg-white px-2.5 h-7 text-xs font-bold"
                   />
                 </div>
@@ -1855,7 +1857,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Lorry */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="lorry_prefix_1288" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Lorry Number
+                    Lorry Number <span className="text-rose-600 font-black text-sm">*</span>
                   </label>
 
                   <div className="flex-1 flex gap-1.5">
@@ -1866,6 +1868,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       value={formData.lorry_prefix}
                       onChange={handleChange}
                       placeholder="PREFIX"
+                      required
                       className="w-24 text-center uppercase border border-gray-400 rounded h-7 text-xs font-bold"
                     />
 
@@ -1876,6 +1879,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       value={formData.lorry_suffix}
                       onChange={handleChange}
                       placeholder="SUFFIX"
+                      required
                       className="flex-1 text-center uppercase border border-gray-400 rounded h-7 text-xs font-bold"
                     />
                   </div>
@@ -1900,7 +1904,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Arrival Date */}
                 <div className="flex items-center gap-2">
                   <label htmlFor="lorry_date_1329" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Lorry Arrival Date
+                    Lorry Arrival Date <span className="text-rose-600 font-black text-sm">*</span>
                   </label>
 
                   <input
@@ -1909,6 +1913,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     name="lorry_date"
                     value={formData.lorry_date}
                     onChange={handleChange}
+                    required
                     className="flex-1 border border-gray-400 rounded bg-white px-2 h-7 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#F7AFA8]"
                   />
                 </div>
@@ -2144,7 +2149,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                 {/* Unit */}
                 <div>
                   <label htmlFor="unit_code_1541" className="block text-[10px] font-bold text-gray-700 mb-0.5">
-                    Unit
+                    Unit <span className="text-rose-600 font-black text-sm">*</span>
                   </label>
 
                   <div className="flex gap-2">
@@ -2155,12 +2160,14 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                       name="unit_code"
                       value={formData.unit_code}
                       readOnly
+                      required
                       className="w-16 h-7 rounded border border-gray-300 bg-slate-100 text-center text-xs font-bold"
                     />
 
                     <select
                       id="unit_name_1549" aria-label="unit name"
                       name="unit_name"
+                      required
                       value={formData.unit_name || "BALES"}
                       onChange={(e) => {
                         const uVal = e.target.value;
