@@ -10,9 +10,13 @@ interface RemarksCardProps {
   onPrint?: () => void;
   onBack?: () => void;
   onSave?: () => void;
+  onSaveDraft?: () => void;
+  onSubmitForApproval?: () => void;
   isLoading?: boolean;
   isLocked?: boolean;
   lockedMessage?: string;
+  isPending?: boolean;
+  isRejected?: boolean;
 }
 
 export const RemarksCard: React.FC<RemarksCardProps> = ({
@@ -22,9 +26,13 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
   onPrint,
   onBack,
   onSave,
+  onSaveDraft,
+  onSubmitForApproval,
   isLoading = false,
   isLocked = false,
-  lockedMessage
+  lockedMessage,
+  isPending = false,
+  isRejected = false
 }) => {
   return (
     <div className="bg-white rounded-[18px] p-5 shadow-md border border-[#D8D3C5] hover:border-[#F7AFA8]/40 hover:shadow-lg transition-all overflow-hidden">
@@ -73,15 +81,19 @@ export const RemarksCard: React.FC<RemarksCardProps> = ({
       </div>
 
       {/* Embedded Action Footer */}
-      {(onPrint || onBack || onSave) && (
+      {(onPrint || onBack || onSave || onSaveDraft || onSubmitForApproval) && (
         <div className="pointer-events-auto">
           <FooterActions
             onPrint={onPrint || (() => {})}
             onBack={onBack || (() => {})}
-            onSave={onSave || (() => {})}
+            onSave={onSave}
+            onSaveDraft={onSaveDraft}
+            onSubmitForApproval={onSubmitForApproval}
             isLoading={isLoading}
             isLocked={isLocked}
             lockedMessage={lockedMessage}
+            isPending={isPending}
+            isRejected={isRejected}
           />
         </div>
       )}

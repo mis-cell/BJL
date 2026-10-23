@@ -157,10 +157,22 @@ export interface Sauda {
   approved_at?: string;
   rejected_by?: string;
   rejected_at?: string;
+  rejection_remarks?: string;
+  resubmission_count?: number;
+  submitted_by?: string;
+  submitted_at?: string;
+  last_updated_at?: string;
+  version?: number;
   created_by?: string;
   is_checked?: boolean;
   checked_by?: string;
   checked_at?: string;
+  user_id?: string;
+  delivery_from?: string;
+  delivery_to?: string;
+  freight_type?: string;
+  delivery_type?: string;
+  sauda_qualities?: any[];
   created_at?: string;
   quality_details?: SaudaQualityDetail[];
 }

@@ -896,24 +896,33 @@ export function isSaudaApproved(sauda: any): boolean {
  */
 export function canEditSaudaContract(sauda: any, roleOrContext?: any): boolean {
   if (!sauda) return true;
-  if (!isSaudaApproved(sauda)) {
-    return canEditOrDelete(roleOrContext);
+  // Once approved by User 010, permanently locked against editing by ALL users!
+  if (isSaudaApproved(sauda)) {
+    return false;
   }
-  // Approved contract: strictly ONLY Admin can edit!
-  return isUserAdmin(roleOrContext);
+  const status = String(sauda.status || sauda.approval_status || '').toUpperCase();
+  // While Pending Approval, locked against editing
+  if (status === 'PENDING') {
+    return false;
+  }
+  return canEditOrDelete(roleOrContext);
 }
 
 /**
  * Sauda Contract Delete Policy:
- * If approved by User 010, only Admin can delete.
+ * Once approved by User 010, permanently locked against deletion by ALL users!
  */
 export function canDeleteSaudaContract(sauda: any, roleOrContext?: any): boolean {
   if (!sauda) return true;
-  if (!isSaudaApproved(sauda)) {
-    return canEditOrDelete(roleOrContext);
+  // Once approved by User 010, permanently locked against deletion by ALL users!
+  if (isSaudaApproved(sauda)) {
+    return false;
   }
-  // Approved contract: strictly ONLY Admin can delete!
-  return isUserAdmin(roleOrContext);
+  const status = String(sauda.status || sauda.approval_status || '').toUpperCase();
+  if (status === 'PENDING') {
+    return false;
+  }
+  return canEditOrDelete(roleOrContext);
 }
 
 /**

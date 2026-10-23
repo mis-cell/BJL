@@ -248,9 +248,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [statusTab, setStatusTab] = useState<'pending' | 'checked' | 'rejected' | 'all'>(() =>
-    screenDraftService.getFilters('sauda_status_tab', 'pending')
-  );
+  const [statusTab, setStatusTab] = useState<'pending' | 'checked' | 'approved' | 'rejected' | 'drafts' | 'resubmitted' | 'all'>(() => {
+    const saved = screenDraftService.getFilters('sauda_status_tab', isUserId10() ? 'pending' : 'all');
+    return saved as any;
+  });
 
   useEffect(() => {
     screenDraftService.saveFilters('sauda_search', searchTerm);
@@ -265,13 +266,24 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const canSeeRejected = true;
   const canSeeAllHistory = true;
 
-  const isCheckedSauda = (s: Sauda) => {
+  // Status Checkers for Maker-Checker Workflow
+  const isApprovedSauda = (s: Sauda) => {
     return Boolean(
       s.is_checked || 
-      String(s.status || '').toUpperCase() === 'CHECKED' || 
+      String(s.status || '').toUpperCase() === 'APPROVED' || 
+      String(s.approval_status || '').toUpperCase() === 'APPROVED' ||
+      String(s.status || '').toUpperCase() === 'CHECKED' ||
       String(s.approval_status || '').toUpperCase() === 'CHECKED' ||
-      String(s.status || '').toUpperCase() === 'APPROVED' ||
-      String(s.approval_status || '').toUpperCase() === 'APPROVED'
+      Boolean(s.approved_by)
+    );
+  };
+
+  const isCheckedSauda = isApprovedSauda;
+
+  const isDraftSauda = (s: Sauda) => {
+    return (
+      String(s.status || '').toUpperCase() === 'DRAFT' ||
+      String(s.approval_status || '').toUpperCase() === 'DRAFT'
     );
   };
 
@@ -284,40 +296,68 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   };
 
   const isPendingUncheckedSauda = (s: Sauda) => {
-    return !isCheckedSauda(s) && !isRejectedSauda(s);
+    return !isApprovedSauda(s) && !isRejectedSauda(s) && !isDraftSauda(s);
   };
 
-  const handleMarkCheck = async (entry: Sauda) => {
+  const isResubmittedSauda = (s: Sauda) => {
+    return (Number(s.resubmission_count) || 0) > 0;
+  };
+
+  // Approval & Rejection Modal State
+  const [approvingSauda, setApprovingSauda] = useState<Sauda | null>(null);
+  const [isApprovingLoading, setIsApprovingLoading] = useState(false);
+
+  const [rejectingSauda, setRejectingSauda] = useState<Sauda | null>(null);
+  const [rejectionRemarksInput, setRejectionRemarksInput] = useState('');
+  const [rejectionError, setRejectionError] = useState('');
+  const [isRejectingLoading, setIsRejectingLoading] = useState(false);
+
+  const [viewingDetailsSauda, setViewingDetailsSauda] = useState<Sauda | null>(null);
+
+  // User 010 (Checker) Final Approval Handler
+  const handleMarkCheck = (entry: Sauda) => {
     const userCtx = getCurrentUserContext();
     const canCheck = isUserAdmin() || isUserId10() || isL5OrAdmin() || userCtx.userRole === 'ADMIN';
 
     if (!canCheck) {
-      alert("🔒 Permission Denied: Only User ID 10 or System Admin can mark Sauda contracts as Checked.");
+      alert("🔒 Permission Denied: Only User ID 010 (Checker) can approve Sauda contracts.");
       return;
     }
 
-    const currentlyChecked = isCheckedSauda(entry);
-    const nextApproved = !currentlyChecked;
-    const approverName = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Checker');
+    if (isApprovedSauda(entry)) {
+      alert(`🔒 Contract is Permanently Locked: Sauda #${entry.sauda_no} is already approved by User 010. Per company policy, once approved it cannot be un-approved or edited.`);
+      return;
+    }
 
+    setApprovingSauda(entry);
+  };
+
+  const handleConfirmApprove = async () => {
+    if (!approvingSauda) return;
+    const userCtx = getCurrentUserContext();
+    const approverName = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'User 010 (Checker)');
+
+    setIsApprovingLoading(true);
+    const entry = approvingSauda;
     const targetId = entry.sauda_id || (entry as any).id;
     const saudaNo = entry.sauda_no;
-    const fYear = entry.financial_year || '2026-2027';
+    const cleanNo = String(saudaNo || '').replace(/^0+/, '');
 
     const updatePayload = {
-      is_checked: nextApproved,
-      checked_by: nextApproved ? approverName : null,
-      approved_by: nextApproved ? approverName : null,
-      checked_at: nextApproved ? new Date().toISOString() : null,
-      approved_at: nextApproved ? new Date().toISOString() : null,
-      status: nextApproved ? 'APPROVED' : 'PENDING',
-      approval_status: nextApproved ? 'APPROVED' : 'PENDING',
+      is_checked: true,
+      checked_by: approverName,
+      approved_by: approverName,
+      checked_at: new Date().toISOString(),
+      approved_at: new Date().toISOString(),
+      status: 'APPROVED',
+      approval_status: 'APPROVED',
       rejected_by: null,
-      rejected_at: null
+      rejected_at: null,
+      last_updated_at: new Date().toISOString()
     };
 
     setSaudaList(prev => prev.map(s => {
-      const match = (s.sauda_id && targetId && s.sauda_id === targetId) || (s.sauda_no === saudaNo && (s.financial_year || '2026-2027') === fYear);
+      const match = (s.sauda_id && targetId && s.sauda_id === targetId) || (s.sauda_no && saudaNo && String(s.sauda_no).replace(/^0+/, '') === cleanNo);
       return match ? { ...s, ...updatePayload } : s;
     }));
 
@@ -334,160 +374,76 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
       logChange({
         module: 'Sauda Desk',
-        entity_name: 'Sauda Contract Approval',
+        entity_name: 'Sauda Final Approval',
         record_id: String(targetId || saudaNo),
         action: 'UPDATE',
         field_name: 'status',
         field_label: 'Approval Status',
         old_value: entry.status || 'PENDING',
-        new_value: nextApproved ? 'APPROVED' : 'PENDING',
+        new_value: 'APPROVED',
         user_name: approverName,
-        remarks: nextApproved ? `Approved by ${approverName}` : `Moved back to Pending by ${approverName}`
+        remarks: `Sauda #${saudaNo} verified and final approved by User 010. Contract is permanently locked.`
       }).catch(() => {});
-    } catch (err) {
-      console.error("Error updating approval status in Supabase:", err);
+
+      window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sauda_master' } }));
+      setApprovingSauda(null);
+      alert(`✅ Sauda #${entry.sauda_no} approved successfully! This contract is now PERMANENTLY LOCKED against editing and deletion.`);
+    } catch (err: any) {
+      console.error("Error approving sauda:", err);
+      alert("Failed to save approval: " + (err.message || err));
+    } finally {
+      setIsApprovingLoading(false);
     }
   };
 
-  const handleEditRejectorName = async (entry: Sauda) => {
-    const userCtx = getCurrentUserContext();
-    const currentName = resolveDisplayName(entry.rejected_by || userCtx.userName || userCtx.username || userCtx.userId, 'Unknown User');
-
-    const entered = window.prompt(
-      `Update Rejector User Name for Sauda Contract #${entry.sauda_no}:\n\nPlease enter the User Name who rejected this Sauda:`,
-      currentName
-    );
-
-    if (entered === null) return;
-    const newRejectorName = resolveDisplayName(entered.trim() || currentName, 'Unknown User');
-    const targetId = entry.sauda_id || (entry as any).id;
-    const saudaNo = entry.sauda_no;
-    const fYear = entry.financial_year || '2026-2027';
-
-    const updatePayload = {
-      rejected_by: newRejectorName
-    };
-
-    setSaudaList(prev => prev.map(s => {
-      const match = (s.sauda_id && targetId && s.sauda_id === targetId) || (s.sauda_no === saudaNo && (s.financial_year || '2026-2027') === fYear);
-      return match ? { ...s, ...updatePayload } : s;
-    }));
-
-    try {
-      const cleanKey = String(saudaNo || targetId || '').trim().toUpperCase();
-      if (cleanKey) {
-        const existingStr = localStorage.getItem(`sauda_check_status_${cleanKey}`);
-        const existingObj = existingStr ? JSON.parse(existingStr) : {};
-        localStorage.setItem(`sauda_check_status_${cleanKey}`, JSON.stringify({ ...existingObj, ...updatePayload }));
-      }
-      if (targetId) {
-        await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload).catch(() => {});
-      } else if (saudaNo) {
-        await dbModule.update('sauda_master', 'sauda_no', saudaNo, updatePayload).catch(() => {});
-      }
-    } catch (err) {
-      console.error("Error updating rejector name in Supabase:", err);
-    }
-  };
-
-  const handleMarkReject = async (entry: Sauda) => {
+  // User 010 (Checker) Rejection Handler with Mandatory Remarks
+  const handleMarkReject = (entry: Sauda) => {
     const userCtx = getCurrentUserContext();
     const canReject = isUserAdmin() || isUserId10() || isL5OrAdmin() || isUserId2() || userCtx.userRole === 'ADMIN';
 
     if (!canReject) {
-      alert("🔒 Permission Denied: Only User ID 10 (Checker) or System Admin can reject Sauda contracts.");
+      alert("🔒 Permission Denied: Only User ID 010 (Checker) can reject Sauda contracts.");
       return;
     }
 
-    const currentlyRejected = isRejectedSauda(entry);
+    if (isApprovedSauda(entry)) {
+      alert(`🔒 Contract is Permanently Locked: Sauda #${entry.sauda_no} is approved and cannot be rejected or modified.`);
+      return;
+    }
+
+    if (isRejectedSauda(entry)) {
+      if (isUser2 || !isUser10) {
+        // User 002 (Maker) opens rejected entry for correction and resubmission
+        handleEdit(entry);
+        return;
+      }
+    }
+
+    setRejectingSauda(entry);
+    setRejectionRemarksInput(entry.rejection_remarks || '');
+    setRejectionError('');
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectingSauda) return;
+    const trimmedRemarks = rejectionRemarksInput.trim();
+    if (!trimmedRemarks) {
+      setRejectionError("Mandatory rejection remarks are required. Please explain why this entry is rejected.");
+      return;
+    }
+    if (trimmedRemarks.length < 3) {
+      setRejectionError("Please provide a descriptive remark explaining what corrections User 002 needs to make.");
+      return;
+    }
+
+    const userCtx = getCurrentUserContext();
+    const rejectorName = resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'User 010 (Checker)');
+
+    setIsRejectingLoading(true);
+    const entry = rejectingSauda;
     const targetId = entry.sauda_id || (entry as any).id;
     const saudaNo = entry.sauda_no;
-    const fYear = entry.financial_year || '2026-2027';
     const cleanNo = String(saudaNo || '').replace(/^0+/, '');
-    const paddedNo = cleanNo ? cleanNo.padStart(4, '0') : '';
-
-    if (currentlyRejected) {
-      if (isUser2 || !isUser10) {
-        // User 002 or maker: Click to review and edit/resubmit
-        const proceedEdit = window.confirm(
-          `Sauda #${entry.sauda_no} is currently REJECTED by "${resolveDisplayName(entry.rejected_by, 'Checker')}".\n\nClick "OK" to EDIT & RESUBMIT this Sauda contract now.\nClick "Cancel" to close.`
-        );
-        if (proceedEdit) {
-          handleEdit(entry);
-        }
-        return;
-      }
-
-      const confirmUnreject = window.confirm(
-        `Sauda #${entry.sauda_no} is currently REJECTED by "${resolveDisplayName(entry.rejected_by, 'Unknown User')}".\n\nClick "OK" to UN-REJECT this Sauda contract (move back to Pending).\nClick "Cancel" to edit the Rejector User Name instead.`
-      );
-
-      if (confirmUnreject) {
-        const updatePayload = {
-          is_checked: false,
-          checked_by: null,
-          checked_at: null,
-          approved_by: null,
-          approved_at: null,
-          status: 'PENDING',
-          approval_status: 'PENDING',
-          rejected_by: null,
-          rejected_at: null
-        };
-
-        setSaudaList(prev => prev.map(s => {
-          const match = (s.sauda_id && targetId && s.sauda_id === targetId) || (s.sauda_no && saudaNo && String(s.sauda_no).replace(/^0+/, '') === cleanNo);
-          return match ? { ...s, ...updatePayload } : s;
-        }));
-
-        try {
-          const cleanKey = String(saudaNo || targetId || '').trim().toUpperCase();
-          if (cleanKey) {
-            localStorage.setItem(`sauda_check_status_${cleanKey}`, JSON.stringify(updatePayload));
-          }
-          if (targetId) {
-            await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload);
-          } else if (saudaNo) {
-            await dbModule.update('sauda_master', 'sauda_no', saudaNo, updatePayload);
-          }
-
-          logChange({
-            module: 'Sauda Desk',
-            entity_name: 'Sauda Contract Un-reject',
-            record_id: String(targetId || saudaNo),
-            action: 'UPDATE',
-            field_name: 'status',
-            field_label: 'Approval Status',
-            old_value: 'REJECTED',
-            new_value: 'PENDING',
-            user_name: resolveDisplayName(userCtx.userName || userCtx.username || userCtx.userId, 'Admin'),
-            remarks: `Sauda #${saudaNo} moved back to Pending from Rejected`
-          }).catch(() => {});
-
-          window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sauda_master' } }));
-        } catch (err: any) {
-          console.error("Error un-rejecting sauda in Supabase:", err);
-          alert("Failed to un-reject: " + (err.message || err));
-        }
-        return;
-      } else {
-        await handleEditRejectorName(entry);
-        return;
-      }
-    }
-
-    const rejectorName = resolveDisplayName(
-      userCtx.userName || userCtx.username || userCtx.userId, 
-      isUserId10() ? 'Checker' : 'Admin'
-    );
-
-    const confirmReject = window.confirm(
-      `Are you sure you want to REJECT Sauda Order #${entry.sauda_no}?\n\nThis will mark it as Rejected in Supabase and send it to User 002 for review and correction.`
-    );
-
-    if (!confirmReject) {
-      return;
-    }
 
     const updatePayload = {
       is_checked: false,
@@ -498,7 +454,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       status: 'REJECTED',
       approval_status: 'REJECTED',
       rejected_by: rejectorName,
-      rejected_at: new Date().toISOString()
+      rejected_at: new Date().toISOString(),
+      rejection_remarks: trimmedRemarks,
+      last_updated_at: new Date().toISOString()
     };
 
     setSaudaList(prev => prev.map(s => {
@@ -523,18 +481,23 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         record_id: String(targetId || saudaNo),
         action: 'UPDATE',
         field_name: 'status',
-        field_label: 'Rejection Status',
+        field_label: 'Approval Status',
         old_value: entry.status || 'PENDING',
         new_value: 'REJECTED',
         user_name: rejectorName,
-        remarks: `Sauda #${saudaNo} rejected by ${rejectorName}`
+        remarks: `Sauda #${saudaNo} rejected by User 010. Reason: ${trimmedRemarks}`
       }).catch(() => {});
 
       window.dispatchEvent(new CustomEvent('app-data-updated', { detail: { table: 'sauda_master' } }));
-      alert(`Order #${entry.sauda_no} has been REJECTED. It is permanently saved in Supabase and returned to User 002 for review.`);
+      setRejectingSauda(null);
+      setRejectionRemarksInput('');
+      setRejectionError('');
+      alert(`✕ Sauda #${entry.sauda_no} has been REJECTED with remarks and returned to User 002 for correction.`);
     } catch (err: any) {
-      console.error("Error updating reject status in Supabase:", err);
-      alert("Failed to save rejection to database: " + (err.message || err));
+      console.error("Error rejecting sauda:", err);
+      alert("Failed to save rejection: " + (err.message || err));
+    } finally {
+      setIsRejectingLoading(false);
     }
   };
 
@@ -969,8 +932,12 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
   const handleDelete = async (id: string) => {
     const target = saudaList.find(s => s.sauda_id === id || (s as any).id === id);
-    if (target && isCheckedSauda(target) && !isUserAdmin()) {
-      alert(`🔒 Permission Denied: Sauda #${target.sauda_no} has been approved by User 010 (Checker). It cannot be deleted by any user. Only Admin can delete approved contracts.`);
+    if (target && isApprovedSauda(target)) {
+      alert(`🔒 Permission Denied: Sauda #${target.sauda_no} has been approved by User 010 (Checker).\n\nPer company policy, once approved, this contract is PERMANENTLY LOCKED against deletion by ALL users.`);
+      return;
+    }
+    if (target && isPendingUncheckedSauda(target)) {
+      alert(`🔒 Permission Denied: Sauda #${target.sauda_no} is currently Pending Approval from User 010 and cannot be deleted.`);
       return;
     }
 
@@ -994,9 +961,20 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   };
 
   const handleEdit = async (sauda: Sauda) => {
-    // If Sauda is approved by user 010 (checked), only Admin can edit it!
-    if (isCheckedSauda(sauda) && !isUserAdmin()) {
-      alert(`🔒 Permission Denied: Sauda #${sauda.sauda_no} has been approved by User 010 (Checker).\n\nIt cannot be edited by any user. Only Admin can edit this contract.`);
+    // Once approved by User 010, permanently locked against editing by all users!
+    if (isApprovedSauda(sauda)) {
+      alert(`🔒 Permission Denied: Sauda #${sauda.sauda_no} is approved by User 010 (Checker).\n\nPer company policy, once approved, this contract is PERMANENTLY LOCKED against editing by ALL users.`);
+      return;
+    }
+
+    // Pending Approval cannot be edited by User 002
+    if (isPendingUncheckedSauda(sauda)) {
+      alert(`🔒 Permission Denied: Sauda #${sauda.sauda_no} is currently Pending Approval from User 010.\n\nIt cannot be edited until verified by the Checker.`);
+      return;
+    }
+
+    if (isUser10) {
+      alert(`🔒 Notice: User 010 (Checker) reviews contracts without directly modifying data. Please use the Approve or Reject buttons.`);
       return;
     }
 
@@ -1362,12 +1340,15 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
     // Filtering by Status Tab
     if (statusTab === 'pending') {
-      // Main Dashboard strictly shows records awaiting approval (pending, not checked and not rejected)
       if (!isPendingUncheckedSauda(s)) return false;
-    } else if (statusTab === 'checked') {
-      if (!isCheckedSauda(s)) return false;
+    } else if (statusTab === 'checked' || statusTab === 'approved') {
+      if (!isApprovedSauda(s)) return false;
     } else if (statusTab === 'rejected') {
       if (!isRejectedSauda(s)) return false;
+    } else if (statusTab === 'drafts') {
+      if (!isDraftSauda(s)) return false;
+    } else if (statusTab === 'resubmitted') {
+      if (!isResubmittedSauda(s)) return false;
     }
 
     const term = searchTerm.toLowerCase().trim();
@@ -1382,7 +1363,8 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       (s.marks || '').toLowerCase().includes(term) ||
       (s.area || '').toLowerCase().includes(term) ||
       (s.agency || '').toLowerCase().includes(term) ||
-      (s.remarks || '').toLowerCase().includes(term);
+      (s.remarks || '').toLowerCase().includes(term) ||
+      (s.rejection_remarks || '').toLowerCase().includes(term);
       
     if (!matchesSearch) return false;
 
@@ -1395,14 +1377,18 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   // Active Saudas strictly in Sauda Desk (not yet moved to Sauda Check Point)
   const activeSaudas = saudaList.filter(s => !isSaudaInCheckPointOrPo(s));
   const pendingSaudas = activeSaudas.filter(s => isPendingUncheckedSauda(s));
-  const checkedSaudas = activeSaudas.filter(s => isCheckedSauda(s));
+  const checkedSaudas = activeSaudas.filter(s => isApprovedSauda(s));
   const rejectedSaudas = activeSaudas.filter(s => isRejectedSauda(s));
-  const completedSaudas = saudaList.filter(s => isSaudaInCheckPointOrPo(s));
+  const draftSaudas = activeSaudas.filter(s => isDraftSauda(s));
+  const resubmittedSaudas = activeSaudas.filter(s => isResubmittedSauda(s));
 
+  const totalSaudas = activeSaudas.length;
   const pendingSaudasCount = pendingSaudas.length;
   const checkedSaudasCount = checkedSaudas.length;
   const rejectedSaudasCount = rejectedSaudas.length;
-  const totalSaudas = activeSaudas.length;
+  const draftSaudasCount = draftSaudas.length;
+  const resubmittedSaudasCount = resubmittedSaudas.length;
+
   const pendingWeightTons = pendingSaudas.reduce((acc, s) => acc + (Number(s.total_wt_in_ton) || 0), 0);
   const totalWeightTons = activeSaudas.reduce((acc, s) => acc + (Number(s.total_wt_in_ton) || 0), 0);
   const displayedWeightTons = filteredSaudas.reduce((acc, s) => acc + (Number(s.total_wt_in_ton) || 0), 0);
@@ -1411,71 +1397,186 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   return (
     <LegacyLayout title="Sauda Desk" subtitle="Bally Jute Company Limited ERP Console" onClose={onClose}>
       <div className="space-y-4 relative pb-10 font-sans">
-        {/* 1. Four Modern Enterprise KPI Cards (Light & Colorful) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Active Pending Saudas (Light Rose) */}
-          <div className="bg-gradient-to-br from-rose-50 via-white to-rose-50/60 rounded-[18px] border border-rose-200 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
-            <div>
-              <p className="text-2xl font-black text-rose-950 tracking-tight font-mono">{pendingSaudasCount}</p>
-              <p className="text-[10px] font-extrabold text-rose-700 uppercase tracking-wider mt-0.5">Active Pending Saudas</p>
-              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-rose-700 bg-rose-100 rounded-md border border-rose-200/60">
-                Awaiting Check Point
-              </span>
-            </div>
-            <div className="p-3 bg-rose-100/80 border border-rose-200 rounded-2xl text-rose-600 shadow-xs">
-              <Clock className="h-6 w-6" />
-            </div>
-          </div>
-
-          {/* Card 2: Total Registered Saudas (Light Indigo/Blue) */}
-          <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50/60 rounded-[18px] border border-blue-200 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
+        {/* 1. Maker-Checker Dedicated Summary KPI Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          {/* Card 1: Total Sauda Entries */}
+          <div 
+            onClick={() => setStatusTab('all')}
+            className={cn(
+              "rounded-[18px] border p-3.5 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between cursor-pointer",
+              statusTab === 'all'
+                ? "bg-gradient-to-br from-blue-100 via-white to-blue-50 border-blue-400 ring-2 ring-blue-300"
+                : "bg-gradient-to-br from-blue-50 via-white to-indigo-50/60 border-blue-200"
+            )}
+          >
             <div>
               <p className="text-2xl font-black text-blue-950 tracking-tight font-mono">{totalSaudas}</p>
-              <p className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider mt-0.5">Total Registered Saudas</p>
+              <p className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider mt-0.5">Total Sauda Entries</p>
               <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-blue-700 bg-blue-100 rounded-md border border-blue-200/60">
-                {pendingSaudasCount} Pending • {checkedSaudasCount} Approved • {rejectedSaudasCount} Rejected
+                All Records
               </span>
             </div>
-            <div className="p-3 bg-blue-100/80 border border-blue-200 rounded-2xl text-blue-600 shadow-xs">
-              <ClipboardList className="h-6 w-6" />
+            <div className="p-2.5 bg-blue-100/80 border border-blue-200 rounded-xl text-blue-600 shadow-xs">
+              <ClipboardList className="h-5 w-5" />
             </div>
           </div>
 
-          {/* Card 3: Cumulative Sauda Weight (Light Emerald/Teal) */}
-          <div className="bg-gradient-to-br from-emerald-50 via-white to-teal-50/60 rounded-[18px] border border-emerald-200 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
+          {/* Card 2: User 010 shows Pending Approval, User 002 shows Drafts */}
+          {isUser10 ? (
+            <div 
+              onClick={() => setStatusTab('pending')}
+              className={cn(
+                "rounded-[18px] border p-3.5 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between cursor-pointer",
+                statusTab === 'pending'
+                  ? "bg-gradient-to-br from-amber-100 via-white to-amber-50 border-amber-400 ring-2 ring-amber-300"
+                  : "bg-gradient-to-br from-amber-50 via-white to-amber-50/60 border-amber-200"
+              )}
+            >
+              <div>
+                <p className="text-2xl font-black text-amber-950 tracking-tight font-mono">{pendingSaudasCount}</p>
+                <p className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider mt-0.5">Pending Approval</p>
+                <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-amber-800 bg-amber-100 rounded-md border border-amber-200/60">
+                  Awaiting Review
+                </span>
+              </div>
+              <div className="p-2.5 bg-amber-100/80 border border-amber-200 rounded-xl text-amber-600 shadow-xs">
+                <Clock className="h-5 w-5" />
+              </div>
+            </div>
+          ) : (
+            <div 
+              onClick={() => setStatusTab('drafts')}
+              className={cn(
+                "rounded-[18px] border p-3.5 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between cursor-pointer",
+                statusTab === 'drafts'
+                  ? "bg-gradient-to-br from-slate-200 via-white to-slate-100 border-slate-400 ring-2 ring-slate-300"
+                  : "bg-gradient-to-br from-slate-50 via-white to-slate-100/60 border-slate-200"
+              )}
+            >
+              <div>
+                <p className="text-2xl font-black text-slate-900 tracking-tight font-mono">{draftSaudasCount}</p>
+                <p className="text-[10px] font-extrabold text-slate-700 uppercase tracking-wider mt-0.5">Draft Entries</p>
+                <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-slate-700 bg-slate-100 rounded-md border border-slate-200/60">
+                  Unsubmitted
+                </span>
+              </div>
+              <div className="p-2.5 bg-slate-100/80 border border-slate-200 rounded-xl text-slate-600 shadow-xs">
+                <Edit className="h-5 w-5" />
+              </div>
+            </div>
+          )}
+
+          {/* Card 3: User 010 shows Approved Entries, User 002 shows Pending Approval */}
+          {isUser10 ? (
+            <div 
+              onClick={() => setStatusTab('approved')}
+              className={cn(
+                "rounded-[18px] border p-3.5 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between cursor-pointer",
+                (statusTab === 'approved' || statusTab === 'checked')
+                  ? "bg-gradient-to-br from-emerald-100 via-white to-emerald-50 border-emerald-400 ring-2 ring-emerald-300"
+                  : "bg-gradient-to-br from-emerald-50 via-white to-emerald-50/60 border-emerald-200"
+              )}
+            >
+              <div>
+                <p className="text-2xl font-black text-emerald-950 tracking-tight font-mono">{checkedSaudasCount}</p>
+                <p className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider mt-0.5">Approved Entries</p>
+                <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-emerald-800 bg-emerald-100 rounded-md border border-emerald-200/60">
+                  Permanently Locked
+                </span>
+              </div>
+              <div className="p-2.5 bg-emerald-100/80 border border-emerald-200 rounded-xl text-emerald-600 shadow-xs">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+            </div>
+          ) : (
+            <div 
+              onClick={() => setStatusTab('pending')}
+              className={cn(
+                "rounded-[18px] border p-3.5 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between cursor-pointer",
+                statusTab === 'pending'
+                  ? "bg-gradient-to-br from-amber-100 via-white to-amber-50 border-amber-400 ring-2 ring-amber-300"
+                  : "bg-gradient-to-br from-amber-50 via-white to-amber-50/60 border-amber-200"
+              )}
+            >
+              <div>
+                <p className="text-2xl font-black text-amber-950 tracking-tight font-mono">{pendingSaudasCount}</p>
+                <p className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider mt-0.5">Pending Approval</p>
+                <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-amber-800 bg-amber-100 rounded-md border border-amber-200/60">
+                  Submitted to 010
+                </span>
+              </div>
+              <div className="p-2.5 bg-amber-100/80 border border-amber-200 rounded-xl text-amber-600 shadow-xs">
+                <Clock className="h-5 w-5" />
+              </div>
+            </div>
+          )}
+
+          {/* Card 4: Rejected Entries */}
+          <div 
+            onClick={() => setStatusTab('rejected')}
+            className={cn(
+              "rounded-[18px] border p-3.5 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between cursor-pointer",
+              statusTab === 'rejected'
+                ? "bg-gradient-to-br from-rose-100 via-white to-rose-50 border-rose-400 ring-2 ring-rose-300"
+                : "bg-gradient-to-br from-rose-50 via-white to-rose-50/60 border-rose-200"
+            )}
+          >
             <div>
-              <p className="text-2xl font-black text-emerald-950 tracking-tight font-mono">
-                {(statusTab === 'pending' ? pendingWeightTons : totalWeightTons).toFixed(2)} <span className="text-sm font-bold text-emerald-700">Tons</span>
-              </p>
-              <p className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider mt-0.5">
-                {statusTab === 'pending' ? "Pending Sauda Weight" : "Cumulative Sauda Weight"}
-              </p>
-              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-100 rounded-md border border-emerald-200/60">
-                {statusTab === 'pending' ? "Active Allocation" : "All Processed"}
+              <p className="text-2xl font-black text-rose-950 tracking-tight font-mono">{rejectedSaudasCount}</p>
+              <p className="text-[10px] font-extrabold text-rose-800 uppercase tracking-wider mt-0.5">Rejected Entries</p>
+              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-rose-800 bg-rose-100 rounded-md border border-rose-200/60">
+                {isUser10 ? "Returned to Maker" : "Needs Correction"}
               </span>
             </div>
-            <div className="p-3 bg-emerald-100/80 border border-emerald-200 rounded-2xl text-emerald-600 shadow-xs">
-              <Scale className="h-6 w-6" />
+            <div className="p-2.5 bg-rose-100/80 border border-rose-200 rounded-xl text-rose-600 shadow-xs">
+              <X className="h-5 w-5" />
             </div>
           </div>
 
-          {/* Card 4: Book Total Value (Light Amber/Orange) */}
-          <div className="bg-gradient-to-br from-amber-50 via-white to-orange-50/60 rounded-[18px] border border-amber-200 p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between">
-            <div>
-              <p className="text-2xl font-black text-amber-950 tracking-tight font-mono">
-                ₹{bookTotalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-              <p className="text-[10px] font-extrabold text-amber-700 uppercase tracking-wider mt-0.5">
-                {statusTab === 'pending' ? "Pending Book Value" : "Book Total Value"}
-              </p>
-              <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-amber-700 bg-amber-100 rounded-md border border-amber-200/60">
-                Verified Valuation
-              </span>
+          {/* Card 5: User 010 shows Resubmitted Entries, User 002 shows Approved Entries */}
+          {isUser10 ? (
+            <div 
+              onClick={() => setStatusTab('resubmitted')}
+              className={cn(
+                "rounded-[18px] border p-3.5 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between cursor-pointer",
+                statusTab === 'resubmitted'
+                  ? "bg-gradient-to-br from-purple-100 via-white to-purple-50 border-purple-400 ring-2 ring-purple-300"
+                  : "bg-gradient-to-br from-purple-50 via-white to-purple-50/60 border-purple-200"
+              )}
+            >
+              <div>
+                <p className="text-2xl font-black text-purple-950 tracking-tight font-mono">{resubmittedSaudasCount}</p>
+                <p className="text-[10px] font-extrabold text-purple-800 uppercase tracking-wider mt-0.5">Resubmitted Entries</p>
+                <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-purple-800 bg-purple-100 rounded-md border border-purple-200/60">
+                  Corrected by 002
+                </span>
+              </div>
+              <div className="p-2.5 bg-purple-100/80 border border-purple-200 rounded-xl text-purple-600 shadow-xs">
+                <RefreshCcw className="h-5 w-5" />
+              </div>
             </div>
-            <div className="p-3 bg-amber-100/80 border border-amber-200 rounded-2xl text-amber-600 shadow-xs">
-              <IndianRupee className="h-6 w-6" />
+          ) : (
+            <div 
+              onClick={() => setStatusTab('approved')}
+              className={cn(
+                "rounded-[18px] border p-3.5 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-between cursor-pointer",
+                (statusTab === 'approved' || statusTab === 'checked')
+                  ? "bg-gradient-to-br from-emerald-100 via-white to-emerald-50 border-emerald-400 ring-2 ring-emerald-300"
+                  : "bg-gradient-to-br from-emerald-50 via-white to-emerald-50/60 border-emerald-200"
+              )}
+            >
+              <div>
+                <p className="text-2xl font-black text-emerald-950 tracking-tight font-mono">{checkedSaudasCount}</p>
+                <p className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider mt-0.5">Approved Entries</p>
+                <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold text-emerald-800 bg-emerald-100 rounded-md border border-emerald-200/60">
+                  Permanently Locked
+                </span>
+              </div>
+              <div className="p-2.5 bg-emerald-100/80 border border-emerald-200 rounded-xl text-emerald-600 shadow-xs">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* 2. Search & Action Toolbar Section */}
@@ -1584,70 +1685,168 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
 
             {/* Quick Section Switchers Beside Search */}
             <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 shrink-0 gap-1 flex-wrap">
-              <button
-                type="button"
-                onClick={() => setStatusTab('all')}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
-                  statusTab === 'all'
-                    ? "bg-slate-900 text-white shadow-2xs"
-                    : "text-slate-700 hover:bg-slate-200"
-                )}
-                title="All Registered Contracts"
-              >
-                <span>All Contracts</span>
-                <span className="text-[10px] font-mono opacity-80">({totalSaudas})</span>
-              </button>
+              {isUser10 ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab('pending')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                      statusTab === 'pending'
+                        ? "bg-[#D94B5A] text-white shadow-2xs"
+                        : "text-slate-700 hover:bg-slate-200"
+                    )}
+                    title="Pending Approval - Awaiting Verification"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Pending Approval</span>
+                    <span className="text-[10px] font-mono opacity-90">({pendingSaudasCount})</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => setStatusTab('pending')}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
-                  statusTab === 'pending'
-                    ? "bg-[#D94B5A] text-white shadow-2xs"
-                    : "text-slate-700 hover:bg-slate-200"
-                )}
-                title="Main Dashboard (Pending Saudas)"
-              >
-                <span>Pending</span>
-                <span className="text-[10px] font-mono opacity-80">({pendingSaudasCount})</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab('all')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                      statusTab === 'all'
+                        ? "bg-slate-900 text-white shadow-2xs"
+                        : "text-slate-700 hover:bg-slate-200"
+                    )}
+                    title="All Registered Contracts"
+                  >
+                    <span>All Contracts</span>
+                    <span className="text-[10px] font-mono opacity-80">({totalSaudas})</span>
+                  </button>
 
-              {canSeeChecked && (
-                <button
-                  type="button"
-                  onClick={() => setStatusTab('checked')}
-                  className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
-                    statusTab === 'checked'
-                      ? "bg-emerald-800 text-white shadow-2xs"
-                      : "text-emerald-800 hover:bg-emerald-100/60"
-                  )}
-                  title="Approved"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Approved</span>
-                  <span className="text-[10px] font-mono opacity-80">({checkedSaudasCount})</span>
-                </button>
-              )}
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab('approved')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                      (statusTab === 'approved' || statusTab === 'checked')
+                        ? "bg-emerald-800 text-white shadow-2xs"
+                        : "text-emerald-800 hover:bg-emerald-100/60"
+                    )}
+                    title="Approved Entries (Permanently Locked)"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Approved</span>
+                    <span className="text-[10px] font-mono opacity-80">({checkedSaudasCount})</span>
+                  </button>
 
-              {canSeeRejected && (
-                <button
-                  type="button"
-                  onClick={() => setStatusTab('rejected')}
-                  className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
-                    statusTab === 'rejected'
-                      ? "bg-rose-800 text-white shadow-2xs"
-                      : "text-rose-800 hover:bg-rose-100/60"
-                  )}
-                  title="Reject"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span>Rejected</span>
-                  <span className="text-[10px] font-mono opacity-80">({rejectedSaudasCount})</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab('rejected')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                      statusTab === 'rejected'
+                        ? "bg-rose-800 text-white shadow-2xs"
+                        : "text-rose-800 hover:bg-rose-100/60"
+                    )}
+                    title="Rejected Entries"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Rejected</span>
+                    <span className="text-[10px] font-mono opacity-80">({rejectedSaudasCount})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab('resubmitted')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                      statusTab === 'resubmitted'
+                        ? "bg-purple-800 text-white shadow-2xs"
+                        : "text-purple-800 hover:bg-purple-100/60"
+                    )}
+                    title="Resubmitted Entries by User 002"
+                  >
+                    <RefreshCcw className="w-3.5 h-3.5" />
+                    <span>Resubmitted</span>
+                    <span className="text-[10px] font-mono opacity-80">({resubmittedSaudasCount})</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab('all')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                      statusTab === 'all'
+                        ? "bg-slate-900 text-white shadow-2xs"
+                        : "text-slate-700 hover:bg-slate-200"
+                    )}
+                    title="All Registered Contracts"
+                  >
+                    <span>All Contracts</span>
+                    <span className="text-[10px] font-mono opacity-80">({totalSaudas})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab('drafts')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                      statusTab === 'drafts'
+                        ? "bg-slate-800 text-white shadow-2xs"
+                        : "text-slate-700 hover:bg-slate-200"
+                    )}
+                    title="Draft Entries (Editable)"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                    <span>Drafts</span>
+                    <span className="text-[10px] font-mono opacity-80">({draftSaudasCount})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab('pending')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                      statusTab === 'pending'
+                        ? "bg-amber-600 text-white shadow-2xs"
+                        : "text-amber-800 hover:bg-amber-100/60"
+                    )}
+                    title="Pending Approval (Awaiting User 010)"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Pending Approval</span>
+                    <span className="text-[10px] font-mono opacity-80">({pendingSaudasCount})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab('rejected')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                      statusTab === 'rejected'
+                        ? "bg-rose-800 text-white shadow-2xs"
+                        : "text-rose-800 hover:bg-rose-100/60"
+                    )}
+                    title="Rejected Entries (Edit & Resubmit)"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Rejected</span>
+                    <span className="text-[10px] font-mono opacity-80">({rejectedSaudasCount})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab('approved')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1",
+                      (statusTab === 'approved' || statusTab === 'checked')
+                        ? "bg-emerald-800 text-white shadow-2xs"
+                        : "text-emerald-800 hover:bg-emerald-100/60"
+                    )}
+                    title="Approved Entries (Permanently Locked)"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Approved</span>
+                    <span className="text-[10px] font-mono opacity-80">({checkedSaudasCount})</span>
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -1668,39 +1867,44 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                   {!isUser10 && <th className="px-3 py-2.5 text-center whitespace-nowrap min-w-[100px] bg-[#FFF2CC] text-[#92400E] font-black">Unit</th>}
                   {!isUser10 && <th className="px-4 py-2.5 text-right whitespace-nowrap min-w-[120px] bg-blue-50 text-blue-950 font-black">B. Rate</th>}
                   <th className={cn("py-2.5 text-center whitespace-nowrap min-w-[150px]", isUser10 ? "px-2" : "px-3")}>Status</th>
-                  {(isAdminOrL4 || isUser10) && <th className={cn("py-2.5 text-center whitespace-nowrap min-w-[120px]", isUser10 ? "px-1" : "px-3")}>Actions</th>}
+                  <th className={cn("py-2.5 text-center whitespace-nowrap min-w-[130px]", isUser10 ? "px-1" : "px-3")}>Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E5E7EB]">
                 {filteredSaudas.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((entry, idx) => {
                   const isSelected = selectedSaudaId === entry.sauda_id;
-                  const canSeeActions = isAdminOrL4 || isUser10;
-                  const isChecked = Boolean(
-                    entry.is_checked || 
-                    String(entry.status || '').toUpperCase() === 'CHECKED' || 
-                    String(entry.approval_status || '').toUpperCase() === 'CHECKED' || 
-                    String(entry.status || '').toUpperCase() === 'APPROVED' || 
-                    String(entry.approval_status || '').toUpperCase() === 'APPROVED'
-                  );
-                  const isRejected = Boolean(
-                    String(entry.status || '').toUpperCase() === 'REJECTED' || 
-                    String(entry.approval_status || '').toUpperCase() === 'REJECTED' ||
-                    Boolean(entry.rejected_by)
-                  );
+                  const canSeeActions = true;
+                  const isChecked = isApprovedSauda(entry);
+                  const isPending = isPendingUncheckedSauda(entry);
+                  const isRejected = isRejectedSauda(entry);
+                  const isDraft = isDraftSauda(entry);
+                  const isResubmitted = isResubmittedSauda(entry);
                   const userCtx = getCurrentUserContext();
-                  const checkerName = resolveDisplayName(entry.checked_by || entry.approved_by || (isChecked ? userCtx.userName : null), 'Checker');
-                  const rejectorName = resolveDisplayName(entry.rejected_by || (isRejected ? userCtx.userName : null), 'Unknown User');
+                  const checkerName = resolveDisplayName(entry.approved_by || entry.checked_by || (isChecked ? userCtx.userName : null), 'Checker (User 010)');
+                  const rejectorName = resolveDisplayName(entry.rejected_by || (isRejected ? userCtx.userName : null), 'Checker (User 010)');
 
                   return (
                     <tr 
                       key={entry.sauda_id} 
                       onClick={() => setSelectedSaudaId(entry.sauda_id!)}
                       onDoubleClick={() => {
-                        if (isChecked && !isUserAdmin()) {
-                          alert(`🔒 Permission Denied: Sauda #${entry.sauda_no} is approved by User 010 (Checker).\n\nIt cannot be edited by any user. Only Admin can edit this contract.`);
+                        if (isChecked || isPending) {
+                          setViewingDetailsSauda(entry);
                           return;
                         }
-                        if (canEditOrDelete()) handleEdit(entry);
+                        if (isRejected || isDraft) {
+                          if (isUser2 || isUserAdmin()) {
+                            handleEdit(entry);
+                          } else {
+                            setViewingDetailsSauda(entry);
+                          }
+                          return;
+                        }
+                        if (canEditSaudaContract(entry)) {
+                          handleEdit(entry);
+                        } else {
+                          setViewingDetailsSauda(entry);
+                        }
                       }}
                       className={cn(
                         "h-10 cursor-pointer transition-colors text-xs font-medium", 
@@ -1763,70 +1967,133 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                       <td className="px-3 text-center">
                         <div className="flex flex-col items-center justify-center gap-1 py-1">
                           {isChecked ? (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleMarkCheck(entry); }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs hover:bg-emerald-700 transition-all cursor-pointer"
-                              title="Approved (Click to toggle / un-approve)"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5 text-amber-300" />
-                              <span>Approved</span>
-                            </button>
-                          ) : isRejected ? (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleMarkReject(entry); }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-xs hover:bg-rose-700 transition-all cursor-pointer"
-                              title={isUser2 || !isUser10 ? "Rejected - Click to Edit and Resubmit" : "Rejected (Click to toggle / un-reject)"}
-                            >
-                              <X className="w-3.5 h-3.5 text-white" />
-                              <span>{isUser2 || !isUser10 ? "Edit & Resubmit" : "Rejected"}</span>
-                            </button>
-                          ) : (
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleMarkCheck(entry); }}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 hover:bg-emerald-600 hover:text-white border border-emerald-300 transition-all cursor-pointer shadow-2xs"
-                                title="Click to Approve (User ID 10 or Admin)"
-                              >
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600 hover:text-white" />
-                                <span>Approve</span>
-                              </button>
-
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleMarkReject(entry); }}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 hover:bg-rose-600 hover:text-white border border-rose-300 transition-all cursor-pointer shadow-2xs"
-                                title="Click to Reject Sauda"
-                              >
-                                <X className="w-3 h-3 text-rose-600 hover:text-white" />
-                                <span>Reject</span>
-                              </button>
-                            </div>
-                          )}
-
-                          {isChecked && checkerName && (
-                            <span className={cn(
-                              "text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight text-center truncate max-w-[120px]",
-                              isSelected ? "bg-emerald-900 text-amber-300" : "bg-emerald-100 text-emerald-900 border border-emerald-200"
-                            )}>
-                              ✓ {checkerName}
-                            </span>
-                          )}
-
-                          {isRejected && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditRejectorName(entry);
-                              }}
-                              className={cn(
-                                "text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight text-center truncate max-w-[120px] cursor-pointer hover:scale-105 transition-all flex items-center justify-center gap-0.5 shadow-2xs",
-                                isSelected ? "bg-rose-900 text-rose-200 hover:bg-rose-800" : "bg-rose-100 text-rose-900 border border-rose-200 hover:bg-rose-200"
+                            <div className="flex flex-col items-center gap-0.5">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-xs">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-amber-300" />
+                                <span>Approved</span>
+                                <Lock className="w-3 h-3 text-emerald-200" />
+                              </span>
+                              {checkerName && (
+                                <span className={cn(
+                                  "text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight text-center truncate max-w-[130px]",
+                                  isSelected ? "bg-emerald-900 text-amber-300" : "bg-emerald-100 text-emerald-900 border border-emerald-200"
+                                )}>
+                                  ✓ {checkerName}
+                                </span>
                               )}
-                              title="Click to edit/update Rejector User Name"
-                            >
-                              <span>✕</span>
-                              <span>{rejectorName || 'Unknown User'}</span>
-                            </button>
+                              <span className={cn(
+                                "text-[7.5px] font-black uppercase tracking-widest flex items-center gap-0.5",
+                                isSelected ? "text-amber-200" : "text-emerald-700"
+                              )}>
+                                <Lock className="w-2 h-2" /> Permanently Locked
+                              </span>
+                            </div>
+                          ) : isRejected ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-xs">
+                                <X className="w-3.5 h-3.5 text-white" />
+                                <span>Rejected</span>
+                              </span>
+                              {rejectorName && (
+                                <span className={cn(
+                                  "text-[8.5px] font-extrabold px-1.5 py-0.2 rounded tracking-tight text-center truncate max-w-[130px]",
+                                  isSelected ? "bg-rose-950 text-rose-200" : "bg-rose-100 text-rose-900 border border-rose-200"
+                                )}>
+                                  By: {rejectorName}
+                                </span>
+                              )}
+                              {entry.rejection_remarks && (
+                                <span
+                                  title={`Rejection reason: ${entry.rejection_remarks}`}
+                                  className={cn(
+                                    "text-[8.5px] font-semibold max-w-[130px] truncate underline cursor-help",
+                                    isSelected ? "text-rose-200" : "text-rose-700"
+                                  )}
+                                >
+                                  "{entry.rejection_remarks}"
+                                </span>
+                              )}
+                              {isUser2 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleEdit(entry); }}
+                                  className="mt-0.5 px-2 py-0.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-[9px] rounded uppercase tracking-wide cursor-pointer shadow-xs flex items-center gap-1"
+                                  title="Edit rejected entry and resubmit for approval"
+                                >
+                                  <Edit className="w-2.5 h-2.5" />
+                                  <span>Edit & Resubmit</span>
+                                </button>
+                              )}
+                            </div>
+                          ) : isDraft ? (
+                            <div className="flex flex-col items-center gap-0.5">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-slate-200 text-slate-800 border border-slate-300 shadow-xs">
+                                <FileText className="w-3 h-3 text-slate-600" />
+                                <span>Draft</span>
+                              </span>
+                              <span className={cn(
+                                "text-[8px] font-bold uppercase tracking-wider",
+                                isSelected ? "text-amber-200" : "text-slate-500"
+                              )}>
+                                Not Submitted
+                              </span>
+                              {isUser2 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleEdit(entry); }}
+                                  className="mt-0.5 px-2 py-0.5 bg-sky-100 hover:bg-sky-200 text-sky-950 border border-sky-300 font-extrabold text-[9px] rounded uppercase tracking-wide cursor-pointer flex items-center gap-1"
+                                >
+                                  <Edit className="w-2.5 h-2.5" />
+                                  <span>Edit Draft</span>
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            /* PENDING APPROVAL */
+                            <div className="flex flex-col items-center justify-center gap-1">
+                              {isResubmitted && (
+                                <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-900 border border-indigo-200 shadow-2xs">
+                                  Resubmitted (v{(entry.resubmission_count || 0) + 1})
+                                </span>
+                              )}
+
+                              {isUser10 ? (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); handleMarkCheck(entry); }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs transition-all cursor-pointer"
+                                    title="Review & Approve Sauda (Confirmation Dialog)"
+                                  >
+                                    <CheckCircle2 className="w-3 h-3 text-amber-300" />
+                                    <span>Approve</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); handleMarkReject(entry); }}
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 hover:bg-rose-600 hover:text-white border border-rose-300 shadow-xs transition-all cursor-pointer"
+                                    title="Reject Sauda (Mandatory Remarks)"
+                                  >
+                                    <X className="w-3 h-3 text-rose-600" />
+                                    <span>Reject</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 shadow-xs">
+                                    <Clock className="w-3.5 h-3.5 text-amber-700" />
+                                    <span>Pending Approval</span>
+                                  </span>
+                                  <span className={cn(
+                                    "text-[8px] font-bold uppercase tracking-wider",
+                                    isSelected ? "text-amber-200" : "text-amber-800"
+                                  )}>
+                                    Under Review (User 010)
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>
@@ -1835,6 +2102,23 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                           {isUser10 ? (
                             <div className="flex items-center justify-center gap-1">
                               <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setViewingDetailsSauda(entry);
+                                }}
+                                className={cn(
+                                  "p-1.5 rounded-lg transition-all cursor-pointer shadow-2xs inline-flex items-center justify-center",
+                                  isSelected
+                                    ? "bg-white/20 text-white hover:bg-white/30"
+                                    : "bg-slate-100 text-slate-700 hover:bg-amber-100 hover:text-slate-900 border border-slate-300"
+                                )}
+                                title="View Complete Sauda Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handlePrint(entry);
@@ -1843,13 +2127,14 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                                   "p-1.5 rounded-lg transition-all cursor-pointer shadow-2xs inline-flex items-center justify-center",
                                   isSelected
                                     ? "bg-white/20 text-amber-300 hover:bg-white/30"
-                                    : "bg-slate-100 text-slate-700 hover:bg-amber-100 hover:text-slate-900 border border-slate-300"
+                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300"
                                 )}
                                 title="Print Sauda Slip"
                               >
-                                <Eye className="w-4 h-4" />
+                                <Printer className="w-4 h-4" />
                               </button>
                               <button
+                                type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setAuditRecordId(entry.sauda_id || entry.sauda_no);
@@ -1869,6 +2154,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                           ) : (
                             <div className="relative inline-block text-left">
                               <button
+                                type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setOpenActionDropdownId(openActionDropdownId === entry.sauda_id ? null : (entry.sauda_id || null));
@@ -1890,65 +2176,132 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                                     className="fixed inset-0 z-20" 
                                     onClick={(e) => { e.stopPropagation(); setOpenActionDropdownId(null); }} 
                                   />
-                                  <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-300 rounded-xl shadow-xl z-30 py-1 font-sans text-xs divide-y divide-slate-100 animate-in fade-in duration-100 text-left">
-                                    {/* Edit Button: If approved, only Admin can edit; otherwise normal permissions apply */}
+                                  <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-300 rounded-xl shadow-xl z-30 py-1 font-sans text-xs divide-y divide-slate-100 animate-in fade-in duration-100 text-left">
+                                    {/* View Details */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenActionDropdownId(null);
+                                        setViewingDetailsSauda(entry);
+                                      }}
+                                      className="w-full px-3 py-1.5 text-left text-slate-800 hover:bg-slate-100 font-bold flex items-center gap-2 cursor-pointer"
+                                      title="View Complete Sauda Details"
+                                    >
+                                      <Eye className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                                      <span>View Details</span>
+                                    </button>
+
+                                    {/* Edit / Resubmit */}
                                     {isChecked ? (
-                                      isUserAdmin() ? (
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setOpenActionDropdownId(null);
-                                            handleEdit(entry);
-                                          }}
-                                          className="w-full px-3 py-1.5 text-left text-amber-800 hover:bg-amber-50 font-bold flex items-center justify-between gap-2 cursor-pointer"
-                                          title="Admin Edit Approved Sauda"
-                                        >
-                                          <div className="flex items-center gap-2">
-                                            <Edit className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                            <span>Edit (Admin)</span>
-                                          </div>
-                                          <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1.5 py-0.2 rounded">
-                                            Admin
-                                          </span>
-                                        </button>
-                                      ) : (
+                                      <div
+                                        className="w-full px-3 py-1.5 text-left text-slate-400 bg-slate-50/80 font-medium flex items-center justify-between gap-2 cursor-not-allowed"
+                                        title="Permanently locked: Approved by User 010. Locked for all users."
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                          <span className="text-slate-500">Edit</span>
+                                        </div>
+                                        <span className="text-[9px] bg-slate-200 text-slate-700 font-bold px-1.5 py-0.2 rounded flex items-center gap-0.5">
+                                          <Lock className="w-2.5 h-2.5" /> Locked
+                                        </span>
+                                      </div>
+                                    ) : isPending ? (
+                                      <div
+                                        className="w-full px-3 py-1.5 text-left text-slate-400 bg-slate-50/80 font-medium flex items-center justify-between gap-2 cursor-not-allowed"
+                                        title="Read-only: Sauda is pending approval by User 010."
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                          <span className="text-slate-500">Edit</span>
+                                        </div>
+                                        <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded">
+                                          In Review
+                                        </span>
+                                      </div>
+                                    ) : isRejected ? (
+                                      (isUser2 || isUserAdmin()) && (
                                         <button
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             setOpenActionDropdownId(null);
-                                            alert(`🔒 Permission Denied: Sauda #${entry.sauda_no} is approved by User 010 (Checker).\n\nIt cannot be edited by any user. Only Admin can edit this contract.`);
+                                            handleEdit(entry);
                                           }}
-                                          className="w-full px-3 py-1.5 text-left text-slate-400 bg-slate-50/80 font-medium flex items-center justify-between gap-2 cursor-not-allowed hover:bg-slate-100 transition-colors"
-                                          title="Locked: Approved by User 010. Only Admin can edit."
+                                          className="w-full px-3 py-1.5 text-left text-amber-900 bg-amber-50/50 hover:bg-amber-100 font-extrabold flex items-center gap-2 cursor-pointer"
+                                          title="Correct errors and resubmit to User 010"
                                         >
-                                          <div className="flex items-center gap-2">
-                                            <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                            <span className="text-slate-500">Edit</span>
-                                          </div>
-                                          <span className="text-[9px] bg-slate-200 text-slate-700 font-bold px-1.5 py-0.2 rounded flex items-center gap-0.5">
-                                            <Lock className="w-2.5 h-2.5" /> Locked
-                                          </span>
+                                          <Edit className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                                          <span>Edit & Resubmit</span>
                                         </button>
                                       )
                                     ) : (
-                                      canEditOrDelete() && (
+                                      /* Draft */
+                                      (isUser2 || isUserAdmin()) && (
                                         <button
+                                          type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             setOpenActionDropdownId(null);
                                             handleEdit(entry);
                                           }}
-                                          className="w-full px-3 py-1.5 text-left text-amber-800 hover:bg-amber-50 font-bold flex items-center gap-2 cursor-pointer"
-                                          title={isRejected ? "Review, Edit and Resubmit Sauda" : "Edit Sauda"}
+                                          className="w-full px-3 py-1.5 text-left text-slate-800 hover:bg-slate-100 font-bold flex items-center gap-2 cursor-pointer"
+                                          title="Edit Draft Sauda"
                                         >
-                                          <Edit className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                          <span>{isRejected ? "Edit & Resubmit" : "Edit"}</span>
+                                          <Edit className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                                          <span>Edit Draft</span>
                                         </button>
                                       )
                                     )}
 
+                                    {/* Delete */}
+                                    {isChecked ? (
+                                      <div
+                                        className="w-full px-3 py-1.5 text-left text-slate-400 bg-slate-50/80 font-medium flex items-center justify-between gap-2 cursor-not-allowed"
+                                        title="Permanently locked: Approved contracts cannot be deleted."
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <Trash2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                          <span className="text-slate-400">Delete</span>
+                                        </div>
+                                        <span className="text-[9px] bg-slate-200 text-slate-700 font-bold px-1.5 py-0.2 rounded">
+                                          Locked
+                                        </span>
+                                      </div>
+                                    ) : isPending ? (
+                                      <div
+                                        className="w-full px-3 py-1.5 text-left text-slate-400 bg-slate-50/80 font-medium flex items-center justify-between gap-2 cursor-not-allowed"
+                                        title="Cannot delete while pending approval."
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <Trash2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                          <span className="text-slate-400">Delete</span>
+                                        </div>
+                                        <span className="text-[9px] bg-slate-200 text-slate-700 font-bold px-1.5 py-0.2 rounded">
+                                          In Review
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      (isDraft || isRejected) && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenActionDropdownId(null);
+                                            handleDelete(entry.sauda_id!);
+                                          }}
+                                          className="w-full px-3 py-1.5 text-left text-rose-700 hover:bg-rose-50 font-bold flex items-center gap-2 cursor-pointer"
+                                          title="Delete Sauda"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                                          <span>Delete</span>
+                                        </button>
+                                      )
+                                    )}
+
+                                    {/* Audit History */}
                                     <button
+                                      type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setOpenActionDropdownId(null);
@@ -1962,57 +2315,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                                       <span>Audit History</span>
                                     </button>
 
-                                    {/* Delete Button: If approved, only Admin can delete */}
-                                    {isChecked ? (
-                                      isUserAdmin() ? (
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setOpenActionDropdownId(null);
-                                            handleDelete(entry.sauda_id!);
-                                          }}
-                                          className="w-full px-3 py-1.5 text-left text-rose-700 hover:bg-rose-50 font-bold flex items-center gap-2 cursor-pointer"
-                                          title="Admin Delete Sauda"
-                                        >
-                                          <Trash2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                                          <span>Delete (Admin)</span>
-                                        </button>
-                                      ) : (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setOpenActionDropdownId(null);
-                                            alert(`🔒 Permission Denied: Sauda #${entry.sauda_no} is approved by User 010 (Checker).\n\nIt cannot be deleted by any user. Only Admin can delete approved contracts.`);
-                                          }}
-                                          className="w-full px-3 py-1.5 text-left text-slate-400 bg-slate-50/80 font-medium flex items-center justify-between gap-2 cursor-not-allowed hover:bg-slate-100 transition-colors"
-                                          title="Locked: Approved by User 010. Only Admin can delete."
-                                        >
-                                          <div className="flex items-center gap-2">
-                                            <Trash2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                            <span className="text-slate-400">Delete</span>
-                                          </div>
-                                          <span className="text-[9px] bg-slate-200 text-slate-700 font-bold px-1.5 py-0.2 rounded">
-                                            Locked
-                                          </span>
-                                        </button>
-                                      )
-                                    ) : (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setOpenActionDropdownId(null);
-                                          handleDelete(entry.sauda_id!);
-                                        }}
-                                        className="w-full px-3 py-1.5 text-left text-rose-700 hover:bg-rose-50 font-bold flex items-center gap-2 cursor-pointer"
-                                        title="Delete Sauda"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                                        <span>Delete</span>
-                                      </button>
-                                    )}
-
+                                    {/* Print */}
                                     <button
+                                      type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setOpenActionDropdownId(null);
@@ -2025,7 +2330,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                                       <span>Print</span>
                                     </button>
 
+                                    {/* Mail */}
                                     <button
+                                      type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setOpenActionDropdownId(null);
@@ -2049,7 +2356,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 })}
                 {filteredSaudas.length === 0 && (
                   <tr>
-                    <td colSpan={isUser10 ? 5 : (isAdminOrL4 ? 10 : 9)} className="py-14 text-center text-slate-500 bg-slate-50/50">
+                    <td colSpan={isUser10 ? 5 : 10} className="py-14 text-center text-slate-500 bg-slate-50/50">
                       <div className="flex flex-col items-center justify-center space-y-2.5">
                         <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
                           <ClipboardList className="h-8 w-8 text-[#D94B5A]" />
@@ -2260,6 +2567,508 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 <Upload className="h-4 w-4" />
                 <span>{isImporting ? "Importing Data..." : "Upload & Inject to Supabase"}</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 1. Approval Confirmation Modal for User 010 */}
+      {approvingSauda && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-emerald-100 text-emerald-800 rounded-xl font-black">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Confirm Sauda Approval</h3>
+                  <p className="text-xs text-slate-500 font-medium">User 010 – Final Checker & Approver Review</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setApprovingSauda(null)}
+                className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Contract Summary Box */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2 text-xs">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Sauda Order No</span>
+                  <span className="text-sm font-black text-slate-900">#{approvingSauda.sauda_no}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Contract Date</span>
+                  <span className="font-bold text-slate-800">{new Date(approvingSauda.date).toLocaleDateString('en-GB')}</span>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200 pt-2 grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Broker</span>
+                  <span className="font-extrabold text-slate-800 truncate block">{approvingSauda.broker}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Supplier</span>
+                  <span className="font-extrabold text-slate-800 truncate block">{approvingSauda.supplier}</span>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200 pt-2 grid grid-cols-3 gap-2">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Wt</span>
+                  <span className="font-black text-slate-900 font-mono">{Number(approvingSauda.total_wt_in_ton || 0).toFixed(3)} MT</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Basic Rate</span>
+                  <span className="font-black text-rose-700 font-mono">₹{Number(approvingSauda.b_rate || 0).toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Maker ID</span>
+                  <span className="font-black text-indigo-700">{approvingSauda.submitted_by || approvingSauda.user_id || 'User 002'}</span>
+                </div>
+              </div>
+
+              {approvingSauda.resubmission_count && approvingSauda.resubmission_count > 0 && (
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-2 text-[11px] font-bold text-indigo-900 flex items-center justify-between">
+                  <span>Resubmission Cycle:</span>
+                  <span className="px-2 py-0.5 bg-indigo-600 text-white rounded font-mono text-xs">
+                    Version {(approvingSauda.resubmission_count || 0) + 1}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Permanent Lock Warning Callout */}
+            <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-start gap-2.5">
+              <Lock className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+              <div className="text-[11px] text-amber-950 font-medium leading-relaxed">
+                <span className="font-extrabold uppercase tracking-wide text-amber-900 block mb-0.5">
+                  Permanent Lock Warning:
+                </span>
+                Once confirmed, this Sauda entry will be <strong className="font-black underline">permanently locked</strong> against editing, deletion, or resubmission by all application users (including User 002, User 010, and Admin).
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-2 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setApprovingSauda(null)}
+                disabled={isApprovingLoading}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmApprove}
+                disabled={isApprovingLoading}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isApprovingLoading ? (
+                  <>
+                    <RefreshCcw className="h-4 w-4 animate-spin" />
+                    <span>Approving & Locking...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-amber-300" />
+                    <span>Confirm Final Approval</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Rejection Modal with Mandatory Remarks for User 010 */}
+      {rejectingSauda && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-rose-100 text-rose-800 rounded-xl font-black">
+                  <X className="h-5 w-5 text-rose-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Reject Sauda Entry</h3>
+                  <p className="text-xs text-slate-500 font-medium">Return entry to User 002 for necessary corrections</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setRejectingSauda(null);
+                  setRejectionRemarksInput('');
+                  setRejectionError(null);
+                }}
+                className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Target Entry Summary */}
+            <div className="bg-rose-50/50 border border-rose-200 rounded-xl p-3 text-xs flex justify-between items-center">
+              <div>
+                <span className="font-extrabold text-slate-900 block">Sauda #{rejectingSauda.sauda_no}</span>
+                <span className="text-slate-500 text-[11px]">{rejectingSauda.broker} • {rejectingSauda.supplier}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] text-slate-500 block uppercase font-bold">Maker</span>
+                <span className="font-extrabold text-indigo-700">{rejectingSauda.submitted_by || 'User 002'}</span>
+              </div>
+            </div>
+
+            {/* Mandatory Rejection Remarks Textarea */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-black text-slate-900 flex items-center justify-between">
+                <span>Rejection Remarks (Mandatory) *</span>
+                <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wide">Required for User 002</span>
+              </label>
+              <textarea
+                rows={4}
+                value={rejectionRemarksInput}
+                onChange={(e) => {
+                  setRejectionRemarksInput(e.target.value);
+                  if (rejectionError) setRejectionError(null);
+                }}
+                placeholder="Explain clearly what needs correction (e.g. incorrect rate ₹14,200 instead of ₹14,000, supplier name mismatch, delivery date out of range)..."
+                className={cn(
+                  "w-full bg-slate-50 border rounded-xl p-3 text-xs font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:bg-white",
+                  rejectionError
+                    ? "border-rose-500 focus:ring-2 focus:ring-rose-200"
+                    : "border-slate-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                )}
+              />
+              {rejectionError && (
+                <p className="text-xs font-bold text-rose-600 flex items-center gap-1 mt-0.5">
+                  <span>⚠</span>
+                  <span>{rejectionError}</span>
+                </p>
+              )}
+              <p className="text-[11px] text-slate-500 font-medium mt-1">
+                These remarks will be displayed to User 002 in their Sauda Entry form so they can make the appropriate corrections and resubmit.
+              </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-2 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => {
+                  setRejectingSauda(null);
+                  setRejectionRemarksInput('');
+                  setRejectionError(null);
+                }}
+                disabled={isRejectingLoading}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReject}
+                disabled={isRejectingLoading}
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isRejectingLoading ? (
+                  <>
+                    <RefreshCcw className="h-4 w-4 animate-spin" />
+                    <span>Rejecting Entry...</span>
+                  </>
+                ) : (
+                  <>
+                    <X className="h-4 w-4" />
+                    <span>Confirm Rejection & Return</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. View Details Modal (Read-Only Review) */}
+      {viewingDetailsSauda && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-4 flex justify-between items-center shrink-0 border-b border-slate-700 text-white">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-white/10 rounded-xl">
+                  <FileText className="h-5 w-5 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black">Sauda Contract Details – #{viewingDetailsSauda.sauda_no}</h3>
+                  <p className="text-xs text-slate-300 font-medium">
+                    Date: {new Date(viewingDetailsSauda.date).toLocaleDateString('en-GB')} • Session: {viewingDetailsSauda.session || '-'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingDetailsSauda(null)}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto space-y-4">
+              {/* Status Banner */}
+              <div className="flex items-center justify-between p-3 rounded-xl border bg-slate-50 border-slate-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Approval Status:</span>
+                  {isApprovedSauda(viewingDetailsSauda) ? (
+                    <span className="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider bg-emerald-600 text-white flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Approved (Permanently Locked)</span>
+                      <Lock className="w-3.5 h-3.5 text-emerald-200" />
+                    </span>
+                  ) : isRejectedSauda(viewingDetailsSauda) ? (
+                    <span className="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider bg-rose-600 text-white flex items-center gap-1">
+                      <X className="w-3.5 h-3.5" />
+                      <span>Rejected</span>
+                    </span>
+                  ) : isDraftSauda(viewingDetailsSauda) ? (
+                    <span className="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider bg-slate-200 text-slate-800 flex items-center gap-1">
+                      <FileText className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Draft (Not Submitted)</span>
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-amber-700" />
+                      <span>Pending Approval (User 010 Review)</span>
+                    </span>
+                  )}
+                </div>
+
+                {viewingDetailsSauda.resubmission_count && viewingDetailsSauda.resubmission_count > 0 ? (
+                  <span className="text-xs font-extrabold px-2.5 py-1 rounded-md bg-indigo-100 text-indigo-900 border border-indigo-200">
+                    Resubmitted (Version {(viewingDetailsSauda.resubmission_count || 0) + 1})
+                  </span>
+                ) : null}
+              </div>
+
+              {/* Rejection Remarks Callout (if rejected) */}
+              {isRejectedSauda(viewingDetailsSauda) && viewingDetailsSauda.rejection_remarks && (
+                <div className="bg-rose-50 border border-rose-300 rounded-xl p-3.5 text-rose-950 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-rose-900 uppercase tracking-wide">
+                    <X className="w-4 h-4 text-rose-600" />
+                    <span>Rejection Remarks from User 010 (Checker):</span>
+                  </div>
+                  <p className="text-xs font-bold pl-5 leading-relaxed bg-white/70 p-2 rounded-lg border border-rose-200">
+                    "{viewingDetailsSauda.rejection_remarks}"
+                  </p>
+                </div>
+              )}
+
+              {/* Key Details Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Broker</span>
+                  <span className="font-extrabold text-slate-900 block truncate">{viewingDetailsSauda.broker || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Supplier</span>
+                  <span className="font-extrabold text-slate-900 block truncate">{viewingDetailsSauda.supplier || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Area</span>
+                  <span className="font-bold text-slate-800 block truncate">{viewingDetailsSauda.area || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Agency</span>
+                  <span className="font-bold text-slate-800 block truncate">{viewingDetailsSauda.agency || '-'}</span>
+                </div>
+
+                <div className="border-t border-slate-200 pt-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Basic Rate</span>
+                  <span className="font-black text-rose-700 font-mono text-sm">₹{Number(viewingDetailsSauda.b_rate || 0).toLocaleString()}</span>
+                </div>
+                <div className="border-t border-slate-200 pt-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Weight</span>
+                  <span className="font-black text-slate-900 font-mono text-sm">{Number(viewingDetailsSauda.total_wt_in_ton || 0).toFixed(3)} MT</span>
+                </div>
+                <div className="border-t border-slate-200 pt-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Unit Type</span>
+                  <span className="font-bold text-slate-800 uppercase">{viewingDetailsSauda.unit_type || 'BALES'}</span>
+                </div>
+                <div className="border-t border-slate-200 pt-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Units/Lorry</span>
+                  <span className="font-bold text-slate-800 font-mono">{viewingDetailsSauda.units_per_lorry || '-'}</span>
+                </div>
+
+                <div className="border-t border-slate-200 pt-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Freight Type</span>
+                  <span className="font-bold text-slate-800">{viewingDetailsSauda.freight_type || '-'}</span>
+                </div>
+                <div className="border-t border-slate-200 pt-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Delivery Type</span>
+                  <span className="font-bold text-slate-800">{viewingDetailsSauda.delivery_type || '-'}</span>
+                </div>
+                <div className="border-t border-slate-200 pt-2 col-span-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Delivery Window</span>
+                  <span className="font-bold text-slate-800 font-mono">
+                    {viewingDetailsSauda.delivery_from ? new Date(viewingDetailsSauda.delivery_from).toLocaleDateString('en-GB') : '-'}
+                    {' '}to{' '}
+                    {viewingDetailsSauda.delivery_to ? new Date(viewingDetailsSauda.delivery_to).toLocaleDateString('en-GB') : '-'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Quality Breakdown Table */}
+              {(() => {
+                const qualities = ((viewingDetailsSauda.quality_details && viewingDetailsSauda.quality_details.length > 0)
+                  ? viewingDetailsSauda.quality_details
+                  : (viewingDetailsSauda.sauda_qualities || [])) as any[];
+                if (qualities.length === 0) return null;
+                return (
+                  <div className="space-y-1.5">
+                    <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">Quality Breakdown</h4>
+                    <div className="border border-slate-200 rounded-xl overflow-hidden">
+                      <table className="w-full text-xs text-left">
+                        <thead className="bg-slate-100 text-slate-700 font-black text-[10px] uppercase">
+                          <tr>
+                            <th className="p-2">Item No</th>
+                            <th className="p-2">Marka</th>
+                            <th className="p-2">Quality</th>
+                            <th className="p-2 text-right">Units</th>
+                            <th className="p-2 text-right">Weight (MT)</th>
+                            <th className="p-2 text-right">Rate</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-medium">
+                          {qualities.map((q: any, i: number) => (
+                            <tr key={i} className="hover:bg-slate-50">
+                              <td className="p-2 font-mono">{q.item_no || i + 1}</td>
+                              <td className="p-2 font-bold">{q.marka || '-'}</td>
+                              <td className="p-2">{q.quality || '-'}</td>
+                              <td className="p-2 text-right font-mono">{q.units || q.qty || '-'}</td>
+                              <td className="p-2 text-right font-mono font-bold">{Number(q.weight_in_ton || q.weight || 0).toFixed(3)}</td>
+                              <td className="p-2 text-right font-mono font-bold text-rose-700">₹{Number(q.rate || q.rs || viewingDetailsSauda.b_rate || 0).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Workflow Audit Details */}
+              <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 text-[11px] grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-600">
+                <div>
+                  <span className="font-bold block text-slate-400 uppercase text-[9px]">Maker (User ID)</span>
+                  <span className="font-extrabold text-slate-800">{viewingDetailsSauda.submitted_by || viewingDetailsSauda.user_id || 'User 002'}</span>
+                </div>
+                <div>
+                  <span className="font-bold block text-slate-400 uppercase text-[9px]">Submitted At</span>
+                  <span className="font-medium text-slate-700">
+                    {viewingDetailsSauda.submitted_at ? new Date(viewingDetailsSauda.submitted_at).toLocaleString('en-GB') : '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-bold block text-slate-400 uppercase text-[9px]">Checker / Approver</span>
+                  <span className="font-extrabold text-slate-800">{viewingDetailsSauda.approved_by || viewingDetailsSauda.checked_by || '-'}</span>
+                </div>
+                <div>
+                  <span className="font-bold block text-slate-400 uppercase text-[9px]">Approved At</span>
+                  <span className="font-medium text-slate-700">
+                    {viewingDetailsSauda.approved_at ? new Date(viewingDetailsSauda.approved_at).toLocaleString('en-GB') : '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-slate-100 p-3.5 border-t border-slate-200 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handlePrint(viewingDetailsSauda)}
+                  className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer className="h-4 w-4 text-slate-600" />
+                  <span>Print Slip</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuditRecordId(viewingDetailsSauda.sauda_id || viewingDetailsSauda.sauda_no);
+                    setAuditModalOpen(true);
+                  }}
+                  className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <History className="h-4 w-4 text-slate-600" />
+                  <span>Audit History</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* If rejected and user 002, provide direct Edit & Resubmit button */}
+                {isRejectedSauda(viewingDetailsSauda) && (isUser2 || isUserAdmin()) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = viewingDetailsSauda;
+                      setViewingDetailsSauda(null);
+                      handleEdit(target);
+                    }}
+                    className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Edit className="h-4 w-4" />
+                    <span>Edit & Resubmit</span>
+                  </button>
+                )}
+
+                {/* If User 010 and pending, provide direct Approve/Reject shortcuts */}
+                {isUser10 && isPendingUncheckedSauda(viewingDetailsSauda) && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = viewingDetailsSauda;
+                        setViewingDetailsSauda(null);
+                        handleMarkReject(target);
+                      }}
+                      className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <X className="h-4 w-4" />
+                      <span>Reject</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = viewingDetailsSauda;
+                        setViewingDetailsSauda(null);
+                        handleMarkCheck(target);
+                      }}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-amber-300" />
+                      <span>Approve</span>
+                    </button>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setViewingDetailsSauda(null)}
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
