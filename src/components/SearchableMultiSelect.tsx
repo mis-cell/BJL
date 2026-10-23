@@ -58,26 +58,19 @@ export const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
         labelStr = opt.trim();
         valStr = opt.trim();
       } else if (typeof opt === 'object') {
-        labelStr = (
+        const primaryName = (
           opt.label ||
-          opt.name ||
           opt.agency_name ||
+          opt.AGENCY_NAME ||
+          opt.name ||
           opt.marka_name ||
           opt.grade_name ||
           opt.value ||
           opt.code ||
           ''
         ).toString().trim();
-        valStr = (
-          opt.value ||
-          opt.code ||
-          opt.agency_name ||
-          opt.marka_name ||
-          opt.grade_name ||
-          opt.name ||
-          opt.label ||
-          ''
-        ).toString().trim();
+        labelStr = primaryName;
+        valStr = primaryName;
       }
 
       if (valStr && !seen.has(valStr.toUpperCase())) {

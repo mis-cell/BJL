@@ -54,29 +54,23 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
   const agencyOptions = useMemo(() => {
     if (!agencies || agencies.length === 0) return [];
 
-    const nameCounts: Record<string, number> = {};
-    agencies.forEach(a => {
-      const name = String(a.AGENCY_NAME || a.agency_name || a.name || (typeof a === 'string' ? a : '')).trim();
-      if (name) nameCounts[name] = (nameCounts[name] || 0) + 1;
-    });
-
     const list: string[] = [];
+    const seenNames = new Set<string>();
+
     agencies.forEach(a => {
-      const name = String(a.AGENCY_NAME || a.agency_name || a.name || (typeof a === 'string' ? a : '')).trim();
-      const code = String(a.AGENCY_CODE || a.agency_code || '').trim();
+      const name = String(
+        a.AGENCY_NAME || a.agency_name || a.name || a.label || (typeof a === 'string' ? a : '')
+      ).trim();
       if (!name) return;
 
-      let displayName = name;
-      if (nameCounts[name] > 1 && code) {
-        displayName = `${name} (Code ${code})`;
-      }
-
-      if (!list.includes(displayName)) {
-        list.push(displayName);
+      const norm = name.toUpperCase();
+      if (!seenNames.has(norm)) {
+        seenNames.add(norm);
+        list.push(name);
       }
     });
 
-    return list;
+    return list.sort((a, b) => a.localeCompare(b));
   }, [agencies]);
 
   const markaOptions = useMemo(() => {
