@@ -6,6 +6,45 @@ export interface SettlementDeductionItem {
   deduction_amount: number;
 }
 
+export const APMC_EXEMPT_AREAS = new Set([
+  'BANGLADESH',
+  'BIHAR',
+  'LOWER ASSAM',
+  'ORISSA',
+  'ODISHA',
+  'UPPER ASSAM'
+]);
+
+export const isApmcExemptArea = (rawArea: any): boolean => {
+  if (!rawArea) return false;
+  const cleaned = String(rawArea)
+    .trim()
+    .toUpperCase()
+    .replace(/\s*\(CODE\s*\d+\)/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleaned) return false;
+  if (APMC_EXEMPT_AREAS.has(cleaned)) return true;
+  for (const exempt of APMC_EXEMPT_AREAS) {
+    if (cleaned === exempt || cleaned.includes(exempt)) return true;
+  }
+  return false;
+};
+
+export const isSettlementApmcExempt = (
+  detailCols: SettlementDetailColumn[],
+  selectedPoData?: any
+): boolean => {
+  const colAreas = (detailCols || [])
+    .map(c => String(c?.area || '').trim())
+    .filter(Boolean);
+  if (colAreas.length > 0) {
+    return colAreas.some(a => isApmcExemptArea(a));
+  }
+  const poArea = selectedPoData?.area || selectedPoData?.area_name || selectedPoData?.arrival_area_name || '';
+  return isApmcExemptArea(poArea);
+};
+
 // Detailed master interface
 export interface SettlementMaster {
   settlement_id?: string;

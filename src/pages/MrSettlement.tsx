@@ -35,7 +35,9 @@ import {
   calculateWeightedRatePerMT,
   initialMaster,
   parseDateOnly,
-  formatToInputDate
+  formatToInputDate,
+  isApmcExemptArea,
+  isSettlementApmcExempt
 } from "../types/settlement.types";
 
 export {
@@ -45,7 +47,9 @@ export {
   emptyDetailColumn,
   initialMaster,
   parseDateOnly,
-  formatToInputDate
+  formatToInputDate,
+  isApmcExemptArea,
+  isSettlementApmcExempt
 };
 export type {
   SettlementDeductionItem,
@@ -2043,6 +2047,11 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
     // APMC Fees = Arrival APMC Fees - Actual APMC Fees
     // Actual APMC Fees (1%) = 1% × (Material Value − Delivery Claim − Deduction Amount − Deduction Claim Total − Excess/Short Amount)
+    // Not applicable (0) when Area is BANGLADESH, BIHAR, LOWER ASSAM, ORISSA, or UPPER ASSAM
+    const isExemptArea = isSettlementApmcExempt(
+      detailCols.map(c => ({ ...c, area: resolveAreaName(c.area, areaMasterList) || c.area })),
+      selectedPoData
+    );
     const deductionClaimTotal = Number(masterData.val_qty_claim) || 0;
     const adjustedMaterialValue = Math.max(
       0,
@@ -2052,7 +2061,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       - deductionClaimTotal 
       - finalExShort
     );
-    const calculatedApmcFees = Number((adjustedMaterialValue * 0.01).toFixed(2));
+    const calculatedApmcFees = isExemptArea ? 0 : Number((adjustedMaterialValue * 0.01).toFixed(2));
     const arrivalApmcFees = Number(masterData.arival_apmc_fees) || 0;
     const actualApmcFees = calculatedApmcFees;
     //const finalApmcFees = Number((arrivalApmcFees - actualApmcFees).toFixed(2));
@@ -2146,7 +2155,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       return prev;
     });
 
-  }, [detailCols, visibleSpecCols, masterData.electronic_scale_net, masterData.summary_rate_aff_cd_cl, masterData.summary_rate_qtel, masterData.summary_premium_amount, masterData.summary_premium_wt, masterData.summary_deduction_amount, masterData.summary_delivery_claim, masterData.val_add_amt, masterData.val_less_amt, masterData.val_qty_claim, masterData.val_ex_short, masterData.summary_less_amount, masterData.final_less_adv, masterData.final_on_ac_adv, masterData.final_cst_pct_amt, masterData.actual_apmc_fees, masterData.arival_apmc_fees, masterData.arrival_date, masterData.sett_date, selectedPoData]);
+  }, [detailCols, visibleSpecCols, areaMasterList, masterData.electronic_scale_net, masterData.summary_rate_aff_cd_cl, masterData.summary_rate_qtel, masterData.summary_premium_amount, masterData.summary_premium_wt, masterData.summary_deduction_amount, masterData.summary_delivery_claim, masterData.val_add_amt, masterData.val_less_amt, masterData.val_qty_claim, masterData.val_ex_short, masterData.summary_less_amount, masterData.final_less_adv, masterData.final_on_ac_adv, masterData.final_cst_pct_amt, masterData.actual_apmc_fees, masterData.arival_apmc_fees, masterData.arrival_date, masterData.sett_date, selectedPoData]);
 
   // Handle master updates
   const handleMasterChange = (field: keyof SettlementMaster, value: any) => {

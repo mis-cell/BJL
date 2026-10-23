@@ -6,6 +6,7 @@ import {
   SettlementMaster,
   getColWtMt,
   getColAmount,
+  isSettlementApmcExempt,
 } from "../../types/settlement.types";
 
 export interface SettlementSpecificationsGridProps {
@@ -274,7 +275,8 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
       {(() => {
         const activeColsForCalc = visibleSpecCols;
         const grandTotal = activeColsForCalc.reduce((sum, idx) => sum + getColAmount(detailCols[idx - 1]), 0);
-        const apmc1Pct = grandTotal * 0.01;
+        const isExemptArea = isSettlementApmcExempt(detailCols, selectedPoData);
+        const apmc1Pct = isExemptArea ? 0 : grandTotal * 0.01;
         const weightedRateMt = calculateWeightedRatePerMT(detailCols);
         const totalWtMt = activeColsForCalc.reduce((sum, idx) => sum + getColWtMt(detailCols[idx - 1]), 0);
 
