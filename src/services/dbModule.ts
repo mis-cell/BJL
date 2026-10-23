@@ -101,7 +101,7 @@ async function executeWithSchemaRetry(
   payload: any
 ) {
   let currentPayload = { ...payload };
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 10; attempt++) {
     const res = await mutationFn(currentPayload);
     if (!res.error) return res;
 
