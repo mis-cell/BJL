@@ -125,7 +125,7 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
           </h4>
 
           <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold">CHALLAN WT <b> (Party)</b></span>
+            <span className="text-[10px] font-bold">CHALLAN WT <b> (Party)</b> <span className="text-rose-600 font-black text-sm">*</span></span>
             <input
               id="challan_material_weight_1905"
               aria-label="challan material weight"
@@ -134,12 +134,13 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
               name="challan_material_weight"
               value={formData.challan_material_weight || 0}
               onChange={onChange}
+              required
               className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
             />
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold">MILL NET</span>
+            <span className="text-[10px] font-bold">MILL NET <span className="text-rose-600 font-black text-sm">*</span></span>
             <input
               id="supplier_net_weight_1917"
               aria-label="supplier net weight"
@@ -148,12 +149,13 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
               name="supplier_net_weight"
               value={formData.supplier_net_weight || 0}
               onChange={onChange}
+              required
               className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
             />
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold">ELECTRONIC NET</span>
+            <span className="text-[10px] font-bold">ELECTRONIC NET <span className="text-rose-600 font-black text-sm">*</span></span>
             <input
               id="electronic_net_weight_1929"
               aria-label="electronic net weight"
@@ -162,6 +164,7 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
               name="electronic_net_weight"
               value={formData.electronic_net_weight || 0}
               onChange={onChange}
+              required
               className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
             />
           </div>
