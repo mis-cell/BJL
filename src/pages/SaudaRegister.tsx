@@ -1164,7 +1164,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         .replace(/20\d{2}20\d{2}/g, '')
         .replace(/\/\d{2}-\d{2}$/g, '')
         .replace(/^\d{2}-\d{2}\//g, '')
-        .replace(/[^0-9]/g, '');
+        .replace(/[^0-9A-Z]/g, '');
       return withoutYear.replace(/^0+/, '');
     };
 
@@ -1229,7 +1229,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         .replace(/20\d{2}20\d{2}/g, '')
         .replace(/\/\d{2}-\d{2}$/g, '')
         .replace(/^\d{2}-\d{2}\//g, '')
-        .replace(/[^0-9]/g, '');
+        .replace(/[^0-9a-z]/g, '');
       return withoutYear.replace(/^0+/, '');
     };
 
@@ -1255,14 +1255,14 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     
     const matchSaudaWithPo = (saudaNumStr: string, poNoStr: string, contractPoNoStr?: string) => {
       if (!saudaNumStr || !poNoStr) return false;
-      const sNoClean = saudaNumStr.trim().toUpperCase().replace(/[^0-9]/g, '');
+      const sNoClean = saudaNumStr.trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
       if (!sNoClean) return false;
 
       const checkMatch = (p: string) => {
         const pUpper = p.trim().toUpperCase();
         if (pUpper === saudaNumStr.trim().toUpperCase()) return true;
 
-        const pNoClean = pUpper.replace(/[^0-9]/g, '');
+        const pNoClean = pUpper.replace(/[^0-9A-Z]/g, '');
         let pNoDigits = pNoClean;
         pNoDigits = pNoDigits.replace(/20\d{2}20\d{2}/g, ''); // strip "20262027"
         pNoDigits = pNoDigits.replace(/\d{4}/g, ''); // strip remaining 4-digit blocks
@@ -1274,7 +1274,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           return true;
         }
 
-        const regex = new RegExp(`(^|[^0-9])${sNoClean}([^0-9]|$)`);
+        const regex = new RegExp(`(^|[^0-9A-Z])${sNoClean}([^0-9A-Z]|$)`);
         return regex.test(pUpper);
       };
 
