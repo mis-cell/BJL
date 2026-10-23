@@ -335,13 +335,22 @@ export default function SaudaEntry({
     setFormData(prev => {
       const updated = { ...prev, [name]: finalValue };
 
-      // Calculate Shipment Days automatically: Shipment Date - Contract Date
+      // Calculate Shipment Days & Date automatically
       if (name === 'shipment_date' || name === 'date') {
         const contractDt = name === 'date' ? new Date(value) : new Date(prev.date || today);
         const shipmentDt = name === 'shipment_date' ? new Date(value) : new Date(prev.shipment_date || today);
         if (!isNaN(contractDt.getTime()) && !isNaN(shipmentDt.getTime())) {
           const diffDays = Math.max(0, Math.ceil((shipmentDt.getTime() - contractDt.getTime()) / (1000 * 3600 * 24)));
           updated.shipment_days = diffDays;
+        }
+      }
+
+      if (name === 'shipment_days') {
+        const days = parseInt(value, 10) || 0;
+        const contractDt = new Date(prev.date || today);
+        if (!isNaN(contractDt.getTime())) {
+          contractDt.setDate(contractDt.getDate() + days);
+          updated.shipment_date = contractDt.toISOString().split('T')[0];
         }
       }
 

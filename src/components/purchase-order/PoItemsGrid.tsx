@@ -47,7 +47,7 @@ const TableComboBox = ({
   }, []);
 
   return (
-    <div className="relative w-full" ref={containerRef}>
+    <div className={`relative w-full ${isOpen ? 'z-[9999]' : 'z-10'}`} ref={containerRef}>
       <input
         type="text"
         disabled={disabled}
@@ -62,7 +62,7 @@ const TableComboBox = ({
         className={`w-full text-left bg-transparent border-none p-1 outline-none font-semibold ${disabled ? 'text-slate-400 cursor-not-allowed' : 'text-slate-900'}`}
       />
       {isOpen && !disabled && (
-        <div className="absolute left-0 top-full z-[100] w-56 max-h-48 overflow-y-auto bg-white border border-slate-400 shadow-xl rounded-sm">
+        <div className="absolute left-0 top-full z-[9999] min-w-[220px] max-h-52 overflow-y-auto bg-white border-2 border-indigo-600 shadow-2xl rounded-md mt-1 text-black">
           {filtered.length > 0 ? (
             filtered.map((opt, i) => (
               <div
@@ -71,13 +71,13 @@ const TableComboBox = ({
                   onChange(opt[textField]);
                   setIsOpen(false);
                 }}
-                className="p-1.5 hover:bg-emerald-100 cursor-pointer text-[10px] flex justify-between items-center text-slate-800"
+                className="p-2 hover:bg-indigo-600 hover:text-white cursor-pointer text-xs flex justify-between items-center font-bold transition-colors border-b border-slate-100 last:border-b-0"
               >
-                <span className="font-bold">{opt[textField]}</span>
+                <span>{opt[textField]}</span>
               </div>
             ))
           ) : (
-            <div className="p-2 text-slate-400 text-center text-[10px]">No options</div>
+            <div className="p-2.5 text-slate-400 text-center text-xs italic">No options found</div>
           )}
         </div>
       )}
@@ -171,7 +171,7 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
         </div>
       </div>
 
-      <div className="border border-[#F7AFA8] bg-white shadow-sm w-full text-black">
+      <div className="border border-[#F7AFA8] bg-white shadow-sm w-full text-black overflow-visible relative z-10">
         <table className="w-full border-collapse text-xs">
           <thead className="bg-[#D94B5A] text-white border-b border-[#F06D6C] select-none">
             {/* Top Row: Spanning Group Headers */}
@@ -212,14 +212,17 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-300">
-            {formData.items.map((row, index) => (
-              <tr 
-                key={`item_row_${index}_${row.grade_code || ''}_${row.srl || index}`} 
-                onClick={() => setSelectedItemSrl(row.srl || index + 1)}
-                className={`divide-x divide-slate-300 transition-colors ${
-                  (row.srl === selectedItemSrl || (!selectedItemSrl && index === 0)) ? 'bg-[#FDE7E6] font-bold' : 'hover:bg-[#FFF5F4]'
-                }`}
-              >
+            {formData.items.map((row, index) => {
+              const isActiveRow = (row.srl === selectedItemSrl || (!selectedItemSrl && index === 0));
+              return (
+                <tr 
+                  key={`item_row_${index}_${row.grade_code || ''}_${row.srl || index}`} 
+                  onClick={() => setSelectedItemSrl(row.srl || index + 1)}
+                  style={{ position: 'relative', zIndex: isActiveRow ? (200 - index) : (100 - index) }}
+                  className={`divide-x divide-slate-300 transition-colors ${
+                    isActiveRow ? 'bg-[#FDE7E6] font-bold' : 'hover:bg-[#FFF5F4]'
+                  }`}
+                >
                 <td className="px-2 py-1 text-center bg-slate-50 font-bold text-slate-700 w-14 font-mono">{row.srl || index + 1}</td>
                 <td className="px-1 py-0.5 text-center font-bold w-28">
                   <select 
@@ -451,7 +454,8 @@ export const PoItemsGrid: React.FC<PoItemsGridProps> = ({
                   )}
                 </td>
               </tr>
-            ))}
+            );
+          })}
           </tbody>
         </table>
       </div>

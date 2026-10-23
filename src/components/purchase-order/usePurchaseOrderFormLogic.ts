@@ -442,11 +442,26 @@ export function usePurchaseOrderFormLogic({
     const unitWtKgs = isBales ? '147.5' : '50';
     const resolvedPoDisplayNo = formatPoNumber(sauda) || sauda.sauda_no || sauda.session || '';
 
+    const saudaDateStr = sauda.date || todayStr;
+    const shipDateStr = sauda.shipment_date || sauda.delivery_to;
+    const shipDaysNum = parseInt(String(sauda.shipment_days || sauda.grace_days || '0'), 10) || 0;
+
+    let computedDeliveryTo = shipDateStr || saudaDateStr;
+    if ((!shipDateStr || shipDateStr === saudaDateStr) && shipDaysNum > 0) {
+      try {
+        const d = new Date(saudaDateStr);
+        if (!isNaN(d.getTime())) {
+          d.setDate(d.getDate() + shipDaysNum);
+          computedDeliveryTo = d.toISOString().split('T')[0];
+        }
+      } catch {}
+    }
+
     setFormData(prev => ({
       ...prev,
       is_ptf: false,
       no: resolvedPoDisplayNo,
-      date: sauda.date || todayStr,
+      date: saudaDateStr,
       broker_code: brokerObj ? brokerObj.brok_code : sauda.broker || '',
       broker: (sauda.broker || '').toUpperCase(),
       supplier_code: supplierObj ? supplierObj.supp_code : sauda.supplier || '',
@@ -463,11 +478,11 @@ export function usePurchaseOrderFormLogic({
       weight_per_lorry: sauda.wt_per_lorry ? Number(sauda.wt_per_lorry).toFixed(3) : (sauda.total_wt_in_ton ? Number(sauda.total_wt_in_ton).toFixed(3) : '0.000'),
       total_contract_mt: sauda.total_wt_in_ton ? Number(sauda.total_wt_in_ton).toFixed(3) : '0.000',
       contract_po_no: sauda.contract_no || sauda.sauda_no || resolvedPoDisplayNo,
-      contract_date: sauda.date || todayStr,
-      delivery_from: sauda.shipment_date || sauda.date || todayStr,
-      delivery_to: sauda.shipment_date || sauda.date || todayStr,
-      grace_days: sauda.shipment_days ? sauda.shipment_days.toString() : '0',
-      delivery_penalty: sauda.shipment_penalty ? sauda.shipment_penalty.toString() : '0',
+      contract_date: saudaDateStr,
+      delivery_from: saudaDateStr,
+      delivery_to: computedDeliveryTo,
+      grace_days: shipDaysNum.toString(),
+      delivery_penalty: sauda.shipment_penalty ? sauda.shipment_penalty.toString() : (sauda.delivery_penalty || '0'),
       b_rate: selectedBRate,
       s_date: sDate,
       remarks: sauda.remarks || prev.remarks,
