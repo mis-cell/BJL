@@ -38,9 +38,9 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
       <div className="bg-slate-50 px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <h2 className="text-base font-extrabold text-slate-900">Inspection Details</h2>
-          <span className="bg-blue-100 text-blue-800 text-xs font-extrabold px-3 py-0.5 rounded-full border border-blue-200">
+          {/* <span className="bg-blue-100 text-blue-800 text-xs font-extrabold px-3 py-0.5 rounded-full border border-blue-200">
             {detailRows.length} {detailRows.length === 1 ? "Row" : "Rows"}
-          </span>
+          </span> */}
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -180,6 +180,7 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
                   onDuplicateRow={onDuplicateRow}
                   onDeleteRow={onDeleteRow}
                 />
+
                 {row.expanded && (
                   <InspectionExpandedPanel
                     row={row}
@@ -191,6 +192,58 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
                 )}
               </React.Fragment>
             ))}
+
+            {/* Final Receipt Total Row */}
+            <tr className="border-r border-emerald-600 p-3 text-center font-extrabold text-white">
+              <td
+                colSpan={9}
+                className="p-3 text-right font-extrabold text-emerald-900"
+              >
+                Final Receipt Total
+              </td>
+              
+              <td className="border-x border-emerald-300 bg-emerald-200 p-3 text-center font-extrabold text-emerald-950">
+                {detailRows
+                  .reduce(
+                    (total, item) =>
+                      total + (Number(item.quantity) || 0),
+                    0
+                  )
+                  .toFixed(2)}
+              </td>
+              <td
+                colSpan={2}
+                className="p-3 text-right font-extrabold text-emerald-900"
+              >
+              </td>
+
+              <td className="border-x border-emerald-300 bg-emerald-200 p-3 text-center font-extrabold text-emerald-950">
+                {detailRows
+                  .reduce(
+                    (total, item) =>
+                      total + (Number(item.receipt_gross_wt) || 0),
+                    0
+                  )
+                  .toFixed(2)}
+              </td>
+              
+              <td
+                colSpan={18}
+                className="p-3 text-right font-extrabold text-emerald-900"
+              >
+               
+              </td>
+
+              <td className="border-x border-emerald-300 bg-emerald-200 p-3 text-center font-extrabold text-emerald-950">
+                {detailRows
+                  .reduce(
+                    (total, item) =>
+                      total + (Number(item.final_receipt_wt) || 0),
+                    0
+                  )
+                  .toFixed(2)}
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
