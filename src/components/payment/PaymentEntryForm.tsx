@@ -556,7 +556,7 @@ export function PaymentEntryForm({
               </span>
             </div>
 
-            {/* Paid Amount (= 93% of Payable Net Amount - Delivery Claim (-) - Total Deductions & Penalties - Extra & Short) */}
+            {/* Paid Amount (= (Payable Net Amount - Delivery Claim (-) - Total Deductions & Penalties - Extra & Short) * 93%) */}
             <div>
               <label htmlFor="paid_amount_input" className="block text-[10px] font-bold uppercase text-emerald-900 mb-1">
                 Paid Amount (₹)
@@ -578,7 +578,7 @@ export function PaymentEntryForm({
               <span className="text-[10px] text-emerald-700 font-bold">
                 {masterData.payable_amt > 0
                   ? `${formatIndianCurrency(Math.round(masterData.paid_amount || 0), true, 0)} (${masterData.payable_amt > 0 ? (((Math.round(masterData.paid_amount || 0)) / Math.round(masterData.payable_amt)) * 100).toFixed(1) : '0.0'}% of bill)`
-                  : '93% of Payable Net − Delivery Claim − Deductions − Extra & Short'}
+                  : '(Payable Net − Delivery Claim − Deductions − Extra & Short) × 93%'}
               </span>
             </div>
 
