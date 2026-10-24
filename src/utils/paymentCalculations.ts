@@ -6,14 +6,9 @@ import { fetchSaudaCheckpointDeduction } from '../services/settlementService';
 
 export const hasDetailColData = (col?: PaymentDetailColumn): boolean => {
   if (!col) return false;
-  const hasGrade = Boolean(col.grade && String(col.grade).trim() !== '');
-  const hasArea = Boolean(col.area && String(col.area).trim() !== '');
-  const hasAgency = Boolean(col.agency && String(col.agency).trim() !== '');
   const hasQty = Number(col.quantity) > 0;
   const hasWt = Number(col.arr_qty_wt) > 0 || Number(col.wt_quantity) > 0;
-  const hasRate = Number(col.rate_value) > 0;
-  const hasAmt = Number(col.amount) > 0;
-  return hasGrade || hasArea || hasAgency || hasQty || hasWt || hasRate || hasAmt;
+  return hasQty || hasWt;
 };
 
 export const calculateDeliveryDelayDays = (
@@ -60,7 +55,7 @@ export const calculateDeliveryClaimPenalty = (
 
 /**
  * Calculates Paid Amount (₹) based on user formula:
- * Paid Amount (₹) = Payable Net Amount - Delivery Claim (-) - Total Deductions & Penalties - Extra & Short
+ * Paid Amount (₹) = (93% of Payable Net Amount) - Delivery Claim (-) - Total Deductions & Penalties - Extra & Short
  */
 export const calculateNetPaidAmountAfterDeductions = (
   payableNetAmount: number,
@@ -70,10 +65,11 @@ export const calculateNetPaidAmountAfterDeductions = (
 ): number => {
   const gross = Number(payableNetAmount) || 0;
   if (gross <= 0) return 0;
+  const base93Pct = gross * 0.93;
   const dClaim = Math.max(0, Number(deliveryClaim) || 0);
   const totDed = Math.max(0, Number(totalDeductionsAndPenalties) || 0);
   const exShort = Math.max(0, Number(extraAndShort) || 0);
-  return Math.max(0, Number((gross - dClaim - totDed - exShort).toFixed(2)));
+  return Math.max(0, Number((base93Pct - dClaim - totDed - exShort).toFixed(2)));
 };
 
 export interface PaymentDeductionsBreakdown {

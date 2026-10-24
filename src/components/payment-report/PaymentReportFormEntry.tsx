@@ -356,28 +356,28 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
               <span>Advance Payment Done? *</span>
               <span className={cn(
                 "text-[9px] px-1.5 py-0.2 rounded font-extrabold uppercase",
-                (masterData.advance_payment_done || 'No') === 'Yes'
+                (masterData.advance_payment_done || 'Yes') === 'Yes'
                   ? "bg-green-100 text-green-800"
                   : "bg-slate-200 text-slate-700"
               )}>
-                {(masterData.advance_payment_done || 'No') === 'Yes' ? 'ADVANCE DONE' : 'NO ADVANCE'}
+                {(masterData.advance_payment_done || 'Yes') === 'Yes' ? 'ADVANCE DONE' : 'NO ADVANCE'}
               </span>
             </label>
             <select
               id="masterdata_advance_paymen_2069"
               name="masterdata_advance_paymen"
               aria-label="masterdata advance paymen"
-              value={masterData.advance_payment_done || 'No'}
+              value={masterData.advance_payment_done || 'Yes'}
               onChange={e => setMasterData({ ...masterData, advance_payment_done: e.target.value })}
               className={cn(
                 "w-full p-2 border rounded font-black text-xs transition-colors",
-                (masterData.advance_payment_done || 'No') === 'Yes'
+                (masterData.advance_payment_done || 'Yes') === 'Yes'
                   ? "bg-green-50 text-green-950 border-green-400 focus:ring-2 focus:ring-green-500"
                   : "bg-white text-slate-800 border-slate-300 focus:ring-2 focus:ring-purple-500"
               )}
             >
-              <option value="No">No </option>
               <option value="Yes">Yes </option>
+              <option value="No">No </option>
             </select>
           </div>
 
@@ -480,48 +480,11 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
               </span>
             </div>
 
-            {/* Paid Amount (= Payable Net Amount - Delivery Claim (-) - Total Deductions & Penalties - Extra & Short) */}
+            {/* Paid Amount (= 93% of Payable Net Amount - Delivery Claim (-) - Total Deductions & Penalties - Extra & Short) */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-[10px] font-bold uppercase text-emerald-900">
-                  Paid Amount (₹)
-                </label>
-                <div className="flex items-center gap-1 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const netPaid = calculateNetPaidAmountAfterDeductions(
-                        masterData.payable_amt || 0,
-                        masterData.summary_delivery_claim,
-                        masterData.summary_deduction_amount,
-                        masterData.val_ex_short
-                      );
-                      setMasterData({ ...masterData, paid_amount: netPaid } as any);
-                    }}
-                    className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300 transition-colors"
-                    title="Paid Amount (₹) = Payable Net Amount - Delivery Claim (-) - Total Deductions & Penalties - Extra & Short"
-                  >
-                    Net After Ded.
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const netAfterDed = calculateNetPaidAmountAfterDeductions(
-                        masterData.payable_amt || 0,
-                        masterData.summary_delivery_claim,
-                        masterData.summary_deduction_amount,
-                        masterData.val_ex_short
-                      );
-                      const p = calculate93PctPaidAmount(netAfterDed);
-                      setMasterData({ ...masterData, paid_amount: p } as any);
-                    }}
-                    className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-teal-100 text-teal-800 hover:bg-teal-200 border border-teal-300 transition-colors"
-                    title="Apply 93% standard payment (floor rounded to nearest ₹1,000)"
-                  >
-                    93% (Floor ₹1K)
-                  </button>
-                </div>
-              </div>
+              <label htmlFor="masterdata_paid_amount_2261" className="block text-[10px] font-bold uppercase text-emerald-900 mb-1">
+                Paid Amount (₹)
+              </label>
               <input
                 id="masterdata_paid_amount_2261"
                 name="masterdata_paid_amount"
@@ -535,7 +498,7 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
               <span className="text-[10px] text-emerald-700 font-bold">
                 {masterData.payable_amt > 0
                   ? `${formatIndianCurrency((masterData as any).paid_amount || 0)} (${((((masterData as any).paid_amount || 0) / masterData.payable_amt) * 100).toFixed(1)}% of bill)`
-                  : 'Paid = Payable Net − Delivery Claim − Deductions − Extra & Short'}
+                  : '93% of Payable Net − Delivery Claim − Deductions − Extra & Short'}
               </span>
             </div>
 
@@ -594,7 +557,7 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
           </div>
 
           {/* Deductions Breakdown Bar for Paid Amount Calculation */}
-          <div className="pt-2 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div className="pt-2 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div className="bg-white/90 px-2.5 py-1.5 rounded border border-rose-200 flex items-center justify-between">
               <div>
                 <span className="block text-[9px] font-black uppercase text-rose-800">Delivery Claim (-)</span>
@@ -626,31 +589,13 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                 -{formatIndianCurrency(Number(masterData.val_ex_short) || 0)}
               </span>
             </div>
-
-            <div className="bg-emerald-50/90 px-2.5 py-1.5 rounded border border-emerald-300 flex items-center justify-between">
-              <div>
-                <span className="block text-[9px] font-black uppercase text-emerald-900">Calculated Net Paid Amount</span>
-                <span className="text-[9px] text-emerald-700 font-semibold">Payable − (Delivery Claim + Ded. + Ex/Short)</span>
-              </div>
-              <span className="font-mono font-black text-xs text-emerald-900">
-                {formatIndianCurrency(
-                  calculateNetPaidAmountAfterDeductions(
-                    masterData.payable_amt || 0,
-                    masterData.summary_delivery_claim,
-                    masterData.summary_deduction_amount,
-                    masterData.val_ex_short
-                  )
-                )}
-              </span>
-            </div>
           </div>
         </div>
 
         {/* 4-Column Specification Grid */}
         <div className="border border-slate-200 rounded-lg overflow-hidden">
           <div className="p-2.5 bg-slate-100 border-b border-slate-200 text-xs font-black uppercase text-slate-800 flex items-center justify-between">
-            <span>Material Grade Details (Optional Breakdown)</span>
-            <span className="text-[10px] font-semibold text-slate-500">4 Column Specification Matrix</span>
+            <span>Details</span>
           </div>
           <div className="p-3 overflow-x-auto">
             <datalist id="grade-options-list">
@@ -676,8 +621,8 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                   <th className="p-2">Grade</th>
                   <th className="p-2">Area</th>
                   <th className="p-2">Agency</th>
-                  <th className="p-2 w-20">Packets / Qty</th>
-                  <th className="p-2 w-24">Weight (MT)</th>
+                  <th className="p-2 w-20">Qty</th>
+                  <th className="p-2 w-24">Weight</th>
                   <th className="p-2 w-24">Rate (₹/Qtl)</th>
                   <th className="p-2 w-20 bg-emerald-50/70 text-emerald-800">Sett (%)</th>
                   <th className="p-2 w-24 bg-amber-50/70 text-amber-900">Deduction (₹/Qtl)</th>

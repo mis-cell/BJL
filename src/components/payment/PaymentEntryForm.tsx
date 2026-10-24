@@ -373,28 +373,28 @@ export function PaymentEntryForm({
               <span>Advance Payment Done? *</span>
               <span className={cn(
                 "text-[9px] px-1.5 py-0.2 rounded font-extrabold uppercase",
-                (masterData.advance_payment_done || 'No') === 'Yes'
+                (masterData.advance_payment_done || 'Yes') === 'Yes'
                   ? "bg-green-100 text-green-800"
                   : "bg-slate-200 text-slate-700"
               )}>
-                {(masterData.advance_payment_done || 'No') === 'Yes' ? 'ADVANCE DONE' : 'NO ADVANCE'}
+                {(masterData.advance_payment_done || 'Yes') === 'Yes' ? 'ADVANCE DONE' : 'NO ADVANCE'}
               </span>
             </label>
             <select 
               id="advance_payment_done_entry" 
               name="advance_payment_done_entry" 
               aria-label="Advance Payment Done"
-              value={masterData.advance_payment_done || 'No'}
+              value={masterData.advance_payment_done || 'Yes'}
               onChange={e => setMasterData({ ...masterData, advance_payment_done: e.target.value })}
               className={cn(
                 "w-full p-2 border rounded font-black text-xs transition-colors",
-                (masterData.advance_payment_done || 'No') === 'Yes'
+                (masterData.advance_payment_done || 'Yes') === 'Yes'
                   ? "bg-green-50 text-green-950 border-green-400 focus:ring-2 focus:ring-green-500"
                   : "bg-white text-slate-800 border-slate-300 focus:ring-2 focus:ring-purple-500"
               )}
             >
-              <option value="No">No </option>
               <option value="Yes">Yes </option>
+              <option value="No">No </option>
             </select>
           </div>
 
@@ -556,68 +556,11 @@ export function PaymentEntryForm({
               </span>
             </div>
 
-            {/* Paid Amount (= Payable Net Amount - Delivery Claim (-) - Total Deductions & Penalties - Extra & Short) */}
+            {/* Paid Amount (= 93% of Payable Net Amount - Delivery Claim (-) - Total Deductions & Penalties - Extra & Short) */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-[10px] font-bold uppercase text-emerald-900">
-                  Paid Amount (₹)
-                </label>
-                <div className="flex items-center gap-1 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMasterData({ ...masterData, paid_amount: 0 });
-                    }}
-                    className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-rose-100 text-rose-800 hover:bg-rose-200 border border-rose-300 transition-colors cursor-pointer"
-                    title="Set Paid Amount to ₹0 (Full Pending)"
-                  >
-                    ₹0 (Pending)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const netPaid = calculateNetPaidAmountAfterDeductions(
-                        masterData.payable_amt || 0,
-                        masterData.summary_delivery_claim,
-                        masterData.summary_deduction_amount,
-                        masterData.val_ex_short
-                      );
-                      setMasterData({ ...masterData, paid_amount: netPaid });
-                    }}
-                    className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300 transition-colors cursor-pointer"
-                    title="Paid Amount (₹) = Payable Net Amount - Delivery Claim (-) - Total Deductions & Penalties - Extra & Short"
-                  >
-                    Net After Ded.
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const netAfterDed = calculateNetPaidAmountAfterDeductions(
-                        masterData.payable_amt || 0,
-                        masterData.summary_delivery_claim,
-                        masterData.summary_deduction_amount,
-                        masterData.val_ex_short
-                      );
-                      const p = calculate93PctPaidAmount(netAfterDed);
-                      setMasterData({ ...masterData, paid_amount: p });
-                    }}
-                    className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-teal-100 text-teal-800 hover:bg-teal-200 border border-teal-300 transition-colors cursor-pointer"
-                    title="Apply 93% (floor rounded to nearest ₹1,000)"
-                  >
-                    93% (Floor ₹1K)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMasterData({ ...masterData, paid_amount: masterData.payable_amt || 0 });
-                    }}
-                    className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-blue-100 text-blue-800 hover:bg-blue-200 border border-blue-300 transition-colors cursor-pointer"
-                    title="Set 100% Full Payment"
-                  >
-                    100% Full
-                  </button>
-                </div>
-              </div>
+              <label htmlFor="paid_amount_input" className="block text-[10px] font-bold uppercase text-emerald-900 mb-1">
+                Paid Amount (₹)
+              </label>
               <input
                 id="paid_amount_input"
                 name="paid_amount_input"
@@ -635,7 +578,7 @@ export function PaymentEntryForm({
               <span className="text-[10px] text-emerald-700 font-bold">
                 {masterData.payable_amt > 0
                   ? `${formatIndianCurrency(masterData.paid_amount || 0)} (${masterData.payable_amt > 0 ? (((masterData.paid_amount || 0) / masterData.payable_amt) * 100).toFixed(1) : '0.0'}% of bill)`
-                  : 'Paid = Payable Net − Delivery Claim − Deductions − Extra & Short'}
+                  : '93% of Payable Net − Delivery Claim − Deductions − Extra & Short'}
               </span>
             </div>
 
@@ -694,7 +637,7 @@ export function PaymentEntryForm({
           </div>
 
           {/* Deductions Breakdown Bar for Paid Amount Calculation */}
-          <div className="pt-2 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div className="pt-2 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div className="bg-white/90 px-2.5 py-1.5 rounded border border-rose-200 flex items-center justify-between">
               <div>
                 <span className="block text-[9px] font-black uppercase text-rose-800">Delivery Claim (-)</span>
@@ -724,23 +667,6 @@ export function PaymentEntryForm({
               </div>
               <span className="font-mono font-black text-xs text-orange-800">
                 -{formatIndianCurrency(Number(masterData.val_ex_short) || 0)}
-              </span>
-            </div>
-
-            <div className="bg-emerald-50/90 px-2.5 py-1.5 rounded border border-emerald-300 flex items-center justify-between">
-              <div>
-                <span className="block text-[9px] font-black uppercase text-emerald-900">Calculated Net Paid Amount</span>
-                <span className="text-[9px] text-emerald-700 font-semibold">Payable − (Delivery Claim + Ded. + Ex/Short)</span>
-              </div>
-              <span className="font-mono font-black text-xs text-emerald-900">
-                {formatIndianCurrency(
-                  calculateNetPaidAmountAfterDeductions(
-                    masterData.payable_amt || 0,
-                    masterData.summary_delivery_claim,
-                    masterData.summary_deduction_amount,
-                    masterData.val_ex_short
-                  )
-                )}
               </span>
             </div>
           </div>

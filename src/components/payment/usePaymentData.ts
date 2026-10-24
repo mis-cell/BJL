@@ -1240,7 +1240,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
         remarks: masterData.remarks || '',
         status: calcStatus,
         payment_status: calcPaymentStatus,
-        advance_payment_done: masterData.advance_payment_done || 'No',
+        advance_payment_done: masterData.advance_payment_done || 'Yes',
         advance_payment_from: masterData.advance_payment_from || '1',
         advance_payment_financier : masterData.advance_payment_financier || '',
         payment_settlementdate: masterData.payment_settlementdate || '',

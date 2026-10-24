@@ -828,7 +828,7 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
         remarks: masterData.remarks || '',
         status: 'completed',
         payment_status: 'Paid',
-        advance_payment_done: masterData.advance_payment_done || 'No',
+        advance_payment_done: masterData.advance_payment_done || 'Yes',
         advance_payment_from: masterData.advance_payment_from || '1',
         payment_settlementdate: masterData.payment_settlementdate || '',
         tenor: masterData.tenor || '',

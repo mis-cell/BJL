@@ -244,7 +244,7 @@ export const initialMaster = (): PaymentMaster => ({
   electronic_scale_net: 0,
   status: 'completed',
   payment_status: 'Paid',
-  advance_payment_done: 'No',
+  advance_payment_done: 'Yes',
   advance_payment_from: '1',
   advance_payment_financier:'',
   payment_settlementdate: '',
