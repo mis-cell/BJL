@@ -63,13 +63,13 @@ export const calculateNetPaidAmountAfterDeductions = (
   totalDeductionsAndPenalties: number = 0,
   extraAndShort: number = 0
 ): number => {
-  const gross = Number(payableNetAmount) || 0;
+  const gross = Math.round(Number(payableNetAmount) || 0);
   if (gross <= 0) return 0;
   const base93Pct = gross * 0.93;
   const dClaim = Math.max(0, Number(deliveryClaim) || 0);
   const totDed = Math.max(0, Number(totalDeductionsAndPenalties) || 0);
   const exShort = Math.max(0, Number(extraAndShort) || 0);
-  return Math.max(0, Number((base93Pct - dClaim - totDed - exShort).toFixed(2)));
+  return Math.max(0, Math.round(base93Pct - dClaim - totDed - exShort));
 };
 
 export interface PaymentDeductionsBreakdown {

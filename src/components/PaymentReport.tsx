@@ -575,7 +575,7 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
       });
 
       const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c), 0);
-      const grossVal = Number(po.total_amount || po.total_amt || po.contract_value || totalColAmt || 0);
+      const grossVal = Math.round(Number(po.total_amount || po.total_amt || po.contract_value || totalColAmt || 0));
 
       const deductions = await resolvePaymentDeductionsForPoAndMr({
         po,
@@ -603,13 +603,13 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
         party_name: po.party_name || po.supplier || prev.party_name,
         broker: po.broker || po.broker_name || prev.broker,
         rate_qntl: Number(po.b_rate || po.rate_qntl || 0),
-        total_amount: grossVal > 0 ? grossVal : prev.total_amount,
-        payable_amt: grossVal > 0 ? grossVal : prev.payable_amt,
+        total_amount: grossVal > 0 ? grossVal : Math.round(prev.total_amount || 0),
+        payable_amt: grossVal > 0 ? grossVal : Math.round(prev.payable_amt || 0),
         summary_delivery_claim: deductions.deliveryClaim,
         summary_deduction_amount: deductions.totalDeductionsAndPenalties,
         summary_deduction_type: deductions.deductionSummaryText,
         val_ex_short: deductions.extraAndShort,
-        paid_amount: grossVal > 0 ? defaultPaid : prev.paid_amount,
+        paid_amount: grossVal > 0 ? defaultPaid : Math.round(prev.paid_amount || 0),
       } as any));
 
       setDetailCols(cols);
@@ -706,9 +706,11 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
       }
 
       const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c), 0);
-      const grossVal = totalColAmt > 0
-        ? totalColAmt
-        : Number(arrival.payable_amt || arrival.net_amt || arrival.value_amt || arrival.total_amount || po?.total_amount || 0);
+      const grossVal = Math.round(
+        totalColAmt > 0
+          ? totalColAmt
+          : Number(arrival.payable_amt || arrival.net_amt || arrival.value_amt || arrival.total_amount || po?.total_amount || 0)
+      );
       const mrWeight = Number(arrival.electronic_net_weight || arrival.weight_qtl || 0);
 
       const deductions = await resolvePaymentDeductionsForPoAndMr({
@@ -742,14 +744,14 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
         lorry_number: arrival.lorry_number || arrival.vehicle_no || prev.lorry_number,
         arrival_no: arrival.final_arrival_no || arrival.mr_no || prev.arrival_no,
         arrival_date: arrival.date || deductions.arrivalDate || prev.arrival_date,
-        total_amount: grossVal > 0 ? grossVal : prev.total_amount,
-        payable_amt: grossVal > 0 ? grossVal : prev.payable_amt,
+        total_amount: grossVal > 0 ? grossVal : Math.round(prev.total_amount || 0),
+        payable_amt: grossVal > 0 ? grossVal : Math.round(prev.payable_amt || 0),
         summary_delivery_claim: deductions.deliveryClaim,
         summary_deduction_amount: deductions.totalDeductionsAndPenalties,
         summary_deduction_type: deductions.deductionSummaryText,
         val_ex_short: deductions.extraAndShort,
-        paid_amount: grossVal > 0 ? defaultPaid : prev.paid_amount,
-        net_amt: grossVal > 0 ? grossVal : prev.net_amt,
+        paid_amount: grossVal > 0 ? defaultPaid : Math.round(prev.paid_amount || 0),
+        net_amt: grossVal > 0 ? grossVal : Math.round(prev.net_amt || 0),
         electronic_scale_net: mrWeight,
         challan_weight: Number(arrival.challan_material_weight || (prev as any).challan_weight)
       } as any));

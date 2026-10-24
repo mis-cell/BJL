@@ -52,7 +52,7 @@ export function PaymentDetailGrid({
 
     setDetailCols(enriched);
 
-    const newTotal = enriched.reduce((sum, c) => sum + getColAmount(c, sattaDiffsList, activePoItems), 0);
+    const newTotal = Math.round(enriched.reduce((sum, c) => sum + getColAmount(c, sattaDiffsList, activePoItems), 0));
     if (newTotal > 0) {
       setMasterData(prev => {
         const newPaid = calculateNetPaidAmountAfterDeductions(
@@ -107,13 +107,13 @@ export function PaymentDetailGrid({
               <th className="p-2 w-20">Qty</th>
               <th className="p-2 w-24">Weight</th>
               <th className="p-2 w-24">Rate (₹/Qtl)</th>
-              <th className="p-2 w-24 bg-emerald-50/70 text-emerald-900">Premium (₹/Qtl)</th>
+              <th className="p-2 w-24 bg-emerald-50/70 text-emerald-900">Premium</th>
               <th className="p-2 w-20 bg-emerald-50/70 text-emerald-800">Sett (%)</th>
               <th className="p-2 min-w-[140px] bg-amber-50/80 text-amber-900 border-l border-amber-200">
-                Grade Down Deduction (₹/Qtl)
+                Grade Down
               </th>
-              <th className="p-2 w-24 bg-blue-50/70 text-blue-900">Sett Rate (₹/Qtl)</th>
-              <th className="p-2 text-right">Amount (₹)</th>
+              <th className="p-2 w-24 bg-blue-50/70 text-blue-900">Sett Rate</th>
+              <th className="p-2 text-right">Amount</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

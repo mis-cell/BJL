@@ -532,10 +532,10 @@ export function PaymentEntryForm({
                 name="payable_net_amount_input" 
                 aria-label="Payable Net Amount (₹)"
                 type="number"
-                step="0.01"
-                value={masterData.payable_amt.toFixed(2)}
+                step="1"
+                value={Math.round(masterData.payable_amt || 0)}
                 onChange={e => {
-                  const val = parseFloat(e.target.value) || 0;
+                  const val = Math.round(parseFloat(e.target.value) || 0);
                   const defaultPaid = calculateNetPaidAmountAfterDeductions(
                     val,
                     masterData.summary_delivery_claim,
@@ -552,7 +552,7 @@ export function PaymentEntryForm({
                 className="w-full p-2 font-black text-sm border border-slate-300 rounded bg-white text-slate-900 shadow-xs focus:ring-2 focus:ring-purple-500"
               />
               <span className="text-[10px] text-slate-500 font-medium">
-                Full Invoice Value: {formatIndianCurrency(masterData.payable_amt)}
+                Full Invoice Value: {formatIndianCurrency(Math.round(masterData.payable_amt || 0), true, 0)}
               </span>
             </div>
 
@@ -566,18 +566,18 @@ export function PaymentEntryForm({
                 name="paid_amount_input"
                 aria-label="Paid Amount"
                 type="number"
-                step="0.01"
-                value={masterData.paid_amount ?? 0}
+                step="1"
+                value={Math.round(masterData.paid_amount ?? 0)}
                 onChange={e => {
                   const rawVal = e.target.value;
-                  const parsed = parseFloat(rawVal);
+                  const parsed = Math.round(parseFloat(rawVal));
                   setMasterData({ ...masterData, paid_amount: isNaN(parsed) ? 0 : parsed });
                 }}
                 className="w-full p-2 font-black text-sm border border-emerald-400 rounded bg-emerald-50/70 text-emerald-950 focus:ring-2 focus:ring-emerald-500 shadow-xs"
               />
               <span className="text-[10px] text-emerald-700 font-bold">
                 {masterData.payable_amt > 0
-                  ? `${formatIndianCurrency(masterData.paid_amount || 0)} (${masterData.payable_amt > 0 ? (((masterData.paid_amount || 0) / masterData.payable_amt) * 100).toFixed(1) : '0.0'}% of bill)`
+                  ? `${formatIndianCurrency(Math.round(masterData.paid_amount || 0), true, 0)} (${masterData.payable_amt > 0 ? (((Math.round(masterData.paid_amount || 0)) / Math.round(masterData.payable_amt)) * 100).toFixed(1) : '0.0'}% of bill)`
                   : '93% of Payable Net − Delivery Claim − Deductions − Extra & Short'}
               </span>
             </div>
@@ -591,16 +591,13 @@ export function PaymentEntryForm({
                 </span>
                 <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 border border-amber-300">
                   {masterData.payable_amt > 0
-                    ? `${(((masterData.payable_amt - masterData.paid_amount) / masterData.payable_amt) * 100).toFixed(1)}%`
+                    ? `${(((Math.round(masterData.payable_amt) - Math.round(masterData.paid_amount || 0)) / Math.round(masterData.payable_amt)) * 100).toFixed(1)}%`
                     : '0.0%'}
                 </span>
               </div>
               <div className="text-base font-black text-amber-950 font-mono my-0.5">
-                {formatIndianCurrency(Math.max(0, masterData.payable_amt - masterData.paid_amount))}
+                {formatIndianCurrency(Math.max(0, Math.round(masterData.payable_amt || 0) - Math.round(masterData.paid_amount || 0)), true, 0)}
               </div>
-              <span className="text-[9.5px] text-amber-800 font-semibold leading-tight">
-                Retention / Deductions Balance
-              </span>
             </div>
 
             {/* Bill / Invoice No */}

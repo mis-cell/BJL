@@ -456,10 +456,10 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                 name="payable_net_amount"
                 aria-label="Payable Net Amount (₹)"
                 type="number"
-                step="0.01"
-                value={masterData.payable_amt || ''}
+                step="1"
+                value={Math.round(masterData.payable_amt || 0)}
                 onChange={e => {
-                  const val = parseFloat(e.target.value) || 0;
+                  const val = Math.round(parseFloat(e.target.value) || 0);
                   const defaultPaid = calculateNetPaidAmountAfterDeductions(
                     val,
                     masterData.summary_delivery_claim,
@@ -476,7 +476,7 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                 className="w-full p-2 font-black text-sm border border-slate-300 rounded bg-white text-slate-900 shadow-xs focus:ring-2 focus:ring-purple-500"
               />
               <span className="text-[10px] text-slate-500 font-medium">
-                Full Invoice Value: {formatIndianCurrency(masterData.payable_amt || 0)}
+                Full Invoice Value: {formatIndianCurrency(Math.round(masterData.payable_amt || 0), true, 0)}
               </span>
             </div>
 
@@ -490,14 +490,14 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                 name="masterdata_paid_amount"
                 aria-label="masterdata paid amount"
                 type="number"
-                step="0.01"
-                value={(masterData as any).paid_amount || ''}
-                onChange={e => setMasterData({ ...masterData, paid_amount: parseFloat(e.target.value) || 0 } as any)}
+                step="1"
+                value={Math.round((masterData as any).paid_amount || 0)}
+                onChange={e => setMasterData({ ...masterData, paid_amount: Math.round(parseFloat(e.target.value) || 0) } as any)}
                 className="w-full p-2 font-black text-sm border border-emerald-400 rounded bg-emerald-50/70 text-emerald-950 focus:ring-2 focus:ring-emerald-500 shadow-xs"
               />
               <span className="text-[10px] text-emerald-700 font-bold">
                 {masterData.payable_amt > 0
-                  ? `${formatIndianCurrency((masterData as any).paid_amount || 0)} (${((((masterData as any).paid_amount || 0) / masterData.payable_amt) * 100).toFixed(1)}% of bill)`
+                  ? `${formatIndianCurrency(Math.round((masterData as any).paid_amount || 0), true, 0)} (${(((Math.round((masterData as any).paid_amount || 0) / Math.round(masterData.payable_amt)) * 100)).toFixed(1)}% of bill)`
                   : '93% of Payable Net − Delivery Claim − Deductions − Extra & Short'}
               </span>
             </div>
@@ -511,16 +511,13 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                 </span>
                 <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 border border-amber-300">
                   {masterData.payable_amt > 0
-                    ? `${(((masterData.payable_amt - ((masterData as any).paid_amount || 0)) / masterData.payable_amt) * 100).toFixed(1)}%`
+                    ? `${(((Math.round(masterData.payable_amt) - Math.round((masterData as any).paid_amount || 0)) / Math.round(masterData.payable_amt)) * 100).toFixed(1)}%`
                     : '0.0%'}
                 </span>
               </div>
               <div className="text-base font-black text-amber-950 font-mono my-0.5">
-                {formatIndianCurrency(Math.max(0, masterData.payable_amt - ((masterData as any).paid_amount || 0)))}
+                {formatIndianCurrency(Math.max(0, Math.round(masterData.payable_amt || 0) - Math.round((masterData as any).paid_amount || 0)), true, 0)}
               </div>
-              <span className="text-[9.5px] text-amber-800 font-semibold leading-tight">
-                Retention / Deductions Balance
-              </span>
             </div>
 
             {/* Bill / Invoice No */}
@@ -625,9 +622,9 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                   <th className="p-2 w-24">Weight</th>
                   <th className="p-2 w-24">Rate (₹/Qtl)</th>
                   <th className="p-2 w-20 bg-emerald-50/70 text-emerald-800">Sett (%)</th>
-                  <th className="p-2 w-24 bg-amber-50/70 text-amber-900">Deduction (₹/Qtl)</th>
-                  <th className="p-2 w-24 bg-blue-50/70 text-blue-900">Sett Rate (₹/Qtl)</th>
-                  <th className="p-2 text-right">Amount (₹)</th>
+                  <th className="p-2 w-24 bg-amber-50/70 text-amber-900">Grade Down</th>
+                  <th className="p-2 w-24 bg-blue-50/70 text-blue-900">Sett Rate</th>
+                  <th className="p-2 text-right">Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -722,7 +719,7 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                             updated[idx].deduction_rate = getColDeduction(updated[idx]);
                             updated[idx].amount = Number((qQtl * sRate).toFixed(2));
                             setDetailCols(updated);
-                            const newTotal = updated.reduce((sum, c) => sum + getColAmount(c), 0);
+                            const newTotal = Math.round(updated.reduce((sum, c) => sum + getColAmount(c), 0));
                             if (newTotal > 0) {
                               setMasterData(prev => {
                                 const newPaid = calculateNetPaidAmountAfterDeductions(
@@ -767,7 +764,7 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                             updated[idx].quantity_qtl = qQtl;
                             updated[idx].amount = Number((qQtl * sRate).toFixed(2));
                             setDetailCols(updated);
-                            const newTotal = updated.reduce((sum, c) => sum + getColAmount(c), 0);
+                            const newTotal = Math.round(updated.reduce((sum, c) => sum + getColAmount(c), 0));
                             if (newTotal > 0) {
                               setMasterData(prev => {
                                 const newPaid = calculateNetPaidAmountAfterDeductions(
@@ -814,7 +811,7 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                               updated[idx].quantity_qtl = qQtl;
                               updated[idx].amount = Number((qQtl * sRate).toFixed(2));
                               setDetailCols(updated);
-                              const newTotal = updated.reduce((sum, c) => sum + getColAmount(c), 0);
+                              const newTotal = Math.round(updated.reduce((sum, c) => sum + getColAmount(c), 0));
                               if (newTotal > 0) {
                                 setMasterData(prev => {
                                   const newPaid = calculateNetPaidAmountAfterDeductions(
