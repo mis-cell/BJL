@@ -1102,17 +1102,14 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       return
     }
     if(formData.unit_name==='' || formData.unit_name===null){
+       alert('Please Select Unit.');
+      return
+    }
+    if(formData.arrival_area_name==='' || formData.arrival_area_name===null){
        alert('Please Select Area.');
       return
     }
-    if(formData.unit_name==='' || formData.unit_name===null){
-       alert('Please Select Area.');
-      return
-    }
-    if(formData.unit_name==='' || formData.unit_name===null){
-       alert('Please Select Area.');
-      return
-    }
+    
 
     // Guard: Prohibit creating new temporary arrivals against cancelled or closed saudas
     const cleanEnteredPo = String(formData.po_no || '').trim().toUpperCase();

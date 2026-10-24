@@ -334,20 +334,25 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
               </tr>
             ))}
             <tr className="h-9 bg-slate-100 font-bold border-t-2 border-slate-300">
-              <td colSpan={9} className="text-right px-3 uppercase text-[11px] font-black text-slate-700 border-r border-slate-300">
+              <td
+                colSpan={9}
+                className="text-right px-3 uppercase text-[11px] font-black text-slate-700 border-r border-slate-300"
+              >
                 Summary Totals:
               </td>
-              <td className="px-2 text-right font-black text-slate-900 border-r border-slate-300">
-               
+              <td className="px-2 text-right font-black text-slate-900 border-r border-slate-300 bg-emerald-100">
+                {details
+                  .reduce((sum, detail) => sum + (Number(detail.netto_pnto) || 0), 0)
+                  .toFixed(3)}
               </td>
-              <td className="px-2 text-right font-black text-blue-900 border-r border-slate-300">
-                
+              <td className="px-2 text-right font-black text-blue-900 border-r border-slate-300 bg-blue-100">
+                {details
+                  .reduce((sum, detail) => sum + (Number(detail.quantity_chln) || 0), 0)
+                  .toLocaleString('en-IN')}
               </td>
               <td className="px-2 text-right font-black text-rose-700 border-r border-slate-300">
-                
               </td>
               <td colSpan={2} className="px-2 text-slate-500 text-[10px]">
-                
               </td>
             </tr>
           </tbody>
