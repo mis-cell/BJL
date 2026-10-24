@@ -630,23 +630,27 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   // 4. APPLY 3% EXECUTION EXEMPTION
   // Calculated strictly from Sauda Total Contract Quantity:
   // 3% Exemption = Sauda Total Contract Quantity × 3%
+  const tolResult = useMemo(
+    () => calculateWeightTolerance(contractMt, totalFinalReceiptClaimMt, unit),
+    [contractMt, totalFinalReceiptClaimMt, unit]
+  );
   const exemptionPct = 3.0;
-  const exemptionMt = Math.round((contractMt * 0.03) * 1000) / 1000;
-  const exemptionQtl = Math.round(exemptionMt * 10 * 100) / 100;
-  const exemptionKg = Math.round(exemptionMt * 1000);
+  const exemptionMt = Math.round(tolResult.toleranceMt * 1000) / 1000;
+  const exemptionQtl = Math.round(tolResult.toleranceQtl * 100) / 100;
+  const exemptionKg = Math.round(tolResult.toleranceMt * 1000);
 
   // 5. FINAL DEDUCTIBLE QUANTITY (TOLERANCE / NO-DEDUCTION RULE)
   // Final Deductible Short = MAX(0, Gross Short - 3% Exemption)
-  const finalDeductibleShortMt = isGrossShort ? Math.max(0, Math.round((grossShortMt - exemptionMt) * 1000) / 1000) : 0;
-  const finalDeductibleShortQtl = Math.round(finalDeductibleShortMt * 10 * 100) / 100;
+  const finalDeductibleShortMt = isGrossShort ? Math.max(0, Math.round(tolResult.shortUnderToleranceMt * 1000) / 1000) : 0;
+  const finalDeductibleShortQtl = isGrossShort ? Math.max(0, Math.round(tolResult.shortUnderToleranceQtl * 100) / 100) : 0;
 
-  const finalDeductibleExcessMt = isGrossExcess ? Math.max(0, Math.round((grossExcessMt - exemptionMt) * 1000) / 1000) : 0;
-  const finalDeductibleExcessQtl = Math.round(finalDeductibleExcessMt * 10 * 100) / 100;
+  const finalDeductibleExcessMt = isGrossExcess ? Math.max(0, Math.round(tolResult.excessOverToleranceMt * 1000) / 1000) : 0;
+  const finalDeductibleExcessQtl = isGrossExcess ? Math.max(0, Math.round(tolResult.excessOverToleranceQtl * 100) / 100) : 0;
 
   const finalDeductibleQtyMt = isGrossExcess ? finalDeductibleExcessMt : finalDeductibleShortMt;
   const finalDeductibleQtyQtl = isGrossExcess ? finalDeductibleExcessQtl : finalDeductibleShortQtl;
 
-  const isWithin3PctExemption = isGrossShort ? (grossShortMt <= exemptionMt + 0.0001) : (isGrossExcess ? (grossExcessMt <= exemptionMt + 0.0001) : true);
+  const isWithin3PctExemption = tolResult.isWithinTolerance;
 
   // Policy Status Label
   const policyStatusText: string = isWithin3PctExemption

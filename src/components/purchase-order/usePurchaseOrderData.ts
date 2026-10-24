@@ -331,7 +331,8 @@ export function usePurchaseOrderData({
       const combinedSettlements = [...(mrSettlementsRes || []), ...(mrSettlementAltRes || [])];
       setDbMaterialMismatches(combinedMatMismatches);
       setDbSattaMismatches(combinedSatMismatches);
-      setSattaBases((sattaBasesRes as any)?.data || sattaBasesRes || []);
+      const sBasesList = (sattaBasesRes as any)?.data || sattaBasesRes || [];
+      setSattaBases(sBasesList);
       setSattaCalcs((sattaCalculatedRes as any)?.data || sattaCalculatedRes || []);
       setAllPayments(payments || []);
       setAllSettlements(combinedSettlements);
@@ -349,7 +350,40 @@ export function usePurchaseOrderData({
           dedMap[cleanKeyFormat(d.sauda_no)] = d;
         }
       });
-      setSettledDeductions(dedMap);
+
+      const normalizeDateYMD = (d: any) => {
+        if (!d) return '';
+        const str = String(d).trim();
+        if (str.length >= 10 && str[4] === '-' && str[7] === '-') return str.slice(0, 10);
+        const parsed = new Date(d);
+        if (!isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+        return str.slice(0, 10);
+      };
+
+      const getTd5BaseRateForDate = (dateStr: string): number => {
+        const targetYmd = normalizeDateYMD(dateStr);
+        const baseList = Array.isArray(sBasesList) ? sBasesList : [];
+        if (baseList.length > 0) {
+          const matches = baseList.filter((b: any) => {
+            const bDateYmd = normalizeDateYMD(b.start_date || b.effective_date || b.satta_date || b.start || b.date || '');
+            return bDateYmd && bDateYmd <= targetYmd;
+          }).sort((a: any, b: any) => {
+            const d1 = normalizeDateYMD(a.start_date || a.start || a.date || '');
+            const d2 = normalizeDateYMD(b.start_date || b.start || b.date || '');
+            return d2.localeCompare(d1);
+          });
+          if (matches.length > 0) {
+            const r = Number(matches[0].base_rate || matches[0].rate || matches[0].b_rate || 0);
+            if (r > 0) return r;
+          }
+          const firstValid = baseList.find((b: any) => Number(b.base_rate || b.rate || b.b_rate || 0) > 0);
+          if (firstValid) return Number(firstValid.base_rate || firstValid.rate || firstValid.b_rate);
+        }
+        return 13500;
+      };
+
+      const deductionsToAutoSync: Array<{ existingId?: any; payload: Record<string, any> }> = [];
+      const nowIso = new Date().toISOString();
 
       const allMergedInspections = [...(matInspections || []), ...(inspections || [])];
       const pos = initialPos;
@@ -478,6 +512,138 @@ export function usePurchaseOrderData({
         const tol = calculateWeightTolerance(contractWeight, totalReceivedMt, unit);
         const isExplicitCompleted = p.status === 'completed' || p.status === 'settled';
         const isWeightCompleted = tol.isCompleted;
+
+        // Automatically calculate WT STATUS and queue save to sauda_check_point_deductions
+        const poNoStr = String(p.po_no || p.contract_po_no || '').trim();
+        const saudaNoStr = String(p.sauda_no || p.sauda_ref || p.contract_po_no || p.po_no || '').trim();
+        if (poNoStr && contractWeight > 0) {
+          const targetPoClean = cleanKeyFormat(poNoStr);
+          const targetSaudaClean = cleanKeyFormat(saudaNoStr);
+          const matchedArrivalForWt = (arrivals || []).find((ar: any) => {
+            const arPo = cleanKeyFormat(ar.po_no || ar.sauda_no || ar.contract_po_no || ar.temporary_arrival_no);
+            return arPo && (arPo === targetPoClean || (targetSaudaClean && arPo === targetSaudaClean));
+          }) || matchingTemp[0] || matchingFinal[0];
+
+          const saudaDateStr = p.s_date || p.po_date || p.date || p.contract_date || (p.created_at ? p.created_at.slice(0, 10) : '');
+          const arrivalDateStr = matchedArrivalForWt?.date || matchedArrivalForWt?.arrival_date || p.last_arrival_date || p.arrival_date || saudaDateStr;
+
+          const saudaTd5Rate = parseFloat(p.b_rate || 0) > 0 ? parseFloat(p.b_rate) : getTd5BaseRateForDate(saudaDateStr);
+          const arrivalTd5Rate = getTd5BaseRateForDate(arrivalDateStr);
+          const td5RateDiff = Math.abs((arrivalTd5Rate || 0) - (saudaTd5Rate || 0));
+
+          let variationType = 'pending_arrival';
+          let deductionQtyMt = 0;
+          let deductionQtyQtl = 0;
+          let penaltyAmount = 0;
+          let wtStatusRemarks = 'Pending Arrival';
+
+          if (totalReceivedMt > 0) {
+            if (tol.isWithinTolerance) {
+              variationType = 'within_tolerance';
+              deductionQtyMt = 0;
+              deductionQtyQtl = 0;
+              penaltyAmount = 0;
+              wtStatusRemarks = `✓ TOLERABLE (±${tol.toleranceMt.toFixed(2)} MT) | Diff: ${tol.diffMt >= 0 ? `+${tol.diffMt.toFixed(3)}` : tol.diffMt.toFixed(3)} MT`;
+            } else if (tol.isOverDelivery) {
+              variationType = 'excess';
+              const excessMt = Math.max(0, tol.excessOverToleranceMt || 0);
+              const excessQtl = Math.max(0, tol.excessOverToleranceQtl || 0);
+              const rawPenalty = td5RateDiff * excessQtl;
+              penaltyAmount = isNaN(rawPenalty) || rawPenalty < 0 ? 0 : Math.round(rawPenalty * 100) / 100;
+              deductionQtyMt = Number(excessMt.toFixed(3));
+              deductionQtyQtl = Number(excessQtl.toFixed(2));
+              wtStatusRemarks = `+${excessMt.toFixed(3)} MT Excess | Penalty: ₹${penaltyAmount}`;
+            } else if (tol.isUnderDelivery) {
+              variationType = 'short';
+              const shortMt = Math.max(0, tol.shortUnderToleranceMt || 0);
+              const shortQtl = Math.max(0, tol.shortUnderToleranceQtl || 0);
+              const rawPenalty = td5RateDiff * shortQtl;
+              penaltyAmount = isNaN(rawPenalty) || rawPenalty < 0 ? 0 : Math.round(rawPenalty * 100) / 100;
+              deductionQtyMt = Number(shortMt.toFixed(3));
+              deductionQtyQtl = Number(shortQtl.toFixed(2));
+              wtStatusRemarks = `-${shortMt.toFixed(3)} MT Short | Beyond Tol. | Penalty: ₹${penaltyAmount}`;
+            } else {
+              variationType = 'within_tolerance';
+              wtStatusRemarks = 'Exact (0.00 MT)';
+            }
+          }
+
+          const linkedMrs = Array.from(new Set([
+            ...matchingFinal.map((ar: any) => String(ar.final_arrival_no || ar.mr_no || ar.arrival_no || '').trim()),
+            ...matchingTemp.map((ar: any) => String(ar.temporary_arrival_no || ar.amad_no || ar.mr_no || '').trim())
+          ].filter(Boolean)));
+          const lastMrNo = linkedMrs[0] || String(p.last_arrival_mr_no || p.mr_no || 'MR-001').trim();
+          const arrivalNumbersStr = linkedMrs.length > 0 ? linkedMrs.join(', ') : lastMrNo;
+
+          const dedPayload: Record<string, any> = {
+            po_no: poNoStr,
+            sauda_no: saudaNoStr || poNoStr,
+            supplier: String(p.supplier || p.supplier_name || p.supp_name || '').trim(),
+            broker: String(p.broker || p.broker_name || '').trim(),
+            contract_weight_mt: Number(contractWeight.toFixed(3)),
+            tolerance_pct: 3.0,
+            tolerance_mt: Number(tol.toleranceMt.toFixed(3)),
+            tolerance_type: '3% Sauda Total Contract Execution Exemption',
+            min_acceptable_mt: Number(tol.minAcceptableMt.toFixed(3)),
+            max_acceptable_mt: Number(tol.maxAcceptableMt.toFixed(3)),
+            total_received_mt: Number(totalReceivedMt.toFixed(3)),
+            variation_type: variationType,
+            variation_mt: Number((contractWeight - totalReceivedMt).toFixed(3)),
+            selected_grade: p.selected_grade || p.grade || 'TD6',
+            sauda_rate: Number(saudaTd5Rate),
+            satta_rate: Number(arrivalTd5Rate),
+            last_arrival_date: normalizeDateYMD(arrivalDateStr) || null,
+            last_mr_no: lastMrNo,
+            applicable_rate: Number(td5RateDiff),
+            rate_basis: 'rate_difference',
+            rate_difference: Number(td5RateDiff),
+            deduction_qty_mt: deductionQtyMt,
+            deduction_qty_qtl: deductionQtyQtl,
+            deduction_amount: penaltyAmount,
+            status: totalReceivedMt > 0 ? 'approved' : 'pending',
+            remarks: wtStatusRemarks,
+            arrival_numbers: arrivalNumbersStr,
+            approved_by: 'System Auto-Calculated',
+            approval_level: 'ADMIN',
+            updated_at: nowIso
+          };
+
+          if (totalReceivedMt > 0) {
+            try {
+              localStorage.setItem(`sauda_settled_${targetPoClean}`, 'true');
+              localStorage.setItem(`sauda_settlement_${targetPoClean}`, JSON.stringify(dedPayload));
+              if (targetSaudaClean) {
+                localStorage.setItem(`sauda_settled_${targetSaudaClean}`, 'true');
+                localStorage.setItem(`sauda_settlement_${targetSaudaClean}`, JSON.stringify(dedPayload));
+              }
+            } catch (_e) {}
+          }
+
+          const existingDed = dedMap[poNoStr.toUpperCase()] ||
+                              dedMap[targetPoClean] ||
+                              (saudaNoStr ? (dedMap[saudaNoStr.toUpperCase()] || dedMap[targetSaudaClean]) : null);
+
+          dedMap[poNoStr.toUpperCase()] = existingDed ? { ...existingDed, ...dedPayload } : dedPayload;
+          dedMap[targetPoClean] = dedMap[poNoStr.toUpperCase()];
+
+          const isCustomLocked = existingDed && existingDed.rate_basis === 'custom' && Number(existingDed.total_received_mt || 0) === dedPayload.total_received_mt;
+          const needsDbSync = !isCustomLocked && (
+            !existingDed ||
+            Number(existingDed.contract_weight_mt || 0) !== dedPayload.contract_weight_mt ||
+            Number(existingDed.total_received_mt || 0) !== dedPayload.total_received_mt ||
+            String(existingDed.variation_type || '') !== dedPayload.variation_type ||
+            Number(existingDed.deduction_qty_mt || 0) !== dedPayload.deduction_qty_mt ||
+            Number(existingDed.deduction_amount || 0) !== dedPayload.deduction_amount ||
+            String(existingDed.remarks || '') !== dedPayload.remarks
+          );
+
+          if (needsDbSync) {
+            deductionsToAutoSync.push({
+              existingId: existingDed?.id,
+              payload: existingDed?.id ? dedPayload : { ...dedPayload, created_at: nowIso }
+            });
+          }
+        }
 
         // 1. Check Temporary Arrival Dashboard
         const hasTempArrival = (arrivals || []).some((ar: any) => matchPoRecord(p, ar)) ||
@@ -680,6 +846,40 @@ export function usePurchaseOrderData({
           is_fully_completed: isFullyComplete
         };
       }));
+
+      setSettledDeductions(dedMap);
+
+      if (supabase && deductionsToAutoSync.length > 0) {
+        (async () => {
+          const writeWithRetry = async (existingId: any, rawPayload: Record<string, any>) => {
+            let activePayload = { ...rawPayload };
+            for (let attempt = 0; attempt < 8; attempt++) {
+              const res = existingId
+                ? await supabase.from('sauda_check_point_deductions').update(activePayload).eq('id', existingId)
+                : await supabase.from('sauda_check_point_deductions').insert([activePayload]);
+              if (!res.error) return;
+              const errMsg = res.error.message || '';
+              const match = errMsg.match(/['"]([a-zA-Z0-9_]+)['"]\s+column/i) ||
+                            errMsg.match(/column\s+['"]([a-zA-Z0-9_]+)['"]/i) ||
+                            errMsg.match(/Could not find the '([a-zA-Z0-9_]+)' column/i);
+              if (match && match[1] && activePayload[match[1]] !== undefined) {
+                delete activePayload[match[1]];
+                continue;
+              }
+              break;
+            }
+          };
+
+          try {
+            await Promise.all(
+              deductionsToAutoSync.map(item => writeWithRetry(item.existingId, item.payload).catch(() => {}))
+            );
+            dbModule.invalidateCache('sauda_check_point_deductions');
+          } catch (e) {
+            console.warn('Auto-save to sauda_check_point_deductions warning:', e);
+          }
+        })();
+      }
 
       setBrokerList((brokers || []).map((b: any) => ({
         ...b,
