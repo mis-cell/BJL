@@ -10,11 +10,13 @@ import {
   getColDeductionExplanation, 
   getColSettRate, 
   getColQtyQtl, 
-  getColAmount 
+  getColAmount,
+  hasDetailColData,
+  calculateNetPaidAmountAfterDeductions
 } from '../../utils/paymentCalculations';
-import { formatIndianCurrency, calculate93PctPaidAmount } from '../../lib/utils';
+import { formatIndianCurrency } from '../../lib/utils';
 import { getNextLowerGrade, normalizeGrade } from '../../services/sattaRateService';
-import { Settings2, ArrowDownRight, CheckCircle2, Info, ChevronDown } from 'lucide-react';
+import { Settings2, ArrowDownRight, CheckCircle2, Info } from 'lucide-react';
 
 export interface PaymentDetailGridProps {
   detailCols: PaymentDetailColumn[];
@@ -52,14 +54,21 @@ export function PaymentDetailGrid({
 
     const newTotal = enriched.reduce((sum, c) => sum + getColAmount(c, sattaDiffsList, activePoItems), 0);
     if (newTotal > 0) {
-      const newPaid = calculate93PctPaidAmount(newTotal);
-      setMasterData(prev => ({
-        ...prev,
-        total_amount: newTotal,
-        payable_amt: newTotal,
-        net_amt: newTotal,
-        paid_amount: newPaid
-      }));
+      setMasterData(prev => {
+        const newPaid = calculateNetPaidAmountAfterDeductions(
+          newTotal,
+          prev.summary_delivery_claim,
+          prev.summary_deduction_amount,
+          prev.val_ex_short
+        );
+        return {
+          ...prev,
+          total_amount: newTotal,
+          payable_amt: newTotal,
+          net_amt: newTotal,
+          paid_amount: newPaid
+        };
+      });
     }
   };
 
@@ -135,7 +144,15 @@ export function PaymentDetailGrid({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {detailCols.map((col, idx) => {
+            {!detailCols.some(c => hasDetailColData(c)) ? (
+              <tr>
+                <td colSpan={12} className="p-4 text-center text-slate-400 italic text-xs">
+                  No material grade breakdown rows with data. Select a P.O or Inspection record to populate grade details.
+                </td>
+              </tr>
+            ) : detailCols.map((col, idx) => {
+              if (!hasDetailColData(col)) return null;
+
               // Ensure col has linked po_items and all_cols
               const colWithContext = {
                 ...col,

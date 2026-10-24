@@ -24,7 +24,9 @@ import {
   mapItemsToDetailCols, 
   isMrAlreadyProcessed, 
   isPoEligibleForPayment,
-  getLinkedMrsForPo
+  getLinkedMrsForPo,
+  calculateNetPaidAmountAfterDeductions,
+  resolvePaymentDeductionsForPoAndMr
 } from '../../utils/paymentCalculations';
 
 export function usePaymentData(onSaveSuccess?: () => void) {
@@ -556,8 +558,10 @@ export function usePaymentData(onSaveSuccess?: () => void) {
       'material_inspection_details',
       'mill_inspection_master',
       'mill_inspection_detail',
+      'mill_inspection_deduction',
       'temporary_material_received',
       'sauda_check_point',
+      'sauda_check_point_deductions',
       'purchase_master',
       'purchase_detail_master',
       'satta_differentials'
@@ -764,7 +768,23 @@ export function usePaymentData(onSaveSuccess?: () => void) {
 
       const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c, sattaDiffsList, poItems), 0);
       const grossVal = Number(po.total_amount || po.total_amt || po.contract_value || totalColAmt || 0);
-      const defaultPaid = grossVal > 0 ? calculate93PctPaidAmount(grossVal) : 0;
+
+      const deductions = await resolvePaymentDeductionsForPoAndMr({
+        po,
+        poNo: po.po_no || poNo,
+        cols,
+        saudaCheckPoints,
+        purchaseOrders,
+        verifiedArrivals
+      });
+      const defaultPaid = grossVal > 0
+        ? calculateNetPaidAmountAfterDeductions(
+            grossVal,
+            deductions.deliveryClaim,
+            deductions.totalDeductionsAndPenalties,
+            deductions.extraAndShort
+          )
+        : 0;
 
       setMasterData(prev => ({
         ...prev,
@@ -777,6 +797,10 @@ export function usePaymentData(onSaveSuccess?: () => void) {
         rate_qntl: Number(po.b_rate || po.rate_qntl || 0),
         total_amount: grossVal > 0 ? grossVal : prev.total_amount,
         payable_amt: grossVal > 0 ? grossVal : prev.payable_amt,
+        summary_delivery_claim: deductions.deliveryClaim,
+        summary_deduction_amount: deductions.totalDeductionsAndPenalties,
+        summary_deduction_type: deductions.deductionSummaryText,
+        val_ex_short: deductions.extraAndShort,
         paid_amount: grossVal > 0 ? defaultPaid : prev.paid_amount,
       }));
 
@@ -1035,8 +1059,26 @@ export function usePaymentData(onSaveSuccess?: () => void) {
       const grossVal = totalColAmt > 0
         ? totalColAmt
         : Number(arrival.payable_amt || arrival.net_amt || arrival.value_amt || arrival.total_amount || po?.total_amount || 0);
-      const defaultPaid = grossVal > 0 ? calculate93PctPaidAmount(grossVal) : 0;
       const mrWeight = Number(arrival.electronic_net_weight || arrival.weight_qtl || 0);
+
+      const deductions = await resolvePaymentDeductionsForPoAndMr({
+        po,
+        poNo,
+        arrival,
+        mrNo: arrival.mr_no || arrival.final_arrival_no || mrNo,
+        cols,
+        saudaCheckPoints,
+        purchaseOrders,
+        verifiedArrivals
+      });
+      const defaultPaid = grossVal > 0
+        ? calculateNetPaidAmountAfterDeductions(
+            grossVal,
+            deductions.deliveryClaim,
+            deductions.totalDeductionsAndPenalties,
+            deductions.extraAndShort
+          )
+        : 0;
 
       setMasterData(prev => ({
         ...prev,
@@ -1049,9 +1091,13 @@ export function usePaymentData(onSaveSuccess?: () => void) {
         po_type: po?.po_type || 'Standard',
         lorry_number: arrival.lorry_number || arrival.vehicle_no || prev.lorry_number,
         arrival_no: arrival.final_arrival_no || arrival.mr_no || prev.arrival_no,
-        arrival_date: arrival.date || prev.arrival_date,
+        arrival_date: arrival.date || deductions.arrivalDate || prev.arrival_date,
         total_amount: grossVal > 0 ? grossVal : prev.total_amount,
         payable_amt: grossVal > 0 ? grossVal : prev.payable_amt,
+        summary_delivery_claim: deductions.deliveryClaim,
+        summary_deduction_amount: deductions.totalDeductionsAndPenalties,
+        summary_deduction_type: deductions.deductionSummaryText,
+        val_ex_short: deductions.extraAndShort,
         paid_amount: grossVal > 0 ? defaultPaid : prev.paid_amount,
         net_amt: grossVal > 0 ? grossVal : prev.net_amt,
         electronic_scale_net: mrWeight,
@@ -1394,6 +1440,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
     setMasterData(item);
     setIsEdit(true);
 
+    let loadedCols = [emptyDetailColumn(1), emptyDetailColumn(2), emptyDetailColumn(3), emptyDetailColumn(4)];
     if (supabase && item.voucher_no) {
       const { data: details } = await supabase
         .from('payment_details')
@@ -1401,7 +1448,6 @@ export function usePaymentData(onSaveSuccess?: () => void) {
         .eq('voucher_no', item.voucher_no);
 
       if (details && details.length > 0) {
-        const newCols = [emptyDetailColumn(1), emptyDetailColumn(2), emptyDetailColumn(3), emptyDetailColumn(4)];
         details.forEach((d: any, idx: number) => {
           if (idx < 4) {
             const settPct =
@@ -1424,7 +1470,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
               ? Number(d.amount)
               : Number((qQtl * sRate).toFixed(2));
 
-            newCols[idx] = {
+            loadedCols[idx] = {
               ...emptyDetailColumn(idx + 1),
               ...d,
               rate_value: origRate,
@@ -1437,9 +1483,26 @@ export function usePaymentData(onSaveSuccess?: () => void) {
             };
           }
         });
-        setDetailCols(newCols);
+        setDetailCols(loadedCols);
       }
     }
+
+    const deductions = await resolvePaymentDeductionsForPoAndMr({
+      poNo: item.po_no,
+      mrNo: item.mr_no,
+      cols: loadedCols,
+      saudaCheckPoints,
+      purchaseOrders,
+      verifiedArrivals
+    });
+
+    setMasterData(prev => ({
+      ...prev,
+      summary_delivery_claim: Number(item.summary_delivery_claim) || deductions.deliveryClaim,
+      summary_deduction_amount: Number(item.summary_deduction_amount) || deductions.totalDeductionsAndPenalties,
+      summary_deduction_type: item.summary_deduction_type || deductions.deductionSummaryText,
+      val_ex_short: Number(item.val_ex_short) || deductions.extraAndShort
+    }));
   };
 
   const handleExportPdf = (filteredPayments: PaymentMaster[]) => {

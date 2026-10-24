@@ -19,7 +19,9 @@ import {
   getColDeduction, 
   getColDeductionExplanation, 
   getColSettRate, 
-  getColAmount 
+  getColAmount,
+  hasDetailColData,
+  calculateNetPaidAmountAfterDeductions
 } from '../../utils/paymentCalculations';
 import { SearchablePoSelect } from '../payment/SearchablePoSelect';
 import { SearchableMrSelect } from '../payment/SearchableMrSelect';
@@ -442,124 +444,205 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
         </div>
 
         {/* Financial Amounts & Settlement Panel */}
-        <div className="p-3 bg-gradient-to-r from-slate-50 via-purple-50/20 to-amber-50/20 border border-slate-200 rounded-lg grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
-          {/* Payable Net Amount */}
-          <div>
-            <label htmlFor="payable_net_amount_2222" className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
-              Payable Net Amount (₹)
-            </label>
-            <input
-              id="payable_net_amount_2222"
-              name="payable_net_amount"
-              aria-label="Payable Net Amount (₹)"
-              type="number"
-              step="0.01"
-              value={masterData.payable_amt || ''}
-              onChange={e => {
-                const val = parseFloat(e.target.value) || 0;
-                const defaultPaid = calculate93PctPaidAmount(val);
-                setMasterData({
-                  ...masterData,
-                  payable_amt: val,
-                  total_amount: val as any,
-                  paid_amount: defaultPaid
-                } as any);
-              }}
-              className="w-full p-2 font-black text-sm border border-slate-300 rounded bg-white text-slate-900 shadow-xs focus:ring-2 focus:ring-purple-500"
-            />
-            <span className="text-[10px] text-slate-500 font-medium">
-              Full Invoice Value: {formatIndianCurrency(masterData.payable_amt || 0)}
-            </span>
-          </div>
-
-          {/* Paid Amount (93% Default) */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-[10px] font-bold uppercase text-emerald-900">
-                Paid Amount (₹)
+        <div className="p-3 bg-gradient-to-r from-slate-50 via-purple-50/20 to-amber-50/20 border border-slate-200 rounded-lg space-y-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {/* Payable Net Amount */}
+            <div>
+              <label htmlFor="payable_net_amount_2222" className="block text-[10px] font-bold uppercase text-slate-700 mb-1">
+                Payable Net Amount (₹)
               </label>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const p = calculate93PctPaidAmount(masterData.payable_amt || 0);
-                    setMasterData({ ...masterData, paid_amount: p } as any);
-                  }}
-                  className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300 transition-colors"
-                  title="Apply 93% standard payment (floor rounded to nearest ₹1,000)"
-                >
-                  93% (Floor ₹1K)
-                </button>
+              <input
+                id="payable_net_amount_2222"
+                name="payable_net_amount"
+                aria-label="Payable Net Amount (₹)"
+                type="number"
+                step="0.01"
+                value={masterData.payable_amt || ''}
+                onChange={e => {
+                  const val = parseFloat(e.target.value) || 0;
+                  const defaultPaid = calculateNetPaidAmountAfterDeductions(
+                    val,
+                    masterData.summary_delivery_claim,
+                    masterData.summary_deduction_amount,
+                    masterData.val_ex_short
+                  );
+                  setMasterData({
+                    ...masterData,
+                    payable_amt: val,
+                    total_amount: val as any,
+                    paid_amount: defaultPaid
+                  } as any);
+                }}
+                className="w-full p-2 font-black text-sm border border-slate-300 rounded bg-white text-slate-900 shadow-xs focus:ring-2 focus:ring-purple-500"
+              />
+              <span className="text-[10px] text-slate-500 font-medium">
+                Full Invoice Value: {formatIndianCurrency(masterData.payable_amt || 0)}
+              </span>
+            </div>
+
+            {/* Paid Amount (= Payable Net Amount - Delivery Claim (-) - Total Deductions & Penalties - Extra & Short) */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[10px] font-bold uppercase text-emerald-900">
+                  Paid Amount (₹)
+                </label>
+                <div className="flex items-center gap-1 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const netPaid = calculateNetPaidAmountAfterDeductions(
+                        masterData.payable_amt || 0,
+                        masterData.summary_delivery_claim,
+                        masterData.summary_deduction_amount,
+                        masterData.val_ex_short
+                      );
+                      setMasterData({ ...masterData, paid_amount: netPaid } as any);
+                    }}
+                    className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300 transition-colors"
+                    title="Paid Amount (₹) = Payable Net Amount - Delivery Claim (-) - Total Deductions & Penalties - Extra & Short"
+                  >
+                    Net After Ded.
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const netAfterDed = calculateNetPaidAmountAfterDeductions(
+                        masterData.payable_amt || 0,
+                        masterData.summary_delivery_claim,
+                        masterData.summary_deduction_amount,
+                        masterData.val_ex_short
+                      );
+                      const p = calculate93PctPaidAmount(netAfterDed);
+                      setMasterData({ ...masterData, paid_amount: p } as any);
+                    }}
+                    className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-teal-100 text-teal-800 hover:bg-teal-200 border border-teal-300 transition-colors"
+                    title="Apply 93% standard payment (floor rounded to nearest ₹1,000)"
+                  >
+                    93% (Floor ₹1K)
+                  </button>
+                </div>
               </div>
-            </div>
-            <input
-              id="masterdata_paid_amount_2261"
-              name="masterdata_paid_amount"
-              aria-label="masterdata paid amount"
-              type="number"
-              step="0.01"
-              value={(masterData as any).paid_amount || ''}
-              onChange={e => setMasterData({ ...masterData, paid_amount: parseFloat(e.target.value) || 0 } as any)}
-              className="w-full p-2 font-black text-sm border border-emerald-400 rounded bg-emerald-50/70 text-emerald-950 focus:ring-2 focus:ring-emerald-500 shadow-xs"
-            />
-            <span className="text-[10px] text-emerald-700 font-bold">
-              {masterData.payable_amt > 0
-                ? `${formatIndianCurrency((masterData as any).paid_amount || 0)} (${((((masterData as any).paid_amount || 0) / masterData.payable_amt) * 100).toFixed(1)}% of bill)`
-                : '93% Default Payment (Floor ₹1,000)'}
-            </span>
-          </div>
-
-          {/* Pending Balance for Final Settlement (7% Retention) */}
-          <div className="bg-gradient-to-br from-amber-50 to-orange-50/80 p-2.5 rounded-lg border border-amber-300 flex flex-col justify-between shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase text-amber-900 tracking-wider flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-amber-700" />
-                Pending Amount
-              </span>
-              <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 border border-amber-300">
+              <input
+                id="masterdata_paid_amount_2261"
+                name="masterdata_paid_amount"
+                aria-label="masterdata paid amount"
+                type="number"
+                step="0.01"
+                value={(masterData as any).paid_amount || ''}
+                onChange={e => setMasterData({ ...masterData, paid_amount: parseFloat(e.target.value) || 0 } as any)}
+                className="w-full p-2 font-black text-sm border border-emerald-400 rounded bg-emerald-50/70 text-emerald-950 focus:ring-2 focus:ring-emerald-500 shadow-xs"
+              />
+              <span className="text-[10px] text-emerald-700 font-bold">
                 {masterData.payable_amt > 0
-                  ? `${(((masterData.payable_amt - ((masterData as any).paid_amount || 0)) / masterData.payable_amt) * 100).toFixed(1)}%`
-                  : '7.0%'}
+                  ? `${formatIndianCurrency((masterData as any).paid_amount || 0)} (${((((masterData as any).paid_amount || 0) / masterData.payable_amt) * 100).toFixed(1)}% of bill)`
+                  : 'Paid = Payable Net − Delivery Claim − Deductions − Extra & Short'}
               </span>
             </div>
-            <div className="text-base font-black text-amber-950 font-mono my-0.5">
-              {formatIndianCurrency(Math.max(0, masterData.payable_amt - ((masterData as any).paid_amount || 0)))}
+
+            {/* Pending Balance for Final Settlement */}
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50/80 p-2.5 rounded-lg border border-amber-300 flex flex-col justify-between shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase text-amber-900 tracking-wider flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-amber-700" />
+                  Pending Amount
+                </span>
+                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 border border-amber-300">
+                  {masterData.payable_amt > 0
+                    ? `${(((masterData.payable_amt - ((masterData as any).paid_amount || 0)) / masterData.payable_amt) * 100).toFixed(1)}%`
+                    : '0.0%'}
+                </span>
+              </div>
+              <div className="text-base font-black text-amber-950 font-mono my-0.5">
+                {formatIndianCurrency(Math.max(0, masterData.payable_amt - ((masterData as any).paid_amount || 0)))}
+              </div>
+              <span className="text-[9.5px] text-amber-800 font-semibold leading-tight">
+                Retention / Deductions Balance
+              </span>
             </div>
-            <span className="text-[9.5px] text-amber-800 font-semibold leading-tight">
-              Retention for Final Settlement
-            </span>
+
+            {/* Bill / Invoice No */}
+            <div>
+              <label htmlFor="bill_invoice_no_2299" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Bill / Invoice No</label>
+              <input
+                id="bill_invoice_no_2299"
+                name="bill_invoice_no"
+                aria-label="Bill / Invoice No"
+                type="text"
+                value={masterData.payable_bill_no || ''}
+                onChange={e => setMasterData({ ...masterData, payable_bill_no: e.target.value })}
+                placeholder="Supplier Bill No"
+                className="w-full p-2 border border-slate-300 rounded font-semibold focus:ring-1 focus:ring-purple-500"
+              />
+              <span className="text-[10px] text-slate-400 font-medium">Invoice Reference</span>
+            </div>
+
+            {/* Remarks */}
+            <div>
+              <label htmlFor="remarks_2312" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Remarks</label>
+              <input
+                id="remarks_2312"
+                name="remarks"
+                aria-label="Remarks"
+                type="text"
+                value={masterData.remarks || ''}
+                onChange={e => setMasterData({ ...masterData, remarks: e.target.value })}
+                placeholder="Payment Remarks"
+                className="w-full p-2 border border-slate-300 rounded focus:ring-1 focus:ring-purple-500"
+              />
+              <span className="text-[10px] text-slate-400 font-medium">Optional Payment Notes</span>
+            </div>
           </div>
 
-          {/* Bill / Invoice No */}
-          <div>
-            <label htmlFor="bill_invoice_no_2299" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Bill / Invoice No</label>
-            <input
-              id="bill_invoice_no_2299"
-              name="bill_invoice_no"
-              aria-label="Bill / Invoice No"
-              type="text"
-              value={masterData.payable_bill_no || ''}
-              onChange={e => setMasterData({ ...masterData, payable_bill_no: e.target.value })}
-              placeholder="Supplier Bill No"
-              className="w-full p-2 border border-slate-300 rounded font-semibold focus:ring-1 focus:ring-purple-500"
-            />
-            <span className="text-[10px] text-slate-400 font-medium">Invoice Reference</span>
-          </div>
+          {/* Deductions Breakdown Bar for Paid Amount Calculation */}
+          <div className="pt-2 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <div className="bg-white/90 px-2.5 py-1.5 rounded border border-rose-200 flex items-center justify-between">
+              <div>
+                <span className="block text-[9px] font-black uppercase text-rose-800">Delivery Claim (-)</span>
+                <span className="text-[9px] text-slate-500">Sauda Check Point & Temp Arrival</span>
+              </div>
+              <span className="font-mono font-black text-xs text-rose-700">
+                -{formatIndianCurrency(Number(masterData.summary_delivery_claim) || 0)}
+              </span>
+            </div>
 
-          {/* Remarks */}
-          <div>
-            <label htmlFor="remarks_2312" className="block text-[10px] font-bold uppercase text-slate-600 mb-1">Remarks</label>
-            <input
-              id="remarks_2312"
-              name="remarks"
-              aria-label="Remarks"
-              type="text"
-              value={masterData.remarks || ''}
-              onChange={e => setMasterData({ ...masterData, remarks: e.target.value })}
-              placeholder="Payment Remarks"
-              className="w-full p-2 border border-slate-300 rounded focus:ring-1 focus:ring-purple-500"
-            />
-            <span className="text-[10px] text-slate-400 font-medium">Optional Payment Notes</span>
+            <div className="bg-white/90 px-2.5 py-1.5 rounded border border-amber-200 flex items-center justify-between">
+              <div>
+                <span className="block text-[9px] font-black uppercase text-amber-900">Total Deductions & Penalties</span>
+                <span className="text-[9px] text-slate-500">
+                  {masterData.summary_deduction_type ? `Mill Inspection (${masterData.summary_deduction_type})` : 'Mill Inspection Section'}
+                </span>
+              </div>
+              <span className="font-mono font-black text-xs text-amber-800">
+                -{formatIndianCurrency(Number(masterData.summary_deduction_amount) || 0)}
+              </span>
+            </div>
+
+            <div className="bg-white/90 px-2.5 py-1.5 rounded border border-orange-200 flex items-center justify-between">
+              <div>
+                <span className="block text-[9px] font-black uppercase text-orange-900">Extra & Short</span>
+                <span className="text-[9px] text-slate-500">Sauda Excess Weight Deduction</span>
+              </div>
+              <span className="font-mono font-black text-xs text-orange-800">
+                -{formatIndianCurrency(Number(masterData.val_ex_short) || 0)}
+              </span>
+            </div>
+
+            <div className="bg-emerald-50/90 px-2.5 py-1.5 rounded border border-emerald-300 flex items-center justify-between">
+              <div>
+                <span className="block text-[9px] font-black uppercase text-emerald-900">Calculated Net Paid Amount</span>
+                <span className="text-[9px] text-emerald-700 font-semibold">Payable − (Delivery Claim + Ded. + Ex/Short)</span>
+              </div>
+              <span className="font-mono font-black text-xs text-emerald-900">
+                {formatIndianCurrency(
+                  calculateNetPaidAmountAfterDeductions(
+                    masterData.payable_amt || 0,
+                    masterData.summary_delivery_claim,
+                    masterData.summary_deduction_amount,
+                    masterData.val_ex_short
+                  )
+                )}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -603,7 +686,15 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {detailCols.map((col, idx) => {
+                {!detailCols.some(c => hasDetailColData(c)) ? (
+                  <tr>
+                    <td colSpan={11} className="p-4 text-center text-slate-400 italic text-xs">
+                      No material grade breakdown rows with data. Select a P.O or Inspection record to populate grade details.
+                    </td>
+                  </tr>
+                ) : detailCols.map((col, idx) => {
+                  if (!hasDetailColData(col)) return null;
+
                   const settPct = getColSettPct(col);
                   const deduction = getColDeduction(col);
                   const settRate = getColSettRate(col);
@@ -688,14 +779,21 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                             setDetailCols(updated);
                             const newTotal = updated.reduce((sum, c) => sum + getColAmount(c), 0);
                             if (newTotal > 0) {
-                              const newPaid = calculate93PctPaidAmount(newTotal);
-                              setMasterData(prev => ({
-                                ...prev,
-                                total_amount: newTotal,
-                                payable_amt: newTotal,
-                                net_amt: newTotal,
-                                paid_amount: newPaid
-                              } as any));
+                              setMasterData(prev => {
+                                const newPaid = calculateNetPaidAmountAfterDeductions(
+                                  newTotal,
+                                  prev.summary_delivery_claim,
+                                  prev.summary_deduction_amount,
+                                  prev.val_ex_short
+                                );
+                                return {
+                                  ...prev,
+                                  total_amount: newTotal,
+                                  payable_amt: newTotal,
+                                  net_amt: newTotal,
+                                  paid_amount: newPaid
+                                } as any;
+                              });
                             }
                           }}
                           className="w-24 p-1 border rounded text-xs font-mono"
@@ -716,7 +814,6 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                             const updated = [...detailCols];
                             const newRate = parseFloat(e.target.value) || 0;
                             updated[idx].rate_value = newRate;
-                            const sPct = getColSettPct(updated[idx]);
                             const ded = getColDeduction(updated[idx]);
                             const sRate = Math.max(0, Number((newRate - ded).toFixed(2)));
                             const qQtl = getColQtyQtl(updated[idx]);
@@ -727,14 +824,21 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                             setDetailCols(updated);
                             const newTotal = updated.reduce((sum, c) => sum + getColAmount(c), 0);
                             if (newTotal > 0) {
-                              const newPaid = calculate93PctPaidAmount(newTotal);
-                              setMasterData(prev => ({
-                                ...prev,
-                                total_amount: newTotal,
-                                payable_amt: newTotal,
-                                net_amt: newTotal,
-                                paid_amount: newPaid
-                              } as any));
+                              setMasterData(prev => {
+                                const newPaid = calculateNetPaidAmountAfterDeductions(
+                                  newTotal,
+                                  prev.summary_delivery_claim,
+                                  prev.summary_deduction_amount,
+                                  prev.val_ex_short
+                                );
+                                return {
+                                  ...prev,
+                                  total_amount: newTotal,
+                                  payable_amt: newTotal,
+                                  net_amt: newTotal,
+                                  paid_amount: newPaid
+                                } as any;
+                              });
                             }
                           }}
                           className="w-24 p-1 border rounded text-xs font-mono"
@@ -767,14 +871,21 @@ export const PaymentReportFormEntry: React.FC<PaymentReportFormEntryProps> = ({
                               setDetailCols(updated);
                               const newTotal = updated.reduce((sum, c) => sum + getColAmount(c), 0);
                               if (newTotal > 0) {
-                                const newPaid = calculate93PctPaidAmount(newTotal);
-                                setMasterData(prev => ({
-                                  ...prev,
-                                  total_amount: newTotal,
-                                  payable_amt: newTotal,
-                                  net_amt: newTotal,
-                                  paid_amount: newPaid
-                                } as any));
+                                setMasterData(prev => {
+                                  const newPaid = calculateNetPaidAmountAfterDeductions(
+                                    newTotal,
+                                    prev.summary_delivery_claim,
+                                    prev.summary_deduction_amount,
+                                    prev.val_ex_short
+                                  );
+                                  return {
+                                    ...prev,
+                                    total_amount: newTotal,
+                                    payable_amt: newTotal,
+                                    net_amt: newTotal,
+                                    paid_amount: newPaid
+                                  } as any;
+                                });
                               }
                             }}
                             placeholder="0"

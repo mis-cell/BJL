@@ -1,5 +1,500 @@
 import { PaymentDetailColumn, emptyDetailColumn } from '../types/payment.types';
 import { calculateSattaDeduction } from '../services/sattaCalculation';
+import { supabase } from '../lib/supabase';
+import { dbModule } from '../services/dbModule';
+import { fetchSaudaCheckpointDeduction } from '../services/settlementService';
+
+export const hasDetailColData = (col?: PaymentDetailColumn): boolean => {
+  if (!col) return false;
+  const hasGrade = Boolean(col.grade && String(col.grade).trim() !== '');
+  const hasArea = Boolean(col.area && String(col.area).trim() !== '');
+  const hasAgency = Boolean(col.agency && String(col.agency).trim() !== '');
+  const hasQty = Number(col.quantity) > 0;
+  const hasWt = Number(col.arr_qty_wt) > 0 || Number(col.wt_quantity) > 0;
+  const hasRate = Number(col.rate_value) > 0;
+  const hasAmt = Number(col.amount) > 0;
+  return hasGrade || hasArea || hasAgency || hasQty || hasWt || hasRate || hasAmt;
+};
+
+export const calculateDeliveryDelayDays = (
+  poDeliveryTo?: string | null,
+  arrivalDate?: string | null
+): number => {
+  if (!poDeliveryTo || !arrivalDate) return 0;
+
+  const parseToMidnight = (dStr: string): Date | null => {
+    const clean = String(dStr).trim();
+    if (!clean) return null;
+    if (/^\d{4}-\d{2}-\d{2}/.test(clean)) {
+      const [y, m, d] = clean.split('T')[0].split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    const dmy = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+    if (dmy) {
+      return new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]));
+    }
+    const d = new Date(clean);
+    if (isNaN(d.getTime())) return null;
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  };
+
+  const due = parseToMidnight(poDeliveryTo);
+  const arr = parseToMidnight(arrivalDate);
+  if (!due || !arr) return 0;
+
+  const diffMs = arr.getTime() - due.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  return diffDays > 0 ? diffDays : 0;
+};
+
+export const calculateDeliveryClaimPenalty = (
+  weightQtl: number,
+  delayDays: number,
+  penaltyRatePerQtlDay: number
+): number => {
+  if (delayDays > 0 && penaltyRatePerQtlDay > 0 && weightQtl > 0) {
+    return Math.round(weightQtl * penaltyRatePerQtlDay * delayDays);
+  }
+  return 0;
+};
+
+/**
+ * Calculates Paid Amount (₹) based on user formula:
+ * Paid Amount (₹) = Payable Net Amount - Delivery Claim (-) - Total Deductions & Penalties - Extra & Short
+ */
+export const calculateNetPaidAmountAfterDeductions = (
+  payableNetAmount: number,
+  deliveryClaim: number = 0,
+  totalDeductionsAndPenalties: number = 0,
+  extraAndShort: number = 0
+): number => {
+  const gross = Number(payableNetAmount) || 0;
+  if (gross <= 0) return 0;
+  const dClaim = Math.max(0, Number(deliveryClaim) || 0);
+  const totDed = Math.max(0, Number(totalDeductionsAndPenalties) || 0);
+  const exShort = Math.max(0, Number(extraAndShort) || 0);
+  return Math.max(0, Number((gross - dClaim - totDed - exShort).toFixed(2)));
+};
+
+export interface PaymentDeductionsBreakdown {
+  deliveryClaim: number;
+  deliveryDelayDays: number;
+  deliveryPenaltyRate: number;
+  weightQtl: number;
+  poDeliveryToDate: string;
+  arrivalDate: string;
+  totalDeductionsAndPenalties: number;
+  deductionSummaryText: string;
+  extraAndShort: number;
+}
+
+export async function resolvePaymentDeductionsForPoAndMr(params: {
+  po?: any;
+  poNo?: string;
+  arrival?: any;
+  mrNo?: string;
+  cols?: PaymentDetailColumn[];
+  saudaCheckPoints?: any[];
+  purchaseOrders?: any[];
+  verifiedArrivals?: any[];
+}): Promise<PaymentDeductionsBreakdown> {
+  const {
+    po,
+    poNo,
+    arrival,
+    mrNo,
+    cols = [],
+    saudaCheckPoints = [],
+    purchaseOrders = [],
+    verifiedArrivals = []
+  } = params;
+
+  const rawPoNo = String(
+    poNo ||
+    po?.po_no ||
+    po?.ptf_no ||
+    po?.sauda_no ||
+    po?.contract_po_no ||
+    arrival?.po_no ||
+    arrival?.mill_po_no ||
+    ''
+  ).trim();
+  const cleanPoNo = rawPoNo.replace(/^#/, '').trim();
+
+  const rawMrNo = String(
+    mrNo ||
+    arrival?.mr_no ||
+    arrival?.final_arrival_no ||
+    arrival?.arrival_no ||
+    arrival?.temporary_arrival_no ||
+    ''
+  ).trim();
+
+  // 1. Resolve Extra & Short from Sauda Check Point (sauda_check_point_deductions)
+  let extraAndShort = 0;
+  if (cleanPoNo) {
+    try {
+      const saudaDed = await fetchSaudaCheckpointDeduction(cleanPoNo);
+      if (saudaDed && Number(saudaDed.deduction_amount) > 0) {
+        extraAndShort = Number(saudaDed.deduction_amount);
+      }
+    } catch (e) {
+      console.warn('Error fetching sauda_check_point_deductions in payment:', e);
+    }
+  }
+  if (extraAndShort === 0 && po) {
+    const fallbackEx = Number(po.excess_short_deduction || po.val_ex_short || 0);
+    if (fallbackEx > 0) extraAndShort = fallbackEx;
+  }
+
+  // 2. Resolve Total Deductions & Penalties from Mill Inspection (mill_inspection_deduction / material_inspection / mill_inspection_master)
+  let totalDeductionsAndPenalties = 0;
+  let deductionSummaryText = '';
+
+  const cleanMr = rawMrNo.replace(/^MR[-_ ]?/i, '').trim();
+  const mrCandidateKeys = Array.from(
+    new Set(
+      [
+        rawMrNo,
+        arrival?.mr_no,
+        arrival?.final_arrival_no,
+        arrival?.arrival_no,
+        arrival?.temporary_arrival_no,
+        cleanMr ? cleanMr : '',
+        cleanMr ? `MR${cleanMr}` : '',
+        cleanMr ? `MR-${cleanMr}` : '',
+        cleanMr ? `MR0${cleanMr}` : '',
+        cleanMr ? `MR00${cleanMr}` : ''
+      ]
+        .map(v => String(v || '').trim())
+        .filter(Boolean)
+    )
+  );
+
+  // If no MR was explicitly passed, check linked arrivals for this PO
+  if (mrCandidateKeys.length === 0 && cleanPoNo && verifiedArrivals.length > 0) {
+    const linked = getLinkedMrsForPo(cleanPoNo, verifiedArrivals);
+    linked.forEach(a => {
+      [a.mr_no, a.final_arrival_no, a.arrival_no, a.temporary_arrival_no]
+        .map(v => String(v || '').trim())
+        .filter(Boolean)
+        .forEach(k => {
+          if (!mrCandidateKeys.includes(k)) mrCandidateKeys.push(k);
+        });
+    });
+  }
+
+  let parsedDedItems: { deduction_type: string; deduction_amount: number }[] = [];
+
+  if (mrCandidateKeys.length > 0 && supabase) {
+    try {
+      const orClauses = mrCandidateKeys
+        .flatMap(k => [`mr_no.eq.${k}`, `arrival_no.eq.${k}`])
+        .join(',');
+      const { data: dedRows } = await supabase
+        .from('mill_inspection_deduction')
+        .select('*')
+        .or(orClauses);
+
+      if (dedRows && dedRows.length > 0) {
+        parsedDedItems = dedRows.map((d: any) => {
+          const rate = Number(d.deduction_rate || d.rate) || 0;
+          const qty = Number(d.deduction_qty || d.qty) || 1;
+          const amt =
+            Number(d.deduction_amount || d.amount) ||
+            Number((rate * qty).toFixed(2));
+          return {
+            deduction_type: String(d.deduction_type || d.type || 'Deduction').trim(),
+            deduction_amount: amt
+          };
+        });
+      }
+    } catch (e) {
+      console.warn('Error querying mill_inspection_deduction in payment:', e);
+    }
+  }
+
+  if (parsedDedItems.length === 0 && mrCandidateKeys.length > 0) {
+    try {
+      const localDedRows = await dbModule.fetchAll('mill_inspection_deduction').catch(() => []);
+      const upperKeys = new Set(mrCandidateKeys.map(k => k.toUpperCase()));
+      const matchedLocal = (localDedRows || []).filter((d: any) => {
+        const dMr = String(d.mr_no || '').trim().toUpperCase();
+        const dArr = String(d.arrival_no || '').trim().toUpperCase();
+        return (dMr && upperKeys.has(dMr)) || (dArr && upperKeys.has(dArr));
+      });
+      if (matchedLocal.length > 0) {
+        parsedDedItems = matchedLocal.map((d: any) => {
+          const rate = Number(d.deduction_rate || d.rate) || 0;
+          const qty = Number(d.deduction_qty || d.qty) || 1;
+          const amt =
+            Number(d.deduction_amount || d.amount) ||
+            Number((rate * qty).toFixed(2));
+          return {
+            deduction_type: String(d.deduction_type || d.type || 'Deduction').trim(),
+            deduction_amount: amt
+          };
+        });
+      }
+    } catch (e) {
+      console.warn('Fallback mill_inspection_deduction error:', e);
+    }
+  }
+
+  // Fallback to arrival.deduction_types or arrival.deductions or live material_inspection / mill_inspection_master
+  let liveInspMaster: any = arrival || null;
+  if (parsedDedItems.length === 0 && mrCandidateKeys.length > 0 && supabase) {
+    try {
+      const orClauses = mrCandidateKeys
+        .flatMap(k => [`mr_no.eq.${k}`, `arrival_no.eq.${k}`])
+        .join(',');
+      const { data: miData } = await supabase
+        .from('material_inspection')
+        .select('*')
+        .or(orClauses)
+        .limit(1);
+      if (miData && miData[0]) {
+        liveInspMaster = { ...liveInspMaster, ...miData[0] };
+      } else {
+        const { data: mimData } = await supabase
+          .from('mill_inspection_master')
+          .select('*')
+          .or(orClauses)
+          .limit(1);
+        if (mimData && mimData[0]) {
+          liveInspMaster = { ...liveInspMaster, ...mimData[0] };
+        }
+      }
+    } catch (e) {
+      console.warn('Fallback inspection master lookup error:', e);
+    }
+  }
+
+  if (parsedDedItems.length === 0 && liveInspMaster) {
+    const rawArr = liveInspMaster.deduction_types || liveInspMaster.deductions;
+    let arr: any[] = [];
+    if (Array.isArray(rawArr)) arr = rawArr;
+    else if (typeof rawArr === 'string' && rawArr.trim()) {
+      try {
+        const parsed = JSON.parse(rawArr);
+        if (Array.isArray(parsed)) arr = parsed;
+      } catch (_e) {}
+    }
+    if (arr.length > 0) {
+      parsedDedItems = arr.map((d: any) => {
+        const rate = Number(d.deduction_rate || d.rate) || 0;
+        const qty = Number(d.deduction_qty || d.qty) || 1;
+        const amt =
+          Number(d.deduction_amount || d.amount) ||
+          Number((rate * qty).toFixed(2));
+        return {
+          deduction_type: String(d.deduction_type || d.type || 'Deduction').trim(),
+          deduction_amount: amt
+        };
+      });
+    }
+  }
+
+  if (parsedDedItems.length > 0) {
+    totalDeductionsAndPenalties = Number(
+      parsedDedItems.reduce((sum, item) => sum + (Number(item.deduction_amount) || 0), 0).toFixed(2)
+    );
+    deductionSummaryText = parsedDedItems.map(item => item.deduction_type).filter(Boolean).join(', ');
+  } else if (liveInspMaster) {
+    const fallbackAmt = Number(
+      liveInspMaster.deduction_amount ||
+      liveInspMaster.summary_deduction_amount ||
+      ((Number(liveInspMaster.deduction_rate) || 0) * (Number(liveInspMaster.deduction_qty) || 1)) ||
+      0
+    );
+    if (fallbackAmt > 0) {
+      totalDeductionsAndPenalties = Number(fallbackAmt.toFixed(2));
+      deductionSummaryText = String(liveInspMaster.deduction_type || liveInspMaster.summary_deduction_type || 'Deduction');
+    }
+  }
+
+  // 3. Resolve Delivery Claim (-): Penalty = Weight (Quintals) × Delay Days × Rate (₹/Qtl/Day)
+  let poDeliveryToDate = String(
+    po?.delivery_to || po?.delivery_gt_to || po?.shipment_date || po?.delivery_to_date || ''
+  ).trim();
+  let deliveryPenaltyRate = Number(po?.delivery_penalty || po?.shipment_penalty || 0);
+
+  // Enrich from saudaCheckPoints or purchaseOrders if missing
+  if ((!poDeliveryToDate || deliveryPenaltyRate <= 0) && cleanPoNo) {
+    const upperPo = cleanPoNo.toUpperCase();
+    const matchInList = (list: any[]) =>
+      list.find(item => {
+        const k1 = String(item.po_no || '').trim().replace(/^#/, '').toUpperCase();
+        const k2 = String(item.ptf_no || '').trim().replace(/^#/, '').toUpperCase();
+        const k3 = String(item.sauda_no || '').trim().replace(/^#/, '').toUpperCase();
+        const k4 = String(item.contract_po_no || '').trim().replace(/^#/, '').toUpperCase();
+        return k1 === upperPo || k2 === upperPo || k3 === upperPo || k4 === upperPo;
+      });
+
+    const scpMatch = matchInList(saudaCheckPoints);
+    const poMatch = matchInList(purchaseOrders);
+
+    if (!poDeliveryToDate) {
+      poDeliveryToDate = String(
+        scpMatch?.delivery_to ||
+        scpMatch?.delivery_gt_to ||
+        scpMatch?.shipment_date ||
+        scpMatch?.delivery_to_date ||
+        poMatch?.delivery_to ||
+        poMatch?.delivery_gt_to ||
+        poMatch?.shipment_date ||
+        poMatch?.delivery_to_date ||
+        ''
+      ).trim();
+    }
+    if (deliveryPenaltyRate <= 0) {
+      deliveryPenaltyRate = Number(
+        scpMatch?.delivery_penalty ||
+        scpMatch?.shipment_penalty ||
+        poMatch?.delivery_penalty ||
+        poMatch?.shipment_penalty ||
+        0
+      );
+    }
+
+    if ((!poDeliveryToDate || deliveryPenaltyRate <= 0) && supabase) {
+      try {
+        const { data: scpDb } = await supabase
+          .from('sauda_check_point')
+          .select('delivery_to, shipment_date, delivery_penalty, shipment_penalty')
+          .or(`po_no.eq."${cleanPoNo}",po_no.eq."#${cleanPoNo}",ptf_no.eq."${cleanPoNo}",sauda_no.eq."${cleanPoNo}"`)
+          .limit(1)
+          .maybeSingle();
+        if (scpDb) {
+          if (!poDeliveryToDate) {
+            poDeliveryToDate = String(scpDb.delivery_to || scpDb.shipment_date || '').trim();
+          }
+          if (deliveryPenaltyRate <= 0) {
+            deliveryPenaltyRate = Number(scpDb.delivery_penalty || scpDb.shipment_penalty || 0);
+          }
+        }
+        if (!poDeliveryToDate || deliveryPenaltyRate <= 0) {
+          const { data: pmDb } = await supabase
+            .from('purchase_master')
+            .select('delivery_to, delivery_gt_to, shipment_date, delivery_penalty, shipment_penalty')
+            .or(`po_no.eq."${cleanPoNo}",po_no.eq."#${cleanPoNo}",contract_po_no.eq."${cleanPoNo}"`)
+            .limit(1)
+            .maybeSingle();
+          if (pmDb) {
+            if (!poDeliveryToDate) {
+              poDeliveryToDate = String(pmDb.delivery_to || pmDb.delivery_gt_to || pmDb.shipment_date || '').trim();
+            }
+            if (deliveryPenaltyRate <= 0) {
+              deliveryPenaltyRate = Number(pmDb.delivery_penalty || pmDb.shipment_penalty || 0);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Error fetching PO delivery dates/penalty from Supabase:', e);
+      }
+    }
+  }
+
+  // Resolve arrivalDate from arrival / temporary_material_received / final_arrival
+  let arrivalDate = String(
+    arrival?.date ||
+    arrival?.arrival_date ||
+    arrival?.voucher_date ||
+    liveInspMaster?.arrival_date ||
+    liveInspMaster?.date ||
+    ''
+  ).trim();
+
+  if (!arrivalDate && mrCandidateKeys.length > 0 && supabase) {
+    try {
+      const orClauses = mrCandidateKeys
+        .flatMap(k => [
+          `mr_no.eq.${k}`,
+          `final_arrival_no.eq.${k}`,
+          `arrival_no.eq.${k}`,
+          `temporary_arrival_no.eq.${k}`
+        ])
+        .join(',');
+      const { data: faData } = await supabase
+        .from('final_arrival')
+        .select('date, arrival_date, temporary_arrival_no')
+        .or(orClauses)
+        .limit(1)
+        .maybeSingle();
+      if (faData && (faData.date || faData.arrival_date)) {
+        arrivalDate = String(faData.date || faData.arrival_date).trim();
+      }
+      if (!arrivalDate) {
+        const tempOrClauses = mrCandidateKeys
+          .flatMap(k => [`temporary_arrival_no.eq.${k}`, `amad_no.eq.${k}`, `arrival_no.eq.${k}`])
+          .join(',');
+        const { data: tmrData } = await supabase
+          .from('temporary_material_received')
+          .select('date, arrival_date')
+          .or(tempOrClauses)
+          .limit(1)
+          .maybeSingle();
+        if (tmrData && (tmrData.date || tmrData.arrival_date)) {
+          arrivalDate = String(tmrData.date || tmrData.arrival_date).trim();
+        }
+      }
+    } catch (e) {
+      console.warn('Error fetching arrival date from final_arrival/temporary_material_received:', e);
+    }
+  }
+
+  // Resolve weight in Quintals
+  const colsWtMt = cols.reduce((sum, c) => sum + getColWtMt(c), 0);
+  let weightQtl = 0;
+  if (colsWtMt > 0) {
+    weightQtl = Math.round(colsWtMt * 10 * 100) / 100;
+  } else if (arrival || liveInspMaster) {
+    const src = arrival || liveInspMaster;
+    const rawQtl = Number(src.weight_qtl || 0);
+    if (rawQtl > 0) {
+      weightQtl = Math.round(rawQtl * 100) / 100;
+    } else {
+      const rawWt = Number(
+        src.electronic_net_weight ||
+        src.challan_material_weight ||
+        src.supplier_net_weight ||
+        src.net_weight ||
+        src.weight_mt ||
+        0
+      );
+      if (rawWt > 0) {
+        let mt = rawWt;
+        if (rawWt > 500) mt = rawWt / 1000;
+        else if (rawWt > 50) mt = rawWt / 10;
+        weightQtl = Math.round(mt * 10 * 100) / 100;
+      }
+    }
+  }
+
+  const deliveryDelayDays = calculateDeliveryDelayDays(poDeliveryToDate, arrivalDate);
+  let deliveryClaim = calculateDeliveryClaimPenalty(weightQtl, deliveryDelayDays, deliveryPenaltyRate);
+
+  if (
+    deliveryClaim === 0 &&
+    arrival?.summary_delivery_claim &&
+    Number(arrival.summary_delivery_claim) > 0 &&
+    Number(arrival.summary_delivery_claim) !== 5550
+  ) {
+    deliveryClaim = Number(arrival.summary_delivery_claim);
+  }
+
+  return {
+    deliveryClaim,
+    deliveryDelayDays,
+    deliveryPenaltyRate,
+    weightQtl,
+    poDeliveryToDate,
+    arrivalDate,
+    totalDeductionsAndPenalties,
+    deductionSummaryText,
+    extraAndShort
+  };
+}
 
 export const getColWtMt = (col?: PaymentDetailColumn): number => {
   if (!col) return 0;

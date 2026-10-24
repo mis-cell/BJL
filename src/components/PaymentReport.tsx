@@ -22,7 +22,9 @@ import {
   mapItemsToDetailCols, 
   isMrAlreadyProcessed, 
   isPoEligibleForPayment,
-  getLinkedMrsForPo
+  getLinkedMrsForPo,
+  calculateNetPaidAmountAfterDeductions,
+  resolvePaymentDeductionsForPoAndMr
 } from '../utils/paymentCalculations';
 import { 
   exportPaymentReportCsv, 
@@ -574,7 +576,23 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
 
       const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c), 0);
       const grossVal = Number(po.total_amount || po.total_amt || po.contract_value || totalColAmt || 0);
-      const defaultPaid = grossVal > 0 ? calculate93PctPaidAmount(grossVal) : 0;
+
+      const deductions = await resolvePaymentDeductionsForPoAndMr({
+        po,
+        poNo: po.po_no || poNo,
+        cols,
+        saudaCheckPoints,
+        purchaseOrders,
+        verifiedArrivals
+      });
+      const defaultPaid = grossVal > 0
+        ? calculateNetPaidAmountAfterDeductions(
+            grossVal,
+            deductions.deliveryClaim,
+            deductions.totalDeductionsAndPenalties,
+            deductions.extraAndShort
+          )
+        : 0;
 
       setMasterData(prev => ({
         ...prev,
@@ -587,6 +605,10 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
         rate_qntl: Number(po.b_rate || po.rate_qntl || 0),
         total_amount: grossVal > 0 ? grossVal : prev.total_amount,
         payable_amt: grossVal > 0 ? grossVal : prev.payable_amt,
+        summary_delivery_claim: deductions.deliveryClaim,
+        summary_deduction_amount: deductions.totalDeductionsAndPenalties,
+        summary_deduction_type: deductions.deductionSummaryText,
+        val_ex_short: deductions.extraAndShort,
         paid_amount: grossVal > 0 ? defaultPaid : prev.paid_amount,
       } as any));
 
@@ -687,8 +709,26 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
       const grossVal = totalColAmt > 0
         ? totalColAmt
         : Number(arrival.payable_amt || arrival.net_amt || arrival.value_amt || arrival.total_amount || po?.total_amount || 0);
-      const defaultPaid = grossVal > 0 ? calculate93PctPaidAmount(grossVal) : 0;
       const mrWeight = Number(arrival.electronic_net_weight || arrival.weight_qtl || 0);
+
+      const deductions = await resolvePaymentDeductionsForPoAndMr({
+        po,
+        poNo,
+        arrival,
+        mrNo: arrival.mr_no || arrival.final_arrival_no || mrNo,
+        cols,
+        saudaCheckPoints,
+        purchaseOrders,
+        verifiedArrivals
+      });
+      const defaultPaid = grossVal > 0
+        ? calculateNetPaidAmountAfterDeductions(
+            grossVal,
+            deductions.deliveryClaim,
+            deductions.totalDeductionsAndPenalties,
+            deductions.extraAndShort
+          )
+        : 0;
 
       setMasterData(prev => ({
         ...prev,
@@ -701,9 +741,13 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
         po_type: po?.po_type || 'Standard',
         lorry_number: arrival.lorry_number || arrival.vehicle_no || prev.lorry_number,
         arrival_no: arrival.final_arrival_no || arrival.mr_no || prev.arrival_no,
-        arrival_date: arrival.date || prev.arrival_date,
+        arrival_date: arrival.date || deductions.arrivalDate || prev.arrival_date,
         total_amount: grossVal > 0 ? grossVal : prev.total_amount,
         payable_amt: grossVal > 0 ? grossVal : prev.payable_amt,
+        summary_delivery_claim: deductions.deliveryClaim,
+        summary_deduction_amount: deductions.totalDeductionsAndPenalties,
+        summary_deduction_type: deductions.deductionSummaryText,
+        val_ex_short: deductions.extraAndShort,
         paid_amount: grossVal > 0 ? defaultPaid : prev.paid_amount,
         net_amt: grossVal > 0 ? grossVal : prev.net_amt,
         electronic_scale_net: mrWeight,
