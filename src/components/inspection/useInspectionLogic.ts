@@ -477,18 +477,32 @@ export function useInspectionLogic() {
       setFinalArrivalList(faList);
 
       const map = new Map<string, InspectionMasterRecord>();
+      const secondaryMap = new Map<string, InspectionMasterRecord>();
       inspectionList.forEach(rec => {
         const k = (rec.mr_no || rec.arrival_no || "").trim().toUpperCase();
         if (k) map.set(k, rec);
+        const mrK = (rec.mr_no || "").trim().toUpperCase();
+        const arrK = (rec.arrival_no || "").trim().toUpperCase();
+        if (mrK) secondaryMap.set(mrK, rec);
+        if (arrK) secondaryMap.set(arrK, rec);
       });
+
+      const isBlankPo = (val: any) => {
+        const s = String(val || "").trim().toUpperCase();
+        return !s || s === "NO" || s === "N/A" || s === "NONE";
+      };
 
       faList.forEach(fa => {
         const mrKey = (fa.mr_no || "").trim().toUpperCase();
         const arrKey = (fa.final_arrival_no || fa.arrival_no || "").trim().toUpperCase();
-        const existing = (mrKey && map.get(mrKey)) || (arrKey && map.get(arrKey));
+        const tempKey = (fa.temporary_arrival_no || fa.amad_no || "").trim().toUpperCase();
+        const existing =
+          (mrKey && (map.get(mrKey) || secondaryMap.get(mrKey))) ||
+          (arrKey && (map.get(arrKey) || secondaryMap.get(arrKey))) ||
+          (tempKey && (map.get(tempKey) || secondaryMap.get(tempKey)));
 
         if (existing) {
-          if (!existing.po_no && fa.po_no) existing.po_no = fa.po_no;
+          if (isBlankPo(existing.po_no) && !isBlankPo(fa.po_no)) existing.po_no = fa.po_no;
           if (!existing.po_date && (fa.po_date || fa.date)) existing.po_date = fa.po_date || fa.date;
           if (!existing.supplier_name && (fa.supplier || fa.challan_supplier)) existing.supplier_name = fa.supplier || fa.challan_supplier;
           if (!existing.broker_name && fa.broker) existing.broker_name = fa.broker;

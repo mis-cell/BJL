@@ -376,18 +376,53 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
     if (amadList.length === 0) setLoading(true);
     setRefreshMessage(null);
     try {
-      const [data, poData, inspectionData] = await Promise.all([
+      const [data, poData, inspectionData, finalArrivalData] = await Promise.all([
         dbModule.fetchAll('temporary_material_received', 'created_at', false),
         dbModule.fetchAll('purchase_master').catch(() => []),
-        dbModule.fetchAll('mill_inspection_master').catch(() => [])
+        dbModule.fetchAll('mill_inspection_master').catch(() => []),
+        dbModule.fetchAll('final_arrival').catch(() => [])
       ]);
+
+      const norm = (v: any) => String(v || '').trim().toUpperCase();
+      const isValidPo = (v: any) => {
+        const s = norm(v);
+        return Boolean(s && s !== 'NO' && s !== 'N/A' && s !== 'NONE');
+      };
+
+      const poByArrivalNo = new Map<string, string>();
+      (finalArrivalData || []).forEach((fa: any) => {
+        if (isValidPo(fa.po_no)) {
+          [fa.temporary_arrival_no, fa.amad_no, fa.final_arrival_no, fa.mr_no, fa.arrival_no].forEach(k => {
+            if (norm(k)) poByArrivalNo.set(norm(k), String(fa.po_no).trim());
+          });
+        }
+      });
+      (inspectionData || []).forEach((insp: any) => {
+        if (isValidPo(insp.po_no)) {
+          [insp.arrival_no, insp.mr_no, insp.temporary_arrival_no].forEach(k => {
+            if (norm(k) && !poByArrivalNo.has(norm(k))) {
+              poByArrivalNo.set(norm(k), String(insp.po_no).trim());
+            }
+          });
+        }
+      });
 
       const normalized = (data || []).map((item: any) => {
         const tempNo = item.temporary_arrival_no || item.amad_no || item.arrival_no || item.mr_no || (item.amad_id ? String(item.amad_id).slice(0, 8) : '');
+        const existingPo = isValidPo(item.po_no) ? item.po_no : '';
+        const resolvedPo =
+          existingPo ||
+          poByArrivalNo.get(norm(tempNo)) ||
+          poByArrivalNo.get(norm(item.amad_no)) ||
+          poByArrivalNo.get(norm(item.mr_no)) ||
+          item.po_no ||
+          '';
+
         return {
           ...item,
           temporary_arrival_no: tempNo,
-          amad_no: tempNo
+          amad_no: tempNo,
+          po_no: resolvedPo
         };
       });
 
@@ -410,7 +445,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
     fetchAmads();
   }, []);
 
-  useLiveAutoRefresh(fetchAmads, [], { tables: ['temporary_material_received', 'purchase_master', 'mill_inspection_master'] });
+  useLiveAutoRefresh(fetchAmads, [], { tables: ['temporary_material_received', 'purchase_master', 'mill_inspection_master', 'final_arrival', 'clubbed_pomr'] });
 
   const handleEditAmad = (amad: Amad) => {
     if (!enforceEditOrDeletePermission("Edit")) return;

@@ -35,24 +35,109 @@ interface ClubbingRecord {
   remarks: string;
 }
 
-const mapDbRowToClubRecord = (row: any): ClubbingRecord => ({
-  id: String(row.id || row.club_id || ''),
-  clubbedAt: String(row.clubbed_at || row.clubbedAt || row.created_at || '').split('T')[0],
-  supplier: String(row.supplier || ''),
-  poNos: Array.isArray(row.po_nos)
-    ? row.po_nos
-    : (typeof row.po_nos === 'string' && row.po_nos.startsWith('[') ? JSON.parse(row.po_nos) : (row.po_no ? [row.po_no] : [])),
-  amadNos: Array.isArray(row.amad_nos)
-    ? row.amad_nos
-    : (typeof row.amad_nos === 'string' && row.amad_nos.startsWith('[') ? JSON.parse(row.amad_nos) : (row.mr_no ? [row.mr_no] : [])),
-  totalPoWeight: Number(row.total_po_weight ?? row.totalPoWeight ?? 0),
-  totalReceivedWeight: Number(row.total_received_weight ?? row.totalReceivedWeight ?? 0),
-  variancePct: Number(row.variance_pct ?? row.variancePct ?? 0),
-  recordedBy: String(row.recorded_by || row.recordedBy || row.clubbed_by || 'LEVEL-4-USER'),
-  remarks: String(row.remarks || '')
-});
+const parseJsonArray = (val: any, fallbackSingle?: any): string[] => {
+  if (Array.isArray(val)) return val.map(String).filter(Boolean);
+  if (typeof val === 'string' && val.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
+    } catch {}
+  }
+  if (fallbackSingle) return [String(fallbackSingle)];
+  return [];
+};
 
 const normalize = (val: any) => String(val || '').trim().toUpperCase();
+
+const mapDbRowToClubRecord = (
+  row: any,
+  allFinalArrivals: any[] = [],
+  allPos: any[] = [],
+  allSaudaCheck: any[] = []
+): ClubbingRecord => {
+  const poNos = parseJsonArray(
+    row.clubbed_po_nos ?? row.po_nos,
+    row.primary_po_no || row.po_no
+  );
+  const amadNos = parseJsonArray(
+    row.clubbed_mr_nos ?? row.amad_nos,
+    row.primary_mr_no || row.mr_no
+  );
+
+  // Enrich from Final Arrival & PO / PTF records if missing in clubbed_pomr schema
+  const primaryMr = normalize(amadNos[0] || row.primary_mr_no || row.mr_no);
+  const primaryPo = normalize(poNos[0] || row.primary_po_no || row.po_no);
+
+  const matchedFa = primaryMr
+    ? allFinalArrivals.find(
+        (fa: any) =>
+          normalize(fa.final_arrival_no) === primaryMr ||
+          normalize(fa.mr_no) === primaryMr ||
+          normalize(fa.temporary_arrival_no) === primaryMr
+      )
+    : null;
+
+  const matchedPo = primaryPo
+    ? allSaudaCheck.find(
+        (s: any) =>
+          normalize(s.ptf_no) === primaryPo ||
+          normalize(s.po_no) === primaryPo ||
+          normalize(s.po_ptf_no) === primaryPo ||
+          normalize(s.sauda_no) === primaryPo ||
+          normalize(s.contract_no) === primaryPo
+      ) ||
+      allPos.find(
+        (p: any) =>
+          normalize(p.po_no) === primaryPo ||
+          normalize(p.ptf_no) === primaryPo ||
+          normalize(p.po_ptf_no) === primaryPo ||
+          normalize(p.sauda_no) === primaryPo ||
+          normalize(p.contract_no) === primaryPo
+      )
+    : null;
+
+  const faWeightMt = matchedFa?.weight_qtl
+    ? Number((parseFloat(matchedFa.weight_qtl) / 10).toFixed(2))
+    : 0;
+  const poWeightMt = matchedPo
+    ? Number(
+        matchedPo.total_contract_mt ||
+          matchedPo.quantity_mt ||
+          matchedPo.total_qty_mt ||
+          matchedPo.quantity ||
+          (matchedPo.qty_qtl ? Number(matchedPo.qty_qtl) / 10 : 0) ||
+          0
+      )
+    : 0;
+
+  const totalPoWeight = Number(row.total_po_weight ?? row.totalPoWeight ?? poWeightMt ?? 0);
+  const totalReceivedWeight = Number(
+    row.total_received_weight ?? row.totalReceivedWeight ?? row.total_weight_mt ?? faWeightMt ?? 0
+  );
+  const computedVariance =
+    totalPoWeight > 0
+      ? Number((((totalReceivedWeight - totalPoWeight) / totalPoWeight) * 100).toFixed(2))
+      : 0;
+
+  return {
+    id: String(row.club_id || row.id || ''),
+    clubbedAt: String(row.clubbed_at || row.clubbedAt || row.created_at || new Date().toISOString()).split('T')[0],
+    supplier: String(
+      row.supplier ||
+        matchedFa?.supplier ||
+        matchedFa?.challan_supplier ||
+        matchedPo?.supplier ||
+        'N/A'
+    ),
+    poNos,
+    amadNos,
+    totalPoWeight,
+    totalReceivedWeight,
+    variancePct: Number(row.variance_pct ?? row.variancePct ?? computedVariance ?? 0),
+    recordedBy: String(row.recorded_by || row.recordedBy || row.clubbed_by || 'LEVEL-4-USER'),
+    remarks: String(row.remarks || '')
+  };
+};
 
 export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
   const [loading, setLoading] = useState(false);
@@ -111,7 +196,60 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
       const suppliersList = Array.from(supplierSet).filter(Boolean).sort();
       setSuppliers(suppliersList);
 
-      setClubbingHistory((allClubbed || []).map(mapDbRowToClubRecord));
+      const mappedHistory = (allClubbed || []).map((row: any) =>
+        mapDbRowToClubRecord(row, allFinalArrivals, allPos, allSaudaCheck)
+      );
+
+      // Also include any bound pairings from final_arrival that aren't in clubbed_pomr yet
+      const recordedPairs = new Set<string>();
+      mappedHistory.forEach(item => {
+        item.amadNos.forEach(a => recordedPairs.add(normalize(a)));
+      });
+
+      (allFinalArrivals || []).forEach((fa: any) => {
+        const poNoStr = normalize(fa.po_no);
+        const faNoStr = String(fa.final_arrival_no || fa.mr_no || '').trim();
+        if (
+          poNoStr &&
+          poNoStr !== 'NO' &&
+          poNoStr !== 'N/A' &&
+          poNoStr !== 'NONE' &&
+          faNoStr &&
+          !recordedPairs.has(normalize(faNoStr))
+        ) {
+          // Check if it was bound to a PTF / Sauda Check Point contract or explicitly bound
+          const matchedScp = (allSaudaCheck || []).find(
+            (s: any) =>
+              normalize(s.ptf_no) === poNoStr ||
+              normalize(s.po_no) === poNoStr ||
+              normalize(s.po_ptf_no) === poNoStr ||
+              normalize(s.sauda_no) === poNoStr
+          );
+          if (matchedScp || poNoStr.startsWith('PTF')) {
+            mappedHistory.push(
+              mapDbRowToClubRecord(
+                {
+                  club_id: `BOUND-${faNoStr}`,
+                  primary_po_no: fa.po_no,
+                  clubbed_po_nos: [fa.po_no],
+                  primary_mr_no: faNoStr,
+                  clubbed_mr_nos: [faNoStr],
+                  created_at: fa.updated_at || fa.created_at || fa.date,
+                  supplier: fa.supplier || fa.challan_supplier || matchedScp?.supplier,
+                  clubbed_by: 'LEVEL-4-USER',
+                  remarks: `Bound Final Arrival ${faNoStr} with ${fa.po_no}`
+                },
+                allFinalArrivals,
+                allPos,
+                allSaudaCheck
+              )
+            );
+            recordedPairs.add(normalize(faNoStr));
+          }
+        }
+      });
+
+      setClubbingHistory(mappedHistory);
 
       // Fetch unbound lists
       await fetchSupplierDocuments(selectedSupplier || 'ALL');
@@ -128,13 +266,28 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
     if (!supplierName) return;
     setLoading(true);
     try {
-      const [allPos, allSaudaCheck, allFinalArrivals] = await Promise.all([
+      const [allPos, allSaudaCheck, allFinalArrivals, allClubbed] = await Promise.all([
         dbModule.fetchAll('purchase_master').catch(() => []),
         dbModule.fetchAll('sauda_check_point').catch(() => []),
-        dbModule.fetchAll('final_arrival').catch(() => [])
+        dbModule.fetchAll('final_arrival').catch(() => []),
+        dbModule.fetchAll('clubbed_pomr').catch(() => [])
       ]);
 
       const isAll = supplierName === 'ALL';
+
+      // Track PO/PTF numbers already bound in final_arrival or clubbed_pomr
+      const boundPoNos = new Set<string>();
+      (allFinalArrivals || []).forEach((fa: any) => {
+        const p = normalize(fa.po_no);
+        if (p && p !== 'NO' && p !== 'N/A' && p !== 'NONE') boundPoNos.add(p);
+      });
+      (allClubbed || []).forEach((c: any) => {
+        const pList = parseJsonArray(c.clubbed_po_nos ?? c.po_nos, c.primary_po_no || c.po_no);
+        pList.forEach(p => {
+          const norm = normalize(p);
+          if (norm) boundPoNos.add(norm);
+        });
+      });
 
       // 1. Unbound Final Arrivals: records in final_arrival where po_no is blank/empty/NO/N/A
       const filteredFinalArrivals = allFinalArrivals.filter((fa: any) => {
@@ -146,25 +299,33 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
         return isPoBlank && matchesSupplier;
       });
 
-      // 2. Unbound POs: records in purchase_master / sauda_check_point where mr_no / final_arrival_no is blank
+      // 2. Unbound POs / PTFs: records in purchase_master / sauda_check_point where mr_no / final_arrival_no is blank and not already bound
       const combinedPOsMap = new Map<string, any>();
       
       const processPo = (po: any) => {
-        const poNo = po.po_no || po.po_ptf_no || po.sauda_no || po.contract_no;
+        const poNo = po.ptf_no || po.po_no || po.po_ptf_no || po.sauda_no || po.contract_no;
         if (!poNo) return;
 
+        const normPoNo = normalize(poNo);
         const mrNoStr = normalize(po.mr_no || po.final_arrival_no || po.temporary_arrival_no);
-        const isMrBlank = !mrNoStr || mrNoStr === 'NO' || mrNoStr === 'N/A' || mrNoStr === 'NONE';
+        const isMrBlank = (!mrNoStr || mrNoStr === 'NO' || mrNoStr === 'N/A' || mrNoStr === 'NONE') && !boundPoNos.has(normPoNo);
         const matchesSupplier = isAll || normalize(po.supplier) === normalize(supplierName);
 
-        if (isMrBlank && matchesSupplier && !combinedPOsMap.has(poNo)) {
-          combinedPOsMap.set(poNo, {
+        if (isMrBlank && matchesSupplier && !combinedPOsMap.has(normPoNo)) {
+          combinedPOsMap.set(normPoNo, {
             ...po,
             po_no: poNo,
             broker: po.broker || po.broker_name || 'N/A',
             area: po.area || po.arrival_area_name || po.arrival_yard || po.area_name || po.dispatch_place || 'N/A',
             supplier: po.supplier || 'N/A',
-            total_contract_mt: Number(po.total_contract_mt || po.quantity_mt || po.total_qty_mt || po.quantity || 0)
+            total_contract_mt: Number(
+              po.total_contract_mt ||
+                po.quantity_mt ||
+                po.total_qty_mt ||
+                po.quantity ||
+                (po.qty_qtl ? Number(po.qty_qtl) / 10 : 0) ||
+                0
+            )
           });
         }
       };
@@ -197,7 +358,8 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
     setLoading(true);
     try {
       const faNo = selectedArrivalForBind.final_arrival_no || selectedArrivalForBind.mr_no;
-      const poNo = chosenPoForBind.po_no;
+      const poNo = chosenPoForBind.po_no || chosenPoForBind.ptf_no;
+      const poDate = chosenPoForBind.po_date || chosenPoForBind.ptf_date || chosenPoForBind.date || chosenPoForBind.sauda_date || '';
 
       const faWeightMt = Number((parseFloat(selectedArrivalForBind.weight_qtl || '0') / 10).toFixed(2));
       const poWeightMt = Number(chosenPoForBind.total_contract_mt || 0);
@@ -208,34 +370,156 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
 
       const supplierName = selectedArrivalForBind.supplier || selectedArrivalForBind.challan_supplier || chosenPoForBind.supplier || 'MULTI-SUPPLIER';
 
-      // 1. Update final_arrival table with linked PO
-      if (selectedArrivalForBind.id || selectedArrivalForBind.final_arrival_no) {
+      const poUpdatePayload: Record<string, any> = { po_no: poNo };
+      if (poDate) poUpdatePayload.po_date = poDate;
+
+      // 1. Update final_arrival table with linked P.O / PTF
+      if (selectedArrivalForBind.final_arrival_id) {
         await dbModule.update(
           'final_arrival',
-          selectedArrivalForBind.id ? 'id' : 'final_arrival_no',
-          selectedArrivalForBind.id || selectedArrivalForBind.final_arrival_no,
-          { po_no: poNo, contract_no: poNo }
+          'final_arrival_id',
+          selectedArrivalForBind.final_arrival_id,
+          { ...poUpdatePayload, contract_no: poNo }
+        ).catch(() => {});
+      }
+      if (selectedArrivalForBind.id) {
+        await dbModule.update(
+          'final_arrival',
+          'id',
+          selectedArrivalForBind.id,
+          { ...poUpdatePayload, contract_no: poNo }
+        ).catch(() => {});
+      }
+      if (selectedArrivalForBind.final_arrival_no) {
+        await dbModule.update(
+          'final_arrival',
+          'final_arrival_no',
+          selectedArrivalForBind.final_arrival_no,
+          { ...poUpdatePayload, contract_no: poNo }
         ).catch(() => {});
       }
 
-      // Also update material_inspection and mill_inspection_master for this arrival/MR so Settlement links it directly
-      const candidateMrKeys = Array.from(new Set([
-        faNo,
-        selectedArrivalForBind.mr_no,
-        selectedArrivalForBind.final_arrival_no,
-        selectedArrivalForBind.arrival_no,
-        selectedArrivalForBind.temporary_arrival_no
-      ].filter(Boolean)));
+      // 2. Collect all candidate Arrival / MR keys & Lorry Numbers to propagate P.O / PTF to Temporary Arrival & Mill Inspection
+      const candidateKeys = new Set<string>(
+        [
+          faNo,
+          selectedArrivalForBind.mr_no,
+          selectedArrivalForBind.final_arrival_no,
+          selectedArrivalForBind.arrival_no,
+          selectedArrivalForBind.temporary_arrival_no,
+          selectedArrivalForBind.amad_no
+        ]
+          .map(v => String(v || '').trim())
+          .filter(Boolean)
+      );
 
-      for (const mrKey of candidateMrKeys) {
-        await dbModule.update('material_inspection', 'mr_no', mrKey, { po_no: poNo }).catch(() => {});
-        await dbModule.update('material_inspection', 'arrival_no', mrKey, { po_no: poNo }).catch(() => {});
-        await dbModule.update('mill_inspection_master', 'mr_no', mrKey, { po_no: poNo }).catch(() => {});
-        await dbModule.update('mill_inspection_master', 'arrival_no', mrKey, { po_no: poNo }).catch(() => {});
+      const candidateLorry = normalize(
+        selectedArrivalForBind.lorry_number ||
+          selectedArrivalForBind.lorry_no ||
+          selectedArrivalForBind.vehicle_no
+      );
+
+      // 2a. Update Temporary Arrival Section (`temporary_material_received`)
+      const allTempArrivals = await dbModule.fetchAll('temporary_material_received').catch(() => []);
+      const normCandidateKeys = new Set(Array.from(candidateKeys).map(normalize));
+
+      for (const ta of allTempArrivals || []) {
+        const taTempNo = String(ta.temporary_arrival_no || '').trim();
+        const taAmadNo = String(ta.amad_no || '').trim();
+        const taArrNo = String(ta.arrival_no || '').trim();
+        const taMrNo = String(ta.mr_no || '').trim();
+        const taLorry = normalize(ta.lorry_number || ta.lorry_no || ta.vehicle_no);
+
+        const isMatchByNo =
+          (taTempNo && normCandidateKeys.has(normalize(taTempNo))) ||
+          (taAmadNo && normCandidateKeys.has(normalize(taAmadNo))) ||
+          (taArrNo && normCandidateKeys.has(normalize(taArrNo))) ||
+          (taMrNo && normCandidateKeys.has(normalize(taMrNo)));
+
+        const isMatchByLorryAndSupplier =
+          !isMatchByNo &&
+          candidateLorry &&
+          taLorry === candidateLorry &&
+          normalize(ta.supplier) === normalize(selectedArrivalForBind.supplier || selectedArrivalForBind.challan_supplier);
+
+        if (isMatchByNo || isMatchByLorryAndSupplier) {
+          if (taTempNo) candidateKeys.add(taTempNo);
+          if (taAmadNo) candidateKeys.add(taAmadNo);
+          if (taArrNo) candidateKeys.add(taArrNo);
+          if (taMrNo) candidateKeys.add(taMrNo);
+
+          if (ta.amad_id) {
+            await dbModule.update('temporary_material_received', 'amad_id', ta.amad_id, poUpdatePayload).catch(() => {});
+          } else if (taTempNo) {
+            await dbModule.update('temporary_material_received', 'temporary_arrival_no', taTempNo, poUpdatePayload).catch(() => {});
+          } else if (taAmadNo) {
+            await dbModule.update('temporary_material_received', 'amad_no', taAmadNo, poUpdatePayload).catch(() => {});
+          }
+        }
       }
 
-      // 2. Update sauda_check_point & purchase_master
+      // Direct fallback updates on temporary_material_received for all candidate keys
+      for (const key of Array.from(candidateKeys)) {
+        await dbModule.update('temporary_material_received', 'temporary_arrival_no', key, poUpdatePayload).catch(() => {});
+        await dbModule.update('temporary_material_received', 'amad_no', key, poUpdatePayload).catch(() => {});
+        await dbModule.update('temporary_material_received', 'mr_no', key, poUpdatePayload).catch(() => {});
+      }
+
+      // 2b. Update Mill Inspection Section (`material_inspection`, `mill_inspection_master`, `inspection_master`, `inspection_checklist`)
+      const updatedNormKeys = new Set(Array.from(candidateKeys).map(normalize));
+      const [allMatInsp, allMillInsp] = await Promise.all([
+        dbModule.fetchAll('material_inspection').catch(() => []),
+        dbModule.fetchAll('mill_inspection_master').catch(() => [])
+      ]);
+
+      for (const mi of allMatInsp || []) {
+        const miMr = normalize(mi.mr_no);
+        const miArr = normalize(mi.arrival_no);
+        const miTemp = normalize(mi.temporary_arrival_no);
+        if (
+          (miMr && updatedNormKeys.has(miMr)) ||
+          (miArr && updatedNormKeys.has(miArr)) ||
+          (miTemp && updatedNormKeys.has(miTemp))
+        ) {
+          if (mi.id) {
+            await dbModule.update('material_inspection', 'id', mi.id, poUpdatePayload).catch(() => {});
+          }
+          if (mi.mr_no) {
+            await dbModule.update('material_inspection', 'mr_no', mi.mr_no, poUpdatePayload).catch(() => {});
+          }
+        }
+      }
+
+      for (const mm of allMillInsp || []) {
+        const mmMr = normalize(mm.mr_no);
+        const mmArr = normalize(mm.arrival_no);
+        if ((mmMr && updatedNormKeys.has(mmMr)) || (mmArr && updatedNormKeys.has(mmArr))) {
+          if (mm.id) {
+            await dbModule.update('mill_inspection_master', 'id', mm.id, poUpdatePayload).catch(() => {});
+          }
+          if (mm.mr_no) {
+            await dbModule.update('mill_inspection_master', 'mr_no', mm.mr_no, poUpdatePayload).catch(() => {});
+          }
+        }
+      }
+
+      for (const mrKey of Array.from(candidateKeys)) {
+        await dbModule.update('material_inspection', 'mr_no', mrKey, poUpdatePayload).catch(() => {});
+        await dbModule.update('material_inspection', 'arrival_no', mrKey, poUpdatePayload).catch(() => {});
+        await dbModule.update('mill_inspection_master', 'mr_no', mrKey, poUpdatePayload).catch(() => {});
+        await dbModule.update('mill_inspection_master', 'arrival_no', mrKey, poUpdatePayload).catch(() => {});
+        await dbModule.update('inspection_master', 'mr_no', mrKey, poUpdatePayload).catch(() => {});
+        await dbModule.update('inspection_master', 'arrival_no', mrKey, poUpdatePayload).catch(() => {});
+        await dbModule.update('inspection_checklist', 'mr_no', mrKey, poUpdatePayload).catch(() => {});
+        await dbModule.update('inspection_checklist', 'arrival_no', mrKey, poUpdatePayload).catch(() => {});
+      }
+
+      // 3. Update sauda_check_point & purchase_master (if columns exist)
       await dbModule.update('sauda_check_point', 'po_no', poNo, { 
+        mr_no: faNo, 
+        final_arrival_no: faNo 
+      }).catch(() => {});
+      await dbModule.update('sauda_check_point', 'ptf_no', poNo, { 
         mr_no: faNo, 
         final_arrival_no: faNo 
       }).catch(() => {});
@@ -245,7 +529,7 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
         final_arrival_no: faNo 
       }).catch(() => {});
 
-      // 3. Record in persistent history table
+      // 4. Record in persistent history table (`clubbed_pomr` uses UUID `id` and required `club_id`, `primary_po_no`)
       const newClubRecord: ClubbingRecord = {
         id: clubId,
         clubbedAt: clubbedDate,
@@ -256,11 +540,16 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
         totalReceivedWeight: faWeightMt,
         variancePct: variance,
         recordedBy: 'LEVEL-4-USER',
-        remarks: remarks || `Bound Final Arrival ${faNo} with P.O ${poNo}`
+        remarks: remarks || `Bound Final Arrival ${faNo} with P.O / PTF ${poNo}`
       };
 
       await dbModule.insert('clubbed_pomr', {
-        id: clubId,
+        club_id: clubId,
+        primary_po_no: poNo,
+        clubbed_po_nos: [poNo],
+        primary_mr_no: faNo,
+        clubbed_mr_nos: [faNo],
+        total_weight_mt: faWeightMt,
         po_no: poNo,
         mr_no: faNo,
         po_nos: JSON.stringify([poNo]),
@@ -278,10 +567,13 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
 
       // Update local state by removing bound items
       setUnboundFinalArrivals(prev => prev.filter(fa => (fa.final_arrival_no || fa.mr_no) !== faNo));
-      setUnboundPOs(prev => prev.filter(po => po.po_no !== poNo));
-      setClubbingHistory(prev => [newClubRecord, ...prev]);
+      setUnboundPOs(prev => prev.filter(po => (po.po_no || po.ptf_no) !== poNo));
+      setClubbingHistory(prev => {
+        const filtered = prev.filter(item => item.id !== clubId && !item.amadNos.includes(faNo));
+        return [newClubRecord, ...filtered];
+      });
 
-      setSuccessToast(`Successfully bound Final Arrival #${faNo} with P.O / PTF #${poNo}!`);
+      setSuccessToast(`Successfully bound Final Arrival #${faNo} with P.O / PTF #${poNo}! Updated Temporary Arrival, Mill Inspection & Final Arrival.`);
 
       // Reset modal state
       setSelectedArrivalForBind(null);
@@ -302,7 +594,8 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
   const deleteClubItem = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this pairing record from history?")) return;
     try {
-      await dbModule.delete('clubbed_pomr', 'id', id);
+      await dbModule.delete('clubbed_pomr', 'club_id', id).catch(() => {});
+      await dbModule.delete('clubbed_pomr', 'id', id).catch(() => {});
       setClubbingHistory(prev => prev.filter(c => c.id !== id));
       setSuccessToast(`Pairing record #${id} removed.`);
       setTimeout(() => setSuccessToast(null), 3000);
@@ -341,17 +634,6 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
       String(fa.broker || '').toLowerCase().includes(q) ||
       String(fa.area || fa.arrival_area_name || '').toLowerCase().includes(q) ||
       String(fa.challan_rr_no || '').toLowerCase().includes(q)
-    );
-  });
-
-  const filteredPOs = unboundPOs.filter(po => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      String(po.po_no || '').toLowerCase().includes(q) ||
-      String(po.supplier || '').toLowerCase().includes(q) ||
-      String(po.broker || '').toLowerCase().includes(q) ||
-      String(po.area || '').toLowerCase().includes(q)
     );
   });
 
@@ -426,195 +708,111 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
           </div>
         )}
 
-        {/* Dual Side-by-Side Matching Workspace */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
-          {/* LEFT SIDE: Untagged Final Arrivals */}
-          <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm space-y-3">
-            <div className="border-b border-slate-100 pb-2.5 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-indigo-600" />
-                <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">Untagged Final Arrivals</h3>
-                  <p className="text-[9px] font-semibold text-slate-400 uppercase">Lorry arrivals awaiting P.O / PTF linkage</p>
-                </div>
+        {/* Untagged Final Arrivals Workspace */}
+        <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm space-y-3">
+          <div className="border-b border-slate-100 pb-2.5 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-indigo-600" />
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">Untagged Final Arrivals</h3>
+                <p className="text-[9px] font-semibold text-slate-400 uppercase">Lorry arrivals awaiting P.O / PTF linkage</p>
               </div>
-              <span className="text-[10px] font-black text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
-                {filteredArrivals.length} Untagged
-              </span>
             </div>
+            <span className="text-[10px] font-black text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+              {filteredArrivals.length} Untagged
+            </span>
+          </div>
 
-            <div className="space-y-2.5 max-h-[520px] overflow-y-auto pr-1">
-              {filteredArrivals.length === 0 ? (
-                <div className="p-10 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">No Untagged Final Arrival Records Found</p>
-                  <p className="text-[9.5px] font-semibold text-slate-400 mt-1">All lorry final arrivals are fully bound with P.O contracts</p>
-                </div>
-              ) : (
-                filteredArrivals.map((mr, idx) => {
-                  const faNo = mr.final_arrival_no || mr.mr_no || `FA-${idx+1}`;
-                  const weightMt = mr.weight_qtl ? (parseFloat(mr.weight_qtl) / 10).toFixed(2) : '0.00';
-                  
-                  return (
-                    <div
-                      key={faNo || idx}
-                      className="p-3.5 rounded-xl border border-slate-200 hover:border-indigo-400 hover:shadow-md bg-white transition-all group relative space-y-2"
-                    >
-                      {/* Card Header */}
-                      <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-black font-mono text-indigo-950 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                              FA No: {faNo}
-                            </span>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase">
-                              Date: {mr.date || mr.final_arrival_date || 'N/A'}
-                            </span>
-                          </div>
-                          <p className="text-[10.5px] font-black text-slate-900 uppercase mt-1">
-                            Supplier: {mr.supplier || mr.challan_supplier || 'N/A'}
-                          </p>
-                        </div>
-
-                        <div className="text-right">
-                          <span className="text-xs font-black text-slate-900 block font-mono">
-                            {weightMt} MT
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[520px] overflow-y-auto pr-1">
+            {filteredArrivals.length === 0 ? (
+              <div className="col-span-full p-10 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">No Untagged Final Arrival Records Found</p>
+                <p className="text-[9.5px] font-semibold text-slate-400 mt-1">All lorry final arrivals are fully bound with P.O contracts</p>
+              </div>
+            ) : (
+              filteredArrivals.map((mr, idx) => {
+                const faNo = mr.final_arrival_no || mr.mr_no || `FA-${idx+1}`;
+                const weightMt = mr.weight_qtl ? (parseFloat(mr.weight_qtl) / 10).toFixed(2) : '0.00';
+                
+                return (
+                  <div
+                    key={faNo || idx}
+                    className="p-3.5 rounded-xl border border-slate-200 hover:border-indigo-400 hover:shadow-md bg-white transition-all group relative space-y-2"
+                  >
+                    {/* Card Header */}
+                    <div className="flex justify-between items-start gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-black font-mono text-indigo-950 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                            FA No: {faNo}
                           </span>
-                          <span className="text-[8.5px] font-bold text-slate-400 uppercase block">
-                            {mr.total_packets || mr.packets || '0'} Bales
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">
+                            Date: {mr.date || mr.final_arrival_date || 'N/A'}
                           </span>
                         </div>
+                        <p className="text-[10.5px] font-black text-slate-900 uppercase mt-1">
+                          Supplier: {mr.supplier || mr.challan_supplier || 'N/A'}
+                        </p>
                       </div>
 
-                      {/* Broker & Arrival Yard Info Badges */}
-                      <div className="grid grid-cols-2 gap-2 text-[9.5px] font-bold bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <div>
-                          <span className="text-[8px] font-extrabold text-slate-400 uppercase block">Broker Name:</span>
-                          <span className="text-slate-900 uppercase font-black truncate block">
-                            {mr.broker || 'N/A'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[8px] font-extrabold text-slate-400 uppercase block">Arrival Yard:</span>
-                          <span className="text-indigo-900 uppercase font-black truncate block">
-                            {mr.area || mr.arrival_area_name || 'N/A'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Transport details & Bind Button */}
-                      <div className="flex justify-between items-center pt-1 border-t border-slate-100 gap-2">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase truncate max-w-[200px]">
-                          Lorry: {mr.lorry_number || mr.lorry_no || mr.vehicle_no || 'N/A'} • Challan: {mr.challan_rr_no || 'N/A'}
+                      <div className="text-right">
+                        <span className="text-xs font-black text-slate-900 block font-mono">
+                          {weightMt} MT
                         </span>
-
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => setSelectedDetailMr(mr)}
-                            className="px-2 py-1 text-[9px] font-extrabold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded border border-slate-200 uppercase transition"
-                          >
-                            Details
-                          </button>
-                          
-                          <button
-                            onClick={() => {
-                              setSelectedArrivalForBind(mr);
-                              setChosenPoForBind(null);
-                              setShowAllPOsInModal(false);
-                            }}
-                            className="px-3 py-1 bg-indigo-700 hover:bg-indigo-800 text-white font-black text-[9.5px] uppercase tracking-wider rounded-lg shadow-xs hover:shadow transition flex items-center gap-1 cursor-pointer"
-                          >
-                            <span>Bind P.O / PTF</span>
-                            <ArrowRight className="h-3 w-3" />
-                          </button>
-                        </div>
+                        <span className="text-[8.5px] font-bold text-slate-400 uppercase block">
+                          {mr.total_packets || mr.packets || '0'} Bales
+                        </span>
                       </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
 
-          {/* RIGHT SIDE: Untagged Sauda Check Point P.O / PTF Contracts */}
-          <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm space-y-3">
-            <div className="border-b border-slate-100 pb-2.5 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <FileCheck className="h-4 w-4 text-emerald-600" />
-                <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">Untagged Sauda Check Point Contracts</h3>
-                  <p className="text-[9px] font-semibold text-slate-400 uppercase">P.O / PTF contracts with no arrival mapped</p>
-                </div>
-              </div>
-              <span className="text-[10px] font-black text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
-                {filteredPOs.length} Contracts
-              </span>
-            </div>
-
-            <div className="space-y-2.5 max-h-[520px] overflow-y-auto pr-1">
-              {filteredPOs.length === 0 ? (
-                <div className="p-10 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">No Untagged P.O / PTF Contracts Found</p>
-                  <p className="text-[9.5px] font-semibold text-slate-400 mt-1">All Sauda Check Point contracts have linked arrival numbers</p>
-                </div>
-              ) : (
-                filteredPOs.map((po, idx) => {
-                  const poNo = po.po_no || po.po_ptf_no || po.sauda_no || `PO-${idx+1}`;
-                  const contractMt = po.total_contract_mt || 0;
-
-                  return (
-                    <div
-                      key={poNo || idx}
-                      className="p-3.5 rounded-xl border border-slate-200 hover:border-emerald-400 bg-white transition-all space-y-2"
-                    >
-                      {/* Card Header */}
-                      <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-black font-mono text-emerald-950 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                              P.O / PTF: {poNo}
-                            </span>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase">
-                              Date: {po.date || po.sauda_date || po.contract_date || 'N/A'}
-                            </span>
-                          </div>
-                          <p className="text-[10.5px] font-black text-slate-900 uppercase mt-1">
-                            Supplier: {po.supplier || 'N/A'}
-                          </p>
-                        </div>
-
-                        <div className="text-right">
-                          <span className="text-xs font-black text-slate-900 block font-mono">
-                            {contractMt ? `${contractMt.toFixed(2)} MT` : '0.00 MT'}
-                          </span>
-                          <span className="text-[8.5px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase inline-block mt-0.5">
-                            Unbound Contract
-                          </span>
-                        </div>
+                    {/* Broker & Arrival Yard Info Badges */}
+                    <div className="grid grid-cols-2 gap-2 text-[9.5px] font-bold bg-slate-50 p-2 rounded-lg border border-slate-100">
+                      <div>
+                        <span className="text-[8px] font-extrabold text-slate-400 uppercase block">Broker Name:</span>
+                        <span className="text-slate-900 uppercase font-black truncate block">
+                          {mr.broker || 'N/A'}
+                        </span>
                       </div>
-
-                      {/* Broker & Arrival Yard Info Badges */}
-                      <div className="grid grid-cols-2 gap-2 text-[9.5px] font-bold bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <div>
-                          <span className="text-[8px] font-extrabold text-slate-400 uppercase block">Broker Name:</span>
-                          <span className="text-slate-900 uppercase font-black truncate block">
-                            {po.broker || 'N/A'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[8px] font-extrabold text-slate-400 uppercase block">Arrival Yard:</span>
-                          <span className="text-emerald-900 uppercase font-black truncate block">
-                            {po.area || po.arrival_area_name || po.arrival_yard || 'N/A'}
-                          </span>
-                        </div>
+                      <div>
+                        <span className="text-[8px] font-extrabold text-slate-400 uppercase block">Arrival Yard:</span>
+                        <span className="text-indigo-900 uppercase font-black truncate block">
+                          {mr.area || mr.arrival_area_name || 'N/A'}
+                        </span>
                       </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
 
+                    {/* Transport details & Bind Button */}
+                    <div className="flex justify-between items-center pt-1 border-t border-slate-100 gap-2">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase truncate max-w-[200px]">
+                        Lorry: {mr.lorry_number || mr.lorry_no || mr.vehicle_no || 'N/A'} • Challan: {mr.challan_rr_no || 'N/A'}
+                      </span>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => setSelectedDetailMr(mr)}
+                          className="px-2 py-1 text-[9px] font-extrabold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded border border-slate-200 uppercase transition"
+                        >
+                          Details
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            setSelectedArrivalForBind(mr);
+                            setChosenPoForBind(null);
+                            setShowAllPOsInModal(false);
+                          }}
+                          className="px-3 py-1 bg-indigo-700 hover:bg-indigo-800 text-white font-black text-[9.5px] uppercase tracking-wider rounded-lg shadow-xs hover:shadow transition flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>Bind P.O / PTF</span>
+                          <ArrowRight className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
 
         {/* Historical Voucher Pairings Register Table (Bottom Panel) */}
@@ -622,7 +820,6 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
           <div className="border-b border-slate-100 pb-3 flex justify-between items-center flex-wrap gap-2">
             <div>
               <h3 className="text-xs font-black uppercase tracking-widest text-slate-900">Historical Bound Voucher Pairings Register</h3>
-              <p className="text-[9.5px] text-slate-400 uppercase font-bold tracking-tight">Active pairings between Final Arrival Lorry Records and Sauda Check Point Contracts</p>
             </div>
             
             <button 

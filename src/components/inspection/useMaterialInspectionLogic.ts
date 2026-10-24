@@ -575,9 +575,6 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
         }
       } catch (e) {}
 
-      const allInspections = Array.from(uniqueMap.values());
-      setSavedInspections(allInspections);
-
       const { data: arrivalsData, error: arrivalsErr } = await supabase
         .from("final_arrival")
         .select("*")
@@ -585,6 +582,35 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
       if (!arrivalsErr && arrivalsData) {
         setFinalArrivals(arrivalsData);
       }
+
+      const norm = (v: any) => String(v || "").trim().toUpperCase();
+      const isBlankPo = (v: any) => {
+        const s = norm(v);
+        return !s || s === "NO" || s === "N/A" || s === "NONE";
+      };
+
+      const poByKey = new Map<string, string>();
+      (arrivalsData || []).forEach((fa: any) => {
+        if (!isBlankPo(fa.po_no)) {
+          [fa.final_arrival_no, fa.mr_no, fa.arrival_no, fa.temporary_arrival_no, fa.amad_no].forEach(k => {
+            if (norm(k)) poByKey.set(norm(k), String(fa.po_no).trim());
+          });
+        }
+      });
+
+      const allInspections = Array.from(uniqueMap.values()).map((insp: any) => {
+        if (isBlankPo(insp.po_no)) {
+          const boundPo =
+            poByKey.get(norm(insp.mr_no)) ||
+            poByKey.get(norm(insp.arrival_no)) ||
+            poByKey.get(norm(insp.temporary_arrival_no));
+          if (boundPo) {
+            return { ...insp, po_no: boundPo };
+          }
+        }
+        return insp;
+      });
+      setSavedInspections(allInspections);
 
       const { data: poData, error: poErr } = await supabase
         .from("purchase_master")
@@ -603,7 +629,7 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
   useLiveAutoRefresh(() => {
     loadAllMasters();
     loadSavedInspectionsList();
-  }, [], { tables: ['material_inspection', 'mill_inspection_master', 'material_inspections', 'purchase_master', 'final_arrival', 'temporary_material_received'] });
+  }, [], { tables: ['material_inspection', 'mill_inspection_master', 'material_inspections', 'purchase_master', 'final_arrival', 'temporary_material_received', 'clubbed_pomr'] });
 
   // Automatically retrieve full P.O. data from purchase_master whenever po_no changes
   useEffect(() => {
