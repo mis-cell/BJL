@@ -31,6 +31,10 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
     grades,
     markas,
     unitList,
+    showTempMrDropdown,
+    setShowTempMrDropdown,
+    tempMrOptions,
+    handleSelectTempMrOption,
     showPoDropdown,
     setShowPoDropdown,
     combinedPoOptions,
@@ -92,8 +96,12 @@ export default function FinalArrivalEntry({ onSave, onCancel, initialData }: Fin
           formData={formData}
           handleInputChange={handleInputChange}
           handleAreaChange={handleAreaChange}
+          handleSelectTempMrOption={handleSelectTempMrOption}
           handleSelectPoOption={handleSelectPoOption}
           loadDetailsFromAmad={loadDetailsFromAmad}
+          showTempMrDropdown={showTempMrDropdown}
+          setShowTempMrDropdown={setShowTempMrDropdown}
+          tempMrOptions={tempMrOptions}
           showPoDropdown={showPoDropdown}
           setShowPoDropdown={setShowPoDropdown}
           combinedPoOptions={combinedPoOptions}

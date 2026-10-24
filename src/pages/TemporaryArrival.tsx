@@ -148,7 +148,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     const lorryInfo = parseLorry(data?.lorry_number || (data as any)?.lorry_no || (data as any)?.vehicle_no);
     return {
       financial_year: data?.financial_year || '2026-2027',
-      arrival_no: data?.temporary_arrival_no || data?.amad_no || 'MR',
+      arrival_no: data?.temporary_arrival_no || data?.amad_no || 'AR0',
       po_no: data?.po_no || '',
       date: data?.date || '',
       jci: data?.jci || 'No',
@@ -199,7 +199,11 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
   const [formData, setFormData] = useState(() => {
     const defaultData = createDefaultFormData(initialData);
     if (initialData) return defaultData;
-    return screenDraftService.getDraft('amad_entry_form', defaultData);
+    const draft = screenDraftService.getDraft('amad_entry_form', defaultData);
+    if (!draft.arrival_no || draft.arrival_no === 'MR') {
+      draft.arrival_no = 'AR0';
+    }
+    return draft;
   });
 
   const filteredArrivalAgencies = useMemo(() => {
@@ -575,7 +579,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
           
           setFormData(prev => ({
             ...prev,
-            arrival_no: initialData?.temporary_arrival_no || initialData?.amad_no || 'MR',
+            arrival_no: initialData?.temporary_arrival_no || initialData?.amad_no || 'AR0',
             challan_supplier: '',
             supplier: '',
             agency_name: '',
@@ -885,7 +889,17 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
   const handleChange = (e: any) => {
     const { name, value } = e.target;
     let finalValue = value;
-    if (name === 'broker' || name === 'supplier' || name === 'challan_supplier' || name === 'arrival_area_name') {
+    if (name === 'arrival_no') {
+      const upper = String(value || '').toUpperCase();
+      if (upper.startsWith('AR0')) {
+        finalValue = 'AR0' + upper.slice(3);
+      } else if (upper === 'AR' || upper === 'A' || upper === '') {
+        finalValue = 'AR0';
+      } else {
+        const suffix = upper.replace(/^(AR0?|MR0?)/i, '');
+        finalValue = 'AR0' + suffix;
+      }
+    } else if (name === 'broker' || name === 'supplier' || name === 'challan_supplier' || name === 'arrival_area_name') {
       finalValue = (value || '').toUpperCase();
     }
     if (name === 'date' ) {
@@ -1065,7 +1079,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
       return
     }
     if(formData.arrival_no!='' || formData.arrival_no!=null){
-      const hasArrivalNo = String(formData.arrival_no || '').trim().replace(/^(MR|AR)/i, '').trim().length > 0;
+      const hasArrivalNo = String(formData.arrival_no || '').trim().replace(/^(MR0?|AR0?)/i, '').trim().length > 0;
       if (!hasArrivalNo) {
         alert('Please enter Arrival No.');
         return;
@@ -1538,8 +1552,31 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                     id="arrival_no_1077" aria-label="Temporary M.R No."
                     type="text"
                     name="arrival_no"
-                    value={formData.arrival_no}
+                    value={formData.arrival_no?.startsWith('AR0') ? formData.arrival_no : `AR0${String(formData.arrival_no || '').replace(/^(AR0?|MR0?)/i, '')}`}
                     onChange={handleChange}
+                    onKeyDown={(e) => {
+                      const target = e.currentTarget;
+                      const start = target.selectionStart ?? 0;
+                      const end = target.selectionEnd ?? 0;
+                      if ((e.key === 'Backspace' && start <= 3 && end <= 3) || (e.key === 'Delete' && start < 3)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onClick={(e) => {
+                      const target = e.currentTarget;
+                      if ((target.selectionStart ?? 0) < 3) {
+                        target.setSelectionRange(3, Math.max(3, target.selectionEnd ?? 3));
+                      }
+                    }}
+                    onFocus={(e) => {
+                      const target = e.currentTarget;
+                      setTimeout(() => {
+                        if ((target.selectionStart ?? 0) < 3) {
+                          const len = target.value.length;
+                          target.setSelectionRange(len, len);
+                        }
+                      }, 0);
+                    }}
                     className="flex-1 border border-sky-300 rounded bg-[#FDE7E6] text-sky-950 px-2 h-7 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-sky-500"
                   />
                 </div>

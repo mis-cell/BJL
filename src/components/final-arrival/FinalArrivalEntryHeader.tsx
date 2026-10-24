@@ -7,8 +7,12 @@ interface FinalArrivalEntryHeaderProps {
   formData: FinalArrivalEntryFormData;
   handleInputChange: (field: string, val: any) => void;
   handleAreaChange: (val: string) => void;
+  handleSelectTempMrOption: (item: any) => void;
   handleSelectPoOption: (item: any) => void;
   loadDetailsFromAmad: (tempMrNo: string) => void;
+  showTempMrDropdown: boolean;
+  setShowTempMrDropdown: (show: boolean) => void;
+  tempMrOptions: any[];
   showPoDropdown: boolean;
   setShowPoDropdown: (show: boolean) => void;
   combinedPoOptions: any[];
@@ -22,8 +26,12 @@ export function FinalArrivalEntryHeader({
   formData,
   handleInputChange,
   handleAreaChange,
+  handleSelectTempMrOption,
   handleSelectPoOption,
   loadDetailsFromAmad,
+  showTempMrDropdown,
+  setShowTempMrDropdown,
+  tempMrOptions,
   showPoDropdown,
   setShowPoDropdown,
   combinedPoOptions,
@@ -36,25 +44,38 @@ export function FinalArrivalEntryHeader({
     <div className="bg-white rounded-xl border border-[#FBCFCB] shadow-xs p-4 space-y-3.5 text-xs text-slate-800">
       {/* ROW 1 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 items-end">
-        {/* Temporary M.R No */}
-        <div className="lg:col-span-1">
+        {/* Temporary M.R No - Searchable Dropdown List */}
+        <div className="lg:col-span-1 relative">
           <label className="block text-[11px] font-bold text-slate-700 mb-1">Temporary M.R No</label>
-          <div className="flex items-center gap-1">
-            <input
-              type="text"
-              value={formData.temporary_arrival_no || 'MR'}
-              onChange={(e) => handleInputChange('temporary_arrival_no', e.target.value)}
-              onBlur={() => {
-                if (formData.temporary_arrival_no) loadDetailsFromAmad(formData.temporary_arrival_no);
-              }}
-              placeholder="Enter Temporary M.R No"
-              className={cn(
-                "w-full h-8 rounded px-2 outline-none text-xs font-mono focus:ring-1 focus:ring-sky-600 transition-colors",
-                formData.temporary_arrival_no 
-                  ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
-                  : "bg-white border border-slate-300 font-semibold"
-              )}
-            />
+          <div className="flex items-center gap-1 relative">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={formData.temporary_arrival_no || ''}
+                onChange={(e) => {
+                  handleInputChange('temporary_arrival_no', e.target.value.toUpperCase());
+                  setShowTempMrDropdown(true);
+                }}
+                onFocus={() => setShowTempMrDropdown(true)}
+                onBlur={() => setTimeout(() => setShowTempMrDropdown(false), 200)}
+                placeholder="-- SELECT TEMP M.R --"
+                className={cn(
+                  "w-full h-8 rounded px-2 pr-6 outline-none text-xs font-mono uppercase focus:ring-1 focus:ring-sky-600 transition-colors",
+                  formData.temporary_arrival_no 
+                    ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
+                    : "bg-white border border-slate-300 font-semibold"
+                )}
+              />
+              <div
+                className="absolute right-1 top-0 bottom-0 w-5 flex items-center justify-center cursor-pointer text-slate-500 hover:text-slate-800"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setShowTempMrDropdown(!showTempMrDropdown);
+                }}
+              >
+                <ChevronDown size={14} />
+              </div>
+            </div>
             <button
               type="button"
               onClick={() => loadDetailsFromAmad(formData.temporary_arrival_no)}
@@ -62,6 +83,59 @@ export function FinalArrivalEntryHeader({
             >
               Pick
             </button>
+
+            {showTempMrDropdown && (
+              <div className="absolute top-9 left-0 w-[380px] bg-white border border-slate-300 rounded-lg max-h-60 overflow-y-auto z-[9999] shadow-xl">
+                {(() => {
+                  const search = (formData.temporary_arrival_no || '').trim().toLowerCase();
+                  const filteredTempMr = tempMrOptions.filter(opt =>
+                    !search ||
+                    (opt.temp_mr_no || '').toLowerCase().includes(search) ||
+                    (opt.po_no || '').toLowerCase().includes(search) ||
+                    (opt.supplier || '').toLowerCase().includes(search) ||
+                    (opt.lorry_number || '').toLowerCase().includes(search) ||
+                    (opt.display_label || '').toLowerCase().includes(search)
+                  );
+
+                  if (filteredTempMr.length === 0) {
+                    return (
+                      <div className="p-3 text-xs text-slate-500 italic text-center">
+                        No matching Temporary M.R records found
+                      </div>
+                    );
+                  }
+
+                  return filteredTempMr.map((opt, idx) => (
+                    <div
+                      key={opt.id || idx}
+                      className="px-3 py-2 text-xs font-mono cursor-pointer hover:bg-emerald-50 border-b border-slate-100 last:border-b-0 flex flex-col gap-0.5"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectTempMrOption(opt);
+                      }}
+                    >
+                      <div className="flex items-center justify-between font-bold text-slate-800">
+                        <span className="flex items-center gap-1.5">
+                          <span>{opt.temp_mr_no}</span>
+                          {opt.po_no && (
+                            <span className="text-emerald-700 font-semibold text-[11px] bg-emerald-50 px-1 rounded">
+                              PO #{opt.po_no}
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-normal">
+                          ✨ From Temporary MR
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-600 flex items-center justify-between">
+                        <span className="truncate">{opt.supplier}</span>
+                        {opt.lorry_number && <span className="font-semibold text-slate-700 shrink-0">🚛 {opt.lorry_number}</span>}
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            )}
           </div>
         </div>
 
@@ -81,13 +155,40 @@ export function FinalArrivalEntryHeader({
           />
         </div>
 
-        {/* Arrival No */}
+        {/* Arrival No (Fixed MR0 prefix + user number input) */}
         <div>
           <label className="block text-[11px] font-bold text-slate-700 mb-1">Arrival No</label>
           <input
             type="text"
-            value={formData.arrival_no || ''}
+            value={
+              formData.arrival_no?.startsWith('MR0')
+                ? formData.arrival_no
+                : `MR0${String(formData.arrival_no || '').replace(/^(MR0?|AR0?|FA-?)/i, '').replace(/[^0-9]/g, '')}`
+            }
             onChange={(e) => handleInputChange('arrival_no', e.target.value)}
+            onKeyDown={(e) => {
+              const target = e.currentTarget;
+              const start = target.selectionStart ?? 0;
+              const end = target.selectionEnd ?? 0;
+              if ((e.key === 'Backspace' && start <= 3 && end <= 3) || (e.key === 'Delete' && start < 3)) {
+                e.preventDefault();
+              }
+            }}
+            onClick={(e) => {
+              const target = e.currentTarget;
+              if ((target.selectionStart ?? 0) < 3) {
+                target.setSelectionRange(3, Math.max(3, target.selectionEnd ?? 3));
+              }
+            }}
+            onFocus={(e) => {
+              const target = e.currentTarget;
+              setTimeout(() => {
+                if ((target.selectionStart ?? 0) < 3) {
+                  const len = target.value.length;
+                  target.setSelectionRange(len, len);
+                }
+              }, 0);
+            }}
             className="w-full h-8 bg-red-50/30 border border-red-500 rounded px-2 outline-none text-xs font-mono font-bold text-red-600 focus:border-red-700"
           />
         </div>
@@ -103,17 +204,20 @@ export function FinalArrivalEntryHeader({
           />
         </div>
 
-        {/* MR / P.O No. */}
+        {/* P.O No. */}
         <div className="relative">
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">MR / P.O No.</label>
+          <label className="block text-[11px] font-bold text-slate-700 mb-1">P.O No.</label>
           <div className="relative">
             <input
               type="text"
               value={formData.po_no || ''}
-              onChange={(e) => handleInputChange('po_no', e.target.value)}
+              onChange={(e) => {
+                handleInputChange('po_no', e.target.value);
+                setShowPoDropdown(true);
+              }}
               onFocus={() => setShowPoDropdown(true)}
               onBlur={() => setTimeout(() => setShowPoDropdown(false), 200)}
-              placeholder="-- SELECT MR / P.O --"
+              placeholder="-- SELECT P.O. --"
               className={cn(
                 "w-full h-8 rounded px-2 outline-none text-xs font-mono uppercase pr-6 transition-colors",
                 formData.po_no 
@@ -127,43 +231,58 @@ export function FinalArrivalEntryHeader({
             >
               <ChevronDown size={14} />
             </div>
-            {showPoDropdown && combinedPoOptions.length > 0 && (
-              <div className="absolute top-9 left-0 w-[420px] bg-white border border-slate-300 rounded-lg max-h-60 overflow-y-auto z-[9999] shadow-xl">
-                {combinedPoOptions
-                  .filter(opt => 
-                    !formData.po_no || 
-                    opt.po_no.toLowerCase().includes(formData.po_no.toLowerCase()) || 
-                    opt.temp_mr_no.toLowerCase().includes(formData.po_no.toLowerCase()) ||
-                    opt.display_label.toLowerCase().includes(formData.po_no.toLowerCase())
-                  )
-                  .map((opt, idx) => (
+            {showPoDropdown && (
+              <div className="absolute top-9 left-0 w-[420px] bg-white border-2 border-indigo-600 rounded-lg max-h-60 overflow-y-auto z-[9999] shadow-2xl">
+                {(() => {
+                  const search = (formData.po_no || '').trim().toLowerCase();
+                  const filteredPos = combinedPoOptions.filter(opt =>
+                    !search ||
+                    String(opt.po_no || '').toLowerCase().includes(search) ||
+                    String(opt.supplier || '').toLowerCase().includes(search) ||
+                    String(opt.broker || '').toLowerCase().includes(search) ||
+                    String(opt.temp_mr_no || '').toLowerCase().includes(search) ||
+                    String(opt.display_label || '').toLowerCase().includes(search)
+                  );
+
+                  if (filteredPos.length === 0) {
+                    return (
+                      <div className="p-3 text-xs text-slate-500 italic text-center">
+                        No matching P.O. records found
+                      </div>
+                    );
+                  }
+
+                  return filteredPos.map((opt, idx) => (
                     <div
                       key={opt.id || idx}
-                      className="px-3 py-2 text-xs font-mono cursor-pointer hover:bg-emerald-50 border-b border-slate-100 last:border-b-0 flex flex-col gap-0.5"
+                      className="px-2.5 py-1.5 text-xs font-mono cursor-pointer hover:bg-indigo-50 hover:text-indigo-900 uppercase border-b border-slate-100 last:border-b-0 transition-colors"
                       onMouseDown={(e) => {
                         e.preventDefault();
                         handleSelectPoOption(opt);
                       }}
                     >
-                      <div className="flex items-center justify-between font-bold text-slate-800">
+                      <div className="flex items-center justify-between font-bold text-indigo-950">
                         <span className="flex items-center gap-1.5">
-                          <span>{opt.po_no}</span>
-                          {opt.temp_mr_no && opt.temp_mr_no !== opt.po_no && (
-                            <span className="text-emerald-700 font-semibold text-[11px] bg-emerald-50 px-1 rounded">
-                              Temp MR #{opt.temp_mr_no}
+                          <span>P.O. #{opt.po_no}</span>
+                          {opt.is_reopened ? (
+                            <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 font-sans font-bold">
+                              REOPENED ({opt.received_lorries || 0}/{opt.contract_lorries || 1} Lorry)
+                            </span>
+                          ) : (
+                            <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 font-sans normal-case">
+                              Sauda Check Point
                             </span>
                           )}
                         </span>
-                        <span className="text-[10px] text-slate-500 font-normal">
-                          {opt.source === 'temporary_material_received' ? '✨ From Temporary MR' : '📋 PO Entry'}
-                        </span>
+                        <span className="text-[10px] text-slate-500 font-normal">{opt.po_date || ''}</span>
                       </div>
-                      <div className="text-[11px] text-slate-600 flex items-center justify-between">
-                        <span>{opt.supplier}</span>
-                        {opt.lorry_number && <span className="font-semibold text-slate-700">🚛 {opt.lorry_number}</span>}
+                      <div className="text-[11px] text-slate-600 flex items-center justify-between gap-2 mt-0.5">
+                        <span className="truncate">Supp: <strong className="text-slate-800">{opt.supplier || 'N/A'}</strong></span>
+                        <span className="shrink-0 font-semibold text-emerald-700">{opt.total_contract_mt || opt.quantity || 0} MT</span>
                       </div>
                     </div>
-                  ))}
+                  ));
+                })()}
               </div>
             )}
           </div>

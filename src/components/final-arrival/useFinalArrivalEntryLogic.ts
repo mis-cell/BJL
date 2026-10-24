@@ -15,6 +15,7 @@ interface UseFinalArrivalEntryLogicProps {
 
 export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArrivalEntryLogicProps) {
   const [loading, setLoading] = useState(false);
+  const [showTempMrDropdown, setShowTempMrDropdown] = useState(false);
   const [showPoDropdown, setShowPoDropdown] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -133,9 +134,15 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
   const [details, setDetails] = useState<ArrivalDetailRow[]>(() => getPaddedDetails(initialData));
 
   const [formData, setFormData] = useState<FinalArrivalEntryFormData>(() => {
+    const rawInitArrNo = initialData?.final_arrival_no || initialData?.arrival_no || '';
+    const formattedArrNo = rawInitArrNo
+      ? (String(rawInitArrNo).toUpperCase().startsWith('MR0')
+          ? String(rawInitArrNo).toUpperCase()
+          : `MR0${String(rawInitArrNo).replace(/^(MR0?|AR0?|FA-?)/i, '').replace(/[^0-9]/g, '')}`)
+      : 'MR0';
     return {
       financial_year: initialData?.financial_year || '2026-2027',
-      arrival_no: initialData?.final_arrival_no || initialData?.arrival_no || '',
+      arrival_no: formattedArrNo,
       mr_no: initialData?.mr_no || '',
       po_no: initialData?.po_no || '',
       po_date: initialData?.po_date || '',
@@ -208,14 +215,14 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
     loadUnits();
   }, []);
 
-  const combinedPoOptions = useMemo(() => {
+  const tempMrOptions = useMemo(() => {
     const list: any[] = [];
-    
+
     const pendingTempArrivals = (temporaryArrivalList || []).filter((ta: any) => {
       const tempMrVal = String(ta.temporary_arrival_no || ta.amad_no || ta.arrival_no || '').trim().toUpperCase();
       const tempId = String(ta.id || ta.temporary_arrival_id || '').trim().toUpperCase();
 
-      if (!tempMrVal && !tempId) return true;
+      if (!tempMrVal && !tempId) return false;
 
       const isCurrentMatch = initialData && (
         (initialData.temporary_arrival_no && String(initialData.temporary_arrival_no).trim().toUpperCase() === tempMrVal) ||
@@ -240,18 +247,17 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
     pendingTempArrivals.forEach((ta: any, idx: number) => {
       const poVal = (ta.po_no || '').trim().toUpperCase();
       const tempMrVal = (ta.temporary_arrival_no || ta.amad_no || ta.arrival_no || '').trim().toUpperCase();
+      if (!tempMrVal) return;
       const supplierVal = (ta.supplier || ta.challan_supplier || '').trim();
       const lorryVal = (ta.lorry_number || ta.lorry_no || ta.vehicle_no || '').trim();
-      const weightVal = ta.challan_material_weight || ta.quantity || 0;
+      const weightVal = ta.challan_material_weight || ta.weight_reduced || (ta.weight_qtl ? Number(ta.weight_qtl) / 10 : 0) || ta.quantity || 0;
       const dateVal = ta.date || ta.temporary_arrival_date || ta.po_date || '';
 
       list.push({
         id: ta.id || ta.temporary_arrival_id || `temp_${idx}`,
-        po_no: tempMrVal || poVal || `TEMP-${idx + 1}`,
         temp_mr_no: tempMrVal,
-        display_label: tempMrVal 
-          ? `Temp MR #${tempMrVal} ${poVal ? `(PO: ${poVal})` : ''} - ${supplierVal} ${lorryVal ? `[${lorryVal}]` : ''}` 
-          : `${poVal} - ${supplierVal} (${weightVal} MT)`,
+        po_no: poVal,
+        display_label: `Temp MR #${tempMrVal} ${poVal ? `(PO: ${poVal})` : ''} - ${supplierVal} ${lorryVal ? `[${lorryVal}]` : ''}`,
         supplier: supplierVal,
         challan_supplier: ta.challan_supplier || supplierVal,
         broker: ta.broker || '',
@@ -265,6 +271,82 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
 
     return list;
   }, [temporaryArrivalList, existingArrivals, initialData]);
+
+  const combinedPoOptions = useMemo(() => {
+    const poMap = new Map<string, any>();
+
+    // 1. P.O.s from Temporary Arrival Section's active P.O. list (sauda_check_point / purchase_master)
+    (purchaseOrders || []).forEach((po: any, idx: number) => {
+      const poVal = String(po.po_no || '').trim().toUpperCase();
+      if (!poVal) return;
+      if (!poMap.has(poVal)) {
+        const supplierVal = String(po.supplier || po.party_name || po.merchant || '').trim().toUpperCase();
+        const contractMt = Number(po.total_contract_mt || po.quantity || 0);
+        poMap.set(poVal, {
+          id: po.po_id || po.id || `po_${idx}`,
+          po_no: po.po_no,
+          temp_mr_no: '',
+          display_label: `P.O. #${po.po_no} - ${supplierVal} (${contractMt} MT)`,
+          supplier: supplierVal,
+          challan_supplier: String(po.challan_supplier || supplierVal).trim().toUpperCase(),
+          broker: String(po.broker || '').trim().toUpperCase(),
+          area: String(po.area || '').trim().toUpperCase(),
+          lorry_number: '',
+          po_date: po.po_date || po.s_date || po.date || '',
+          total_contract_mt: contractMt,
+          quantity: contractMt,
+          is_reopened: Boolean(po.is_reopened),
+          received_lorries: po.received_lorries || 0,
+          contract_lorries: po.contract_lorries || 1,
+          purchase_unit_code: po.purchase_unit_code || po.unit_code || '',
+          purchase_unit_name: po.purchase_unit_name || po.unit_name || '',
+          ptf: (po.ptf_no || po.is_ptf) ? 'Yes' : 'No',
+          source: 'sauda_check_point',
+          raw_item: po
+        });
+      }
+    });
+
+    // 2. Also include any P.O.s directly referenced in Temporary Arrival records (temporary_material_received)
+    (temporaryArrivalList || []).forEach((ta: any, idx: number) => {
+      const poVal = String(ta.po_no || '').trim().toUpperCase();
+      if (!poVal) return;
+      const tempMrVal = String(ta.temporary_arrival_no || ta.amad_no || ta.arrival_no || '').trim().toUpperCase();
+      const supplierVal = String(ta.supplier || ta.challan_supplier || '').trim().toUpperCase();
+      const lorryVal = String(ta.lorry_number || ta.lorry_no || ta.vehicle_no || '').trim();
+      const weightVal = Number(ta.challan_material_weight || ta.weight_reduced || (ta.weight_qtl ? Number(ta.weight_qtl) / 10 : 0) || ta.quantity || 0);
+      const dateVal = ta.po_date || ta.date || ta.temporary_arrival_date || '';
+
+      if (poMap.has(poVal)) {
+        const existing = poMap.get(poVal);
+        if (!existing.temp_mr_no && tempMrVal) {
+          existing.temp_mr_no = tempMrVal;
+        }
+        if (!existing.lorry_number && lorryVal) {
+          existing.lorry_number = lorryVal;
+        }
+      } else {
+        poMap.set(poVal, {
+          id: ta.id || ta.temporary_arrival_id || `temp_po_${idx}`,
+          po_no: poVal,
+          temp_mr_no: tempMrVal,
+          display_label: `P.O. #${poVal} ${tempMrVal ? `(Temp MR #${tempMrVal})` : ''} - ${supplierVal}`,
+          supplier: supplierVal,
+          challan_supplier: String(ta.challan_supplier || supplierVal).trim().toUpperCase(),
+          broker: String(ta.broker || '').trim().toUpperCase(),
+          area: String(ta.arrival_area_name || '').trim().toUpperCase(),
+          lorry_number: lorryVal,
+          po_date: dateVal,
+          total_contract_mt: weightVal,
+          quantity: weightVal,
+          source: 'temporary_material_received',
+          raw_item: ta
+        });
+      }
+    });
+
+    return Array.from(poMap.values());
+  }, [purchaseOrders, temporaryArrivalList]);
 
   useEffect(() => {
     async function loadMastersAndIncrement() {
@@ -314,22 +396,9 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
         setMarkas(finalMarkas);
 
         if (!initialData) {
-          let nextNum = 502;
-          if (allArrivals && allArrivals.length > 0) {
-            let lastNum = 500;
-            allArrivals.forEach((a: any) => {
-              const an = a.final_arrival_no || '';
-              const num = parseInt(an.replace(/[^0-9]/g, ''), 10);
-              if (!isNaN(num) && num > lastNum) {
-                lastNum = num;
-              }
-            });
-            nextNum = lastNum + 1;
-          }
-          
           setFormData(prev => ({
             ...prev,
-            arrival_no: `FA-${nextNum}`
+            arrival_no: prev.arrival_no && prev.arrival_no.startsWith('MR0') ? prev.arrival_no : 'MR0'
           }));
         }
       } catch (err) {
@@ -408,7 +477,6 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
       setFormData(prev => ({
         ...prev,
         temporary_arrival_no: matchedAmad?.temporary_arrival_no || matchedAmad?.amad_no || matchedInsp?.arrival_no || searchVal,
-        arrival_no: matchedAmad?.temporary_arrival_no || matchedAmad?.amad_no || matchedInsp?.arrival_no || prev.arrival_no,
         mr_no: matchedInsp?.mr_no || matchedAmad?.temporary_arrival_no || prev.mr_no,
         temporary_arrival_date: matchedAmad?.date || matchedAmad?.temporary_arrival_date || matchedInsp?.arrival_date || prev.temporary_arrival_date,
         po_no: finalPoNo || prev.po_no,
@@ -686,7 +754,6 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
         apmc_fees: Number(matchedInspection?.apmc_fees ?? (matchedInspection as any)?.arival_apmc_fees ?? amadData?.apmc_fees ?? (amadData as any)?.arival_apmc_fees ?? prev.apmc_fees ?? 0),
         remarks: matchedInspection?.remarks || amadData?.remarks || prev.remarks,
         temporary_arrival_no: matchedInspection?.arrival_no || amadData?.temporary_arrival_no || amadData?.amad_no || prev.temporary_arrival_no,
-        arrival_no: matchedInspection?.arrival_no || amadData?.temporary_arrival_no || amadData?.amad_no || prev.temporary_arrival_no,
         temporary_arrival_date: matchedInspection?.arrival_date || amadData?.date || prev.temporary_arrival_date,
         challan_material_weight: Number(matchedInspection?.challan_material_weight) || Number(amadData?.challan_material_weight) || Number(prev.challan_material_weight),
         actual_gross_weight: Number(matchedInspection?.actual_gross_weight) || Number(amadData?.actual_gross_weight) || Number(prev.actual_gross_weight),
@@ -923,22 +990,33 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
   };
 
   const handleInputChange = (field: string, val: any) => {
+    let finalVal = val;
+    if (field === 'arrival_no') {
+      const upper = String(val || '').toUpperCase();
+      if (upper.startsWith('MR0')) {
+        finalVal = 'MR0' + upper.slice(3).replace(/[^0-9]/g, '');
+      } else if (upper === 'MR' || upper === 'M' || upper === '') {
+        finalVal = 'MR0';
+      } else {
+        const suffix = upper.replace(/^(MR0?|AR0?|FA-?)/i, '').replace(/[^0-9]/g, '');
+        finalVal = 'MR0' + suffix;
+      }
+    }
+
     setFormData(prev => {
-      const next = { ...prev, [field]: val };
+      const next = { ...prev, [field]: finalVal };
       if (field === 'consignment_note') {
-        next.consignment_note_no = val;
+        next.consignment_note_no = finalVal;
       } else if (field === 'consignment_note_no') {
-        next.consignment_note = val;
+        next.consignment_note = finalVal;
       } else if (field === 'challan_rr_no') {
-        next.challan_railway_receipt_no = val;
+        next.challan_railway_receipt_no = finalVal;
       } else if (field === 'challan_railway_receipt_no') {
-        next.challan_rr_no = val;
-      } else if (field === 'temporary_arrival_no') {
-        next.arrival_no = val;
+        next.challan_rr_no = finalVal;
       }
 
       if (field === 'unit_name') {
-        const uUpper = String(val || '').trim().toUpperCase();
+        const uUpper = String(finalVal || '').trim().toUpperCase();
         const isLoose = uUpper.includes('LOOSE') || uUpper === 'LOOSE';
         setDetails(prevRows => prevRows.map(r => ({
           ...r,
@@ -947,13 +1025,13 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
         })));
       }
 
-      if (field === 'po_no' && val) {
-        const valUpper = String(val).trim().toUpperCase();
+      if (field === 'po_no' && finalVal) {
+        const valUpper = String(finalVal).trim().toUpperCase();
         const matched = purchaseOrders.find(po => String(po.po_no).trim().toUpperCase() === valUpper);
         if (matched) {
           next.po_date = matched.po_date || matched.s_date || matched.date || next.po_date;
-          next.supplier = (matched.supplier || matched.merchant || next.supplier || '').toUpperCase();
-          next.challan_supplier = (matched.challan_supplier || matched.supplier || matched.merchant || next.challan_supplier || '').toUpperCase();
+          next.supplier = (matched.supplier || matched.party_name || matched.merchant || next.supplier || '').toUpperCase();
+          next.challan_supplier = (matched.challan_supplier || matched.supplier || matched.party_name || matched.merchant || next.challan_supplier || '').toUpperCase();
           next.broker = (matched.broker || next.broker || '').toUpperCase();
           next.arrival_area_name = (matched.area || next.arrival_area_name || '').toUpperCase();
           const matchedArea = areas.find(a => String(a.area_name).trim().toUpperCase() === String(matched.area).trim().toUpperCase());
@@ -973,18 +1051,24 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
     });
   };
 
+  const handleSelectTempMrOption = (item: any) => {
+    if (!item || !item.temp_mr_no) return;
+    handleInputChange('temporary_arrival_no', item.temp_mr_no);
+    loadDetailsFromAmad(item.temp_mr_no);
+    setShowTempMrDropdown(false);
+  };
+
   const handleSelectPoOption = (item: any) => {
     handleInputChange('po_no', item.po_no);
     if (item.supplier) handleInputChange('supplier', item.supplier);
     if (item.challan_supplier) handleInputChange('challan_supplier', item.challan_supplier);
     if (item.broker) handleInputChange('broker', item.broker);
     if (item.po_date) handleInputChange('po_date', item.po_date);
-    if (item.lorry_number) handleInputChange('lorry_number', item.lorry_number);
-    
-    if (item.temp_mr_no) {
-      handleInputChange('temporary_arrival_no', item.temp_mr_no);
-      loadDetailsFromAmad(item.temp_mr_no);
-    } else if (item.po_no && !formData.temporary_arrival_no) {
+    if (item.area) handleAreaChange(item.area);
+    if (item.purchase_unit_name) handleInputChange('unit_name', item.purchase_unit_name);
+    if (item.ptf) handleInputChange('ptf', item.ptf);
+
+    if (item.po_no && (!details || details.length === 0 || !details.some(d => d.receipt_grade_name || d.netto_pnto > 0))) {
       loadDetailsFromPo(item.po_no);
     }
     setShowPoDropdown(false);
@@ -1192,7 +1276,8 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
     if (initialData && !enforceEditOrDeletePermission("Edit")) {
       return;
     }
-    if (!formData.arrival_no) {
+    const cleanArrivalNo = String(formData.arrival_no || '').trim().replace(/^MR0?/i, '').trim();
+    if (!formData.arrival_no || !cleanArrivalNo) {
       alert("Arrival No. is mandatory.");
       return;
     }
@@ -1377,6 +1462,10 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
     purchaseOrders,
     temporaryArrivalList,
     unitList,
+    showTempMrDropdown,
+    setShowTempMrDropdown,
+    tempMrOptions,
+    handleSelectTempMrOption,
     showPoDropdown,
     setShowPoDropdown,
     combinedPoOptions,
