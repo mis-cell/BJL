@@ -108,6 +108,7 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
     existingTotalUnits?: string,
     existingUnitsPerLorry?: string
   ) => {
+    if (isPtf) return;
     const norm = normalizeUnitType(unitTypeVal);
     const lorries = Math.max(1, parseFloat(lorriesVal) || 1);
     const rawWeight = parseFloat(weightVal) || 0;
@@ -172,11 +173,20 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
   };
 
   const handleLorriesChange = (val: string) => {
-    setLocalLorries(val);
+     setLocalLorries(val);
+    if (isPtf) {
+      setCalcData(prev => ({
+        ...prev,
+        total_lorries: val
+      }));
+      return;
+    }
+    
+    
     const lorries = Math.max(1, parseFloat(val) || 1);
     const norm = normalizeUnitType(localUnitType);
 
-    if (norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES') {
+    if ( (norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES') && !is_ptf) {
       setLocalTotalUnits('');
       setLocalUnitsPerLorry('');
       return;
@@ -215,7 +225,7 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
     if (onUnitTypeChange) {
       onUnitTypeChange(newUnitName, newWeightUnit);
     }
-
+    if (isPtf) return;
     recomputeUnits(localLorries, localWeight, newUnitName, newWeightUnit);
   };
 
@@ -226,11 +236,25 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
 
   const handleWeightChange = (val: string) => {
     setLocalWeight(val);
+    if (isPtf) {
+      setCalcData(prev => ({
+        ...prev,
+        weight_per_lorry: val
+      }));
+      return;
+    }
     recomputeUnits(localLorries, val, localUnitType, localWeightUnitKgs);
   };
 
   const handleUnitsPerLorryChange = (val: string) => {
     setLocalUnitsPerLorry(val);
+     if (isPtf) {
+      setCalcData(prev => ({
+        ...prev,
+        units_per_lorry: val
+      }));
+      return;
+    }
     const norm = normalizeUnitType(localUnitType);
     if (norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES') return;
 
@@ -257,6 +281,13 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
 
   const handleTotalUnitsChange = (val: string) => {
     setLocalTotalUnits(val);
+    if (isPtf) {
+      setCalcData(prev => ({
+        ...prev,
+        total_units: val
+      }));
+      return;
+    }
     const norm = normalizeUnitType(localUnitType);
     if (norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES') return;
 
