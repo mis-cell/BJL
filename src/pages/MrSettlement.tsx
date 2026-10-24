@@ -12,7 +12,8 @@ import { supabase } from "../lib/supabase";
 import { dbModule } from "../services/dbModule";
 import { cn, sanitizeCsvData } from "../lib/utils";
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isL5OrAdmin } from "../lib/permissions";
-import { findMatchedPoItem, parseGridOrItems } from "../utils/paymentCalculations";
+import { findMatchedPoItem, parseGridOrItems, getColSettRate } from "../utils/paymentCalculations";
+import { setCachedSattaDiffs, getCachedSattaDiffs } from "../services/sattaCalculation";
 import {
   resolveGradeName,
   resolveAgencyName,
@@ -244,6 +245,14 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         });
       }
 
+      // Ensure satta differentials are cached for Sett Rate calculation
+      if (supabase && getCachedSattaDiffs().length === 0) {
+        try {
+          const { data: sattaRes } = await supabase.from('satta_differentials').select('*');
+          if (sattaRes && sattaRes.length > 0) setCachedSattaDiffs(sattaRes);
+        } catch (e) {}
+      }
+
       // Also live-update detailCols if payment has sett_rate for grades
       if (matchedDetailsList.length > 0) {
         setDetailCols(prevCols => prevCols.map(col => {
@@ -256,9 +265,22 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                           return Boolean(pdGrade && colGrade && pdGrade === colGrade);
                         });
           if (match) {
-            const settRate = (match.sett_rate !== undefined && match.sett_rate !== null && Number(match.sett_rate) > 0)
+            const origRate = Number(match.rate_value) > 0 ? Number(match.rate_value) : Number(col.rate_value || 0);
+            const prem = Number(match.premium || 0);
+            const settPct = Number(match.sett_pct) > 0
+              ? Number(match.sett_pct)
+              : (Number(col.gd_claim) > 0 ? Number(col.gd_claim) : Number(col.gd_sett || 0));
+            const calcRate = getColSettRate(
+              { ...col, rate_value: origRate, premium: prem, sett_pct: settPct, all_cols: prevCols } as any,
+              getCachedSattaDiffs()
+            );
+            const pdSettRate = (match.sett_rate !== undefined && match.sett_rate !== null && Number(match.sett_rate) > 0)
               ? Number(match.sett_rate)
-              : (Number(match.rate_value) > 0 ? Number(match.rate_value) - Number(match.deduction_rate || 0) : 0);
+              : (origRate > 0 ? origRate + prem - Number(match.deduction_rate || 0) : 0);
+            const pdDedRate = Number(match.deduction_rate) || 0;
+            const settRate = (pdSettRate > 0 && (pdDedRate > 0 || pdSettRate !== origRate || settPct <= 0))
+              ? pdSettRate
+              : (calcRate > 0 ? calcRate : pdSettRate);
             if (settRate > 0) {
               return { ...col, rate_value: settRate };
             }
@@ -654,12 +676,13 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       if (supabase) {
         // Fetch master registers for lookup (cached in-memory)
         if (!mastersCacheRef.current.gData) {
-          const [gData, agData, mDataList, aData, dData] = await Promise.all([
+          const [gData, agData, mDataList, aData, dData, sattaData] = await Promise.all([
             supabase.from('grade_master').select('*').then(r => r.data || [], () => []),
             supabase.from('agency_master').select('*').then(r => r.data || [], () => []),
             supabase.from('marka_master').select('*').then(r => r.data || [], () => []),
             supabase.from('area_master').select('*').then(r => r.data || [], () => []),
-            supabase.from('deduction_master').select('*').then(r => r.data || [], () => [])
+            supabase.from('deduction_master').select('*').then(r => r.data || [], () => []),
+            supabase.from('satta_differentials').select('*').then(r => r.data || [], () => [])
           ]);
           mastersCacheRef.current = { gData, agData, mDataList, aData, dData };
           setGradeMasterList(gData);
@@ -667,6 +690,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           setMarkaMasterList(mDataList);
           setAreaMasterList(aData);
           setDeductionMasterList(dData);
+          if (sattaData && sattaData.length > 0) {
+            setCachedSattaDiffs(sattaData);
+          }
         }
 
         // 1. Fetch saved settlements & payments
@@ -1437,7 +1463,14 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         inspMaster
       });
 
-      const { totalPaid: syncedPaidAmount, payDetails: matchedPayDetails } = await syncPaymentModuleData(targetMrNo, poNoForDet);
+      if (getCachedSattaDiffs().length === 0) {
+        try {
+          const { data: sattaData } = await supabase.from('satta_differentials').select('*');
+          if (sattaData && sattaData.length > 0) setCachedSattaDiffs(sattaData);
+        } catch (e) {}
+      }
+
+      const { totalPaid: syncedPaidAmount, payDetails: matchedPayDetails } = await syncPaymentModuleData(targetMrNo, effectivePoNo);
 
       // Calculate total Premium Quantity (MT), Premium WT (Qtl), and Premium Amount (₹) from Inspection Details
       let totalPremMt = 0;
@@ -1672,7 +1705,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   merged.wt_quantity = Math.round(arrWtKg / merged.quantity);
                   merged.wt_phota = merged.wt_quantity;
                 }
-                if ((!merged.rate_value || Number(merged.rate_value) === 0) && fallbackCol.rate_value) {
+                if (fallbackCol.rate_value && Number(fallbackCol.rate_value) > 0) {
                   merged.rate_value = fallbackCol.rate_value;
                 }
                 if (merged.gd_sett == null || merged.gd_sett === 0) merged.gd_sett = fallbackCol.gd_sett;

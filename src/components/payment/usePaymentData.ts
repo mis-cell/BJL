@@ -170,6 +170,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
             wt_phota NUMERIC DEFAULT 0,
             wt_quantity NUMERIC DEFAULT 0,
             rate_value NUMERIC DEFAULT 0,
+            premium NUMERIC DEFAULT 0,
             gd_claim NUMERIC DEFAULT 0,
             gd_sett NUMERIC DEFAULT 0,
             gd_rev NUMERIC DEFAULT 0,
@@ -206,6 +207,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
           );
           ALTER TABLE IF EXISTS payment_details DISABLE ROW LEVEL SECURITY;
+          ALTER TABLE IF EXISTS payment_details ADD COLUMN IF NOT EXISTS premium NUMERIC DEFAULT 0;
           ALTER TABLE IF EXISTS payment_details ADD COLUMN IF NOT EXISTS sett_pct NUMERIC DEFAULT 0;
           ALTER TABLE IF EXISTS payment_details ADD COLUMN IF NOT EXISTS deduction_rate NUMERIC DEFAULT 0;
           ALTER TABLE IF EXISTS payment_details ADD COLUMN IF NOT EXISTS sett_rate NUMERIC DEFAULT 0;
@@ -999,7 +1001,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
       });
 
       if (poItems.length > 0) {
-        cols = cols.map((col) => {
+        const colsWithBaseRates = cols.map((col) => {
           if (!col.grade && !col.arr_qty_wt && !col.quantity) return col;
           
           let lineRate = col.rate_value;
@@ -1032,30 +1034,37 @@ export function usePaymentData(onSaveSuccess?: () => void) {
           }
 
           const settPct = getColSettPct(col);
-          const colWithRate = { ...col, rate_value: lineRate, premium: linePremium, sett_pct: settPct, po_items: poItems, all_cols: cols };
-          const ded = getColDeduction(colWithRate, sattaDiffsList, poItems);
-          const sRate = Math.max(0, Number((lineRate + linePremium - ded).toFixed(2)));
-          const qQtl = getColQtyQtl(col);
-          const amt = Number((qQtl * sRate).toFixed(2));
-
           return {
             ...col,
             rate_value: lineRate,
             premium: linePremium,
             sett_pct: settPct,
+            po_items: poItems
+          };
+        });
+
+        cols = colsWithBaseRates.map((col) => {
+          if (!col.grade && !col.arr_qty_wt && !col.quantity) return { ...col, all_cols: colsWithBaseRates };
+          const colWithRate = { ...col, all_cols: colsWithBaseRates };
+          const ded = getColDeduction(colWithRate, sattaDiffsList, poItems);
+          const sRate = Math.max(0, Number(((Number(col.rate_value) || 0) + (Number(col.premium) || 0) - ded).toFixed(2)));
+          const qQtl = getColQtyQtl(col);
+          const amt = Number((qQtl * sRate).toFixed(2));
+
+          return {
+            ...col,
             deduction_rate: ded,
             sett_rate: sRate,
             quantity_qtl: qQtl,
             amount: amt,
-            po_items: poItems,
-            all_cols: cols
+            all_cols: colsWithBaseRates
           };
         });
       } else {
         cols = cols.map(c => ({ ...c, po_items: poItems, all_cols: cols }));
       }
 
-      const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c), 0);
+      const totalColAmt = cols.reduce((sum, c) => sum + getColAmount(c, sattaDiffsList, poItems), 0);
       const grossVal = Math.round(
         totalColAmt > 0
           ? totalColAmt
@@ -1256,50 +1265,57 @@ export function usePaymentData(onSaveSuccess?: () => void) {
 
       const rowsToWrite = detailCols
         .filter(c => c.grade && c.grade.trim() !== '')
-        .map(c => ({
-          voucher_no: masterData.voucher_no,
-          mr_no: masterData.mr_no,
-          col_index: c.col_index,
-          grade: c.grade,
-          area: c.area,
-          agency: c.agency,
-          marka_crop: c.marka_crop,
-          quantity: Number(c.quantity) || 0,
-          arr_qty_wt: Number(c.arr_qty_wt) || 0,
-          min_qty_wt: Number(c.min_qty_wt) || 0,
-          wt_phota: Number(c.wt_phota) || 0,
-          wt_quantity: Number(c.wt_quantity) || 0,
-          rate_value: Number(c.rate_value) || 0,
-          premium: Number(c.premium) || 0,
-          sett_pct: getColSettPct(c),
-          deduction_rate: getColDeduction(c),
-          sett_rate: getColSettRate(c),
-          quantity_qtl: getColQtyQtl(c),
-          amount: getColAmount(c),
-          gd_claim: Number(c.gd_claim) || 0,
-          gd_sett: Number(c.gd_sett) || 0,
-          gd_rev: Number(c.gd_rev) || 0,
-          gd_final: Number(c.gd_final) || 0,
-          moist_claim: Number(c.moist_claim) || 0,
-          moist_sett: Number(c.moist_sett) || 0,
-          moist_rev: Number(c.moist_rev) || 0,
-          moist_final: Number(c.moist_final) || 0,
-          dust_claim: Number(c.dust_claim) || 0,
-          dust_sett: Number(c.dust_sett) || 0,
-          dust_rev: Number(c.dust_rev) || 0,
-          dust_final: Number(c.dust_final) || 0,
-          ncv_claim: Number(c.ncv_claim) || 0,
-          ncv_sett: Number(c.ncv_sett) || 0,
-          ncv_rev: Number(c.ncv_rev) || 0,
-          ncv_final: Number(c.ncv_final) || 0,
-          po_grade_claim: Number(c.po_grade_claim) || 0,
-          po_grade_sett: Number(c.po_grade_sett) || 0,
-          po_grade_rev: Number(c.po_grade_rev) || 0,
-          po_grade_final: Number(c.po_grade_final) || 0,
-          adjust_type: c.adjust_type,
-          remark: c.remark,
-          claim_settlement: Number(c.claim_settlement) || 0
-        }));
+        .map(c => {
+          const colWithCtx = {
+            ...c,
+            po_items: (c.po_items && c.po_items.length > 0) ? c.po_items : activePoItems,
+            all_cols: detailCols
+          };
+          return {
+            voucher_no: masterData.voucher_no,
+            mr_no: masterData.mr_no,
+            col_index: c.col_index,
+            grade: c.grade,
+            area: c.area,
+            agency: c.agency,
+            marka_crop: c.marka_crop,
+            quantity: Number(c.quantity) || 0,
+            arr_qty_wt: Number(c.arr_qty_wt) || 0,
+            min_qty_wt: Number(c.min_qty_wt) || 0,
+            wt_phota: Number(c.wt_phota) || 0,
+            wt_quantity: Number(c.wt_quantity) || 0,
+            rate_value: Number(c.rate_value) || 0,
+            premium: Number(c.premium) || 0,
+            sett_pct: getColSettPct(colWithCtx),
+            deduction_rate: getColDeduction(colWithCtx, sattaDiffsList, activePoItems),
+            sett_rate: getColSettRate(colWithCtx, sattaDiffsList, activePoItems),
+            quantity_qtl: getColQtyQtl(colWithCtx),
+            amount: getColAmount(colWithCtx, sattaDiffsList, activePoItems),
+            gd_claim: Number(c.gd_claim) || 0,
+            gd_sett: Number(c.gd_sett) || 0,
+            gd_rev: Number(c.gd_rev) || 0,
+            gd_final: Number(c.gd_final) || 0,
+            moist_claim: Number(c.moist_claim) || 0,
+            moist_sett: Number(c.moist_sett) || 0,
+            moist_rev: Number(c.moist_rev) || 0,
+            moist_final: Number(c.moist_final) || 0,
+            dust_claim: Number(c.dust_claim) || 0,
+            dust_sett: Number(c.dust_sett) || 0,
+            dust_rev: Number(c.dust_rev) || 0,
+            dust_final: Number(c.dust_final) || 0,
+            ncv_claim: Number(c.ncv_claim) || 0,
+            ncv_sett: Number(c.ncv_sett) || 0,
+            ncv_rev: Number(c.ncv_rev) || 0,
+            ncv_final: Number(c.ncv_final) || 0,
+            po_grade_claim: Number(c.po_grade_claim) || 0,
+            po_grade_sett: Number(c.po_grade_sett) || 0,
+            po_grade_rev: Number(c.po_grade_rev) || 0,
+            po_grade_final: Number(c.po_grade_final) || 0,
+            adjust_type: c.adjust_type,
+            remark: c.remark,
+            claim_settlement: Number(c.claim_settlement) || 0
+          };
+        });
 
       const sqlVal = (v: any) => {
         if (v === null || v === undefined) return 'NULL';
@@ -1335,7 +1351,11 @@ export function usePaymentData(onSaveSuccess?: () => void) {
         if (rowsToWrite.length > 0) {
           const rowsWithId = rowsToWrite.map(r => ({ ...r, payment_id: savedMaster?.payment_id || null }));
           const { error: insErr } = await supabase.from('payment_details').insert(rowsWithId);
-          if (insErr) throw insErr;
+          if (insErr) {
+            for (const r of rowsWithId) {
+              await dbModule.insert('payment_details', r);
+            }
+          }
         }
         if (masterData.mr_no) {
           await supabase.from('final_arrival').update({ payment_status: targetArrivalPaymentStatus }).eq('mr_no', masterData.mr_no);

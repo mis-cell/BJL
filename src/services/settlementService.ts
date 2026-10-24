@@ -4,7 +4,8 @@ import {
   SettlementDetailColumn, 
   emptyDetailColumn 
 } from '../types/settlement.types';
-import { findMatchedPoItem, parseGridOrItems } from '../utils/paymentCalculations';
+import { findMatchedPoItem, parseGridOrItems, getColSettRate } from '../utils/paymentCalculations';
+import { getCachedSattaDiffs } from './sattaCalculation';
 
 export const resolveGradeName = (raw: any, overrideList?: any[]): string => {
   if (!raw && raw !== 0) return '';
@@ -327,8 +328,130 @@ export const buildAlignedSettlementColumns = (
 
   const matchedPoIndices = new Set<number>();
 
+  const applyPaymentSettRates = (
+    cols: SettlementDetailColumn[],
+    rawItemsByCol: Array<{ inspItem?: any; faItem?: any; pDet?: any; payDetail?: any }>
+  ): SettlementDetailColumn[] => {
+    const diffs = getCachedSattaDiffs();
+    const colsWithOrigRates = cols.map((c, i) => {
+      const meta = rawItemsByCol[i] || {};
+      const pd = meta.payDetail;
+      const pDet = meta.pDet;
+      const inspItem = meta.inspItem;
+      const item = meta.faItem || meta.inspItem;
+      const origRate =
+        Number(pd?.rate_value) > 0
+          ? Number(pd.rate_value)
+          : Number(
+              pDet?.rate_qntl ||
+              pDet?.rate_per_mt ||
+              pDet?.rate ||
+              pDet?.rate_mt ||
+              poData?.rate_qntl ||
+              poData?.rate_mt ||
+              poData?.b_rate ||
+              inspItem?.rate ||
+              inspItem?.rate_qntl ||
+              item?.rate_value ||
+              item?.rate ||
+              item?.rate_qntl ||
+              item?.recon_rate_mt ||
+              c.rate_value ||
+              0
+            );
+      return {
+        ...c,
+        rate_value: origRate
+      };
+    });
+
+    return cols.map((col, i) => {
+      const hasData = Boolean(col.grade || Number(col.quantity) > 0 || Number(col.arr_qty_wt) > 0);
+      if (!hasData) return col;
+
+      const meta = rawItemsByCol[i] || {};
+      const pd = meta.payDetail;
+      const pDet = meta.pDet;
+      const inspItem = meta.inspItem;
+      const item = meta.faItem || meta.inspItem;
+
+      const origRate = colsWithOrigRates[i].rate_value;
+      const premium = Number(
+        pd?.premium ??
+        pDet?.premium ??
+        pDet?.premium_amount ??
+        pDet?.prem ??
+        poData?.premium ??
+        0
+      );
+
+      // Extract Grade Down Claim / Sett % using the exact same fields as Payment Operations (mapItemsToDetailCols)
+      const payGdClaim = Number(
+        inspItem?.gd_claim ?? item?.gd_claim ??
+        inspItem?.grade_down_claim ?? item?.grade_down_claim ??
+        inspItem?.claim_grade_down ?? item?.claim_grade_down ??
+        inspItem?.claim_gr_down ?? item?.claim_gr_down ??
+        inspItem?.grade_down_act ?? item?.grade_down_act ??
+        inspItem?.actual_grade_down ?? item?.actual_grade_down ??
+        col.gd_claim ?? 0
+      );
+      const payGdSett = Number(
+        inspItem?.gd_sett ?? item?.gd_sett ??
+        inspItem?.settlement_grade_down ?? item?.settlement_grade_down ??
+        inspItem?.grade_down_sett ?? item?.grade_down_sett ??
+        inspItem?.mill_sett_gr_down ?? item?.mill_sett_gr_down ??
+        col.gd_sett ?? 0
+      );
+
+      let settPct = 0;
+      if (pd && pd.sett_pct !== undefined && pd.sett_pct !== null && String(pd.sett_pct).trim() !== '' && !isNaN(Number(pd.sett_pct)) && Number(pd.sett_pct) > 0) {
+        settPct = Number(pd.sett_pct);
+      } else if (payGdClaim > 0) {
+        settPct = payGdClaim;
+      } else if (payGdSett > 0) {
+        settPct = payGdSett;
+      }
+
+      const colForPaymentCalc: any = {
+        ...col,
+        rate_value: origRate,
+        premium,
+        sett_pct: settPct,
+        gd_claim: payGdClaim,
+        gd_sett: payGdSett,
+        po_items: poDetails || [],
+        all_cols: colsWithOrigRates
+      };
+
+      const calculatedPaymentSettRate = getColSettRate(colForPaymentCalc, diffs, poDetails || []);
+
+      let finalReconRate = origRate;
+      if (pd && pd.sett_rate !== undefined && pd.sett_rate !== null && Number(pd.sett_rate) > 0) {
+        const pdSettRate = Number(pd.sett_rate);
+        const pdDedRate = Number(pd.deduction_rate) || 0;
+        if (pdDedRate > 0 || pdSettRate !== origRate || settPct <= 0) {
+          finalReconRate = pdSettRate;
+        } else if (calculatedPaymentSettRate > 0) {
+          finalReconRate = calculatedPaymentSettRate;
+        } else {
+          finalReconRate = pdSettRate;
+        }
+      } else if (pd && Number(pd.rate_value) > 0 && Number(pd.deduction_rate) > 0) {
+        finalReconRate = Math.max(0, Number((Number(pd.rate_value) + premium - Number(pd.deduction_rate)).toFixed(2)));
+      } else if (calculatedPaymentSettRate > 0) {
+        finalReconRate = calculatedPaymentSettRate;
+      }
+
+      return {
+        ...col,
+        rate_value: finalReconRate
+      };
+    });
+  };
+
   if (arrivalRows.length > 0) {
-    return [1, 2, 3, 4].map(idx => {
+    const rawItemsByCol: Array<{ inspItem?: any; faItem?: any; pDet?: any; payDetail?: any }> = [];
+    const builtCols = [1, 2, 3, 4].map(idx => {
       const arr = arrivalRows[idx - 1] || null;
       if (arr) {
         let matchedPoItem: any = null;
@@ -379,6 +502,13 @@ export const buildAlignedSettlementColumns = (
             return Boolean(pdGrade && arrGrade && pdGrade === arrGrade);
           });
 
+        rawItemsByCol.push({
+          inspItem: arr.inspItem,
+          faItem: arr.faItem,
+          pDet: matchedPoItem,
+          payDetail: matchedPayDetail
+        });
+
         return buildSettlementCol(
           idx,
           arr.inspItem || arr.faItem,
@@ -394,13 +524,17 @@ export const buildAlignedSettlementColumns = (
           matchedPayDetail
         );
       } else {
+        rawItemsByCol.push({});
         return emptyDetailColumn(idx);
       }
     });
+
+    return applyPaymentSettRates(builtCols, rawItemsByCol);
   }
 
   if (poDetails && poDetails.length > 0) {
-    return [1, 2, 3, 4].map(idx => {
+    const rawItemsByCol: Array<{ inspItem?: any; faItem?: any; pDet?: any; payDetail?: any }> = [];
+    const builtCols = [1, 2, 3, 4].map(idx => {
       const pDet = poDetails[idx - 1] || null;
       if (pDet) {
         const matchedPayDetail = (payDetails || []).find(pd => Number(pd.col_index) === idx) ||
@@ -409,6 +543,11 @@ export const buildAlignedSettlementColumns = (
             const poGrade = (resolveGradeName(pDet.grade_name || pDet.quality || pDet.grade, gList) || '').trim().toUpperCase();
             return Boolean(pdGrade && poGrade && pdGrade === poGrade);
           });
+
+        rawItemsByCol.push({
+          pDet,
+          payDetail: matchedPayDetail
+        });
 
         return buildSettlementCol(
           idx,
@@ -425,8 +564,11 @@ export const buildAlignedSettlementColumns = (
           matchedPayDetail
         );
       }
+      rawItemsByCol.push({});
       return emptyDetailColumn(idx);
     });
+
+    return applyPaymentSettRates(builtCols, rawItemsByCol);
   }
 
   return [1, 2, 3, 4].map(idx => emptyDetailColumn(idx));
