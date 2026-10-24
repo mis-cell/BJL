@@ -40,6 +40,10 @@ export interface PurchaseOrderRegisterViewProps {
   onClose?: () => void;
   statusFilter: 'all' | 'pending' | 'completed' | 'short' | 'excess' | 'cancelled';
   setStatusFilter: (status: any) => void;
+  lorryStatusFilter?: 'all' | 'open' | 'closed';
+  setLorryStatusFilter?: (status: 'all' | 'open' | 'closed') => void;
+  wtStatusFilter?: 'all' | 'pending_arrival' | 'tolerable' | 'short' | 'excess';
+  setWtStatusFilter?: (status: 'all' | 'pending_arrival' | 'tolerable' | 'short' | 'excess') => void;
   totalPendingPos: number;
   totalGeneratedPos: number;
   totalCompletedPos: number;
@@ -100,6 +104,10 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
   onClose,
   statusFilter,
   setStatusFilter,
+  lorryStatusFilter = 'all',
+  setLorryStatusFilter,
+  wtStatusFilter = 'all',
+  setWtStatusFilter,
   totalPendingPos,
   totalGeneratedPos,
   totalCompletedPos,
@@ -154,6 +162,20 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
   allInspections = []
 }) => {
   const [histogramModalPo, setHistogramModalPo] = useState<any | null>(null);
+  const [localLorryFilter, setLocalLorryFilter] = useState<'all' | 'open' | 'closed'>('all');
+  const [localWtFilter, setLocalWtFilter] = useState<'all' | 'pending_arrival' | 'tolerable' | 'short' | 'excess'>('all');
+
+  const activeLorryFilter = setLorryStatusFilter ? lorryStatusFilter : localLorryFilter;
+  const updateLorryFilter = (val: 'all' | 'open' | 'closed') => {
+    if (setLorryStatusFilter) setLorryStatusFilter(val);
+    else setLocalLorryFilter(val);
+  };
+
+  const activeWtFilter = setWtStatusFilter ? wtStatusFilter : localWtFilter;
+  const updateWtFilter = (val: 'all' | 'pending_arrival' | 'tolerable' | 'short' | 'excess') => {
+    if (setWtStatusFilter) setWtStatusFilter(val);
+    else setLocalWtFilter(val);
+  };
 
   const normalizeDateYMD = (d: any) => {
     if (!d) return '';
@@ -184,109 +206,169 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
     return 13500;
   };
 
+  const handleRowDoubleClick = (item: any) => {
+    const isVoid = item.status === 'cancelled';
+    if (isVoid) return;
+
+    const userCtx = getCurrentUserContext();
+    const isUser002Only = isUserId2(userCtx) && !isLevel4OrAbove(userCtx);
+    if (isUser002Only && isTempPo) {
+      return;
+    }
+
+    const currentUserRole = (userCtx?.userRole || (userCtx as any)?.role || 'USER').toUpperCase();
+    const currentUserLevel = (userCtx?.userLevel || (userCtx as any)?.level || 'L1').toUpperCase();
+    const isAdminUser =
+      isUserAdmin(userCtx) ||
+      currentUserRole === 'ADMIN' ||
+      currentUserRole === 'ADMINISTRATOR' ||
+      Boolean((userCtx as any)?.isAdmin) ||
+      currentUserLevel === 'ADMIN' ||
+      currentUserLevel === 'L5' ||
+      isL5OrAdmin();
+
+    const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
+    const receivedLorries = item.received_lorries || 0;
+    const isClosed =
+      !item.is_reopened &&
+      Boolean(item.is_closed || item.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
+
+    if (isClosed && !isAdminUser) {
+      if (setClosedNoticePo) setClosedNoticePo(item);
+      return;
+    }
+
+    handleLoadSelectedPo(item);
+  };
+
+  const handleResetAllFilters = () => {
+    setSearchTerm('');
+    setStartDate('');
+    setEndDate('');
+    setStatusFilter('all');
+    updateLorryFilter('all');
+    updateWtFilter('all');
+    if (setSelectedMonth) setSelectedMonth(null);
+  };
+
+  const paginatedPos = sortedPos.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
-    <div className="space-y-2.5">
-      {/* Top Stat Cards & Chart layout (Colour Full as per card titles) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-        {/* Card 1: Active Pending P.O. (Light Rose) */}
-        <div 
+    <div className="space-y-2">
+      {/* Top KPI Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        {/* Card 1: Active Pending P.O. */}
+        <div
           onClick={() => setStatusFilter('pending')}
-          className={`rounded-xl p-3 shadow-xs hover:shadow-md transition-all flex items-center justify-between cursor-pointer border ${
-            statusFilter === 'pending' 
-              ? 'bg-rose-100/90 border-rose-400 ring-2 ring-rose-400/50 scale-[1.02]' 
-              : 'bg-gradient-to-br from-rose-50 via-white to-rose-50/60 border-rose-200 hover:-translate-y-0.5'
-          }`}
+          className={cn(
+            'rounded-xl px-3 py-2 shadow-2xs hover:shadow-xs transition-all flex items-center justify-between cursor-pointer border',
+            statusFilter === 'pending'
+              ? 'bg-rose-100/90 border-rose-400 ring-1 ring-rose-400/50'
+              : 'bg-gradient-to-br from-rose-50 via-white to-rose-50/60 border-rose-200'
+          )}
           title="Filter table by Active Pending P.O."
         >
           <div>
-            <p className="text-[10px] font-extrabold text-rose-700 uppercase tracking-wider mb-0.5">Active Pending P.O.</p>
-            <p className="text-xl sm:text-2xl font-black text-rose-950 font-mono tracking-tight">{totalPendingPos}</p>
+            <p className="text-[10px] font-extrabold text-rose-700 uppercase tracking-wider">Active Pending P.O.</p>
+            <p className="text-lg sm:text-xl font-black text-rose-950 font-mono tabular-nums tracking-tight">{totalPendingPos}</p>
           </div>
-          <div className="p-2.5 bg-rose-100/80 border border-rose-200 rounded-xl text-rose-600 shadow-xs">
-            <Clock className="h-5 w-5" />
+          <div className="p-2 bg-rose-100/80 border border-rose-200 rounded-lg text-rose-600">
+            <Clock className="h-4 w-4" />
           </div>
         </div>
 
-        {/* Card 2: Total Generated POs (Light Indigo/Blue) */}
-        <div 
+        {/* Card 2: Total Generated POs */}
+        <div
           onClick={() => setStatusFilter('all')}
-          className={`rounded-xl p-3 shadow-xs hover:shadow-md transition-all flex items-center justify-between cursor-pointer border ${
-            statusFilter === 'all' 
-              ? 'bg-blue-100/90 border-blue-400 ring-2 ring-blue-400/50 scale-[1.02]' 
-              : 'bg-gradient-to-br from-blue-50 via-white to-indigo-50/60 border-blue-200 hover:-translate-y-0.5'
-          }`}
+          className={cn(
+            'rounded-xl px-3 py-2 shadow-2xs hover:shadow-xs transition-all flex items-center justify-between cursor-pointer border',
+            statusFilter === 'all'
+              ? 'bg-blue-100/90 border-blue-400 ring-1 ring-blue-400/50'
+              : 'bg-gradient-to-br from-blue-50 via-white to-indigo-50/60 border-blue-200'
+          )}
           title="Show all generated P.O records"
         >
           <div>
-            <p className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider mb-0.5">Total Generated POs</p>
-            <p className="text-xl sm:text-2xl font-black text-blue-950 font-mono tracking-tight">{totalGeneratedPos}</p>
+            <p className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider">Total Generated POs</p>
+            <p className="text-lg sm:text-xl font-black text-blue-950 font-mono tabular-nums tracking-tight">{totalGeneratedPos}</p>
           </div>
-          <div className="p-2.5 bg-blue-100/80 border border-blue-200 rounded-xl text-blue-600 shadow-xs">
-            <ClipboardList className="h-5 w-5" />
+          <div className="p-2 bg-blue-100/80 border border-blue-200 rounded-lg text-blue-600">
+            <ClipboardList className="h-4 w-4" />
           </div>
         </div>
 
-        {/* Card 3: Cumulative PO Weight (Light Emerald/Teal) */}
-        <div className="bg-gradient-to-br from-emerald-50 via-white to-teal-50/60 rounded-xl p-3 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center justify-between border border-emerald-200">
+        {/* Card 3: Cumulative PO Weight */}
+        <div className="bg-gradient-to-br from-emerald-50 via-white to-teal-50/60 rounded-xl px-3 py-2 shadow-2xs flex items-center justify-between border border-emerald-200">
           <div>
-            <p className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider mb-0.5">Cumulative PO Weight</p>
-            <p className="text-xl sm:text-2xl font-black text-emerald-950 font-mono tracking-tight">
-              {cumulativeWeight.toFixed(2)} <span className="text-xs font-bold text-emerald-700">Tons</span>
+            <p className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider">Cumulative PO Weight</p>
+            <p className="text-lg sm:text-xl font-black text-emerald-950 font-mono tabular-nums tracking-tight">
+              {cumulativeWeight.toFixed(2)} <span className="text-xs font-bold text-emerald-700">MT</span>
             </p>
           </div>
-          <div className="p-2.5 bg-emerald-100/80 border border-emerald-200 rounded-xl text-emerald-600 shadow-xs">
-            <TrendingUp className="h-5 w-5" />
+          <div className="p-2 bg-emerald-100/80 border border-emerald-200 rounded-lg text-emerald-600">
+            <TrendingUp className="h-4 w-4" />
           </div>
         </div>
 
-        {/* Card 4: Status Mix (Light Purple/Violet) */}
-        <div className="bg-gradient-to-br from-purple-50 via-white to-indigo-50/60 rounded-xl p-3 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center justify-between gap-2 border border-purple-200">
+        {/* Card 4: Status Mix */}
+        <div className="bg-gradient-to-br from-purple-50 via-white to-indigo-50/60 rounded-xl px-3 py-1.5 shadow-2xs flex items-center justify-between gap-2 border border-purple-200">
           <div className="flex-1 min-w-[85px]">
-            <p className="text-[10px] font-extrabold text-purple-700 uppercase tracking-wider mb-1">Status Mix</p>
-            <div className="space-y-1">
-              <button 
+            <p className="text-[10px] font-extrabold text-purple-700 uppercase tracking-wider mb-0.5">Status Mix</p>
+            <div className="flex flex-wrap gap-1">
+              <button
                 onClick={() => setStatusFilter('pending')}
-                className={`flex items-center gap-1.5 px-2 py-0.5 rounded transition-all cursor-pointer text-left w-full text-xs font-bold ${
-                  statusFilter === 'pending' ? 'bg-rose-600 text-white shadow-xs' : 'bg-rose-50 text-rose-800 border border-rose-200/80 hover:bg-rose-100'
-                }`}
-                title="Filter by Pending"
+                className={cn(
+                  'flex items-center gap-1 px-1.5 py-0.5 rounded transition-all cursor-pointer text-[10px] font-bold',
+                  statusFilter === 'pending'
+                    ? 'bg-amber-600 text-white shadow-2xs'
+                    : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+                )}
               >
-                <span className={`w-2 h-2 rounded-full inline-block ${statusFilter === 'pending' ? 'bg-white' : 'bg-rose-500'}`} />
-                <span className="truncate">Pending ({totalPendingPos})</span>
+                <span className={cn('w-1.5 h-1.5 rounded-full', statusFilter === 'pending' ? 'bg-white' : 'bg-amber-500')} />
+                <span>Pending ({totalPendingPos})</span>
               </button>
-              <button 
+              <button
                 onClick={() => setStatusFilter('completed')}
-                className={`flex items-center gap-1.5 px-2 py-0.5 rounded transition-all cursor-pointer text-left w-full text-xs font-bold ${
-                  statusFilter === 'completed' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80 hover:bg-emerald-100'
-                }`}
-                title="Filter by Completed"
+                className={cn(
+                  'flex items-center gap-1 px-1.5 py-0.5 rounded transition-all cursor-pointer text-[10px] font-bold',
+                  statusFilter === 'completed'
+                    ? 'bg-emerald-600 text-white shadow-2xs'
+                    : 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
+                )}
               >
-                <span className={`w-2 h-2 rounded-full inline-block ${statusFilter === 'completed' ? 'bg-white' : 'bg-emerald-500'}`} />
-                <span className="truncate">Completed ({totalCompletedPos})</span>
+                <span className={cn('w-1.5 h-1.5 rounded-full', statusFilter === 'completed' ? 'bg-white' : 'bg-emerald-500')} />
+                <span>Completed ({totalCompletedPos})</span>
               </button>
             </div>
           </div>
-          <div className="w-14 h-11 relative flex justify-center items-center shrink-0">
+          <div className="w-12 h-10 relative flex justify-center items-center shrink-0">
             {scopedPos.length === 0 ? (
               <div className="text-purple-400 text-[8.5px] font-bold">No Data</div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%" minWidth={80} minHeight={44}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={48} minHeight={38}>
                 <PieChart>
                   <Pie
                     data={statusPieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={9}
-                    outerRadius={18}
+                    innerRadius={8}
+                    outerRadius={16}
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    {statusPieData.map((entry, index) => (
+                    {statusPieData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={STATUS_COLORS[index]} stroke="#c084fc" strokeWidth={1} />
                     ))}
                   </Pie>
-                  <RechartsTooltip 
-                    contentStyle={{ background: '#ffffff', border: '1px solid #c084fc', color: '#1e1b4b', fontSize: '9px', borderRadius: '8px', padding: '2px 6px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                  <RechartsTooltip
+                    contentStyle={{
+                      background: '#ffffff',
+                      border: '1px solid #c084fc',
+                      color: '#1e1b4b',
+                      fontSize: '9px',
+                      borderRadius: '8px',
+                      padding: '2px 6px'
+                    }}
                     itemStyle={{ padding: 0, color: '#1e1b4b' }}
                     formatter={(value: any, name: any) => [`${value} POs`, name]}
                   />
@@ -297,805 +379,1045 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
         </div>
       </div>
 
-      {/* Register Search and Mode Controls */}
-      <div className="bg-white border border-slate-200 rounded-xl p-2.5 shadow-xs flex flex-wrap items-center gap-2 justify-between">
-        {/* Search Box */}
-        <div className="relative flex-1 min-w-[200px] sm:min-w-[240px]">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-          <input  id="search_by_po_no_broker_na_2911" name="search_by_po_no_broker_na" aria-label="Search by PO No, Broker Name, Supplier Name, Station/Area..."
-            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#F7AFA8]/20 focus:border-[#F7AFA8] transition-all" 
-            placeholder="Search by PO No, Broker Name, Supplier Name, Station/Area..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      {/* Compact Single-Row / Dual-Zone Search & Filter Toolbar */}
+      <div className="bg-white border border-slate-200 rounded-xl p-2 shadow-2xs flex flex-wrap items-center justify-between gap-1.5">
+        {/* Left: Search + Dropdown Filters + Date Range + Search/Reset */}
+        <div className="flex flex-wrap items-center gap-1.5 flex-1">
+          {/* Search by PO/PTF No or Broker */}
+          <div className="relative min-w-[200px] sm:w-[230px] flex-1 sm:flex-none">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <input
+              id="search_by_po_no_broker_na_2911"
+              name="search_by_po_no_broker_na"
+              aria-label="Search by PO/PTF No or Broker..."
+              className="w-full pl-7 pr-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#D94B5A] focus:border-[#D94B5A] transition-all"
+              placeholder="Search PO / PTF No or Broker..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Date Range Filter */}
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-0.5 text-[11px]">
+            <span className="text-[9px] font-bold text-slate-500 uppercase">From</span>
+            <input
+              id="startdate_2921"
+              name="startdate"
+              aria-label="From Date"
+              type="date"
+              className="bg-white border border-slate-200 rounded px-1 py-0.5 text-[11px] font-semibold text-slate-800 outline-none focus:border-[#D94B5A]"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+            <span className="text-[9px] font-bold text-slate-500 uppercase">To</span>
+            <input
+              id="enddate_2923"
+              name="enddate"
+              aria-label="To Date"
+              type="date"
+              className="bg-white border border-slate-200 rounded px-1 py-0.5 text-[11px] font-semibold text-slate-800 outline-none focus:border-[#D94B5A]"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+
+          {/* Status Filter */}
+          <select
+            aria-label="Status Filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-bold text-slate-700 outline-none focus:border-[#D94B5A] cursor-pointer"
+            title="Filter by Status"
+          >
+            <option value="all">Status: All ({totalGeneratedPos})</option>
+            <option value="pending">Pending ({totalPendingPos})</option>
+            <option value="completed">Completed ({totalCompletedPos})</option>
+            <option value="short">Short Wt ({totalShortPos})</option>
+            <option value="excess">Excess Wt ({totalExcessPos})</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+
+          {/* Lorry Status Filter */}
+          <select
+            aria-label="Lorry Status Filter"
+            value={activeLorryFilter}
+            onChange={(e) => updateLorryFilter(e.target.value as any)}
+            className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-bold text-slate-700 outline-none focus:border-[#D94B5A] cursor-pointer"
+            title="Filter by Lorry Status"
+          >
+            <option value="all">Lorry: All</option>
+            <option value="open">Lorry: Open</option>
+            <option value="closed">Lorry: Closed</option>
+          </select>
+
+          {/* WT Status Filter */}
+          <select
+            aria-label="WT Status Filter"
+            value={activeWtFilter}
+            onChange={(e) => updateWtFilter(e.target.value as any)}
+            className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-bold text-slate-700 outline-none focus:border-[#D94B5A] cursor-pointer"
+            title="Filter by Weight Status"
+          >
+            <option value="all">WT Status: All</option>
+            <option value="pending_arrival">Pending Arrival</option>
+            <option value="tolerable">Tolerable</option>
+            <option value="short">Short Weight</option>
+            <option value="excess">Excess Weight</option>
+          </select>
+
+          {/* Search & Reset Buttons */}
+          <button
+            type="button"
+            onClick={() => setCurrentPage(1)}
+            className="bg-slate-800 hover:bg-slate-900 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+            title="Apply Search & Filters"
+          >
+            <Search className="h-3 w-3" />
+            <span>Search</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleResetAllFilters}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer"
+            title="Reset all search and filter criteria"
+          >
+            <X className="h-3 w-3" />
+            <span>Reset</span>
+          </button>
         </div>
 
-        {/* Beside Search Box: New Manual P.O (PTF) & Status Filter Buttons */}
-        <div className="flex items-center gap-2 flex-wrap shrink-0">
+        {/* Right: Primary Action Buttons (New Manual P.O, Export Excel, Refresh) */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {isTempPo && (
             <button
+              type="button"
               onClick={handleGlobalAdd}
-              className="bg-[#F7AFA8] hover:bg-[#D94B5A] text-white px-3 py-1.5 rounded-lg font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 whitespace-nowrap"
-              title="Create empty PTF PO directly"
+              className="bg-[#D94B5A] hover:bg-[#be3b49] text-white px-2.5 py-1 rounded-lg font-bold text-[11px] shadow-2xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap"
+              title="Create Manual P.O (PTF)"
             >
-              <Plus className="w-3.5 h-3.5 text-emerald-300" />
+              <Plus className="w-3.5 h-3.5 text-white" />
               <span>New Manual P.O (PTF)</span>
             </button>
           )}
 
-          {/* Status Filter Toggle Options */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg gap-0.5 border border-slate-200 shrink-0">
-            <button
-              onClick={() => setStatusFilter('all')}
-              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                statusFilter === 'all'
-                  ? 'bg-slate-900 text-white shadow-2xs font-extrabold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-              title="Show all Purchase Orders"
-            >
-              All ({totalGeneratedPos})
-            </button>
-            <button
-              onClick={() => setStatusFilter('pending')}
-              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                statusFilter === 'pending'
-                  ? 'bg-rose-600 text-white shadow-2xs font-extrabold'
-                  : 'text-slate-600 hover:text-rose-700'
-              }`}
-              title="Show only Active Pending Purchase Orders"
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'pending' ? 'bg-white' : 'bg-rose-500'}`} />
-              Pending ({totalPendingPos})
-            </button>
-            <button
-              onClick={() => setStatusFilter('completed')}
-              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                statusFilter === 'completed'
-                  ? 'bg-emerald-600 text-white shadow-2xs font-extrabold'
-                  : 'text-slate-600 hover:text-emerald-800'
-              }`}
-              title="Show Completed / Fully Received Purchase Orders"
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'completed' ? 'bg-white' : 'bg-emerald-500'}`} />
-              Completed ({totalCompletedPos})
-            </button>
-            <button
-              onClick={() => setStatusFilter('short')}
-              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                statusFilter === 'short'
-                  ? 'bg-amber-600 text-white shadow-2xs font-extrabold'
-                  : 'text-slate-600 hover:text-amber-800'
-              }`}
-              title="Show Short Weight Purchase Orders"
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'short' ? 'bg-white' : 'bg-amber-500'}`} />
-              Short Wt ({totalShortPos})
-            </button>
-            <button
-              onClick={() => setStatusFilter('excess')}
-              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                statusFilter === 'excess'
-                  ? 'bg-blue-600 text-white shadow-2xs font-extrabold'
-                  : 'text-slate-600 hover:text-blue-800'
-              }`}
-              title="Show Excess Weight Purchase Orders"
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${statusFilter === 'excess' ? 'bg-white' : 'bg-blue-500'}`} />
-              Excess Wt ({totalExcessPos})
-            </button>
-          </div>
-        </div>
-
-        {/* Date Filters & Quick Actions */}
-        <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-0.5 text-xs">
-            <span className="text-[9.5px] font-bold text-slate-500 uppercase px-1">From</span>
-            <input  id="startdate_2921" name="startdate" aria-label="startdate" type="date" className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold text-slate-800 outline-none" value={startDate} onChange={e => setStartDate(e.target.value)} />
-            <span className="text-[9.5px] font-bold text-slate-500 uppercase px-1">To</span>
-            <input  id="enddate_2923" name="enddate" aria-label="enddate" type="date" className="bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold text-slate-800 outline-none" value={endDate} onChange={e => setEndDate(e.target.value)} />
-          </div>
-
-          <button 
-            onClick={handleCsvDownload} 
-            className="bg-[#F7AFA8] hover:bg-[#D94B5A] text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-2xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-            title="Download filtered records as CSV"
-          >
-            <Download className="h-3.5 w-3.5 text-emerald-200" /> Export CSV
-          </button>
           <button
-            onClick={() => { setSearchTerm(''); setStartDate(''); setEndDate(''); setStatusFilter('all'); }}
-            title="Clear search and status filter"
-            className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+            type="button"
+            onClick={handleCsvDownload}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-2xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 whitespace-nowrap"
+            title="Export filtered records to Excel / CSV"
           >
-            <X className="h-3.5 w-3.5" /> Clear
+            <Download className="h-3 w-3 text-white" />
+            <span>Export Excel</span>
           </button>
-          <button 
+
+          <button
+            type="button"
             onClick={fetchPosAndMasters}
-            title="Refresh Purchase Orders from database"
-            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50" disabled={loading}
+            disabled={loading}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+            title="Refresh records"
           >
-            <RefreshCcw className={`h-3.5 w-3.5 text-emerald-600 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Refreshing...' : 'Refresh'}
+            <RefreshCcw className={cn('h-3 w-3 text-slate-600', loading && 'animate-spin')} />
+            <span className="hidden xl:inline">{loading ? 'Syncing...' : 'Refresh'}</span>
           </button>
         </div>
       </div>
 
-      {/* PO Grid Table */}
-      <div className="bg-white border border-[#CBD5E1] rounded-xl shadow-xs overflow-x-auto overflow-y-auto max-h-[calc(100vh-250px)] min-h-[400px] w-full max-w-full touch-overflow-container">
-         <table className="w-full min-w-[1880px] border-collapse text-xs text-[#111111]">
-            <thead className="bg-[#FDE7E6] sticky top-0 z-20 font-black border-b-2 border-[#D94B5A] shadow-2xs">
-               <tr className="h-10 text-[#111111] text-[11px] sm:text-[12px] uppercase tracking-wider">
-                  <th 
-                    onClick={() => handleSort('po_no')}
-                    className="px-3 py-2.5 text-left border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[160px]"
-                    title="Sort by PO / PTF No"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span>PO / PTF NO</span>
-                      {renderSortIndicator('po_no')}
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('date')}
-                    className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[110px]"
-                    title="Sort by Date"
-                  >
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span>DATE</span>
-                      {renderSortIndicator('date')}
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('type')}
-                    className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[120px]"
-                    title="Sort by Type"
-                  >
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span>TYPE</span>
-                      {renderSortIndicator('type')}
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('broker')}
-                    className="px-3 py-2.5 text-left border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[190px]"
-                    title="Sort by Broker"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span>BROKER</span>
-                      {renderSortIndicator('broker')}
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('supplier')}
-                    className="px-3 py-2.5 text-left border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[220px]"
-                    title="Sort by Party / Supplier"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span>PARTY / SUPPLIER</span>
-                      {renderSortIndicator('supplier')}
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('unit')}
-                    className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[100px]"
-                    title="Sort by Unit"
-                  >
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span>UNIT</span>
-                      {renderSortIndicator('unit')}
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('total_units')}
-                    className="px-3 py-2.5 text-right border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[100px]"
-                    title="Sort by Count"
-                  >
-                    <div className="flex items-center justify-end gap-1.5">
-                      <span>COUNT</span>
-                      {renderSortIndicator('total_units')}
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('weight')}
-                    className="px-3 py-2.5 text-right border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[200px]"
-                    title="Sort by Weight"
-                  >
-                    <div className="flex items-center justify-end gap-1.5">
-                      <span>WEIGHT</span>
-                      {renderSortIndicator('weight')}
-                    </div>
-                  </th>
-                   <th 
-                    onClick={() => handleSort('status')}
-                    className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[125px]"
-                    title="Sort by Status"
-                  >
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span>STATUS</span>
-                      {renderSortIndicator('status')}
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('closed_open')}
-                    className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[155px]"
-                    title="Sort by Lorry Status (Closed / Open)"
-                  >
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span>LORRY STATUS</span>
-                      {renderSortIndicator('closed_open')}
-                    </div>
-                  </th>
-                  <th 
-                    onClick={() => handleSort('excess_short')}
-                    className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[155px]"
-                    title="Sort by WT Status. Policy: Lower of 5% or 1500 kg is Tolerable; Penalty = TD5 Difference × Excess Qtl"
-                  >
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span>WT STATUS</span>
-                      {renderSortIndicator('excess_short')}
-                    </div>
-                  </th>
-                  {isTempPo && (
-                    <>
-                      <th 
-                        onClick={() => handleSort('pass_mismatch')}
-                        className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider cursor-pointer select-none hover:bg-[#FBCFCB] transition-colors group min-w-[120px]"
-                        title="Sort by Pass / Mis"
-                      >
-                        <div className="flex items-center justify-center gap-1.5">
-                          <span>PASS/MIS</span>
-                          {renderSortIndicator('pass_mismatch')}
-                        </div>
-                      </th>
-                      <th 
-                        className="px-3 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider min-w-[145px]"
-                        title="Current Process Stage"
-                      >
-                        <div className="flex items-center justify-center gap-1.5">
-                          <span>STAGE</span>
-                        </div>
-                      </th>
-                    </>
+      {/* Desktop & Laptop Compact 14-Column Single-Screen Table */}
+      <div className="hidden md:block bg-white border border-slate-200 rounded-xl shadow-2xs overflow-x-auto overflow-y-auto max-h-[calc(100vh-235px)] min-h-[380px] w-full">
+        <table className="w-full table-fixed min-w-[1180px] xl:min-w-0 border-collapse text-[11px] text-slate-900">
+          <thead className="bg-[#FDE7E6] sticky top-0 z-20 border-b-2 border-[#D94B5A] shadow-2xs">
+            <tr className="h-9 text-[#111111] text-[10.5px] font-black uppercase tracking-tight select-none">
+              {/* 1. PO / PTF No */}
+              <th
+                onClick={() => handleSort('po_no')}
+                className="w-[8.5%] px-2 py-2 text-left border-r border-rose-200/80 whitespace-nowrap cursor-pointer hover:bg-[#FBCFCB] transition-colors group"
+                title="Sort by PO / PTF No"
+              >
+                <div className="flex items-center gap-0.5 truncate">
+                  <span>PO / PTF No</span>
+                  {renderSortIndicator('po_no')}
+                </div>
+              </th>
+
+              {/* 2. Date */}
+              <th
+                onClick={() => handleSort('date')}
+                className="w-[6.2%] px-1.5 py-2 text-center border-r border-rose-200/80 whitespace-nowrap cursor-pointer hover:bg-[#FBCFCB] transition-colors group"
+                title="Sort by Date"
+              >
+                <div className="flex items-center justify-center gap-0.5">
+                  <span>Date</span>
+                  {renderSortIndicator('date')}
+                </div>
+              </th>
+
+              {/* 3. Type */}
+              <th
+                onClick={() => handleSort('type')}
+                className="w-[6.8%] px-1.5 py-2 text-center border-r border-rose-200/80 whitespace-nowrap cursor-pointer hover:bg-[#FBCFCB] transition-colors group"
+                title="Sort by Type"
+              >
+                <div className="flex items-center justify-center gap-0.5">
+                  <span>Type</span>
+                  {renderSortIndicator('type')}
+                </div>
+              </th>
+
+              {/* 4. Broker */}
+              <th
+                onClick={() => handleSort('broker')}
+                className="w-[12.5%] px-2 py-2 text-left border-r border-rose-200/80 whitespace-nowrap cursor-pointer hover:bg-[#FBCFCB] transition-colors group"
+                title="Sort by Broker"
+              >
+                <div className="flex items-center gap-0.5 truncate">
+                  <span>Broker</span>
+                  {renderSortIndicator('broker')}
+                </div>
+              </th>
+
+              {/* 5. Unit */}
+              <th
+                onClick={() => handleSort('unit')}
+                className="w-[4.5%] px-1 py-2 text-center border-r border-rose-200/80 whitespace-nowrap cursor-pointer hover:bg-[#FBCFCB] transition-colors group"
+                title="Sort by Unit"
+              >
+                <div className="flex items-center justify-center gap-0.5">
+                  <span>Unit</span>
+                  {renderSortIndicator('unit')}
+                </div>
+              </th>
+
+              {/* 6. Count */}
+              <th
+                onClick={() => handleSort('total_units')}
+                className="w-[4.5%] px-1.5 py-2 text-right border-r border-rose-200/80 whitespace-nowrap cursor-pointer hover:bg-[#FBCFCB] transition-colors group"
+                title="Sort by Count"
+              >
+                <div className="flex items-center justify-end gap-0.5">
+                  <span>Count</span>
+                  {renderSortIndicator('total_units')}
+                </div>
+              </th>
+
+              {/* 7. Weight */}
+              <th
+                onClick={() => handleSort('weight')}
+                className="w-[11%] px-2 py-2 text-right border-r border-rose-200/80 whitespace-nowrap cursor-pointer hover:bg-[#FBCFCB] transition-colors group"
+                title="Sort by Weight (Received / Total Contract MT)"
+              >
+                <div className="flex items-center justify-end gap-0.5">
+                  <span>Weight</span>
+                  {renderSortIndicator('weight')}
+                </div>
+              </th>
+
+              {/* 8. Status */}
+              <th
+                onClick={() => handleSort('status')}
+                className="w-[6.8%] px-1.5 py-2 text-center border-r border-rose-200/80 whitespace-nowrap cursor-pointer hover:bg-[#FBCFCB] transition-colors group"
+                title="Sort by Status"
+              >
+                <div className="flex items-center justify-center gap-0.5">
+                  <span>Status</span>
+                  {renderSortIndicator('status')}
+                </div>
+              </th>
+
+              {/* 9. Lorry Status */}
+              <th
+                onClick={() => handleSort('closed_open')}
+                className="w-[7.5%] px-1.5 py-2 text-center border-r border-rose-200/80 whitespace-nowrap cursor-pointer hover:bg-[#FBCFCB] transition-colors group"
+                title="Sort by Lorry Status (Open / Closed)"
+              >
+                <div className="flex items-center justify-center gap-0.5">
+                  <span>Lorry Status</span>
+                  {renderSortIndicator('closed_open')}
+                </div>
+              </th>
+
+              {/* 10. WT Status */}
+              <th
+                onClick={() => handleSort('excess_short')}
+                className="w-[9.5%] px-1.5 py-2 text-center border-r border-rose-200/80 whitespace-nowrap cursor-pointer hover:bg-[#FBCFCB] transition-colors group"
+                title="Sort by WT Status"
+              >
+                <div className="flex items-center justify-center gap-0.5">
+                  <span>WT Status</span>
+                  {renderSortIndicator('excess_short')}
+                </div>
+              </th>
+
+              {/* 11. Pass/MIS */}
+              <th
+                onClick={() => handleSort('pass_mismatch')}
+                className="w-[6.2%] px-1.5 py-2 text-center border-r border-rose-200/80 whitespace-nowrap cursor-pointer hover:bg-[#FBCFCB] transition-colors group"
+                title="Sort by Pass / Mismatch"
+              >
+                <div className="flex items-center justify-center gap-0.5">
+                  <span>Pass/MIS</span>
+                  {renderSortIndicator('pass_mismatch')}
+                </div>
+              </th>
+
+              {/* 12. Stage */}
+              <th
+                onClick={() => handleSort('stage')}
+                className="w-[8.8%] px-1.5 py-2 text-center border-r border-rose-200/80 whitespace-nowrap cursor-pointer hover:bg-[#FBCFCB] transition-colors group"
+                title="Sort by Process Stage"
+              >
+                <div className="flex items-center justify-center gap-0.5">
+                  <span>Stage</span>
+                  {renderSortIndicator('stage')}
+                </div>
+              </th>
+
+              {/* 13. Chart */}
+              <th
+                className="w-[3.2%] px-1 py-2 text-center border-r border-rose-200/80 whitespace-nowrap bg-[#FBCFCB]/60"
+                title="P.O. Histogram & Consignment Analytics"
+              >
+                <span>Chart</span>
+              </th>
+
+              {/* 14. Actions */}
+              <th className="w-[4.0%] px-1.5 py-2 text-center whitespace-nowrap bg-[#FDE7E6]">
+                <span>Actions</span>
+              </th>
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-slate-200/80">
+            {paginatedPos.map((item, idx) => {
+              const isSelected = selectedPoNo === item.po_no;
+              const isVoid = item.status === 'cancelled';
+
+              const contract = parseFloat(item.total_contract_mt || 0) || 0;
+              const rcvd = Number(item.received_weight_mt || 0);
+              const unit = item.purchase_unit_name || item.unit_type || item.unit || 'BALES';
+              const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
+              const pct = contract > 0 ? Math.min(100, Math.max(0, (rcvd / contract) * 100)) : 0;
+
+              const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
+              const receivedLorries = item.received_lorries || 0;
+              const isClosed =
+                !item.is_reopened &&
+                Boolean(item.is_closed || item.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
+              const isCompleted =
+                !item.is_reopened &&
+                Boolean(tol.isCompleted || isClosed || item.status === 'completed' || item.status === 'settled');
+
+              const isResolved = isPoMismatchResolved(item);
+              const stage =
+                item.workflow_stage ||
+                (item.pass_status === 'pass' ? 'final_po' : item.pass_status) ||
+                'temp_arrival_pending';
+              const isMismatch =
+                !isResolved &&
+                (stage === 'mismatch' ||
+                  (item.mismatch_fields && item.mismatch_fields.length > 0) ||
+                  Boolean(item.has_mismatch));
+
+              let openRemarksData = item.open_remarks;
+              if (typeof openRemarksData === 'string') {
+                try {
+                  openRemarksData = JSON.parse(openRemarksData);
+                } catch (e) {}
+              }
+
+              return (
+                <tr
+                  key={item.po_no}
+                  onClick={() => setSelectedPoNo(item.po_no)}
+                  onDoubleClick={() => handleRowDoubleClick(item)}
+                  className={cn(
+                    'h-9 cursor-pointer transition-colors',
+                    isSelected
+                      ? 'bg-[#FDE7E6]/90 text-slate-950'
+                      : isVoid
+                      ? 'bg-rose-50/40 text-slate-400 line-through decoration-rose-400/50'
+                      : idx % 2 === 0
+                      ? 'bg-white hover:bg-rose-50/40'
+                      : 'bg-slate-50/60 hover:bg-rose-50/40'
                   )}
-                  <th 
-                    className="px-2 py-2.5 text-center border-r border-[#CBD5E1] whitespace-nowrap font-black uppercase tracking-wider min-w-[56px] bg-[#FBCFCB] text-[#111111]"
-                    title="P.O. Histogram & Complete Multi-M.R. History"
+                >
+                  {/* 1. PO / PTF No */}
+                  <td
+                    className={cn(
+                      'px-2 py-1 font-mono font-bold text-[11px] whitespace-nowrap truncate border-r border-slate-200/80 select-text',
+                      isVoid ? 'text-rose-400' : 'text-slate-900'
+                    )}
+                    title={item.po_no}
                   >
-                    <div className="flex items-center justify-center">
-                      <BarChart3 className="w-4 h-4 text-[#D94B5A]" />
-                    </div>
-                  </th>
-                  <th className="px-3 py-2.5 text-center whitespace-nowrap font-black uppercase tracking-wider min-w-[130px] bg-[#FDE7E6] text-[#111111]">ACTIONS</th>
-               </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E5E7EB] font-medium">
-               {sortedPos.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((item, idx) => {
-                  const isSelected = selectedPoNo === item.po_no;
-                  const isVoid = item.status === 'cancelled';
-                  return (
-                  <tr 
-                     key={item.po_no} 
-                     onClick={() => setSelectedPoNo(item.po_no)}
-                     onDoubleClick={() => { 
-                        if (!isVoid) {
-                           const userCtx = getCurrentUserContext();
-                           const isUser002Only = isUserId2(userCtx) && !isLevel4OrAbove(userCtx);
-                           if (isUser002Only && isTempPo) {
-                             alert("🔒 Access Denied: Only Level 4 or Admin can edit saved records in Sauda Check Point Dashboard.");
-                             return;
-                           }
+                    {item.po_no}
+                  </td>
 
-                           const currentUserRole = (userCtx?.userRole || (userCtx as any)?.role || "USER").toUpperCase();
-                           const currentUserLevel = (userCtx?.userLevel || (userCtx as any)?.level || "L1").toUpperCase();
-                           const isAdminUser = isUserAdmin(userCtx) || currentUserRole === "ADMIN" || currentUserRole === "ADMINISTRATOR" || Boolean((userCtx as any)?.isAdmin) || currentUserLevel === "ADMIN" || currentUserLevel === "L5" || isL5OrAdmin();
+                  {/* 2. Date */}
+                  <td className="px-1.5 py-1 text-center font-mono tabular-nums text-[10.5px] text-slate-700 whitespace-nowrap border-r border-slate-200/80">
+                    {item.po_date || item.date || item.created_at?.slice(0, 10) || '-'}
+                  </td>
 
-                           const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
-                           const receivedLorries = item.received_lorries || 0;
-                           const isClosed = !item.is_reopened && Boolean(item.is_closed || item.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
-
-                           if (isClosed && !isAdminUser) {
-                             if (setClosedNoticePo) setClosedNoticePo(item);
-                             return;
-                           }
-
-                           handleLoadSelectedPo(item);
-                        }
-                     }}
-                     className={cn(
-                        "h-10 cursor-pointer transition-colors text-xs font-semibold",
-                        isSelected ? "bg-[#FBCFCB] text-[#111111]" : 
-                        isVoid ? "bg-rose-50/40 text-slate-400 line-through decoration-rose-400/50" :
-                        (idx % 2 === 0 ? "bg-white hover:bg-[#FFF2CC]" : "bg-[#FFFCFB] hover:bg-[#FFF2CC]")
-                     )}
-                  >
-                     <td className={cn("px-2.5 py-1.5 font-mono font-bold select-text whitespace-nowrap border-r border-[#CBD5E1]", isVoid ? "text-rose-400" : "text-[#111111]")}>{item.po_no}</td>
-                     <td className="px-2 py-1.5 text-center font-mono whitespace-nowrap border-r border-[#CBD5E1] text-[#262626]">{item.po_date || item.created_at?.slice(0, 10) || ''}</td>
-                     <td className="px-2 py-1.5 text-center whitespace-nowrap border-r border-[#CBD5E1]">
-                        <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold tracking-tight", item.ptf_no ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-emerald-100 text-emerald-900 border border-emerald-300")}>
-                           {item.ptf_no ? 'PTF ENTRY' : 'SAUDA LINKED'}
-                        </span>
-                     </td>
-                     <td className="px-2.5 py-1.5 uppercase font-semibold border-r border-[#CBD5E1] text-[#111111] max-w-[200px] truncate" title={item.broker}>{item.broker || '-'}</td>
-                     <td className="px-2.5 py-1.5 uppercase font-bold border-r border-[#CBD5E1] text-[#111111] max-w-[220px] truncate" title={item.supplier}>{item.supplier || '-'}</td>
-                     <td className="px-2 py-1.5 text-center font-bold uppercase whitespace-nowrap border-r border-[#CBD5E1] text-[10px] text-[#262626]">{item.purchase_unit_name || 'BALES'}</td>
-                     <td className="px-2 py-1.5 text-right font-mono font-bold whitespace-nowrap border-r border-[#CBD5E1] text-[#111111]">{item.total_units || 0}</td>
-                     <td className="px-2.5 py-1.5 text-left font-mono border-r border-[#CBD5E1] min-w-[180px]">
-                        {(() => {
-                           const contract = parseFloat(item.total_contract_mt || 0) || 0;
-                           const rcvd = Number(item.received_weight_mt || 0);
-                           const unit = item.purchase_unit_name || item.unit_type || item.unit || 'BALES';
-                           const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
-                           const pct = contract > 0 ? Math.min(100, Math.max(0, (rcvd / contract) * 100)) : 0;
-                           const barGradient = tol.isCompleted 
-                              ? 'from-emerald-500 to-green-600' 
-                              : pct > 0 
-                              ? 'from-blue-600 to-indigo-600' 
-                              : 'from-slate-300 to-slate-400';
-                           return (
-                              <div>
-                                 <div className="flex items-center justify-between gap-1 text-[10px] font-bold">
-                                    <span className={cn("whitespace-nowrap font-mono", tol.isCompleted ? "text-emerald-800 font-extrabold" : "text-[#111111]")}>
-                                       {rcvd.toFixed(3)} MT Rcvd
-                                    </span>
-                                    <span className="font-sans text-[9px] text-[#404040]">of</span>
-                                    <span className="font-mono font-bold whitespace-nowrap text-[#111111]">
-                                       {contract.toFixed(3)} MT
-                                    </span>
-                                 </div>
-                                 <div className="mt-1 space-y-0.5">
-                                    <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden" title={`${pct.toFixed(1)}% received.`}>
-                                       <div className={cn("h-full rounded-full bg-gradient-to-r transition-all duration-300", barGradient)} style={{ width: `${tol.isCompleted ? 100 : pct}%` }} />
-                                    </div>
-                                 </div>
-                              </div>
-                           );
-                        })()}
-                     </td>
-                      {/* Operational Status Column */}
-                      <td className="px-2 py-1.5 text-center whitespace-nowrap border-r border-[#CBD5E1] min-w-[110px]">
-                         {(() => {
-                            const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
-                            const receivedLorries = item.received_lorries || 0;
-                            const isClosed = !item.is_reopened && Boolean(item.is_closed || item.status === "closed" || (contractLorries > 0 && receivedLorries >= contractLorries));
-                            const isResolved = isPoMismatchResolved(item);
-                            const stage = item.workflow_stage || (item.pass_status === "pass" ? "final_po" : item.pass_status) || "temp_arrival_pending";
-
-                            const isMismatch = !isResolved && (
-                              stage === "mismatch" || 
-                              (item.mismatch_fields && item.mismatch_fields.length > 0) || 
-                              Boolean(item.has_mismatch)
-                            );
-
-                            if (isMismatch) {
-                              return (
-                                <span 
-                                  className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center gap-1"
-                                  title="Has an active Mismatch awaiting approval"
-                                >
-                                  <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
-                                  <span>MISMATCH</span>
-                                </span>
-                              );
-                            }
-
-                            if (isClosed) {
-                              return (
-                                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full text-[#166534] bg-[#DCFCE7] border border-[#86EFAC] inline-flex items-center gap-1">
-                                  <Check className="w-3 h-3 text-[#166534]" />
-                                  <span>COMPLETED</span>
-                                </span>
-                              );
-                            }
-
-                            return (
-                              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full text-[#92400E] bg-[#FFF2CC] border border-[#FFE08A] inline-flex items-center gap-1">
-                                <span>PENDING</span>
-                              </span>
-                            );
-                         })()}
-                      </td>
-
-                      {/* CLOSED / OPEN Column (Lorry-wise) */}
-                      <td className="px-2 py-1.5 text-center whitespace-nowrap border-r border-[#CBD5E1] min-w-[145px]">
-                         {(() => {
-                            const userCtx = getCurrentUserContext();
-                            const userRole = String(userCtx?.userRole || "").toUpperCase();
-                            const userLevel = String(userCtx?.userLevel || "").toUpperCase();
-                            const isAdminOrL4 = isUserAdmin(userCtx) || userRole === "ADMIN" || userRole === "ADMINISTRATOR" || isL5OrAdmin() || userLevel === "L4" || userLevel === "L5" || userLevel === "MAX";
-
-                            const contract = parseFloat(item.total_contract_mt || 0) || 0;
-                            const rcvd = Number(item.received_weight_mt || 0);
-                            const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
-                            const receivedLorries = item.received_lorries || 0;
-                            const isClosed = !item.is_reopened && Boolean(item.is_closed || item.status === "closed" || (contractLorries > 0 && receivedLorries >= contractLorries));
-
-                            const canShowReopen = isAdminOrL4 && isClosed;
-
-                            let openRemarksData = item.open_remarks;
-                            if (typeof openRemarksData === 'string') {
-                              try { openRemarksData = JSON.parse(openRemarksData); } catch (e) {}
-                            }
-
-                            if (isClosed) {
-                              return (
-                                <div className="flex flex-col items-center justify-center gap-1">
-                                  <span 
-                                    onClick={(e) => { e.stopPropagation(); setClosedNoticePo(item); }}
-                                    className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-amber-300 border border-slate-700 flex items-center gap-1 whitespace-nowrap cursor-pointer hover:bg-slate-700 transition-colors"
-                                    title={`Sauda is CLOSED: ${receivedLorries} of ${contractLorries} Lorries Received.`}
-                                  >
-                                    <Lock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
-                                    <span>CLOSED ({receivedLorries}/{contractLorries} Lorry)</span>
-                                  </span>
-
-                                  {canShowReopen ? (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); openReopenAuthModal(item); }}
-                                      className="text-[9px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 transition-colors flex items-center gap-1 cursor-pointer"
-                                      title="Click to Reopen this Closed Sauda"
-                                    >
-                                      <Unlock className="w-2.5 h-2.5 text-emerald-700" />
-                                      <span>Reopen</span>
-                                    </button>
-                                  ) : (
-                                    <span className="text-[8px] font-semibold text-slate-500 italic">
-                                      Within Tolerance
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            }
-
-                            return (
-                              <div className="flex flex-col items-center justify-center gap-1">
-                                <span 
-                                  className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#166534] border border-[#86EFAC] flex items-center gap-1 whitespace-nowrap"
-                                  title={`Sauda is OPEN: ${receivedLorries} of ${contractLorries} Lorries Received.`}
-                                >
-                                  <Unlock className="w-2.5 h-2.5 text-[#166534] shrink-0" />
-                                  <span>OPEN ({receivedLorries}/{contractLorries} Lorry)</span>
-                                </span>
-
-                                {openRemarksData && (
-                                  <div
-                                    onClick={(e) => { e.stopPropagation(); setAuditViewPo(item); }}
-                                    className="flex items-center gap-1 text-[8.5px] font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded cursor-pointer transition-colors max-w-[150px]"
-                                    title={`Reopened by: ${openRemarksData.opened_by}`}
-                                  >
-                                    <UserCheck className="w-2.5 h-2.5 text-indigo-700 shrink-0" />
-                                    <span className="truncate">By {openRemarksData.opened_by}</span>
-                                  </div>
-                                )}
-
-                                {isAdminOrL4 && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); handleCloseSauda(item); }}
-                                    className="text-[8.5px] font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded border border-slate-300 transition-colors flex items-center gap-0.5 cursor-pointer"
-                                    title="Manually Close this Sauda"
-                                  >
-                                    <Lock className="w-2 h-2 text-slate-600" />
-                                    <span>Force Close</span>
-                                  </button>
-                                )}
-                              </div>
-                            );
-                         })()}
-                      </td>
-
-                      {/* EXCESS / SHORT WEIGHT Column */}
-                      <td className="px-2 py-1.5 text-center whitespace-nowrap border-r border-[#CBD5E1] min-w-[145px]">
-                         {(() => {
-                            const contract = parseFloat(item.total_contract_mt || 0) || 0;
-                            const rcvd = Number(item.received_weight_mt || 0);
-                            const unit = item.purchase_unit_name || item.unit_type || item.unit || 'BALES';
-                            const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
-
-                            if (rcvd <= 0) {
-                              return (
-                                <div
-                                  onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
-                                  className="cursor-pointer group flex flex-col items-center justify-center"
-                                  title="No arrival received yet."
-                                >
-                                  <span className="text-[10px] text-slate-500 font-medium italic group-hover:text-[#D94B5A] transition-colors">Pending Arrival</span>
-                                </div>
-                              );
-                            }
-
-                            if (tol.isWithinTolerance) {
-                              return (
-                                <div 
-                                  onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
-                                  className="flex flex-col items-center justify-center gap-0.5 cursor-pointer group"
-                                  title={`Weight within tolerance.`}
-                                >
-                                  <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-[#DCFCE7] text-[#166534] border border-[#86EFAC]">
-                                    ✓ TOLERABLE (±{tol.toleranceMt.toFixed(2)} MT)
-                                  </span>
-                                  <span className="text-[8px] font-bold text-[#404040]">
-                                    Diff: {tol.diffMt >= 0 ? `+${tol.diffMt.toFixed(3)}` : tol.diffMt.toFixed(3)} MT
-                                  </span>
-                                </div>
-                              );
-                            }
-
-                            const cleanPo = (s: any) => String(s || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-                            const targetPo = cleanPo(item.po_no);
-                            const targetSauda = cleanPo(item.sauda_no || item.contract_po_no);
-                            const matchedArrival = allTempArrivals?.find((ar: any) => {
-                              const arPo = cleanPo(ar.po_no || ar.sauda_no || ar.contract_po_no || ar.temporary_arrival_no);
-                              return arPo && (arPo === targetPo || arPo === targetSauda);
-                            });
-
-                            const saudaDateStr = item.s_date || item.po_date || item.date || item.contract_date || item.created_at?.slice(0, 10) || '';
-                            const arrivalDateStr = matchedArrival?.date || matchedArrival?.arrival_date || item.last_arrival_date || item.arrival_date || saudaDateStr;
-
-                            const saudaTd5Rate = parseFloat(item.b_rate || 0) > 0 ? parseFloat(item.b_rate) : getTd5BaseRateForDate(saudaDateStr);
-                            const arrivalTd5Rate = getTd5BaseRateForDate(arrivalDateStr);
-                            const td5RateDiff = Math.abs((arrivalTd5Rate || 0) - (saudaTd5Rate || 0));
-
-                            if (tol.isOverDelivery) {
-                              const excessMt = Math.max(0, tol.excessOverToleranceMt || 0);
-                              const excessQtl = Math.max(0, tol.excessOverToleranceQtl || 0);
-                              const rawPenalty = td5RateDiff * excessQtl;
-                              const penaltyAmount = isNaN(rawPenalty) || rawPenalty < 0 ? 0 : Math.round(rawPenalty * 100) / 100;
-
-                              return (
-                                <div
-                                  onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
-                                  className="flex flex-col items-center justify-center gap-0.5 cursor-pointer group"
-                                >
-                                  <span className="text-[9.5px] font-extrabold px-2 py-0.5 rounded border border-purple-300 bg-purple-100 text-purple-950">
-                                    +{excessMt.toFixed(3)} MT Excess
-                                  </span>
-                                  <span className="text-[8px] font-extrabold text-[#991B1B] bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded-full">
-                                    Penalty: ₹{penaltyAmount.toLocaleString()}
-                                  </span>
-                                </div>
-                              );
-                            }
-
-                            if (tol.isUnderDelivery) {
-                              const shortMt = Math.max(0, tol.shortUnderToleranceMt || 0);
-
-                              return (
-                                <div
-                                  onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
-                                  className="flex flex-col items-center justify-center gap-0.5 cursor-pointer group"
-                                >
-                                  <span className="text-[9.5px] font-extrabold px-2 py-0.5 rounded border border-[#FFE08A] bg-[#FFF2CC] text-[#92400E]">
-                                    -{shortMt.toFixed(3)} MT Short
-                                  </span>
-                                  <span className="text-[8px] font-bold text-[#92400E]">
-                                    Beyond Tol.
-                                  </span>
-                                </div>
-                              );
-                            }
-
-                            return (
-                              <div
-                                onClick={(e) => { e.stopPropagation(); setExcessShortModalPo(item); }}
-                                className="cursor-pointer group flex flex-col items-center justify-center"
-                              >
-                                <span className="text-[9.5px] font-extrabold px-2 py-0.5 rounded bg-[#DCFCE7] text-[#166534] border border-[#86EFAC]">
-                                  Exact (0.00 MT)
-                                </span>
-                              </div>
-                            );
-                         })()}
-                      </td>
-
-                      {isTempPo && (
-                        <>
-                          {/* PASS / MISMATCH STATUS */}
-                          <td className="px-2 py-1.5 text-center whitespace-nowrap border-r border-[#CBD5E1] min-w-[110px]">
-                            {(() => {
-                              const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
-                              const receivedLorries = item.received_lorries || 0;
-                              const isClosed = !item.is_reopened && (Boolean(item.is_closed) || (receivedLorries >= contractLorries && contractLorries > 0));
-
-                              const isResolved = isPoMismatchResolved(item);
-                              const stage = item.workflow_stage || (item.pass_status === "pass" ? "final_po" : item.pass_status) || "temp_arrival_pending";
-
-                              const isMismatch = !isResolved && (
-                                stage === "mismatch" || 
-                                (item.mismatch_fields && item.mismatch_fields.length > 0) || 
-                                Boolean(item.has_mismatch)
-                              );
-
-                              if (isMismatch) {
-                                return (
-                                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center gap-1">
-                                    <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
-                                    <span>Mismatch Case</span>
-                                  </span>
-                                );
-                              }
-
-                              if (!isClosed) {
-                                return null;
-                              }
-
-                              return (
-                                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#DCFCE7] text-[#166534] border border-[#86EFAC] inline-flex items-center gap-1">
-                                  <Check className="w-3 h-3 text-[#166534] shrink-0" />
-                                  <span>Pass</span>
-                                </span>
-                              );
-                            })()}
-                          </td>
-
-                          {/* PROCESS STAGE & PASS ACTION */}
-                          <td className="px-2 py-1.5 text-center whitespace-nowrap border-r border-[#CBD5E1] min-w-[135px]">
-                            {(() => {
-                              const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
-                              const receivedLorries = item.received_lorries || 0;
-                              const isClosed = !item.is_reopened && (Boolean(item.is_closed) || (receivedLorries >= contractLorries && contractLorries > 0));
-
-                              const isAdvDone = checkIsAdvancePaymentDone(item, allPayments);
-                              const isSettlementDone = checkIsSettlementDone(item, allSettlements);
-
-                              if (!isAdvDone) {
-                                return (
-                                  <span className="text-[9px] font-bold text-[#404040] bg-slate-100 px-2 py-0.5 rounded border border-slate-300 inline-flex items-center gap-1">
-                                    <Clock className="w-3 h-3 text-slate-500" />
-                                    <span>ADVANCE PENDING</span>
-                                  </span>
-                                );
-                              }
-
-                              if (!isClosed) {
-                                return (
-                                  <span className="text-[9px] font-bold text-[#92400E] bg-[#FFF2CC] px-2 py-0.5 rounded border border-[#FFE08A] inline-flex items-center gap-1">
-                                    <Clock className="w-3 h-3 text-[#92400E]" />
-                                    <span>LORRY PENDING</span>
-                                  </span>
-                                );
-                              }
-
-                              if (!isSettlementDone) {
-                                return (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { 
-                                      e.stopPropagation(); 
-                                      setExcessShortModalPo(item);
-                                    }}
-                                    className="text-[9px] font-black px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-950 border border-blue-300 uppercase cursor-pointer inline-flex items-center gap-1 whitespace-nowrap transition-colors"
-                                  >
-                                    <Clock className="w-3 h-3 text-blue-700" />
-                                    <span>SETTLEMENT PENDING</span>
-                                  </button>
-                                );
-                              }
-
-                              return (
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); handlePassToFinal(item); }}
-                                  className="text-[9px] font-black px-2.5 py-1 rounded bg-[#D94B5A] hover:bg-[#E85A5A] text-white uppercase shadow-xs cursor-pointer inline-flex items-center gap-1 transition-all active:scale-95 whitespace-nowrap"
-                                >
-                                  <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
-                                  <span>PASS → FINAL P.O</span>
-                                </button>
-                              );
-                            })()}
-                          </td>
-                        </>
+                  {/* 3. Type */}
+                  <td className="px-1.5 py-1 text-center whitespace-nowrap border-r border-slate-200/80">
+                    <span
+                      className={cn(
+                        'inline-block px-1.5 py-0.5 rounded text-[9.5px] font-bold tracking-tight leading-none border',
+                        item.ptf_no
+                          ? 'bg-amber-50 text-amber-800 border-amber-200'
+                          : 'bg-emerald-50 text-emerald-800 border-emerald-200'
                       )}
+                    >
+                      {item.ptf_no ? 'PTF ENTRY' : 'SAUDA LINKED'}
+                    </span>
+                  </td>
 
-                      {/* HISTOGRAM SMALL ICON ONLY COLUMN */}
-                      <td className="px-1.5 py-1.5 text-center whitespace-nowrap border-r border-[#CBD5E1] min-w-[48px]">
+                  {/* 4. Broker (truncate with full name on hover) */}
+                  <td
+                    className="px-2 py-1 uppercase font-semibold text-[10.5px] text-slate-900 truncate border-r border-slate-200/80"
+                    title={item.broker || '-'}
+                  >
+                    {item.broker || '-'}
+                  </td>
+
+                  {/* 5. Unit */}
+                  <td className="px-1 py-1 text-center font-bold uppercase text-[10px] text-slate-700 whitespace-nowrap border-r border-slate-200/80">
+                    {unit}
+                  </td>
+
+                  {/* 6. Count */}
+                  <td className="px-1.5 py-1 text-right font-mono tabular-nums font-bold text-[11px] text-slate-900 whitespace-nowrap border-r border-slate-200/80">
+                    {item.total_units || 0}
+                  </td>
+
+                  {/* 7. Weight (13.360 / 13.360 MT + Red/Grey thin progress bar) */}
+                  <td
+                    className="px-2 py-1 border-r border-slate-200/80 whitespace-nowrap"
+                    title={`Received: ${rcvd.toFixed(3)} MT / Contract: ${contract.toFixed(3)} MT (${pct.toFixed(1)}%)`}
+                  >
+                    <div className="flex flex-col justify-center">
+                      <div className="flex items-center justify-end gap-0.5 font-mono tabular-nums text-[10px] leading-tight">
+                        <span className={cn('font-bold', isCompleted ? 'text-rose-700' : 'text-slate-900')}>
+                          {rcvd.toFixed(3)}
+                        </span>
+                        <span className="text-slate-400">/</span>
+                        <span className="font-semibold text-slate-700">{contract.toFixed(3)} MT</span>
+                      </div>
+                      <div className="mt-1 w-full h-1 rounded-full bg-slate-200 overflow-hidden">
+                        <div
+                          className={cn(
+                            'h-full rounded-full transition-all duration-300',
+                            isCompleted ? 'bg-[#D94B5A]' : 'bg-slate-400'
+                          )}
+                          style={{ width: `${isCompleted ? 100 : pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* 8. Status (Pending — Orange, Completed — Green) */}
+                  <td className="px-1.5 py-1 text-center whitespace-nowrap border-r border-slate-200/80">
+                    {isVoid ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                        Cancelled
+                      </span>
+                    ) : isMismatch ? (
+                      <span
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-50 text-rose-700 border border-rose-300"
+                        title="Active Mismatch awaiting resolution"
+                      >
+                        <AlertTriangle className="w-2.5 h-2.5 text-rose-600 shrink-0" />
+                        <span>Mismatch</span>
+                      </span>
+                    ) : isClosed ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        <span>Completed</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-amber-50 text-amber-700 border border-amber-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                        <span>Pending</span>
+                      </span>
+                    )}
+                  </td>
+
+                  {/* 9. Lorry Status (OPEN (0/1), CLOSED (1/1) — Force Close/Reopen moved to Actions) */}
+                  <td className="px-1.5 py-1 text-center whitespace-nowrap border-r border-slate-200/80">
+                    <div className="inline-flex items-center justify-center gap-1">
+                      {isClosed ? (
+                        <span
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setClosedNoticePo(item);
+                          }}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-mono tabular-nums font-bold bg-slate-800 text-amber-300 border border-slate-700 hover:bg-slate-700 transition-colors"
+                          title={`CLOSED (${receivedLorries}/${contractLorries} Lorries). Use Actions menu to Reopen.`}
+                        >
+                          <Lock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                          <span>CLOSED ({receivedLorries}/{contractLorries})</span>
+                        </span>
+                      ) : (
+                        <span
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-mono tabular-nums font-bold bg-emerald-50 text-emerald-800 border border-emerald-300"
+                          title={`OPEN (${receivedLorries}/${contractLorries} Lorries). Use Actions menu to Force Close.`}
+                        >
+                          <Unlock className="w-2.5 h-2.5 text-emerald-700 shrink-0" />
+                          <span>OPEN ({receivedLorries}/{contractLorries})</span>
+                        </span>
+                      )}
+                      {openRemarksData && (
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setHistogramModalPo(item);
+                            setAuditViewPo(item);
                           }}
-                          className="p-1.5 rounded-lg border border-[#FBCFCB] bg-[#FDE7E6] hover:bg-[#FBCFCB] text-[#D94B5A] transition-all inline-flex items-center justify-center cursor-pointer active:scale-95"
-                          title={`📊 Open P.O. Histogram (${item.po_no})`}
+                          className="p-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 cursor-pointer"
+                          title={`Reopened by ${openRemarksData.opened_by} — Click to view audit log`}
                         >
-                          <BarChart3 className="w-3.5 h-3.5 text-[#D94B5A] shrink-0" />
+                          <UserCheck className="w-2.5 h-2.5" />
                         </button>
-                      </td>
+                      )}
+                    </div>
+                  </td>
 
-                      {/* ACTIONS */}
-                      <td className="px-3 py-1.5 text-center min-w-[110px] whitespace-nowrap">
-                         {isVoid ? (
-                            <div className="flex items-center justify-center gap-1.5">
-                              <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] uppercase border border-rose-200">CANCELLED</span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                  setActionMenu(actionMenu && actionMenu.item.po_no === item.po_no ? null : { item, x: r.right, y: r.bottom });
-                                }}
-                                className="px-2 py-1 rounded-lg border font-bold text-[10px] uppercase flex items-center gap-1 cursor-pointer bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-800"
-                              >
-                                Actions <ChevronDown className="w-3 h-3" />
-                              </button>
-                            </div>
-                         ) : (
-                         <div className="flex justify-center">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                setActionMenu(actionMenu && actionMenu.item.po_no === item.po_no ? null : { item, x: r.right, y: r.bottom });
-                              }}
-                              className="px-3 py-1 rounded-lg border border-[#CBD5E1] font-bold text-[10px] uppercase flex items-center gap-1 bg-white hover:bg-[#FFF2CC] text-[#111111] transition-colors cursor-pointer shadow-2xs"
-                              title="Actions"
-                            >
-                              Actions <ChevronDown className="w-3 h-3 text-[#404040]" />
-                            </button>
-                         </div>
-                         )}
-                      </td>
-                   </tr>
-                )})}
-                {filteredPos.length === 0 && (
-                   <tr>
-                      <td colSpan={isTempPo ? 15 : 13} className="py-12 text-center text-[#64748B] uppercase font-bold italic">
-                        No Saved Purchase Orders found matching criteria.
-                      </td>
-                   </tr>
+                  {/* 10. WT Status */}
+                  <td className="px-1.5 py-1 text-center whitespace-nowrap border-r border-slate-200/80">
+                    {(() => {
+                      if (rcvd <= 0) {
+                        return (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExcessShortModalPo(item);
+                            }}
+                            className="text-[10px] text-slate-400 font-medium italic hover:text-[#D94B5A] transition-colors cursor-pointer"
+                            title="No arrival weight recorded yet"
+                          >
+                            Pending Arrival
+                          </button>
+                        );
+                      }
+
+                      const diffStr = `${tol.diffMt >= 0 ? '+' : ''}${tol.diffMt.toFixed(3)} MT`;
+
+                      if (tol.isWithinTolerance) {
+                        return (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExcessShortModalPo(item);
+                            }}
+                            className="inline-flex flex-col items-center justify-center leading-tight cursor-pointer group"
+                            title={`Weight Difference: ${diffStr} (Within ±${tol.toleranceMt.toFixed(2)} MT tolerance)`}
+                          >
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 group-hover:bg-emerald-100 transition-colors">
+                              Tolerable (±{tol.toleranceMt.toFixed(2)} MT)
+                            </span>
+                            <span className="text-[8px] font-mono tabular-nums text-slate-500 mt-0.5">
+                              Diff: {diffStr}
+                            </span>
+                          </button>
+                        );
+                      }
+
+                      const cleanPo = (s: any) =>
+                        String(s || '')
+                          .trim()
+                          .replace(/[^a-zA-Z0-9]/g, '')
+                          .toUpperCase();
+                      const targetPo = cleanPo(item.po_no);
+                      const targetSauda = cleanPo(item.sauda_no || item.contract_po_no);
+                      const matchedArrival = allTempArrivals?.find((ar: any) => {
+                        const arPo = cleanPo(ar.po_no || ar.sauda_no || ar.contract_po_no || ar.temporary_arrival_no);
+                        return arPo && (arPo === targetPo || arPo === targetSauda);
+                      });
+
+                      const saudaDateStr =
+                        item.s_date || item.po_date || item.date || item.contract_date || item.created_at?.slice(0, 10) || '';
+                      const arrivalDateStr =
+                        matchedArrival?.date ||
+                        matchedArrival?.arrival_date ||
+                        item.last_arrival_date ||
+                        item.arrival_date ||
+                        saudaDateStr;
+
+                      const saudaTd5Rate =
+                        parseFloat(item.b_rate || 0) > 0 ? parseFloat(item.b_rate) : getTd5BaseRateForDate(saudaDateStr);
+                      const arrivalTd5Rate = getTd5BaseRateForDate(arrivalDateStr);
+                      const td5RateDiff = Math.abs((arrivalTd5Rate || 0) - (saudaTd5Rate || 0));
+
+                      if (tol.isOverDelivery) {
+                        const excessMt = Math.max(0, tol.excessOverToleranceMt || 0);
+                        const excessQtl = Math.max(0, tol.excessOverToleranceQtl || 0);
+                        const rawPenalty = td5RateDiff * excessQtl;
+                        const penaltyAmount = isNaN(rawPenalty) || rawPenalty < 0 ? 0 : Math.round(rawPenalty * 100) / 100;
+
+                        return (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExcessShortModalPo(item);
+                            }}
+                            className="inline-flex flex-col items-center justify-center leading-tight cursor-pointer"
+                            title={`Excess Weight: +${excessMt.toFixed(3)} MT | Diff: ${diffStr} | Penalty: ₹${penaltyAmount.toLocaleString()}`}
+                          >
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono tabular-nums font-bold bg-purple-50 text-purple-900 border border-purple-300">
+                              +{excessMt.toFixed(2)} MT Excess
+                            </span>
+                            <span className="text-[8px] font-mono tabular-nums font-semibold text-rose-700 mt-0.5">
+                              Pen: ₹{penaltyAmount.toLocaleString()}
+                            </span>
+                          </button>
+                        );
+                      }
+
+                      if (tol.isUnderDelivery) {
+                        const shortMt = Math.max(0, tol.shortUnderToleranceMt || 0);
+                        return (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExcessShortModalPo(item);
+                            }}
+                            className="inline-flex flex-col items-center justify-center leading-tight cursor-pointer"
+                            title={`Short Weight: -${shortMt.toFixed(3)} MT | Diff: ${diffStr}`}
+                          >
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono tabular-nums font-bold bg-amber-50 text-amber-900 border border-amber-300">
+                              -{shortMt.toFixed(2)} MT Short
+                            </span>
+                            <span className="text-[8px] font-mono tabular-nums text-amber-700 mt-0.5">
+                              Diff: {diffStr}
+                            </span>
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExcessShortModalPo(item);
+                          }}
+                          className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 cursor-pointer"
+                          title={`Exact Weight (Diff: ${diffStr})`}
+                        >
+                          Exact (0.00 MT)
+                        </button>
+                      );
+                    })()}
+                  </td>
+
+                  {/* 11. Pass/MIS */}
+                  <td className="px-1.5 py-1 text-center whitespace-nowrap border-r border-slate-200/80">
+                    {isMismatch ? (
+                      <span
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-rose-50 text-rose-700 border border-rose-300"
+                        title="Mismatch / Fail Case"
+                      >
+                        <AlertTriangle className="w-2.5 h-2.5 text-rose-600 shrink-0" />
+                        <span>Fail</span>
+                      </span>
+                    ) : isClosed ? (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300">
+                        <Check className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                        <span>Pass</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                        Pending
+                      </span>
+                    )}
+                  </td>
+
+                  {/* 12. Stage */}
+                  <td className="px-1.5 py-1 text-center whitespace-nowrap border-r border-slate-200/80">
+                    {(() => {
+                      const isAdvDone = checkIsAdvancePaymentDone(item, allPayments);
+                      const isSettlementDone = checkIsSettlementDone(item, allSettlements);
+
+                      if (!isAdvDone) {
+                        return (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-slate-700 bg-slate-100 border border-slate-300">
+                            <Clock className="w-2.5 h-2.5 text-slate-500 shrink-0" />
+                            <span>Advance Pending</span>
+                          </span>
+                        );
+                      }
+
+                      if (!isClosed) {
+                        return (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-amber-800 bg-amber-50 border border-amber-300">
+                            <Clock className="w-2.5 h-2.5 text-amber-600 shrink-0" />
+                            <span>Lorry Pending</span>
+                          </span>
+                        );
+                      }
+
+                      if (!isSettlementDone) {
+                        return (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExcessShortModalPo(item);
+                            }}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-300 cursor-pointer transition-colors"
+                            title="Click to open Weight & Settlement details"
+                          >
+                            <Clock className="w-2.5 h-2.5 text-blue-600 shrink-0" />
+                            <span>Settlement Pending</span>
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isTempPo) handlePassToFinal(item);
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold bg-[#D94B5A] hover:bg-[#be3b49] text-white shadow-2xs cursor-pointer transition-all active:scale-95"
+                          title="Pass to Final P.O"
+                        >
+                          <Check className="w-2.5 h-2.5 text-white stroke-[3] shrink-0" />
+                          <span>Pass → Final P.O</span>
+                        </button>
+                      );
+                    })()}
+                  </td>
+
+                  {/* 13. Chart */}
+                  <td className="px-1 py-1 text-center whitespace-nowrap border-r border-slate-200/80">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setHistogramModalPo(item);
+                      }}
+                      className="p-1 rounded-md border border-rose-200 bg-[#FDE7E6] hover:bg-[#FBCFCB] text-[#D94B5A] transition-all inline-flex items-center justify-center cursor-pointer active:scale-95"
+                      title={`View P.O. Analytics & Consignment Chart (${item.po_no})`}
+                    >
+                      <BarChart3 className="w-3.5 h-3.5 text-[#D94B5A]" />
+                    </button>
+                  </td>
+
+                  {/* 14. Actions */}
+                  <td className="px-1 py-1 text-center whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        setActionMenu(
+                          actionMenu && actionMenu.item.po_no === item.po_no
+                            ? null
+                            : { item, x: r.right, y: r.bottom }
+                        );
+                      }}
+                      className={cn(
+                        'px-2 py-0.5 rounded-md border font-bold text-[10px] inline-flex items-center justify-center gap-0.5 transition-colors cursor-pointer shadow-2xs',
+                        isVoid
+                          ? 'bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-800'
+                          : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-800'
+                      )}
+                      title="Open Actions Menu"
+                    >
+                      <span>Actions</span>
+                      <ChevronDown className="w-3 h-3 text-slate-500" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+
+            {filteredPos.length === 0 && (
+              <tr>
+                <td colSpan={14} className="py-12 text-center text-slate-500 uppercase font-bold italic text-xs">
+                  No Purchase Orders found matching the current filters.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile Responsive Card View (< md) */}
+      <div className="md:hidden space-y-2 max-h-[calc(100vh-250px)] overflow-y-auto pr-0.5">
+        {paginatedPos.map((item) => {
+          const isSelected = selectedPoNo === item.po_no;
+          const isVoid = item.status === 'cancelled';
+          const contract = parseFloat(item.total_contract_mt || 0) || 0;
+          const rcvd = Number(item.received_weight_mt || 0);
+          const unit = item.purchase_unit_name || item.unit_type || item.unit || 'BALES';
+          const tol = item.weight_tolerance || calculateWeightTolerance(contract, rcvd, unit);
+          const pct = contract > 0 ? Math.min(100, Math.max(0, (rcvd / contract) * 100)) : 0;
+
+          const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
+          const receivedLorries = item.received_lorries || 0;
+          const isClosed =
+            !item.is_reopened &&
+            Boolean(item.is_closed || item.status === 'closed' || (contractLorries > 0 && receivedLorries >= contractLorries));
+          const isCompleted =
+            !item.is_reopened &&
+            Boolean(tol.isCompleted || isClosed || item.status === 'completed' || item.status === 'settled');
+
+          const isResolved = isPoMismatchResolved(item);
+          const stage =
+            item.workflow_stage ||
+            (item.pass_status === 'pass' ? 'final_po' : item.pass_status) ||
+            'temp_arrival_pending';
+          const isMismatch =
+            !isResolved &&
+            (stage === 'mismatch' ||
+              (item.mismatch_fields && item.mismatch_fields.length > 0) ||
+              Boolean(item.has_mismatch));
+
+          const isAdvDone = checkIsAdvancePaymentDone(item, allPayments);
+          const isSettlementDone = checkIsSettlementDone(item, allSettlements);
+
+          return (
+            <div
+              key={item.po_no}
+              onClick={() => setSelectedPoNo(item.po_no)}
+              onDoubleClick={() => handleRowDoubleClick(item)}
+              className={cn(
+                'rounded-xl border p-3 shadow-2xs space-y-2 text-xs transition-colors',
+                isSelected ? 'bg-[#FDE7E6]/50 border-[#D94B5A]' : 'bg-white border-slate-200'
+              )}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-mono font-black text-slate-900 text-sm truncate">{item.po_no}</span>
+                  <span
+                    className={cn(
+                      'px-1.5 py-0.5 rounded text-[9px] font-bold border shrink-0',
+                      item.ptf_no
+                        ? 'bg-amber-50 text-amber-800 border-amber-200'
+                        : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    )}
+                  >
+                    {item.ptf_no ? 'PTF ENTRY' : 'SAUDA LINKED'}
+                  </span>
+                </div>
+                <span className="font-mono text-[11px] text-slate-500 shrink-0">
+                  {item.po_date || item.date || item.created_at?.slice(0, 10) || '-'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 text-[11px]">
+                <div className="truncate font-semibold text-slate-800" title={item.broker}>
+                  <span className="text-slate-400 font-normal mr-1">Broker:</span>
+                  {item.broker || '-'}
+                </div>
+                <div className="font-mono font-bold text-slate-800 shrink-0">
+                  {item.total_units || 0} {unit}
+                </div>
+              </div>
+
+              {/* Weight Progress */}
+              <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/80">
+                <div className="flex items-center justify-between text-[11px] font-mono tabular-nums">
+                  <span className="text-slate-500 font-sans font-semibold">Weight:</span>
+                  <span>
+                    <strong className={isCompleted ? 'text-rose-700' : 'text-slate-900'}>{rcvd.toFixed(3)}</strong> /{' '}
+                    {contract.toFixed(3)} MT
+                  </span>
+                </div>
+                <div className="mt-1 w-full h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                  <div
+                    className={cn('h-full rounded-full', isCompleted ? 'bg-[#D94B5A]' : 'bg-slate-400')}
+                    style={{ width: `${isCompleted ? 100 : pct}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Badges Row */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                {isClosed ? (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300">
+                    Completed
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-300">
+                    Pending
+                  </span>
                 )}
-             </tbody>
-          </table>
-       </div>
 
-       {/* Pagination / Total bar */}
-       <div className="bg-white border border-[#CBD5E1] rounded-xl p-3 shadow-2xs flex flex-wrap justify-between items-center gap-3">
-          <div className="flex flex-wrap gap-3 items-center">
-             <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg px-3.5 py-1.5 flex items-center gap-2">
-                <span className="text-[10px] font-bold text-[#404040] uppercase">Cumulative Weight:</span>
-                <span className="text-xs font-black text-[#111111] font-mono">
-                  {filteredPos.reduce((acc, s) => acc + parseFloat(s.total_contract_mt || 0), 0).toFixed(3)} MT
+                <span
+                  className={cn(
+                    'px-2 py-0.5 rounded text-[10px] font-mono font-bold border',
+                    isClosed
+                      ? 'bg-slate-800 text-amber-300 border-slate-700'
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                  )}
+                >
+                  {isClosed ? `CLOSED (${receivedLorries}/${contractLorries})` : `OPEN (${receivedLorries}/${contractLorries})`}
                 </span>
-             </div>
-             <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg px-3.5 py-1.5 flex items-center gap-2">
-                <span className="text-[10px] font-bold text-[#404040] uppercase">Closed P.O.s:</span>
-                <span className="text-xs font-black text-[#166534] font-mono">
-                  {filteredPos.filter(p => p.pending === false || p.pending === 'No').length} Closed
-                </span>
-             </div>
-             <div className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg px-3.5 py-1.5 flex items-center gap-2">
-                <span className="text-[10px] font-bold text-[#404040] uppercase">Total Records:</span>
-                <span className="text-xs font-black text-[#111111] font-mono">
-                  {filteredPos.length} POs
-                </span>
-             </div>
-          </div>
-          <div className="flex-1 max-w-xl">
-             <PaginationControls
-               currentPage={currentPage}
-               totalItems={sortedPos.length}
-               pageSize={pageSize}
-               onPageChange={setCurrentPage}
-               onPageSizeChange={setPageSize}
-             />
-          </div>
-       </div>
 
-       {/* Histogram Lifecycle & Story Modal */}
-       {histogramModalPo && (
-         <PoHistogramHistoryModal
-           isOpen={Boolean(histogramModalPo)}
-           onClose={() => setHistogramModalPo(null)}
-           po={histogramModalPo}
-           allPayments={allPayments}
-           allSettlements={allSettlements}
-           allArrivals={allTempArrivals}
-           allInspections={allInspections}
-         />
-       )}
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExcessShortModalPo(item);
+                  }}
+                  className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300 cursor-pointer"
+                >
+                  {rcvd <= 0
+                    ? 'Pending Arrival'
+                    : tol.isWithinTolerance
+                    ? `Tolerable (±${tol.toleranceMt.toFixed(2)} MT)`
+                    : tol.isOverDelivery
+                    ? `+${Math.max(0, tol.excessOverToleranceMt || 0).toFixed(2)} MT Excess`
+                    : `-${Math.max(0, tol.shortUnderToleranceMt || 0).toFixed(2)} MT Short`}
+                </span>
+
+                <span
+                  className={cn(
+                    'px-2 py-0.5 rounded text-[10px] font-bold border',
+                    isMismatch
+                      ? 'bg-rose-50 text-rose-700 border-rose-300'
+                      : isClosed
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                  )}
+                >
+                  {isMismatch ? 'Fail' : isClosed ? 'Pass' : 'Pending'}
+                </span>
+              </div>
+
+              {/* Footer: Stage, Chart, Actions */}
+              <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100">
+                <div>
+                  {!isAdvDone ? (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                      Advance Pending
+                    </span>
+                  ) : !isClosed ? (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                      Lorry Pending
+                    </span>
+                  ) : !isSettlementDone ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExcessShortModalPo(item);
+                      }}
+                      className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-300"
+                    >
+                      Settlement Pending
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isTempPo) handlePassToFinal(item);
+                      }}
+                      className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#D94B5A] text-white"
+                    >
+                      Pass → Final P.O
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setHistogramModalPo(item);
+                    }}
+                    className="p-1.5 rounded-lg border border-rose-200 bg-[#FDE7E6] text-[#D94B5A]"
+                    title="Open Chart"
+                  >
+                    <BarChart3 className="w-3.5 h-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      setActionMenu(
+                        actionMenu && actionMenu.item.po_no === item.po_no
+                          ? null
+                          : { item, x: r.right, y: r.bottom }
+                      );
+                    }}
+                    className={cn(
+                      'px-2.5 py-1 rounded-lg border font-bold text-[10px] inline-flex items-center gap-1',
+                      isVoid
+                        ? 'bg-rose-50 border-rose-200 text-rose-800'
+                        : 'bg-white border-slate-300 text-slate-800'
+                    )}
+                  >
+                    <span>Actions</span>
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {filteredPos.length === 0 && (
+          <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 font-bold text-xs uppercase italic">
+            No Purchase Orders found matching the current filters.
+          </div>
+        )}
+      </div>
+
+      {/* Pagination / Footer Bar */}
+      <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-2xs flex flex-wrap justify-between items-center gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-slate-500 uppercase">Cumulative Weight:</span>
+            <span className="text-xs font-black text-slate-900 font-mono tabular-nums">
+              {filteredPos.reduce((acc, s) => acc + parseFloat(s.total_contract_mt || 0), 0).toFixed(3)} MT
+            </span>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-slate-500 uppercase">Closed P.O.s:</span>
+            <span className="text-xs font-black text-emerald-700 font-mono tabular-nums">
+              {filteredPos.filter((p) => p.pending === false || p.pending === 'No' || p.is_closed).length} Closed
+            </span>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-slate-500 uppercase">Total Records:</span>
+            <span className="text-xs font-black text-slate-900 font-mono tabular-nums">{filteredPos.length} POs</span>
+          </div>
+        </div>
+        <div className="flex-1 max-w-xl">
+          <PaginationControls
+            currentPage={currentPage}
+            totalItems={sortedPos.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
+      </div>
+
+      {/* Histogram Lifecycle & Story Modal */}
+      {histogramModalPo && (
+        <PoHistogramHistoryModal
+          isOpen={Boolean(histogramModalPo)}
+          onClose={() => setHistogramModalPo(null)}
+          po={histogramModalPo}
+          allPayments={allPayments}
+          allSettlements={allSettlements}
+          allArrivals={allTempArrivals}
+          allInspections={allInspections}
+        />
+      )}
     </div>
   );
-};
-
-const selectPoRowStyle = (isSelected: boolean) => {
-  return isSelected ? "bg-rose-500 text-white border-rose-400" : "text-rose-700 bg-rose-50 border-rose-200";
 };

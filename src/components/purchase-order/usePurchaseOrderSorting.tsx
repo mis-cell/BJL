@@ -4,8 +4,10 @@ import { calculateWeightTolerance } from '../../lib/weightTolerance';
 import { canViewCompletedData } from '../../lib/permissions';
 import { parseMonthKey } from '../common/MonthWiseCardsRibbon';
 
-export type SortKey = 'po_no' | 'date' | 'type' | 'supplier' | 'broker' | 'unit' | 'total_units' | 'weight' | 'status' | 'closed_open' | 'excess_short' | 'pass_mismatch';
+export type SortKey = 'po_no' | 'date' | 'type' | 'supplier' | 'broker' | 'unit' | 'total_units' | 'weight' | 'status' | 'closed_open' | 'excess_short' | 'pass_mismatch' | 'stage';
 export type StatusFilterType = 'all' | 'pending' | 'completed' | 'short' | 'excess' | 'cancelled';
+export type LorryStatusFilterType = 'all' | 'open' | 'closed';
+export type WtStatusFilterType = 'all' | 'pending_arrival' | 'tolerable' | 'short' | 'excess';
 
 interface UsePurchaseOrderSortingProps {
   poList: any[];
@@ -28,6 +30,8 @@ export function usePurchaseOrderSorting({
   const [endDate, setEndDate] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('all');
+  const [lorryStatusFilter, setLorryStatusFilter] = useState<LorryStatusFilterType>('all');
+  const [wtStatusFilter, setWtStatusFilter] = useState<WtStatusFilterType>('all');
   const [selectedPoNo, setSelectedPoNo] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,7 +39,7 @@ export function usePurchaseOrderSorting({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [deferredSearchTerm, startDate, endDate, statusFilter, selectedMonth]);
+  }, [deferredSearchTerm, startDate, endDate, statusFilter, lorryStatusFilter, wtStatusFilter, selectedMonth]);
 
   const [sortConfig, setSortConfig] = useState<{
     key: SortKey;
@@ -54,13 +58,13 @@ export function usePurchaseOrderSorting({
     const isActive = sortConfig.key === colKey;
     if (isActive) {
       return sortConfig.direction === 'asc' ? (
-        <ArrowUp className="w-3 h-3 text-emerald-800 shrink-0 inline ml-1 font-bold" />
+        <ArrowUp className="w-3 h-3 text-[#9F1239] shrink-0 inline ml-0.5 font-bold" />
       ) : (
-        <ArrowDown className="w-3 h-3 text-emerald-800 shrink-0 inline ml-1 font-bold" />
+        <ArrowDown className="w-3 h-3 text-[#9F1239] shrink-0 inline ml-0.5 font-bold" />
       );
     }
     return (
-      <ArrowUpDown className="w-2.5 h-2.5 text-slate-400 opacity-40 group-hover:opacity-100 shrink-0 inline ml-1 transition-opacity" />
+      <ArrowUpDown className="w-2.5 h-2.5 text-rose-900/40 opacity-50 group-hover:opacity-100 shrink-0 inline ml-0.5 transition-opacity" />
     );
   };
 
@@ -124,9 +128,27 @@ export function usePurchaseOrderSorting({
         }
       }
 
+      if (lorryStatusFilter !== 'all') {
+        if (lorryStatusFilter === 'open' && isClosed) return false;
+        if (lorryStatusFilter === 'closed' && !isClosed) return false;
+      }
+
+      if (wtStatusFilter !== 'all') {
+        const hasArrived = receivedWt > 0 || receivedLorries > 0;
+        if (wtStatusFilter === 'pending_arrival') {
+          if (hasArrived) return false;
+        } else if (wtStatusFilter === 'tolerable') {
+          if (!hasArrived || !tol.isAcceptable) return false;
+        } else if (wtStatusFilter === 'short') {
+          if (!hasArrived || !tol.isUnderDelivery || tol.isAcceptable) return false;
+        } else if (wtStatusFilter === 'excess') {
+          if (!hasArrived || !tol.isOverDelivery || tol.isAcceptable) return false;
+        }
+      }
+
       return true;
     });
-  }, [poList, searchTerm, startDate, endDate, statusFilter]);
+  }, [poList, deferredSearchTerm, startDate, endDate, selectedMonth, statusFilter, lorryStatusFilter, wtStatusFilter]);
 
   // Sorted POs for Table View
   const sortedPos = useMemo(() => {
@@ -250,6 +272,12 @@ export function usePurchaseOrderSorting({
           comparison = wA - wB;
           break;
         }
+        case 'stage': {
+          const sA = String(a.workflow_stage || a.pass_status || '');
+          const sB = String(b.workflow_stage || b.pass_status || '');
+          comparison = sA.localeCompare(sB);
+          break;
+        }
         default:
           comparison = 0;
       }
@@ -368,6 +396,10 @@ export function usePurchaseOrderSorting({
     setSelectedMonth,
     statusFilter,
     setStatusFilter,
+    lorryStatusFilter,
+    setLorryStatusFilter,
+    wtStatusFilter,
+    setWtStatusFilter,
     selectedPoNo,
     setSelectedPoNo,
     currentPage,

@@ -95,6 +95,10 @@ export default function PurchaseOrder({
     setSelectedMonth,
     statusFilter,
     setStatusFilter,
+    lorryStatusFilter,
+    setLorryStatusFilter,
+    wtStatusFilter,
+    setWtStatusFilter,
     selectedPoNo,
     setSelectedPoNo,
     currentPage,
@@ -296,6 +300,10 @@ export default function PurchaseOrder({
             onClose={onClose}
             statusFilter={statusFilter}
             setStatusFilter={setStatusFilter}
+            lorryStatusFilter={lorryStatusFilter}
+            setLorryStatusFilter={setLorryStatusFilter}
+            wtStatusFilter={wtStatusFilter}
+            setWtStatusFilter={setWtStatusFilter}
             totalPendingPos={totalPendingPos}
             totalGeneratedPos={totalGeneratedPos}
             totalCompletedPos={totalCompletedPos}
@@ -404,6 +412,12 @@ export default function PurchaseOrder({
         onSendMail={handleSendMailPo}
         onDelete={handleDeletePo}
         onCancelPo={handleCancelSauda}
+        onViewEdit={handleLoadSelectedPo}
+        onPrint={handlePrintPo}
+        onForceClose={handleCloseSauda}
+        onReopen={openReopenAuthModal}
+        onViewAudit={setAuditViewPo}
+        onWeightModal={setExcessShortModalPo}
       />
 
       {/* Manual Close P.O Modal with Remarks (Level 4 & Admin) */}

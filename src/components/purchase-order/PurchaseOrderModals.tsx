@@ -13,7 +13,10 @@ import {
   Edit,
   Lock,
   Unlock,
-  Ban
+  Ban,
+  Printer,
+  Scale,
+  Eye
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { isUserAdmin, isL5OrAdmin, getCurrentUserContext } from '../../lib/permissions';
@@ -45,7 +48,25 @@ export const PoActionMenuPortal: React.FC<{
   onSendMail: (item: any) => void;
   onDelete: (poNo: string) => void;
   onCancelPo?: (item: any) => void;
-}> = ({ actionMenu, onClose, onSendMail, onDelete, onCancelPo }) => {
+  onViewEdit?: (item: any) => void;
+  onPrint?: (item: any) => void;
+  onForceClose?: (item: any) => void;
+  onReopen?: (item: any) => void;
+  onViewAudit?: (item: any) => void;
+  onWeightModal?: (item: any) => void;
+}> = ({
+  actionMenu,
+  onClose,
+  onSendMail,
+  onDelete,
+  onCancelPo,
+  onViewEdit,
+  onPrint,
+  onForceClose,
+  onReopen,
+  onViewAudit,
+  onWeightModal
+}) => {
   if (!actionMenu) return null;
 
   const userCtx = getCurrentUserContext();
@@ -54,40 +75,168 @@ export const PoActionMenuPortal: React.FC<{
   const isAdminOrL4 = isUserAdmin(userCtx) || userRole === 'ADMIN' || userRole === 'ADMINISTRATOR' || 
                        isL5OrAdmin() || userLevel === 'L4' || userLevel === 'L5' || userLevel === 'MAX' || 
                        Boolean((userCtx as any)?.isAdmin);
+  const isUserId2 = String(userCtx?.userId) === '2';
 
-  const isCancelled = actionMenu.item.status === 'cancelled';
+  const item = actionMenu.item;
+  const isCancelled = item.status === 'cancelled';
+  const contractLorries = item.contract_lorries || item.total_no_of_lorries || 1;
+  const receivedLorries = item.received_lorries || 0;
+  const isClosed = !item.is_reopened && Boolean(
+    item.is_closed ||
+    item.status === 'closed' ||
+    (contractLorries > 0 && receivedLorries >= contractLorries)
+  );
+  const editDisabled = isUserId2 || (isClosed && !isAdminOrL4);
+
+  const menuTop = Math.min(actionMenu.y + 4, window.innerHeight - 320);
+  const menuLeft = Math.max(8, Math.min(actionMenu.x - 196, window.innerWidth - 224));
 
   return createPortal(
     <>
       <div className="fixed inset-0 z-[999]" onClick={onClose} />
       <div
-        className="fixed z-[1000] bg-white rounded-2xl shadow-2xl border border-slate-200 p-1.5 text-xs w-44 animate-in fade-in zoom-in-95 duration-100"
-        style={{ top: actionMenu.y + 4, left: Math.max(8, actionMenu.x - 180) }}
+        className="fixed z-[1000] bg-white rounded-xl shadow-2xl border border-slate-200 p-1.5 text-xs w-52 animate-in fade-in zoom-in-95 duration-100"
+        style={{ top: Math.max(8, menuTop), left: menuLeft }}
       >
+        {/* View Details / Edit */}
+        {onViewEdit && (
+          <button
+            onClick={() => {
+              if (editDisabled) return;
+              onClose();
+              onViewEdit(item);
+            }}
+            disabled={editDisabled}
+            className={cn(
+              "w-full text-left px-3 py-2 rounded-lg flex items-center gap-2.5 font-bold text-xs transition-colors",
+              editDisabled
+                ? "opacity-40 cursor-not-allowed text-slate-400"
+                : "hover:bg-slate-100 text-slate-800 cursor-pointer"
+            )}
+            title={
+              isUserId2
+                ? "Restricted for User ID 2"
+                : editDisabled
+                ? "CLOSED: Only Level 4 / Admin can Reopen to edit"
+                : "View Details & Edit Contract"
+            }
+          >
+            <Eye className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+            <span>View Details / Edit</span>
+          </button>
+        )}
+
+        {/* Print P.O */}
+        {onPrint && (
+          <button
+            onClick={() => {
+              onClose();
+              onPrint(item);
+            }}
+            className="w-full text-left px-3 py-2 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+            <span>Print P.O</span>
+          </button>
+        )}
+
+        {/* Weight Tolerance & Settlement */}
+        {onWeightModal && (
+          <button
+            onClick={() => {
+              onClose();
+              onWeightModal(item);
+            }}
+            className="w-full text-left px-3 py-2 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+          >
+            <Scale className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+            <span>Weight Settlement</span>
+          </button>
+        )}
+
+        {/* Force Close / Reopen (moved from Lorry Status column to save table space) */}
+        {(onForceClose || onReopen) && (
+          <>
+            <div className="border-t border-slate-100 my-1" />
+            {!isClosed && onForceClose && (
+              <button
+                onClick={() => {
+                  if (!isAdminOrL4) return;
+                  onClose();
+                  onForceClose(item);
+                }}
+                disabled={!isAdminOrL4}
+                className={cn(
+                  "w-full text-left px-3 py-2 rounded-lg flex items-center gap-2.5 font-bold text-xs transition-colors",
+                  isAdminOrL4
+                    ? "hover:bg-amber-50 text-amber-800 cursor-pointer"
+                    : "opacity-40 cursor-not-allowed text-slate-400"
+                )}
+                title={isAdminOrL4 ? "Manually Close this P.O with remarks" : "Only Level 4 or Admin can manually close a P.O"}
+              >
+                <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                <span>Force Close P.O</span>
+              </button>
+            )}
+            {isClosed && onReopen && (
+              <button
+                onClick={() => {
+                  if (!isAdminOrL4) return;
+                  onClose();
+                  onReopen(item);
+                }}
+                disabled={!isAdminOrL4}
+                className={cn(
+                  "w-full text-left px-3 py-2 rounded-lg flex items-center gap-2.5 font-bold text-xs transition-colors",
+                  isAdminOrL4
+                    ? "hover:bg-indigo-50 text-indigo-700 cursor-pointer"
+                    : "opacity-40 cursor-not-allowed text-slate-400"
+                )}
+                title={isAdminOrL4 ? "Reopen this Closed P.O with remarks" : "Only Level 4 or Admin can reopen a Closed P.O"}
+              >
+                <Unlock className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <span>Reopen P.O</span>
+              </button>
+            )}
+            {item.open_remarks && onViewAudit && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onViewAudit(item);
+                }}
+                className="w-full text-left px-3 py-2 hover:bg-indigo-50 rounded-lg flex items-center gap-2.5 text-indigo-700 font-bold text-xs transition-colors cursor-pointer"
+              >
+                <UserCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <span>Reopen Audit Log</span>
+              </button>
+            )}
+          </>
+        )}
+
+        <div className="border-t border-slate-100 my-1" />
+
+        {/* Email */}
         <button
           onClick={() => {
-            const it = actionMenu.item;
             onClose();
-            onSendMail(it);
+            onSendMail(item);
           }}
-          className="w-full text-left px-3 py-2 hover:bg-indigo-50/70 rounded-xl flex items-center gap-2.5 text-indigo-700 font-bold text-xs transition-colors cursor-pointer"
+          className="w-full text-left px-3 py-2 hover:bg-indigo-50/70 rounded-lg flex items-center gap-2.5 text-indigo-700 font-bold text-xs transition-colors cursor-pointer"
         >
-          <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
-          <span>Email</span>
+          <Mail className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+          <span>Email P.O</span>
         </button>
 
         {/* Level 4 & Admin: Cancel Sauda / Restore Sauda Action Button */}
         {isAdminOrL4 && (
           <>
-            <div className="border-t border-slate-100 my-0.5" />
             <button
               onClick={() => {
-                const it = actionMenu.item;
                 onClose();
-                onCancelPo?.(it);
+                onCancelPo?.(item);
               }}
               className={cn(
-                "w-full text-left px-3 py-2 rounded-xl flex items-center gap-2.5 font-bold text-xs transition-colors cursor-pointer",
+                "w-full text-left px-3 py-2 rounded-lg flex items-center gap-2.5 font-bold text-xs transition-colors cursor-pointer",
                 isCancelled
                   ? "hover:bg-emerald-50 text-emerald-700"
                   : "hover:bg-amber-50 text-amber-900"
@@ -96,12 +245,12 @@ export const PoActionMenuPortal: React.FC<{
             >
               {isCancelled ? (
                 <>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                   <span>Restore Sauda</span>
                 </>
               ) : (
                 <>
-                  <Ban className="w-4 h-4 text-amber-700 shrink-0" />
+                  <Ban className="w-3.5 h-3.5 text-amber-700 shrink-0" />
                   <span>Cancel Sauda</span>
                 </>
               )}
@@ -109,23 +258,23 @@ export const PoActionMenuPortal: React.FC<{
           </>
         )}
 
-        <div className="border-t border-slate-100 my-0.5" />
+        <div className="border-t border-slate-100 my-1" />
         <button
           onClick={() => {
-            const po = actionMenu.item.po_no;
+            const po = item.po_no;
             onClose();
             onDelete(po);
           }}
           disabled={!isUserAdmin() && !isL5OrAdmin()}
           className={cn(
-            "w-full text-left px-3 py-2 rounded-xl flex items-center gap-2.5 font-bold text-xs transition-colors cursor-pointer",
+            "w-full text-left px-3 py-2 rounded-lg flex items-center gap-2.5 font-bold text-xs transition-colors cursor-pointer",
             !isUserAdmin() && !isL5OrAdmin()
               ? "opacity-40 cursor-not-allowed text-slate-400"
               : "hover:bg-rose-50 text-rose-700"
           )}
           title={!isUserAdmin() && !isL5OrAdmin() ? "Admin permission required to delete Sauda records" : "Delete Sauda record"}
         >
-          <Trash2 className="w-4 h-4 text-rose-600 shrink-0" />
+          <Trash2 className="w-3.5 h-3.5 text-rose-600 shrink-0" />
           <span>Delete</span>
         </button>
       </div>
