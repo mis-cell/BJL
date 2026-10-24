@@ -69,7 +69,8 @@ export const calculateNetPaidAmountAfterDeductions = (
   const dClaim = Math.max(0, Number(deliveryClaim) || 0);
   const totDed = Math.max(0, Number(totalDeductionsAndPenalties) || 0);
   const exShort = Math.max(0, Number(extraAndShort) || 0);
-  return Math.max(0, Math.round(base93Pct - dClaim - totDed - exShort));
+  const netAfterDeductions = Math.max(0, base93Pct - dClaim - totDed - exShort);
+  return Math.floor(netAfterDeductions / 1000) * 1000;
 };
 
 export interface PaymentDeductionsBreakdown {
