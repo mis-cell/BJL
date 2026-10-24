@@ -575,11 +575,6 @@ export function PaymentEntryForm({
                 }}
                 className="w-full p-2 font-black text-sm border border-emerald-400 rounded bg-emerald-50/70 text-emerald-950 focus:ring-2 focus:ring-emerald-500 shadow-xs"
               />
-              <span className="text-[10px] text-emerald-700 font-bold">
-                {masterData.payable_amt > 0
-                  ? `${formatIndianCurrency(Math.round(masterData.paid_amount || 0), true, 0)} (${masterData.payable_amt > 0 ? (((Math.round(masterData.paid_amount || 0)) / Math.round(masterData.payable_amt)) * 100).toFixed(1) : '0.0'}% of bill)`
-                  : '(Payable Net − Delivery Claim − Deductions − Extra & Short) × 93%'}
-              </span>
             </div>
 
             {/* Pending Balance for Final Settlement */}
@@ -588,11 +583,6 @@ export function PaymentEntryForm({
                 <span className="text-[10px] font-black uppercase text-amber-900 tracking-wider flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5 text-amber-700" />
                   Pending Amount
-                </span>
-                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 border border-amber-300">
-                  {masterData.payable_amt > 0
-                    ? `${(((Math.round(masterData.payable_amt) - Math.round(masterData.paid_amount || 0)) / Math.round(masterData.payable_amt)) * 100).toFixed(1)}%`
-                    : '0.0%'}
                 </span>
               </div>
               <div className="text-base font-black text-amber-950 font-mono my-0.5">
