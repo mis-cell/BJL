@@ -1058,6 +1058,47 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     if (initialData && !enforceEditOrDeletePermission("Edit")) {
       return;
     }
+    //alert(JSON.stringify(details))
+    //return
+    if(formData.arrival_no==='' || formData.arrival_no===null){
+       alert('Please enter Arrival No.');
+      return
+    }
+    if(formData.arrival_no!='' || formData.arrival_no!=null){
+      const hasArrivalNo = String(formData.arrival_no || '').trim().replace(/^(MR|AR)/i, '').trim().length > 0;
+      if (!hasArrivalNo) {
+        alert('Please enter Arrival No.');
+        return;
+      }
+    }
+    if(formData.challan_supplier==='' || formData.challan_supplier===null){
+       alert('Please Select Challan Supplier.');
+      return
+    }
+    if(formData.supplier==='' || formData.supplier===null){
+       alert('Please Select Supplier.');
+      return
+    }
+    if(formData.broker==='' || formData.broker===null){
+       alert('Please Select Broker.');
+      return
+    }
+    if(formData.lorry_suffix==='' || formData.lorry_suffix===null){
+       alert('Please Enter Lorry No.');
+      return
+    }
+    if(formData.unit_name==='' || formData.unit_name===null){
+       alert('Please Select Area.');
+      return
+    }
+    if(formData.unit_name==='' || formData.unit_name===null){
+       alert('Please Select Area.');
+      return
+    }
+    if(formData.unit_name==='' || formData.unit_name===null){
+       alert('Please Select Area.');
+      return
+    }
 
     // Guard: Prohibit creating new temporary arrivals against cancelled or closed saudas
     const cleanEnteredPo = String(formData.po_no || '').trim().toUpperCase();
