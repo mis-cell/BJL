@@ -199,7 +199,7 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
                 colSpan={9}
                 className="p-3 text-right font-extrabold text-emerald-900"
               >
-                Final Receipt Total
+                Summary Totals:
               </td>
               
               <td className="border-x border-emerald-300 bg-emerald-200 p-3 text-center font-extrabold text-emerald-950">
