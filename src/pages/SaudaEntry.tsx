@@ -133,15 +133,29 @@ export default function SaudaEntry({
   // User ID 010 (Checker) reviews and approves or rejects with mandatory remarks.
   // CRITICAL RULE: Once approved by User 010, the entry is PERMANENTLY LOCKED for ALL users (including Admin).
   const isContractApproved = isSaudaApproved(initialData);
-  const rawStatus = String(initialData?.status || initialData?.approval_status || '').toUpperCase();
-  const isPendingApproval = rawStatus === 'PENDING';
-  const isRejectedContract = rawStatus === 'REJECTED' || Boolean(initialData?.rejected_by);
-  const isDraftContract = rawStatus === 'DRAFT';
+  const rawStatus = String(initialData?.status || '').toUpperCase();
+  const rawApprovalStatus = String(initialData?.approval_status || '').toUpperCase();
+  const isRejectedContract = !isContractApproved && (
+    rawStatus === 'REJECTED' ||
+    rawApprovalStatus === 'REJECTED' ||
+    (Boolean(initialData?.rejected_by) && rawStatus !== 'PENDING' && rawApprovalStatus !== 'PENDING')
+  );
+  const isDraftContract = !isContractApproved && !isRejectedContract && (
+    rawStatus === 'DRAFT' || rawApprovalStatus === 'DRAFT'
+  );
+  const isPendingApproval = Boolean(
+    initialData &&
+    !isContractApproved &&
+    !isRejectedContract &&
+    !isDraftContract &&
+    (rawStatus === 'PENDING' || rawApprovalStatus === 'PENDING')
+  );
 
   // Read-only conditions:
   // 1. Approved = permanently locked for all users
-  // 2. Pending Approval = read-only for User 002 / maker
-  // 3. User 010 review = User 010 cannot directly edit input fields; can only Approve/Reject in dashboard
+  // 2. Pending Approval = read-only for User 002 / maker while awaiting User 010 review
+  // 3. Rejected or Draft = editable by User 002 so Maker can correct & resubmit
+  // 4. User 010 review = User 010 cannot directly edit input fields; can only Approve/Reject in dashboard
   const isLockedForCurrentUser = Boolean(isContractApproved || isPendingApproval || (isUser010 && initialData));
 
   const today = new Date().toISOString().split('T')[0];
@@ -1000,6 +1014,9 @@ export default function SaudaEntry({
         saudaPayload.checked_at = null;
         saudaPayload.approved_by = null;
         saudaPayload.approved_at = null;
+        saudaPayload.rejected_by = null;
+        saudaPayload.rejected_at = null;
+        saudaPayload.rejection_remarks = null;
         saudaPayload.submitted_by = activeUserId;
         saudaPayload.submitted_at = new Date().toISOString();
 
@@ -1074,6 +1091,37 @@ export default function SaudaEntry({
           }
         }
       }
+
+      try {
+        const oldCleanKey = String(initialData?.sauda_no || '').trim().toUpperCase();
+        const newCleanKey = String(saudaPayload.sauda_no || '').trim().toUpperCase();
+        const idCleanKey = String(saudaPayload.sauda_id || '').trim().toUpperCase();
+        if (oldCleanKey && oldCleanKey !== newCleanKey) {
+          localStorage.removeItem(`sauda_check_status_${oldCleanKey}`);
+        }
+        const statusCachePayload = {
+          is_checked: false,
+          checked_by: null,
+          checked_at: null,
+          approved_by: null,
+          approved_at: null,
+          rejected_by: saudaPayload.rejected_by ?? null,
+          rejected_at: saudaPayload.rejected_at ?? null,
+          rejection_remarks: saudaPayload.rejection_remarks ?? null,
+          status: saudaPayload.status,
+          approval_status: saudaPayload.approval_status,
+          submitted_by: saudaPayload.submitted_by ?? null,
+          submitted_at: saudaPayload.submitted_at ?? null,
+          resubmission_count: saudaPayload.resubmission_count || 0,
+          last_updated_at: saudaPayload.last_updated_at
+        };
+        if (newCleanKey) {
+          localStorage.setItem(`sauda_check_status_${newCleanKey}`, JSON.stringify(statusCachePayload));
+        }
+        if (idCleanKey) {
+          localStorage.setItem(`sauda_check_status_${idCleanKey}`, JSON.stringify(statusCachePayload));
+        }
+      } catch (_e) {}
 
       if (isWasRejected && targetMode === 'SUBMIT') {
         logChange({
@@ -1154,9 +1202,14 @@ export default function SaudaEntry({
                     ✓ Approved by: {resolveDisplayName(initialData.approved_by || initialData.checked_by)}
                   </span>
                 )}
-                {initialData && initialData.rejected_by && (
+                {initialData && isRejectedContract && initialData.rejected_by && (
                   <span className="bg-rose-900 text-rose-100 text-[10px] font-extrabold px-2 py-0.5 rounded border border-rose-500/50">
                     ✕ Rejected by: {resolveDisplayName(initialData.rejected_by)}
+                  </span>
+                )}
+                {initialData && isPendingApproval && (Number(initialData.resubmission_count) || 0) > 0 && (
+                  <span className="bg-indigo-900 text-indigo-100 text-[10px] font-extrabold px-2 py-0.5 rounded border border-indigo-400/50">
+                    ↻ Resubmitted (v{(Number(initialData.resubmission_count) || 0) + 1})
                   </span>
                 )}
               </div>
@@ -1285,7 +1338,48 @@ export default function SaudaEntry({
           </div>
         )}
 
-        {/* 2. Pending Approval Banner */}
+        {/* 2. Rejected Contract Banner (Editable by User 002 for Resubmission) */}
+        {!isContractApproved && isRejectedContract && (
+          <div className="bg-rose-50 border-2 border-rose-400 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-rose-100 rounded-xl border border-rose-300 text-rose-700 shrink-0 shadow-2xs">
+                <ShieldAlert className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="bg-rose-700 text-white font-black text-[11px] px-2.5 py-0.5 rounded tracking-wider uppercase shadow-2xs">
+                    REJECTED BY USER 010
+                  </span>
+                  <span className="font-extrabold text-rose-950 text-sm">
+                    Returned for Correction by {resolveDisplayName(initialData?.rejected_by, 'User 010 (Checker)')}
+                  </span>
+                  <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] font-black px-2 py-0.5 rounded uppercase">
+                    Editable by User 002
+                  </span>
+                </div>
+                {initialData?.rejection_remarks && (
+                  <p className="text-xs font-bold text-rose-900 bg-white/80 border border-rose-200 rounded-lg px-3 py-1.5 mt-1.5">
+                    Rejection Reason: "{initialData.rejection_remarks}"
+                  </p>
+                )}
+                <p className="text-xs text-rose-800 font-medium mt-1">
+                  Please update the necessary details below and click <strong>"RESUBMIT FOR APPROVAL"</strong> at the bottom of the form to send this contract back to User 010.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-4 py-2 bg-rose-700 hover:bg-rose-800 active:bg-rose-900 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
+              >
+                Back to Register
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 3. Pending Approval Banner */}
         {!isContractApproved && isPendingApproval && (
           <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-in fade-in">
             <div className="flex items-center gap-3">
@@ -1300,6 +1394,11 @@ export default function SaudaEntry({
                   <span className="font-extrabold text-amber-950 text-sm">
                     Awaiting Verification by User 010 (Checker)
                   </span>
+                  {(Number(initialData?.resubmission_count) || 0) > 0 && (
+                    <span className="text-[10px] text-indigo-900 bg-indigo-100 px-2 py-0.5 rounded border border-indigo-300 font-extrabold">
+                      Resubmitted (Version {(Number(initialData?.resubmission_count) || 0) + 1})
+                    </span>
+                  )}
                   {initialData?.submitted_at && (
                     <span className="text-[10px] text-amber-900 bg-amber-200/70 px-2 py-0.5 rounded border border-amber-300 font-mono">
                       Submitted on: {new Date(initialData.submitted_at).toLocaleString('en-GB')}

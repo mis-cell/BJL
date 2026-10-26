@@ -294,11 +294,12 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   };
 
   const isRejectedSauda = (s: Sauda) => {
-    return Boolean(
-      String(s.status || '').toUpperCase() === 'REJECTED' || 
-      String(s.approval_status || '').toUpperCase() === 'REJECTED' ||
-      Boolean(s.rejected_by)
-    );
+    if (isApprovedSauda(s)) return false;
+    const st = String(s.status || '').toUpperCase();
+    const ast = String(s.approval_status || '').toUpperCase();
+    if (st === 'REJECTED' || ast === 'REJECTED') return true;
+    if (st === 'PENDING' || ast === 'PENDING') return false;
+    return Boolean(s.rejected_by);
   };
 
   const isPendingUncheckedSauda = (s: Sauda) => {
@@ -403,6 +404,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         localStorage.setItem(`sauda_check_status_${cleanKey}`, JSON.stringify(updatePayload));
       }
       if (targetId) {
+        localStorage.setItem(`sauda_check_status_${String(targetId).trim().toUpperCase()}`, JSON.stringify(updatePayload));
+      }
+      if (targetId) {
         await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload);
       } else if (saudaNo) {
         await dbModule.update('sauda_master', 'sauda_no', saudaNo, updatePayload);
@@ -504,6 +508,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       const cleanKey = String(saudaNo || targetId || '').trim().toUpperCase();
       if (cleanKey) {
         localStorage.setItem(`sauda_check_status_${cleanKey}`, JSON.stringify(updatePayload));
+      }
+      if (targetId) {
+        localStorage.setItem(`sauda_check_status_${String(targetId).trim().toUpperCase()}`, JSON.stringify(updatePayload));
       }
       if (targetId) {
         await dbModule.update('sauda_master', 'sauda_id', targetId, updatePayload);
@@ -940,13 +947,38 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         dbModule.fetchAll('sauda_check_point').catch(() => [])
       ]);
 
-      const mergedSaudas = (saudasData || []).map((s: any) => {
+      const mergedSaudas = (saudasData || []).map((rawSauda: any) => {
+        const s = { ...rawSauda };
+        const dbStatus = String(s.status || s.approval_status || '').toUpperCase();
+        // If DB row was resubmitted (PENDING), ensure stale rejected_by is cleared
+        if (dbStatus === 'PENDING' && s.rejected_by) {
+          s.rejected_by = null;
+          s.rejected_at = null;
+        }
+
         const cleanKey = String(s.sauda_no || s.sauda_id || '').trim().toUpperCase();
+        const idKey = s.sauda_id ? String(s.sauda_id).trim().toUpperCase() : '';
         if (cleanKey) {
           try {
             const cachedStr = localStorage.getItem(`sauda_check_status_${cleanKey}`);
             if (cachedStr) {
               const cachedObj = JSON.parse(cachedStr);
+              const cachedStatus = String(cachedObj.status || cachedObj.approval_status || '').toUpperCase();
+              const dbUpdatedTime = new Date(s.last_updated_at || s.submitted_at || 0).getTime();
+              const cacheUpdatedTime = new Date(cachedObj.last_updated_at || cachedObj.rejected_at || cachedObj.approved_at || 0).getTime();
+
+              // Discard stale REJECTED cache if DB shows PENDING resubmission or newer update
+              const isStaleRejectedCache =
+                cachedStatus === 'REJECTED' &&
+                dbStatus === 'PENDING' &&
+                (!s.rejected_by || (Number(s.resubmission_count) || 0) > 0 || (dbUpdatedTime > 0 && dbUpdatedTime >= cacheUpdatedTime));
+
+              if (isStaleRejectedCache || dbStatus === 'APPROVED') {
+                localStorage.removeItem(`sauda_check_status_${cleanKey}`);
+                if (idKey) localStorage.removeItem(`sauda_check_status_${idKey}`);
+                return s;
+              }
+
               return { ...s, ...cachedObj };
             }
           } catch (_e) {}
