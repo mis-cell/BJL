@@ -83,6 +83,8 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
       
       const wtStr = calcData.weight_per_lorry || '29.500';
       setLocalWeight(wtStr);
+      setLocalTotalUnits(calcData.total_units || '');
+      setLocalUnitsPerLorry(calcData.units_per_lorry || '');
 
       recomputeUnits(lorriesStr, wtStr, uType, initialWtUnit, calcData.total_units, calcData.units_per_lorry);
     }
@@ -173,7 +175,7 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
   };
 
   const handleLorriesChange = (val: string) => {
-     setLocalLorries(val);
+    setLocalLorries(val);
     if (isPtf) {
       setCalcData(prev => ({
         ...prev,
@@ -181,12 +183,11 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
       }));
       return;
     }
-    
-    
+
     const lorries = Math.max(1, parseFloat(val) || 1);
     const norm = normalizeUnitType(localUnitType);
 
-    if ( (norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES') && !is_ptf) {
+    if ((norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES') && !isPtf) {
       setLocalTotalUnits('');
       setLocalUnitsPerLorry('');
       return;
@@ -248,7 +249,7 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
 
   const handleUnitsPerLorryChange = (val: string) => {
     setLocalUnitsPerLorry(val);
-     if (isPtf) {
+    if (isPtf) {
       setCalcData(prev => ({
         ...prev,
         units_per_lorry: val
@@ -314,7 +315,7 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
 
   const handleApplyClick = () => {
     const norm = normalizeUnitType(localUnitType);
-    const isNonUnit = norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES';
+    const isNonUnit = (norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES') && !isPtf;
     const rawWeight = parseFloat(localWeight) || 0;
     const wtPerLorryFormatted = rawWeight >= 100 ? (rawWeight / 1000).toFixed(3) : rawWeight.toFixed(3);
 
@@ -338,7 +339,7 @@ export const PoCalculationModal: React.FC<PoCalculationModalProps> = ({
   };
 
   const norm = normalizeUnitType(localUnitType);
-  const isNonUnit = norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES';
+  const isNonUnit = (norm === 'LOOSE' || norm === 'P. BALES' || norm === 'H. BALES') && !isPtf;
   const unitWeightForFormula = norm === 'DRUMS' ? (parseFloat(localWeightUnitKgs) || 50) : 147.5;
   const rawNumWeight = parseFloat(localWeight) || 0;
   const displayKgWeight = rawNumWeight < 100 ? rawNumWeight * 1000 : rawNumWeight;
