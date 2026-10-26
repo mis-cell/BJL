@@ -1,5 +1,6 @@
 import { PaymentDetailColumn, emptyDetailColumn } from '../types/payment.types';
 import { calculateSattaDeduction } from '../services/sattaCalculation';
+export { calculateSattaDeduction };
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
 import { fetchSaudaCheckpointDeduction } from '../services/settlementService';
@@ -555,6 +556,9 @@ export const getColDeduction = (col?: PaymentDetailColumn, dbDiffs?: any[], poIt
   if (settPct <= 0 && (!col.deduction_rate || col.deduction_rate <= 0)) return 0;
   if (settPct <= 0 && col.deduction_rate && col.deduction_rate > 0) return Number(col.deduction_rate);
   const res = calculateSattaDeduction(col, dbDiffs, undefined, poItemsList || col.po_items);
+  if (res.deduction <= 0 && col.deduction_rate && Number(col.deduction_rate) > 0) {
+    return Number(col.deduction_rate);
+  }
   return res.deduction;
 };
 

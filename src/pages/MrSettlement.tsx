@@ -12,7 +12,7 @@ import { supabase } from "../lib/supabase";
 import { dbModule } from "../services/dbModule";
 import { cn, sanitizeCsvData } from "../lib/utils";
 import { enforceEditOrDeletePermission, canEditOrDelete, canViewCompletedData, isL5OrAdmin } from "../lib/permissions";
-import { findMatchedPoItem, parseGridOrItems, getColSettRate } from "../utils/paymentCalculations";
+import { findMatchedPoItem, parseGridOrItems, getColSettRate, calculateSattaDeduction } from "../utils/paymentCalculations";
 import { setCachedSattaDiffs, getCachedSattaDiffs } from "../services/sattaCalculation";
 import {
   resolveGradeName,
@@ -33,6 +33,7 @@ import {
   emptyDetailColumn,
   getColWtMt,
   getColAmount,
+  getEffectiveColSettRate,
   calculateWeightedRatePerMT,
   initialMaster,
   parseDateOnly,
@@ -44,6 +45,7 @@ import {
 export {
   getColWtMt,
   getColAmount,
+  getEffectiveColSettRate,
   calculateWeightedRatePerMT,
   emptyDetailColumn,
   initialMaster,
@@ -253,7 +255,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         } catch (e) {}
       }
 
-      // Also live-update detailCols if payment has sett_rate for grades
+      // Also live-update detailCols with Payment Operations -> Details fields (preserving original PO rate in rate_value!)
       if (matchedDetailsList.length > 0) {
         setDetailCols(prevCols => prevCols.map(col => {
           const hasData = Boolean(col.grade || col.quantity || col.arr_qty_wt);
@@ -266,24 +268,47 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         });
           if (match) {
             const origRate = Number(match.rate_value) > 0 ? Number(match.rate_value) : Number(col.rate_value || 0);
-            const prem = Number(match.premium || 0);
-            const settPct = Number(match.sett_pct) > 0
+            const prem = Number(match.premium) > 0 ? Number(match.premium) : Number(col.premium || 0);
+            const settPct = match.sett_pct !== undefined && match.sett_pct !== null && Number(match.sett_pct) > 0
               ? Number(match.sett_pct)
-              : (Number(col.gd_claim) > 0 ? Number(col.gd_claim) : Number(col.gd_sett || 0));
-            const calcRate = getColSettRate(
-              { ...col, rate_value: origRate, premium: prem, sett_pct: settPct, all_cols: prevCols } as any,
-              getCachedSattaDiffs()
+              : (Number(col.gd_sett) > 0 ? Number(col.gd_sett) : Number(col.gd_claim || 0));
+
+            const sattaObj = calculateSattaDeduction(
+              col.grade,
+              origRate,
+              settPct,
+              getCachedSattaDiffs(),
+              gradeMasterList.map((g: any) => ({ code: g.grade_code || g.code || g.id, name: g.grade_name || g.name || g.grade })),
+              col.po_items,
+              match.lower_grade || col.lower_grade,
+              match.lower_grade_rate ?? col.lower_grade_rate,
+              prevCols
             );
+
+            const pdDedRate = Number(match.deduction_rate) > 0 ? Number(match.deduction_rate) : sattaObj.deduction;
             const pdSettRate = (match.sett_rate !== undefined && match.sett_rate !== null && Number(match.sett_rate) > 0)
               ? Number(match.sett_rate)
-              : (origRate > 0 ? origRate + prem - Number(match.deduction_rate || 0) : 0);
-            const pdDedRate = Number(match.deduction_rate) || 0;
-            const settRate = (pdSettRate > 0 && (pdDedRate > 0 || pdSettRate !== origRate || settPct <= 0))
-              ? pdSettRate
-              : (calcRate > 0 ? calcRate : pdSettRate);
-            if (settRate > 0) {
-              return { ...col, rate_value: settRate };
-            }
+              : (origRate > 0 ? Number((origRate + prem - pdDedRate).toFixed(2)) : 0);
+
+            const wtMt = getColWtMt(col);
+            const qtyQtl = Number((wtMt * 10).toFixed(2));
+            const colAmt = Number((qtyQtl * pdSettRate).toFixed(2));
+
+            return {
+              ...col,
+              rate_value: origRate,
+              premium: prem,
+              sett_pct: settPct,
+              gd_sett: settPct,
+              deduction_rate: pdDedRate,
+              sett_rate: pdSettRate,
+              quantity_qtl: qtyQtl,
+              amount: colAmt,
+              lower_grade: match.lower_grade || col.lower_grade || sattaObj.targetGradeName,
+              target_lower_grade: sattaObj.targetGradeName,
+              lower_grade_rate: match.lower_grade_rate ?? col.lower_grade_rate ?? sattaObj.lowerRate,
+              grade_diff: sattaObj.diff
+            };
           }
           return col;
         }));
@@ -362,7 +387,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     });
   }, [detailCols, showAllDeductionCols]);
 
-    const [showViewModal, setShowViewModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [viewModalData, setViewModalData] = useState<{
     master: SettlementMaster;
     details: SettlementDetailColumn[];
@@ -403,7 +428,48 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
 
       const activeMaster = foundMaster || masterData;
-      
+
+      // Also fetch PO details, final_arrival, material_inspection, supplier_master, and payment_details for accurate print preview
+      const targetPoForView = activeMaster.po_no || selectedPoNo || '';
+      const [{ poData: viewPoData, poDetails: viewPoDetails }, { totalPaid: viewPaidAmt, payDetails: viewPayDetails }] = await Promise.all([
+        targetPoForView ? fetchPoAndItemDetails(targetPoForView) : Promise.resolve({ poData: null, poDetails: [] }),
+        syncPaymentModuleData(targetMrNo, targetPoForView)
+      ]);
+
+      let faRecord: any = null;
+      let inspRecord: any = null;
+      let inspDetailsList: any[] = [];
+      let supplierAddress = activeMaster.supplier_address || '';
+      let supplierPan = activeMaster.pan_no || '';
+
+      if (supabase) {
+        try {
+          const [faRes, matInspRes, matInspDetRes] = await Promise.all([
+            supabase.from('final_arrival').select('*').or(`mr_no.eq.${targetMrNo},final_arrival_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).maybeSingle(),
+            supabase.from('material_inspection').select('*').or(`mr_no.eq.${targetMrNo},final_arrival_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).maybeSingle(),
+            supabase.from('material_inspection_details').select('*').eq('mr_no', targetMrNo)
+          ]);
+          if (faRes.data) faRecord = faRes.data;
+          if (matInspRes.data) inspRecord = matInspRes.data;
+          if (matInspDetRes.data) inspDetailsList = matInspDetRes.data;
+        } catch (e) {}
+
+        const supName = (activeMaster.supplier || faRecord?.supplier || inspRecord?.supplier_name || '').trim();
+        if (supName && !supplierAddress) {
+          try {
+            const { data: supData } = await supabase
+              .from('supplier_master')
+              .select('*')
+              .ilike('supplier_name', supName)
+              .maybeSingle();
+            if (supData) {
+              supplierAddress = supData.address || supData.supplier_address || supData.city || '';
+              if (!supplierPan) supplierPan = supData.pan_no || supData.pan || '';
+            }
+          } catch (e) {}
+        }
+      }
+
       // Parse deductions if needed
       let deductionsList: SettlementDeductionItem[] = [];
       if (Array.isArray(activeMaster.deductions) && activeMaster.deductions.length > 0) {
@@ -419,7 +485,6 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       if (deductionsList.length === 0 || (deductionsList.length === 1 && !deductionsList[0].deduction_type)) {
         try {
           if (supabase) {
-            // First check mill_inspection_deduction
             const { data: millDedList } = await supabase
               .from('mill_inspection_deduction')
               .select('*')
@@ -433,19 +498,11 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                 deduction_qty: Number(d.deduction_qty) || 0,
                 deduction_amount: Number(d.deduction_amount) || 0
               }));
-            } else {
-              const { data: inspData } = await supabase
-                .from('material_inspection')
-                .select('deductions, deduction_types, summary_deduction_type, summary_deduction_rate, summary_deduction_qty, summary_deduction_amount')
-                .or(`mr_no.eq.${targetMrNo},final_arrival_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`)
-                .maybeSingle();
-              
-              if (inspData) {
-                if (Array.isArray(inspData.deductions) && inspData.deductions.length > 0) {
-                  deductionsList = inspData.deductions;
-                } else if (Array.isArray(inspData.deduction_types) && inspData.deduction_types.length > 0) {
-                  deductionsList = inspData.deduction_types;
-                }
+            } else if (inspRecord) {
+              if (Array.isArray(inspRecord.deductions) && inspRecord.deductions.length > 0) {
+                deductionsList = inspRecord.deductions;
+              } else if (Array.isArray(inspRecord.deduction_types) && inspRecord.deduction_types.length > 0) {
+                deductionsList = inspRecord.deduction_types;
               }
             }
           }
@@ -468,7 +525,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             let rowAmt = 0;
             const amtMatch = part.match(/₹\s*([0-9.]+)/i);
             const rateMatch = part.match(/@\s*₹?\s*([0-9.]+)/i) || part.match(/₹\s*([0-9.]+)/i);
-            const qtyMatch = part.match(/([0-9.]+)\s*@/i) || part.match(/([0-9.]+)\s*(?:bales|units|nos|qntl)/i);
+            const qtyMatch = part.match(/([0-9.]+)\s*@/i) || part.match(/([0-9.]+)\s*(?:bales|units|nos|qntl|kgs)/i);
             if (amtMatch) rowAmt = parseFloat(amtMatch[1]) || 0;
             if (rateMatch) rowRate = parseFloat(rateMatch[1]) || 0;
             if (qtyMatch) rowQty = parseFloat(qtyMatch[1]) || 1;
@@ -491,9 +548,44 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         }
       }
 
+      const faGridArr = parseGridOrItems(faRecord?.specification_grid || faRecord?.items || inspRecord?.specification_grid || inspRecord?.items);
+      const alignedFallbackCols = buildAlignedSettlementColumns(
+        viewPoDetails,
+        inspDetailsList,
+        faGridArr,
+        faRecord,
+        inspRecord,
+        viewPoData || selectedPoData,
+        gradeMasterList,
+        agencyMasterList,
+        markaMasterList,
+        areaMasterList,
+        viewPayDetails
+      );
+
       const activeDetails: SettlementDetailColumn[] = [1, 2, 3, 4].map(idx => {
         const existing = foundDetails.find((d: any) => Number(d.col_index) === idx);
-        return existing ? { ...emptyDetailColumn(idx), ...existing } : (detailCols[idx-1] || emptyDetailColumn(idx));
+        const fb = alignedFallbackCols[idx - 1] || detailCols[idx - 1] || emptyDetailColumn(idx);
+        if (existing) {
+          const merged: SettlementDetailColumn = {
+            ...emptyDetailColumn(idx),
+            ...fb,
+            ...existing,
+            grade: existing.grade || fb.grade,
+            area: existing.area || fb.area,
+            agency: existing.agency || fb.agency,
+            marka_crop: existing.marka_crop || fb.marka_crop,
+            rate_value: Number(fb.rate_value) > 0 ? Number(fb.rate_value) : Number(existing.rate_value || 0),
+            premium: Number(existing.premium) > 0 ? Number(existing.premium) : Number(fb.premium || 0),
+            sett_pct: existing.sett_pct !== undefined && Number(existing.sett_pct) > 0 ? Number(existing.sett_pct) : (Number(existing.gd_sett) > 0 ? Number(existing.gd_sett) : Number(fb.sett_pct || fb.gd_claim || 0)),
+            deduction_rate: existing.deduction_rate !== undefined && Number(existing.deduction_rate) > 0 ? Number(existing.deduction_rate) : Number(fb.deduction_rate || 0),
+            sett_rate: existing.sett_rate !== undefined && Number(existing.sett_rate) > 0 ? Number(existing.sett_rate) : Number(fb.sett_rate || 0),
+          };
+          merged.sett_rate = getEffectiveColSettRate(merged);
+          merged.amount = getColAmount(merged);
+          return merged;
+        }
+        return fb;
       });
 
       let viewApmcFees = Number(activeMaster.arival_apmc_fees ?? activeMaster.apmc_fees ?? 0);
@@ -508,7 +600,15 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       setViewModalData({
         master: {
           ...activeMaster,
+          mr_date: activeMaster.mr_date || faRecord?.date || faRecord?.mr_date || inspRecord?.mr_date || inspRecord?.arrival_date || activeMaster.arrival_date || activeMaster.sett_date,
+          po_date: activeMaster.po_date || viewPoData?.po_date || viewPoData?.s_date || faRecord?.po_date || inspRecord?.po_date || '',
+          supplier_address: supplierAddress || faRecord?.supplier_address || '',
+          consign_no: activeMaster.consign_no || faRecord?.consignment_note_no || faRecord?.challan_rr_no || faRecord?.challan_no || '',
+          consign_date: activeMaster.consign_date || faRecord?.challan_date || faRecord?.po_date || viewPoData?.po_date || '',
+          way_bill: activeMaster.way_bill || faRecord?.way_bill_no || faRecord?.way_bill || '',
+          pan_no: supplierPan || faRecord?.pan_no || '',
           arival_apmc_fees: viewApmcFees,
+          final_on_ac_adv: Number(activeMaster.final_on_ac_adv) > 0 ? Number(activeMaster.final_on_ac_adv) : viewPaidAmt,
           deductions: deductionsList
         },
         details: activeDetails
@@ -1691,7 +1791,11 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
               const fallbackCol = fallbackCols[idx - 1] || emptyDetailColumn(idx);
 
               if (dbMatch) {
-                const merged = { ...emptyDetailColumn(idx), ...dbMatch };
+                const merged: SettlementDetailColumn = {
+                  ...emptyDetailColumn(idx),
+                  ...fallbackCol,
+                  ...dbMatch
+                };
                 if (!merged.grade && fallbackCol.grade) merged.grade = fallbackCol.grade;
                 if (!merged.area && fallbackCol.area) merged.area = fallbackCol.area;
                 if (!merged.agency && fallbackCol.agency) merged.agency = fallbackCol.agency;
@@ -1706,8 +1810,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   merged.wt_quantity = Math.round(arrWtKg / merged.quantity);
                   merged.wt_phota = merged.wt_quantity;
                 }
+                // Preserve original PO rate from fallbackCol when available
                 if (fallbackCol.rate_value && Number(fallbackCol.rate_value) > 0) {
                   merged.rate_value = fallbackCol.rate_value;
+                }
+                if (!merged.premium && fallbackCol.premium) {
+                  merged.premium = fallbackCol.premium;
                 }
                 if (merged.gd_sett == null || merged.gd_sett === 0) merged.gd_sett = fallbackCol.gd_sett;
                 if (merged.gd_claim == null || merged.gd_claim === 0) merged.gd_claim = fallbackCol.gd_claim;
@@ -1717,6 +1825,16 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                 if (merged.dust_claim == null || merged.dust_claim === 0) merged.dust_claim = fallbackCol.dust_claim;
                 if (merged.ncv_sett == null || merged.ncv_sett === 0) merged.ncv_sett = fallbackCol.ncv_sett;
                 if (merged.ncv_claim == null || merged.ncv_claim === 0) merged.ncv_claim = fallbackCol.ncv_claim;
+
+                merged.sett_pct = (dbMatch.sett_pct !== undefined && Number(dbMatch.sett_pct) > 0)
+                  ? Number(dbMatch.sett_pct)
+                  : (Number(merged.gd_sett) > 0 ? Number(merged.gd_sett) : Number(fallbackCol.sett_pct || merged.gd_claim || 0));
+                merged.deduction_rate = (dbMatch.deduction_rate !== undefined && Number(dbMatch.deduction_rate) > 0)
+                  ? Number(dbMatch.deduction_rate)
+                  : Number(fallbackCol.deduction_rate || 0);
+                merged.sett_rate = getEffectiveColSettRate(merged);
+                merged.quantity_qtl = Number((getColWtMt(merged) * 10).toFixed(2));
+                merged.amount = getColAmount(merged);
                 return merged;
               }
               return fallbackCol;
@@ -1769,6 +1887,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         const prefilledMaster: SettlementMaster = {
           ...initialMaster(),
           mr_no: resolvedMrNo,
+          mr_date: faMaster?.date || faMaster?.mr_date || inspMaster?.mr_date || inspMaster?.arrival_date || '',
           po_type: 'MILL_PO',
           broker: faMaster?.broker || inspMaster?.broker_name || inspMaster?.broker || '',
           supplier: faMaster?.supplier || inspMaster?.supplier_name || inspMaster?.supplier || '',
@@ -2072,12 +2191,16 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const calculatedMaterialValue = Number(grandTotal.toFixed(2));
 
     // Calculate Premium Amount: Premium Rate (₹/Qtl) * Premium WT (in Qtl)
+    // Note: If column premiums are already factored into each column's Sett Rate & Amount, do not double-add them to payable_amt
+    const hasColumnPremiums = detailCols.some(c => Number(c.premium) > 0 && getColWtMt(c) > 0);
     const premiumRatePerQtl = Number(masterData.summary_premium_amount) || 0;
     const premiumWeightQtl = (masterData.summary_premium_wt !== undefined && masterData.summary_premium_wt !== null && Number(masterData.summary_premium_wt) > 0)
       ? Number(masterData.summary_premium_wt)
       : Number(masterData.summary_less_amount || 0);
-    const calculatedPremiumAmount = Number((premiumRatePerQtl * premiumWeightQtl).toFixed(2));
-    const finalPremiumAmount = Number(masterData.val_premium_amt !== undefined && masterData.val_premium_amt !== null && masterData.val_premium_amt !== 0 ? masterData.val_premium_amt : calculatedPremiumAmount);
+    const calculatedPremiumAmount = hasColumnPremiums ? 0 : Number((premiumRatePerQtl * premiumWeightQtl).toFixed(2));
+    const finalPremiumAmount = hasColumnPremiums
+      ? 0
+      : Number(masterData.val_premium_amt !== undefined && masterData.val_premium_amt !== null && masterData.val_premium_amt !== 0 ? masterData.val_premium_amt : calculatedPremiumAmount);
 
     // APMC Fees = Arrival APMC Fees - Actual APMC Fees
     // Actual APMC Fees (1%) = 1% × (Material Value − Delivery Claim − Deduction Amount − Deduction Claim Total − Excess/Short Amount)
@@ -2098,8 +2221,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     const calculatedApmcFees = isExemptArea ? 0 : Math.round(adjustedMaterialValue * 0.01);
     const arrivalApmcFees = Number(masterData.arival_apmc_fees) || 0;
     const actualApmcFees = calculatedApmcFees;
-    //const finalApmcFees = Number((arrivalApmcFees - actualApmcFees).toFixed(2));
-    const finalApmcFees = Math.min(0,Number((arrivalApmcFees - actualApmcFees).toFixed(2)));
+    const finalApmcFees = Math.min(0, Number((arrivalApmcFees - actualApmcFees).toFixed(2)));
 
     // Valuation calculation = Material Value + Add Amt + Premium Amt - Val Less Amt - Qty Claim
     const calculatedValuationVal = Number((
@@ -2300,7 +2422,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         const qty = Number(col.quantity) || 0;
         const arrWt = Number(col.arr_qty_wt) || 0;
         const wtQty = Number(col.wt_quantity) || 0;
-        return (qty > 0 || arrWt > 0 || wtQty > 0);
+        return (qty > 0 || arrWt > 0 || wtQty > 0 || Boolean(col.grade));
       };
 
       const claimFields = ['gd_claim', 'moist_claim', 'dust_claim', 'ncv_claim', 'po_grade_claim'];
@@ -2310,7 +2432,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             return { ...c, [field]: 0 };
           }
           if (c.col_index === idx) {
-            return { ...c, [field]: value };
+            const nextCol = { ...c, [field]: value };
+            if (field === 'gd_claim' && (!nextCol.sett_pct || Number(nextCol.sett_pct) === 0)) {
+              nextCol.sett_pct = Number(value) || 0;
+              nextCol.gd_sett = Number(value) || 0;
+            }
+            return nextCol;
           }
           return c;
         });
@@ -2319,6 +2446,13 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       return prev.map(c => {
         if (c.col_index !== idx) return c;
         const updated = { ...c, [field]: value };
+
+        // Synchronize sett_pct <-> gd_sett
+        if (field === 'sett_pct') {
+          updated.gd_sett = Number(value) || 0;
+        } else if (field === 'gd_sett') {
+          updated.sett_pct = Number(value) || 0;
+        }
 
         if (field === 'quantity' || field === 'arr_qty_wt' || field === 'wt_phota' || field === 'min_qty_wt') {
           const qty = Number(updated.quantity) || 0;
@@ -2331,6 +2465,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             updated.wt_phota = 0;
             updated.gd_claim = 0;
             updated.gd_sett = 0;
+            updated.sett_pct = 0;
+            updated.deduction_rate = 0;
             updated.moist_claim = 0;
             updated.moist_sett = 0;
             updated.dust_claim = 0;
@@ -2355,6 +2491,38 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             }
           }
         }
+
+        // Recalculate Satta Grade Down deduction, Sett Rate, Quantity (Qtl), and Amount
+        const rateVal = Number(updated.rate_value) || 0;
+        const premVal = Number(updated.premium) || 0;
+        const settPctVal = updated.sett_pct !== undefined && updated.sett_pct !== null
+          ? Number(updated.sett_pct)
+          : (Number(updated.gd_sett) > 0 ? Number(updated.gd_sett) : Number(updated.gd_claim || 0));
+
+        if (field !== 'deduction_rate') {
+          const sattaObj = calculateSattaDeduction(
+            updated.grade,
+            rateVal,
+            settPctVal,
+            getCachedSattaDiffs(),
+            gradeMasterList.map((g: any) => ({ code: g.grade_code || g.code || g.id, name: g.grade_name || g.name || g.grade })),
+            updated.po_items,
+            updated.lower_grade,
+            updated.lower_grade_rate,
+            prev
+          );
+          updated.deduction_rate = sattaObj.deduction;
+          updated.target_lower_grade = sattaObj.targetGradeName;
+          if (!updated.lower_grade) updated.lower_grade = sattaObj.targetGradeName;
+          if (field !== 'lower_grade_rate') updated.lower_grade_rate = sattaObj.lowerRate;
+          updated.grade_diff = sattaObj.diff;
+        }
+
+        const dedRateVal = Number(updated.deduction_rate) || 0;
+        updated.sett_rate = rateVal > 0 ? Number((rateVal + premVal - dedRateVal).toFixed(2)) : 0;
+        updated.quantity_qtl = Number((getColWtMt(updated) * 10).toFixed(2));
+        updated.amount = Number((updated.quantity_qtl * updated.sett_rate).toFixed(2));
+
         return updated;
       });
     });
@@ -2991,6 +3159,17 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                   masterData={masterData}
                   selectedPoData={selectedPoData}
                   calculateWeightedRatePerMT={calculateWeightedRatePerMT}
+                  gradeMasterList={gradeMasterList.map((g: any) => ({
+                    code: String(g.grade_code || g.code || g.id || ""),
+                    name: String(g.grade_name || g.name || g.grade || ""),
+                  }))}
+                  areaMasterList={areaMasterList
+                    .map((a: any) => String(a.area_name || a.name || a.area || "").trim())
+                    .filter(Boolean)}
+                  agencyMasterList={agencyMasterList
+                    .map((ag: any) => String(ag.agency_name || ag.name || ag.agency || "").trim())
+                    .filter(Boolean)}
+                  sattaDiffsList={getCachedSattaDiffs()}
                 />
 
                 {/* Dynamic P.O Quantities Reduction Panel & 1-to-N Consignment Meter placed cleanly in the gap */}
@@ -3015,7 +3194,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           setViewModalData(null);
         }}
         viewModalData={viewModalData}
-        resolveGradeName={resolveGradeName}
+        resolveGradeName={(g: string) => resolveGradeName(g, gradeMasterList)}
       />
 
       {/* PO Audit Limit Overwrite Confirmation Modal */}

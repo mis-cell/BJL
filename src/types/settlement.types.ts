@@ -118,9 +118,21 @@ export interface SettlementMaster {
   supplier_net_wt: number;
   electronic_scale_net: number;
   payment_status: string;
+
+  // Extended print/header metadata
+  supplier_address?: string;
+  consign_no?: string;
+  consign_date?: string;
+  way_bill?: string;
+  pan_no?: string;
+  unit_name?: string;
+  printed_by?: string;
+  on_ac_total_advance?: number;
+  on_ac_total_adv_adjusted?: number;
+  cheque_adjustments?: Array<{ cheque_no: string; date: string; adjusted_value: number }>;
 }
 
-// 4-Column specifications entry
+// 4-Column specifications entry (aligned with Payment Operations -> Details)
 export interface SettlementDetailColumn {
   col_index: number;
   grade: string;
@@ -134,6 +146,14 @@ export interface SettlementDetailColumn {
 
   wt_quantity: number;
   rate_value: number;
+  premium?: number;
+
+  // Grade Down Settlement & Rate Adjustments (consistent with PaymentDetailColumn)
+  sett_pct?: number;
+  deduction_rate?: number;
+  sett_rate?: number;
+  quantity_qtl?: number;
+  amount?: number;
 
   // Claims
   gd_claim: number;
@@ -164,6 +184,15 @@ export interface SettlementDetailColumn {
   adjust_type: string;
   remark: string;
   claim_settlement: number;
+
+  // Grade Down from Sauda Check Point / PO Items Table Matrix
+  lower_grade?: string;
+  target_lower_grade?: string;
+  lower_grade_rate?: number;
+  grade_diff?: number;
+  po_items?: any[];
+  all_cols?: SettlementDetailColumn[];
+  unit?: string;
 }
 
 export const emptyDetailColumn = (index: number): SettlementDetailColumn => ({
@@ -178,6 +207,12 @@ export const emptyDetailColumn = (index: number): SettlementDetailColumn => ({
   wt_phota: 0,
   wt_quantity: 0,
   rate_value: 0,
+  premium: 0,
+  sett_pct: 0,
+  deduction_rate: 0,
+  sett_rate: 0,
+  quantity_qtl: 0,
+  amount: 0,
   gd_claim: 0, gd_sett: 0, gd_rev: 0, gd_final: 0,
   moist_claim: 0, moist_sett: 0, moist_rev: 0, moist_final: 0,
   dust_claim: 0, dust_sett: 0, dust_rev: 0, dust_final: 0,
@@ -185,7 +220,8 @@ export const emptyDetailColumn = (index: number): SettlementDetailColumn => ({
   po_grade_claim: 0, po_grade_sett: 0, po_grade_rev: 0, po_grade_final: 0,
   adjust_type: 'No Adjustment',
   remark: '',
-  claim_settlement: 0
+  claim_settlement: 0,
+  unit: 'BALES'
 });
 
 export const getColWtMt = (col?: SettlementDetailColumn): number => {
@@ -203,14 +239,27 @@ export const getColWtMt = (col?: SettlementDetailColumn): number => {
   return 0;
 };
 
+export const getEffectiveColSettRate = (col?: SettlementDetailColumn, fallbackRate: number = 0): number => {
+  if (!col) return 0;
+  const origRate = Number(col.rate_value) > 0 ? Number(col.rate_value) : (Number(fallbackRate) || 0);
+  const prem = Number(col.premium) || 0;
+  const ded = Number(col.deduction_rate) || 0;
+  if (origRate > 0 && (prem > 0 || ded > 0)) {
+    return Math.max(0, Number((origRate + prem - ded).toFixed(2)));
+  }
+  if (col.sett_rate !== undefined && col.sett_rate !== null && Number(col.sett_rate) > 0) {
+    return Number(col.sett_rate);
+  }
+  return origRate;
+};
+
 export const getColAmount = (col?: SettlementDetailColumn, fallbackRate: number = 0): number => {
   if (!col) return 0;
   const wtMt = getColWtMt(col);
-  const reconRate = Number(col.rate_value) > 0 ? Number(col.rate_value) : (Number(fallbackRate) || 0);
-  if (wtMt <= 0 || reconRate <= 0) return 0;
-  const wtKg = wtMt * 1000;
-  const rateKg = reconRate / 100;
-  return wtKg * rateKg;
+  const effectiveRate = getEffectiveColSettRate(col, fallbackRate);
+  if (wtMt <= 0 || effectiveRate <= 0) return 0;
+  const qtyQtl = Number((wtMt * 10).toFixed(3));
+  return Number((qtyQtl * effectiveRate).toFixed(2));
 };
 
 export const calculateWeightedRatePerMT = (cols: SettlementDetailColumn[]): number => {
@@ -219,10 +268,9 @@ export const calculateWeightedRatePerMT = (cols: SettlementDetailColumn[]): numb
 
   cols.forEach(col => {
     const wtMt = getColWtMt(col);
-    const reconRateQtl = Number(col.rate_value) || 0;
+    const colAmount = getColAmount(col);
     
-    if (wtMt > 0 && reconRateQtl > 0) {
-      const colAmount = wtMt * reconRateQtl * 10;
+    if (wtMt > 0 && colAmount > 0) {
       totalWeightMt += wtMt;
       totalAmount += colAmount;
     }

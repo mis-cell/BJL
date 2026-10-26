@@ -1,13 +1,15 @@
-import React from "react";
-import { Calculator } from "lucide-react";
+import React, { useState } from "react";
+import { Calculator, Settings2 } from "lucide-react";
 import { LegacyFieldset } from "../LegacyLayout";
 import {
   SettlementDetailColumn,
   SettlementMaster,
   getColWtMt,
   getColAmount,
+  getEffectiveColSettRate,
   isSettlementApmcExempt,
 } from "../../types/settlement.types";
+import { calculateSattaDeduction } from "../../utils/paymentCalculations";
 
 export interface SettlementSpecificationsGridProps {
   detailCols: SettlementDetailColumn[];
@@ -21,6 +23,11 @@ export interface SettlementSpecificationsGridProps {
   masterData: SettlementMaster;
   selectedPoData: any;
   calculateWeightedRatePerMT: (cols: SettlementDetailColumn[]) => number;
+  gradeMasterList?: { code: string; name: string }[];
+  areaMasterList?: string[];
+  agencyMasterList?: string[];
+  activePoItems?: any[];
+  sattaDiffsList?: { grade_from: string; grade_to: string; rate_diff: number }[];
 }
 
 export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGridProps> = ({
@@ -35,241 +42,401 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
   masterData,
   selectedPoData,
   calculateWeightedRatePerMT,
+  gradeMasterList = [],
+  areaMasterList = [],
+  agencyMasterList = [],
+  activePoItems = [],
+  sattaDiffsList = [],
 }) => {
+  const [expandedColIndex, setExpandedColIndex] = useState<number | null>(null);
+
+  const visibleRows = detailCols.filter((c) => visibleSpecCols.includes(c.col_index));
+
   return (
     <div className="space-y-3">
-      {/* Grid 1: Vertical Spec Table */}
-      <div className="flex items-center justify-between pb-1 px-1">
-        <span className="text-[9.5px] text-gray-600 font-bold uppercase tracking-wider">
-          Settlement Columns {visibleSpecCols.length < 4 ? `(${visibleSpecCols.length} Active with Arr. Wt)` : ""}
-        </span>
-        <button
-          type="button"
-          onClick={() => setShowAllSpecCols(!showAllSpecCols)}
-          className="text-[9px] px-2 py-0.5 rounded border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-bold cursor-pointer transition-colors shadow-2xs"
-        >
-          {showAllSpecCols ? "Hide Unarrived Columns" : "Show All 4 Columns"}
-        </button>
-      </div>
+      {/* Grid 1: Details Table matching Payment Operations -> Details */}
+      <LegacyFieldset legend="Details">
+        <div className="flex items-center justify-between pb-1.5 px-1">
+          <span className="text-[9.5px] text-gray-600 font-bold uppercase tracking-wider">
+            Material Specification &amp; Settlement Details{" "}
+            {visibleSpecCols.length < 4 ? `(${visibleSpecCols.length} Active with Arr. Wt)` : ""}
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowAllSpecCols(!showAllSpecCols)}
+            className="text-[9px] px-2 py-0.5 rounded border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-bold cursor-pointer transition-colors shadow-2xs"
+          >
+            {showAllSpecCols ? "Hide Unarrived Columns" : "Show All 4 Columns"}
+          </button>
+        </div>
 
-      <div className="bg-white border border-gray-400 overflow-hidden shadow-sm">
-        <table className="w-full text-left border-collapse font-sans text-[10px]">
-          <thead>
-            <tr className="bg-[#e4dfd8] border-b border-gray-400 text-center font-black uppercase text-gray-700">
-              <th className="px-2 py-1.5 border-r border-gray-300 w-24">Grade Spec</th>
-              {visibleSpecCols.map((idx, colPos) => (
-                <th
-                  key={idx}
-                  className={`px-2 py-1.5 ${colPos < visibleSpecCols.length - 1 ? "border-r border-gray-300" : ""}`}
-                >
-                  Column {idx} {detailCols[idx - 1]?.grade ? `(${detailCols[idx - 1]?.grade})` : ""}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-300 font-bold">
-            {/* Grade */}
-            <tr className="hover:bg-slate-50">
-              <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 uppercase text-gray-500">Grade</td>
-              {visibleSpecCols.map((idx) => (
-                <td key={idx} className="p-0.5 border-r border-gray-200">
-                  <input
-                    id={`grade_name_col_${idx}`}
-                    name={`grade_name_col_${idx}`}
-                    aria-label={`Grade Name Col ${idx}`}
-                    type="text"
-                    className="w-full bg-transparent p-1 outline-none text-center font-black text-slate-800"
-                    placeholder="Grade Name"
-                    value={detailCols[idx - 1]?.grade || ""}
-                    onChange={(e) => handleColChange(idx, "grade", e.target.value)}
-                  />
-                </td>
-              ))}
-            </tr>
+        <div className="bg-white border border-gray-400 shadow-xs overflow-x-auto">
+          <table className="w-full text-left border-collapse font-sans text-[10px]">
+            <thead>
+              <tr className="bg-[#e4dfd8] border-b border-gray-400 text-center font-black uppercase text-gray-800">
+                <th className="p-1.5 border-r border-gray-300 w-10">Col</th>
+                <th className="p-1.5 border-r border-gray-300 w-24">Grade</th>
+                <th className="p-1.5 border-r border-gray-300 w-24">Area</th>
+                <th className="p-1.5 border-r border-gray-300 w-24">Agency</th>
+                <th className="p-1.5 border-r border-gray-300 w-16">Qty</th>
+                <th className="p-1.5 border-r border-gray-300 w-20">Weight</th>
+                <th className="p-1.5 border-r border-gray-300 w-20">Rate (₹/Qtl)</th>
+                <th className="p-1.5 border-r border-gray-300 w-16">Premium</th>
+                <th className="p-1.5 border-r border-gray-300 w-20 text-blue-900 bg-blue-50/40">Sett (%)</th>
+                <th className="p-1.5 border-r border-gray-300 w-24 text-rose-800 bg-rose-50/30">Grade Down</th>
+                <th className="p-1.5 border-r border-gray-300 w-20 text-indigo-900 bg-indigo-50/30">Sett Rate</th>
+                <th className="p-1.5 w-24 text-emerald-900 bg-emerald-50/30">Amount</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-300 font-bold text-center">
+              {visibleRows.map((col) => {
+                const colIdx = col.col_index;
+                const wtMt = getColWtMt(col);
+                const qtyQtl = Number(col.quantity_qtl) > 0 ? Number(col.quantity_qtl) : wtMt * 10;
+                const rateVal = Number(col.rate_value) || 0;
+                const premVal = Number(col.premium) || 0;
+                const settPctVal =
+                  col.sett_pct !== undefined && col.sett_pct !== null
+                    ? Number(col.sett_pct)
+                    : Number(col.gd_sett) > 0
+                    ? Number(col.gd_sett)
+                    : Number(col.gd_claim) || 0;
 
-            {/* Area */}
-            <tr className="hover:bg-slate-50">
-              <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 uppercase text-gray-500">Area</td>
-              {visibleSpecCols.map((idx) => (
-                <td key={idx} className="p-0.5 border-r border-gray-200">
-                  <input
-                    id={`area_col_${idx}`}
-                    name={`area_col_${idx}`}
-                    aria-label={`Area Col ${idx}`}
-                    type="text"
-                    className="w-full bg-transparent p-1 outline-none text-center"
-                    placeholder="Area"
-                    value={detailCols[idx - 1]?.area || ""}
-                    onChange={(e) => handleColChange(idx, "area", e.target.value)}
-                  />
-                </td>
-              ))}
-            </tr>
+                const calcObj = calculateSattaDeduction(
+                  col.grade,
+                  rateVal,
+                  settPctVal,
+                  sattaDiffsList,
+                  gradeMasterList,
+                  activePoItems.length > 0 ? activePoItems : col.po_items,
+                  col.lower_grade || col.target_lower_grade,
+                  col.lower_grade_rate,
+                  detailCols
+                );
 
-            {/* Agency */}
-            <tr className="hover:bg-slate-50">
-              <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 uppercase text-gray-500">Agency</td>
-              {visibleSpecCols.map((idx) => (
-                <td key={idx} className="p-0.5 border-r border-gray-200">
-                  <input
-                    id={`agency_col_${idx}`}
-                    name={`agency_col_${idx}`}
-                    aria-label={`Agency Col ${idx}`}
-                    type="text"
-                    className="w-full bg-transparent p-1 outline-none text-center"
-                    placeholder="Agency"
-                    value={detailCols[idx - 1]?.agency || ""}
-                    onChange={(e) => handleColChange(idx, "agency", e.target.value)}
-                  />
-                </td>
-              ))}
-            </tr>
+                const dedVal =
+                  col.deduction_rate !== undefined && Number(col.deduction_rate) > 0
+                    ? Number(col.deduction_rate)
+                    : calcObj.deduction;
 
-            {/* Marka/Crop */}
-            <tr className="hover:bg-slate-50">
-              <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 uppercase text-gray-500">Marka/Crop</td>
-              {visibleSpecCols.map((idx) => (
-                <td key={idx} className="p-0.5 border-r border-gray-200">
-                  <input
-                    id={`marka_crop_col_${idx}`}
-                    name={`marka_crop_col_${idx}`}
-                    aria-label={`Marka/Crop Col ${idx}`}
-                    type="text"
-                    className="w-full bg-transparent p-1 outline-none text-center text-[9px] font-mono"
-                    placeholder="Marka/Crop"
-                    value={detailCols[idx - 1]?.marka_crop || ""}
-                    onChange={(e) => handleColChange(idx, "marka_crop", e.target.value)}
-                  />
-                </td>
-              ))}
-            </tr>
+                const settRateVal = getEffectiveColSettRate(col);
+                const amtVal = getColAmount(col);
 
-            {/* Quantity */}
-            <tr className="hover:bg-slate-50">
-              <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 text-rose-800 uppercase">Quantity (B)</td>
-              {visibleSpecCols.map((idx) => (
-                <td key={idx} className="p-0.5 border-r border-gray-200">
-                  <input
-                    id={`quantity_col_${idx}`}
-                    name={`quantity_col_${idx}`}
-                    aria-label={`Quantity Col ${idx}`}
-                    type="number"
-                    className="w-full bg-transparent p-1 outline-none text-center font-mono font-bold text-rose-800 bg-rose-50/40"
-                    placeholder="0"
-                    value={detailCols[idx - 1]?.quantity || ""}
-                    onChange={(e) => handleColChange(idx, "quantity", parseInt(e.target.value) || 0)}
-                  />
-                </td>
-              ))}
-            </tr>
-
-            {/* Arr. Qty/Wt */}
-            <tr className="hover:bg-slate-50">
-              <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 uppercase text-gray-500">Arr. Qty/Wt</td>
-              {visibleSpecCols.map((idx) => (
-                <td key={idx} className="p-0.5 border-r border-gray-200">
-                  <input
-                    id={`arr_qty_wt_col_${idx}`}
-                    name={`arr_qty_wt_col_${idx}`}
-                    aria-label={`Arr Qty Wt Col ${idx}`}
-                    type="number"
-                    className="w-full bg-transparent p-1 outline-none text-center font-mono"
-                    placeholder="0.000"
-                    value={detailCols[idx - 1]?.arr_qty_wt || ""}
-                    onChange={(e) => handleColChange(idx, "arr_qty_wt", parseFloat(e.target.value) || 0)}
-                  />
-                </td>
-              ))}
-            </tr>
-
-            {/* Min.Qty/Wt */}
-            <tr className="hover:bg-slate-50">
-              <td className="px-2 py-1 border-r border-gray-200 bg-slate-100 uppercase text-gray-600 font-bold">
-                <div className="flex flex-col">
-                  <span>Min.Qty/Wt</span>
-                  <span className="text-[7.5px] text-gray-400 font-normal lowercase">(3% acceptable)</span>
-                </div>
-              </td>
-              {visibleSpecCols.map((idx) => (
-                <td key={idx} className="p-0.5 border-r border-gray-200">
-                  <input
-                    id={`min_qty_wt_${idx}`}
-                    name={`min_qty_wt_${idx}`}
-                    aria-label={`Min.Qty/Wt Col ${idx}`}
-                    type="number"
-                    step="0.001"
-                    className="w-full bg-transparent p-1 outline-none text-center font-mono font-bold text-slate-700"
-                    placeholder="0.000"
-                    value={detailCols[idx - 1]?.min_qty_wt || ""}
-                    onChange={(e) => handleColChange(idx, "min_qty_wt", parseFloat(e.target.value) || 0)}
-                  />
-                </td>
-              ))}
-            </tr>
-
-            {/* Wt/Quantity */}
-            <tr className="bg-indigo-50/40 hover:bg-indigo-50 font-black">
-              <td className="px-2 py-1 border-r border-gray-200 uppercase text-indigo-900">
-                <div className="flex flex-col">
-                  <span>Wt/Quantity</span>
-                  <span className="text-[7.5px] text-indigo-700 font-normal lowercase">(Round Kg / Qty)</span>
-                </div>
-              </td>
-              {visibleSpecCols.map((idx) => {
-                const col = detailCols[idx - 1];
-                const qty = Number(col?.quantity) || 0;
-                const arrWt = Number(col?.arr_qty_wt) || 0;
-                const wtPerQty =
-                  qty > 0 && arrWt > 0
-                    ? Math.round((arrWt <= 50 ? arrWt * 1000 : arrWt) / qty)
-                    : Number(col?.wt_quantity) || Number(col?.wt_phota) || 0;
                 return (
-                  <td key={idx} className="p-1 border-r border-gray-200 text-center font-mono font-black text-indigo-950 text-xs">
-                    {wtPerQty > 0 ? `${wtPerQty} kg` : "-"}
-                  </td>
+                  <tr key={colIdx} className="hover:bg-slate-50 transition-colors">
+                    {/* Col */}
+                    <td className="p-1 border-r border-gray-200 bg-slate-100 font-black text-gray-600">
+                      Col {colIdx}
+                    </td>
+
+                    {/* Grade */}
+                    <td className="p-0.5 border-r border-gray-200">
+                      {gradeMasterList.length > 0 ? (
+                        <select
+                          aria-label={`Grade Col ${colIdx}`}
+                          className="w-full p-1 bg-transparent text-center font-black outline-none focus:bg-amber-50 cursor-pointer"
+                          value={col.grade || ""}
+                          onChange={(e) => handleColChange(colIdx, "grade", e.target.value)}
+                        >
+                          <option value="">-- Select --</option>
+                          {col.grade &&
+                            !gradeMasterList.some(
+                              (g) => g.name === col.grade || g.code === col.grade
+                            ) && <option value={col.grade}>{col.grade}</option>}
+                          {gradeMasterList.map((g, i) => (
+                            <option key={i} value={g.name}>
+                              {g.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          id={`grade_name_col_${colIdx}`}
+                          name={`grade_name_col_${colIdx}`}
+                          aria-label={`Grade Name Col ${colIdx}`}
+                          type="text"
+                          className="w-full bg-transparent p-1 outline-none text-center font-black text-slate-800 focus:bg-amber-50"
+                          placeholder="Grade"
+                          value={col.grade || ""}
+                          onChange={(e) => handleColChange(colIdx, "grade", e.target.value)}
+                        />
+                      )}
+                    </td>
+
+                    {/* Area */}
+                    <td className="p-0.5 border-r border-gray-200">
+                      {areaMasterList.length > 0 ? (
+                        <select
+                          aria-label={`Area Col ${colIdx}`}
+                          className="w-full p-1 bg-transparent text-center outline-none focus:bg-amber-50 cursor-pointer"
+                          value={col.area || ""}
+                          onChange={(e) => handleColChange(colIdx, "area", e.target.value)}
+                        >
+                          <option value="">-- Select --</option>
+                          {col.area && !areaMasterList.includes(col.area) && (
+                            <option value={col.area}>{col.area}</option>
+                          )}
+                          {areaMasterList.map((a, i) => (
+                            <option key={i} value={a}>
+                              {a}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          id={`area_col_${colIdx}`}
+                          name={`area_col_${colIdx}`}
+                          aria-label={`Area Col ${colIdx}`}
+                          type="text"
+                          className="w-full bg-transparent p-1 outline-none text-center focus:bg-amber-50"
+                          placeholder="Area"
+                          value={col.area || ""}
+                          onChange={(e) => handleColChange(colIdx, "area", e.target.value)}
+                        />
+                      )}
+                    </td>
+
+                    {/* Agency */}
+                    <td className="p-0.5 border-r border-gray-200">
+                      {agencyMasterList.length > 0 ? (
+                        <select
+                          aria-label={`Agency Col ${colIdx}`}
+                          className="w-full p-1 bg-transparent text-center outline-none focus:bg-amber-50 cursor-pointer"
+                          value={col.agency || ""}
+                          onChange={(e) => handleColChange(colIdx, "agency", e.target.value)}
+                        >
+                          <option value="">-- Select --</option>
+                          {col.agency && !agencyMasterList.includes(col.agency) && (
+                            <option value={col.agency}>{col.agency}</option>
+                          )}
+                          {agencyMasterList.map((ag, i) => (
+                            <option key={i} value={ag}>
+                              {ag}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          id={`agency_col_${colIdx}`}
+                          name={`agency_col_${colIdx}`}
+                          aria-label={`Agency Col ${colIdx}`}
+                          type="text"
+                          className="w-full bg-transparent p-1 outline-none text-center focus:bg-amber-50"
+                          placeholder="Agency"
+                          value={col.agency || ""}
+                          onChange={(e) => handleColChange(colIdx, "agency", e.target.value)}
+                        />
+                      )}
+                    </td>
+
+                    {/* Qty */}
+                    <td className="p-0.5 border-r border-gray-200">
+                      <input
+                        id={`quantity_col_${colIdx}`}
+                        name={`quantity_col_${colIdx}`}
+                        aria-label={`Quantity Col ${colIdx}`}
+                        type="number"
+                        className="w-full p-1 bg-transparent text-center font-mono outline-none focus:bg-amber-50"
+                        value={col.quantity || ""}
+                        onChange={(e) =>
+                          handleColChange(colIdx, "quantity", parseFloat(e.target.value) || 0)
+                        }
+                      />
+                    </td>
+
+                    {/* Weight */}
+                    <td className="p-0.5 border-r border-gray-200">
+                      <div className="flex flex-col items-center">
+                        <input
+                          id={`arr_qty_wt_col_${colIdx}`}
+                          name={`arr_qty_wt_col_${colIdx}`}
+                          aria-label={`Weight Col ${colIdx}`}
+                          type="number"
+                          step="0.001"
+                          className="w-full p-0.5 bg-transparent text-center font-mono font-black outline-none focus:bg-amber-50"
+                          value={col.arr_qty_wt || ""}
+                          onChange={(e) =>
+                            handleColChange(colIdx, "arr_qty_wt", parseFloat(e.target.value) || 0)
+                          }
+                        />
+                        {qtyQtl > 0 && (
+                          <span className="text-[8px] font-mono text-gray-500 bg-gray-100 px-1 rounded">
+                            {qtyQtl.toFixed(2)} Qtl
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Rate (₹/Qtl) */}
+                    <td className="p-0.5 border-r border-gray-200">
+                      <input
+                        id={`recon_rate_${colIdx}`}
+                        name={`recon_rate_${colIdx}`}
+                        aria-label={`Rate Col ${colIdx}`}
+                        type="number"
+                        className="w-full p-1 bg-transparent text-center font-mono text-blue-900 font-black outline-none focus:bg-amber-50"
+                        value={col.rate_value || ""}
+                        onChange={(e) =>
+                          handleColChange(colIdx, "rate_value", parseFloat(e.target.value) || 0)
+                        }
+                      />
+                    </td>
+
+                    {/* Premium */}
+                    <td className="p-0.5 border-r border-gray-200">
+                      <input
+                        id={`premium_col_${colIdx}`}
+                        name={`premium_col_${colIdx}`}
+                        aria-label={`Premium Col ${colIdx}`}
+                        type="number"
+                        className="w-full p-1 bg-transparent text-center font-mono text-amber-800 outline-none focus:bg-amber-50"
+                        value={col.premium || ""}
+                        onChange={(e) =>
+                          handleColChange(colIdx, "premium", parseFloat(e.target.value) || 0)
+                        }
+                      />
+                    </td>
+
+                    {/* Sett (%) */}
+                    <td className="p-0.5 border-r border-gray-200 bg-blue-50/20">
+                      <div className="flex flex-col items-center">
+                        <input
+                          id={`sett_pct_col_${colIdx}`}
+                          name={`sett_pct_col_${colIdx}`}
+                          aria-label={`Sett Pct Col ${colIdx}`}
+                          type="number"
+                          step="0.1"
+                          placeholder="0%"
+                          className="w-full p-0.5 bg-transparent text-center font-mono text-blue-900 font-black outline-none focus:bg-blue-100/50"
+                          value={settPctVal || ""}
+                          onChange={(e) =>
+                            handleColChange(colIdx, "sett_pct", parseFloat(e.target.value) || 0)
+                          }
+                        />
+                        {Number(col.gd_claim) > 0 && (
+                          <span
+                            className="text-[7.5px] font-mono text-slate-500 bg-slate-100 px-1 rounded leading-tight"
+                            title="Inspection Claim %"
+                          >
+                            Claim: {col.gd_claim}%
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Grade Down */}
+                    <td className="p-1 border-r border-gray-200 bg-rose-50/15">
+                      <div className="flex flex-col items-center gap-0.5">
+                        <div className="flex items-center justify-center gap-1 w-full">
+                          <input
+                            id={`deduction_rate_col_${colIdx}`}
+                            name={`deduction_rate_col_${colIdx}`}
+                            aria-label={`Grade Down Col ${colIdx}`}
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            className="w-14 p-0.5 bg-white border border-rose-200 rounded text-center font-mono text-rose-700 font-black outline-none focus:border-rose-500 text-[10px]"
+                            value={dedVal || ""}
+                            onChange={(e) =>
+                              handleColChange(
+                                colIdx,
+                                "deduction_rate",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedColIndex(expandedColIndex === colIdx ? null : colIdx)
+                            }
+                            className={`p-0.5 rounded border cursor-pointer transition-colors ${
+                              expandedColIndex === colIdx
+                                ? "bg-rose-600 text-white border-rose-700"
+                                : "bg-white text-gray-500 border-gray-300 hover:bg-gray-100"
+                            }`}
+                            title="Configure Lower Grade & Rate for Grade Down calculation"
+                          >
+                            <Settings2 className="h-3 w-3" />
+                          </button>
+                        </div>
+
+                        {settPctVal > 0 && calcObj.targetGradeName && (
+                          <div className="text-[8px] font-mono text-rose-800 bg-rose-100/70 px-1 py-0.5 rounded leading-tight text-center w-full">
+                            ↘ {calcObj.targetGradeName} @ ₹{calcObj.lowerRate} (Δ₹{calcObj.diff} ×{" "}
+                            {settPctVal}%)
+                          </div>
+                        )}
+
+                        {expandedColIndex === colIdx && (
+                          <div className="mt-1 p-1.5 bg-white border border-rose-300 rounded shadow-sm w-full text-left space-y-1 z-10">
+                            <div className="text-[8px] font-black uppercase text-rose-900 border-b border-rose-100 pb-0.5">
+                              Lower Grade Override
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <label className="text-[7.5px] text-gray-500 uppercase font-bold">
+                                Lower Grade:
+                              </label>
+                              <select
+                                aria-label="Lower Grade Override"
+                                className="w-full p-0.5 text-[9px] border border-gray-300 rounded bg-slate-50 font-bold"
+                                value={col.lower_grade || calcObj.targetGradeName || ""}
+                                onChange={(e) =>
+                                  handleColChange(colIdx, "lower_grade", e.target.value)
+                                }
+                              >
+                                <option value="">Auto ({calcObj.targetGradeName || "Next"})</option>
+                                {gradeMasterList.map((g, idx) => (
+                                  <option key={idx} value={g.name}>
+                                    {g.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <label className="text-[7.5px] text-gray-500 uppercase font-bold">
+                                Lower Rate (₹/Qtl):
+                              </label>
+                              <input
+                                aria-label="Lower Grade Rate Override"
+                                type="number"
+                                className="w-full p-0.5 text-[9px] border border-gray-300 rounded font-mono font-bold text-center"
+                                placeholder={String(calcObj.lowerRate || 0)}
+                                value={col.lower_grade_rate ?? calcObj.lowerRate ?? ""}
+                                onChange={(e) =>
+                                  handleColChange(
+                                    colIdx,
+                                    "lower_grade_rate",
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Sett Rate */}
+                    <td className="p-1 border-r border-gray-200 font-mono text-indigo-900 bg-indigo-50/20 font-black">
+                      ₹{settRateVal.toFixed(2)}
+                    </td>
+
+                    {/* Amount */}
+                    <td className="p-1 font-mono text-emerald-900 bg-emerald-50/20 font-black">
+                      ₹
+                      {amtVal.toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                  </tr>
                 );
               })}
-            </tr>
-
-            {/* Recon Rate */}
-            <tr className="bg-indigo-50/40 hover:bg-slate-50 font-black">
-              <td className="px-2 py-1 border-r border-gray-200 uppercase text-indigo-900">
-                Recon Rate
-              </td>
-              {visibleSpecCols.map((idx) => (
-                <td key={idx} className="p-0.5 border-r border-gray-200">
-                  <input
-                    id={`recon_rate_${idx}`}
-                    name={`recon_rate_${idx}`}
-                    aria-label={`₹ Rate Col ${idx}`}
-                    type="number"
-                    className="w-full bg-white text-center p-0.5 font-mono text-indigo-950 font-bold border border-indigo-200 text-[10px]"
-                    placeholder="₹ Rate"
-                    value={detailCols[idx - 1]?.rate_value || ""}
-                    onChange={(e) => handleColChange(idx, "rate_value", parseFloat(e.target.value) || 0)}
-                  />
-                </td>
-              ))}
-            </tr>
-
-            {/* Calculated Column Amount */}
-            <tr className="bg-[#eef7f2] hover:bg-[#e2f0e8] font-black border-t border-emerald-300">
-              <td className="px-2 py-1 border-r border-gray-300 uppercase text-emerald-950 font-extrabold flex items-center justify-between text-[10px] bg-[#e2f0e8]">
-                <span>Recon Amount</span>
-                <span className="text-[8.5px] text-emerald-800 font-mono">(₹)</span>
-              </td>
-              {visibleSpecCols.map((idx) => {
-                const colAmt = getColAmount(detailCols[idx - 1]);
-                return (
-                  <td key={idx} className="p-1 border-r border-gray-300 text-center font-mono font-bold text-emerald-950 text-[11px] bg-[#eef7f2]">
-                    ₹{colAmt.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 0 })}
-                  </td>
-                );
-              })}
-            </tr>
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+          </table>
+        </div>
+      </LegacyFieldset>
 
       {/* Recon Rate, Rate / m.T & Actual APMC Fees Clean Summary Card */}
       {(() => {

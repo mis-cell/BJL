@@ -174,34 +174,28 @@ export const buildSettlementCol = (
   col.arr_qty_wt = col.quantity > 0 || rawWt > 0 ? (Number(rawWt) || 0) : 0;
   col.min_qty_wt = col.arr_qty_wt > 0 ? Number((col.arr_qty_wt * 0.97).toFixed(3)) : 0;
 
-  // 7. Rate
-  let paymentSettRate = 0;
-  if (payDetailItem) {
-    if (payDetailItem.sett_rate !== undefined && payDetailItem.sett_rate !== null && Number(payDetailItem.sett_rate) > 0) {
-      paymentSettRate = Number(payDetailItem.sett_rate);
-    } else if (Number(payDetailItem.rate_value) > 0) {
-      const ded = Number(payDetailItem.deduction_rate) || 0;
-      paymentSettRate = Math.max(0, Number(payDetailItem.rate_value) - ded);
+  // 7. Rate (Original PO Rate) & Premium
+  const rawRate =
+    (payDetailItem?.rate_value && Number(payDetailItem.rate_value) > 0 ? Number(payDetailItem.rate_value) : 0) ||
+    pDet?.rate_qntl || pDet?.rate_per_mt || pDet?.rate || pDet?.rate_mt ||
+    poData?.rate_qntl || poData?.rate_mt || poData?.b_rate ||
+    inspItem?.rate || inspItem?.rate_qntl ||
+    item?.rate_value || item?.rate || item?.rate_qntl || item?.recon_rate_mt || 0;
+
+  col.rate_value = Number(rawRate) || 0;
+  if (!col.rate_value || col.rate_value === 0) {
+    const fallbackRate = Number(poData?.b_rate || poData?.rate_qntl || poData?.rate_mt || 0);
+    if (fallbackRate > 0) {
+      col.rate_value = fallbackRate;
     }
   }
 
-  if (paymentSettRate > 0) {
-    col.rate_value = paymentSettRate;
-  } else {
-    const rawRate = 
-      pDet?.rate_qntl || pDet?.rate_per_mt || pDet?.rate || pDet?.rate_mt ||
-      poData?.rate_qntl || poData?.rate_mt || poData?.b_rate ||
-      inspItem?.rate || inspItem?.rate_qntl ||
-      item?.rate_value || item?.rate || item?.rate_qntl || item?.recon_rate_mt || 0;
-    
-    col.rate_value = Number(rawRate) || 0;
-    if (!col.rate_value || col.rate_value === 0) {
-      const fallbackRate = Number(poData?.b_rate || poData?.rate_qntl || poData?.rate_mt || 0);
-      if (fallbackRate > 0) {
-        col.rate_value = fallbackRate;
-      }
-    }
-  }
+  col.premium = Number(
+    (payDetailItem?.premium && Number(payDetailItem.premium) > 0 ? Number(payDetailItem.premium) : 0) ||
+    pDet?.premium || pDet?.premium_amount || pDet?.prem || poData?.premium || 0
+  );
+
+  col.unit = String(inspItem?.unit || item?.unit || faMaster?.unit_name || pDet?.unit || 'BALES').trim().toUpperCase();
 
   // 8. Wt/Quantity
   const rawWtKg = col.arr_qty_wt > 0 ? (col.arr_qty_wt <= 50 ? col.arr_qty_wt * 1000 : col.arr_qty_wt) : 0;
@@ -339,14 +333,22 @@ export const buildAlignedSettlementColumns = (
       const pDet = meta.pDet;
       const inspItem = meta.inspItem;
       const item = meta.faItem || meta.inspItem;
+
+      // Always prefer PO rate or payment_details rate_value as the base contract Rate (₹/Qtl)
+      const poRate = Number(
+        pDet?.rate_qntl ||
+        pDet?.rate_per_mt ||
+        pDet?.rate ||
+        pDet?.rate_mt ||
+        0
+      );
+      const pdOrigRate = Number(pd?.rate_value) || 0;
       const origRate =
-        Number(pd?.rate_value) > 0
-          ? Number(pd.rate_value)
+        poRate > 0
+          ? poRate
+          : pdOrigRate > 0
+          ? pdOrigRate
           : Number(
-              pDet?.rate_qntl ||
-              pDet?.rate_per_mt ||
-              pDet?.rate ||
-              pDet?.rate_mt ||
               poData?.rate_qntl ||
               poData?.rate_mt ||
               poData?.b_rate ||
@@ -365,9 +367,9 @@ export const buildAlignedSettlementColumns = (
       };
     });
 
-    return cols.map((col, i) => {
+    const computedCols = cols.map((col, i) => {
       const hasData = Boolean(col.grade || Number(col.quantity) > 0 || Number(col.arr_qty_wt) > 0);
-      if (!hasData) return col;
+      if (!hasData) return { ...col, po_items: poDetails || [], all_cols: colsWithOrigRates };
 
       const meta = rawItemsByCol[i] || {};
       const pd = meta.payDetail;
@@ -377,11 +379,12 @@ export const buildAlignedSettlementColumns = (
 
       const origRate = colsWithOrigRates[i].rate_value;
       const premium = Number(
-        pd?.premium ??
-        pDet?.premium ??
-        pDet?.premium_amount ??
-        pDet?.prem ??
-        poData?.premium ??
+        (pd?.premium && Number(pd.premium) > 0 ? Number(pd.premium) : 0) ||
+        pDet?.premium ||
+        pDet?.premium_amount ||
+        pDet?.prem ||
+        poData?.premium ||
+        col.premium ||
         0
       );
 
@@ -393,14 +396,14 @@ export const buildAlignedSettlementColumns = (
         inspItem?.claim_gr_down ?? item?.claim_gr_down ??
         inspItem?.grade_down_act ?? item?.grade_down_act ??
         inspItem?.actual_grade_down ?? item?.actual_grade_down ??
-        col.gd_claim ?? 0
+        pd?.gd_claim ?? col.gd_claim ?? 0
       );
       const payGdSett = Number(
         inspItem?.gd_sett ?? item?.gd_sett ??
         inspItem?.settlement_grade_down ?? item?.settlement_grade_down ??
         inspItem?.grade_down_sett ?? item?.grade_down_sett ??
         inspItem?.mill_sett_gr_down ?? item?.mill_sett_gr_down ??
-        col.gd_sett ?? 0
+        pd?.gd_sett ?? col.gd_sett ?? 0
       );
 
       let settPct = 0;
@@ -424,29 +427,31 @@ export const buildAlignedSettlementColumns = (
       };
 
       const calculatedPaymentSettRate = getColSettRate(colForPaymentCalc, diffs, poDetails || []);
-
-      let finalReconRate = origRate;
-      if (pd && pd.sett_rate !== undefined && pd.sett_rate !== null && Number(pd.sett_rate) > 0) {
-        const pdSettRate = Number(pd.sett_rate);
-        const pdDedRate = Number(pd.deduction_rate) || 0;
-        if (pdDedRate > 0 || pdSettRate !== origRate || settPct <= 0) {
-          finalReconRate = pdSettRate;
-        } else if (calculatedPaymentSettRate > 0) {
-          finalReconRate = calculatedPaymentSettRate;
-        } else {
-          finalReconRate = pdSettRate;
-        }
-      } else if (pd && Number(pd.rate_value) > 0 && Number(pd.deduction_rate) > 0) {
-        finalReconRate = Math.max(0, Number((Number(pd.rate_value) + premium - Number(pd.deduction_rate)).toFixed(2)));
-      } else if (calculatedPaymentSettRate > 0) {
-        finalReconRate = calculatedPaymentSettRate;
-      }
+      const calcDedRate = Math.max(0, Number((origRate + premium - calculatedPaymentSettRate).toFixed(2)));
+      const pdDedRate = pd && pd.deduction_rate !== undefined && pd.deduction_rate !== null ? Number(pd.deduction_rate) : 0;
+      const finalDedRate = calcDedRate > 0 ? calcDedRate : pdDedRate;
+      const finalSettRate = Math.max(0, Number((origRate + premium - finalDedRate).toFixed(2)));
+      const wtMt = Number(col.arr_qty_wt) || 0;
+      const qtyQtl = Number((wtMt * 10).toFixed(3));
+      const rowAmount = Number((qtyQtl * finalSettRate).toFixed(2));
 
       return {
         ...col,
-        rate_value: finalReconRate
+        rate_value: origRate,
+        premium,
+        sett_pct: settPct,
+        gd_claim: payGdClaim,
+        gd_sett: payGdSett || payGdClaim,
+        deduction_rate: finalDedRate,
+        sett_rate: finalSettRate,
+        quantity_qtl: qtyQtl,
+        amount: rowAmount,
+        po_items: poDetails || [],
+        all_cols: colsWithOrigRates
       };
     });
+
+    return computedCols.map(c => ({ ...c, all_cols: computedCols }));
   };
 
   if (arrivalRows.length > 0) {
@@ -585,18 +590,34 @@ export const fetchPoAndItemDetails = async (
 
   let poData: any = null;
   let poDetails: any[] = [];
+  let scpItemsForMerge: any[] = [];
 
   try {
     if (supabase) {
       const [pmRes, scpRes] = await Promise.all([
         supabase.from('purchase_master').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).maybeSingle(),
-        supabase.from('sauda_check_point').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).maybeSingle()
+        supabase.from('sauda_check_point').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}",ptf_no.eq."${cleanPo}",sauda_no.eq."${cleanPo}"`).maybeSingle()
       ]);
 
-      if (pmRes?.data) {
-        poData = pmRes.data;
-      } else if (scpRes?.data) {
-        const scp = scpRes.data;
+      const pm = pmRes?.data || null;
+      const scp = scpRes?.data || null;
+
+      if (pm && scp) {
+        poData = {
+          ...pm,
+          ...scp,
+          po_no: pm.po_no || scp.po_no,
+          po_date: pm.po_date || scp.po_date || scp.s_date,
+          supplier: pm.supplier || scp.supplier_name || scp.supplier,
+          broker: pm.broker || scp.broker_name || scp.broker,
+          total_contract_mt: pm.total_contract_mt || scp.total_contract_mt || scp.quantity || 0,
+          premium: Number(scp.premium || pm.premium || 0),
+          items: scp.items || pm.items,
+          grid_details: scp.grid_details || pm.grid_details
+        };
+      } else if (pm) {
+        poData = pm;
+      } else if (scp) {
         poData = {
           ...scp,
           po_date: scp.po_date || scp.s_date,
@@ -616,34 +637,57 @@ export const fetchPoAndItemDetails = async (
           supabase.from('purchase_master').select('*').ilike('po_no', cleanPo).limit(1),
           supabase.from('sauda_check_point').select('*').ilike('po_no', cleanPo).limit(1)
         ]);
-        if (pmIlike?.data && pmIlike.data.length > 0) poData = pmIlike.data[0];
-        else if (scpIlike?.data && scpIlike.data.length > 0) {
-          const scp = scpIlike.data[0];
+        const pmRow = pmIlike?.data?.[0] || null;
+        const scpRow = scpIlike?.data?.[0] || null;
+        if (pmRow && scpRow) {
           poData = {
-            ...scp,
-            po_date: scp.po_date || scp.s_date,
-            supplier: scp.supplier_name || scp.supplier,
-            broker: scp.broker_name || scp.broker,
-            total_contract_mt: scp.total_contract_mt || scp.quantity || 0,
-            pending: scp.pending ?? true,
-            status: scp.status || 'temp'
+            ...pmRow,
+            ...scpRow,
+            po_date: pmRow.po_date || scpRow.po_date || scpRow.s_date,
+            supplier: pmRow.supplier || scpRow.supplier_name || scpRow.supplier,
+            broker: pmRow.broker || scpRow.broker_name || scpRow.broker,
+            total_contract_mt: pmRow.total_contract_mt || scpRow.total_contract_mt || scpRow.quantity || 0,
+            premium: Number(scpRow.premium || pmRow.premium || 0),
+            items: scpRow.items || pmRow.items,
+            grid_details: scpRow.grid_details || pmRow.grid_details
+          };
+        } else if (pmRow) {
+          poData = pmRow;
+        } else if (scpRow) {
+          poData = {
+            ...scpRow,
+            po_date: scpRow.po_date || scpRow.s_date,
+            supplier: scpRow.supplier_name || scpRow.supplier,
+            broker: scpRow.broker_name || scpRow.broker,
+            total_contract_mt: scpRow.total_contract_mt || scpRow.quantity || 0,
+            pending: scpRow.pending ?? true,
+            status: scpRow.status || 'temp'
           };
         }
       }
 
-      if (poData?.items || poData?.grid_details) {
-        const parsed = parseGridOrItems(poData.items || poData.grid_details);
-        if (parsed.length > 0 && parsed.some((it: any) => it.grade || it.grade_name || it.grade_code || it.rate_qntl || it.rate)) {
-          poDetails = parsed;
-        }
+      // Parse embedded JSON items from both scp and pm
+      const parsedFromScp = parseGridOrItems(scp?.items || scp?.grid_details);
+      const parsedFromPm = parseGridOrItems(pm?.items || pm?.grid_details || poData?.items || poData?.grid_details);
+      if (parsedFromScp.length > 0) scpItemsForMerge = parsedFromScp;
+
+      if (parsedFromPm.length > 0 && parsedFromPm.some((it: any) => it.grade || it.grade_name || it.grade_code || it.rate_qntl || it.rate)) {
+        poDetails = parsedFromPm;
+      } else if (parsedFromScp.length > 0 && parsedFromScp.some((it: any) => it.grade || it.grade_name || it.grade_code || it.rate_qntl || it.rate)) {
+        poDetails = parsedFromScp;
+      }
+
+      // Also fetch purchase_detail_master and sauda_check_point_details so we never miss rate or premium
+      const [pdmRes, scpdRes] = await Promise.all([
+        supabase.from('purchase_detail_master').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).order('srl_no', { ascending: true }),
+        supabase.from('sauda_check_point_details').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).order('srl_no', { ascending: true })
+      ]);
+
+      if (scpdRes?.data && scpdRes.data.length > 0) {
+        scpItemsForMerge = [...scpItemsForMerge, ...scpdRes.data];
       }
 
       if (poDetails.length === 0) {
-        const [pdmRes, scpdRes] = await Promise.all([
-          supabase.from('purchase_detail_master').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).order('srl_no', { ascending: true }),
-          supabase.from('sauda_check_point_details').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).order('srl_no', { ascending: true })
-        ]);
-
         if (pdmRes?.data && pdmRes.data.length > 0) {
           poDetails = pdmRes.data;
         } else if (scpdRes?.data && scpdRes.data.length > 0) {
@@ -653,6 +697,9 @@ export const fetchPoAndItemDetails = async (
             supabase.from('purchase_detail_master').select('*').ilike('po_no', cleanPo),
             supabase.from('sauda_check_point_details').select('*').ilike('po_no', cleanPo)
           ]);
+          if (scpdIlike?.data && scpdIlike.data.length > 0) {
+            scpItemsForMerge = [...scpItemsForMerge, ...scpdIlike.data];
+          }
           if (pdmIlike?.data && pdmIlike.data.length > 0) poDetails = pdmIlike.data;
           else if (scpdIlike?.data && scpdIlike.data.length > 0) poDetails = scpdIlike.data;
         }
@@ -665,24 +712,22 @@ export const fetchPoAndItemDetails = async (
         dbModule.fetchAll('sauda_check_point').catch(() => [])
       ]);
       const matchPm = (localPm || []).find((p: any) => String(p.po_no || '').trim().toUpperCase().replace(/^#/, '') === cleanPo.toUpperCase());
-      if (matchPm) poData = matchPm;
-      else {
-        const matchScp = (localScp || []).find((p: any) => String(p.po_no || '').trim().toUpperCase().replace(/^#/, '') === cleanPo.toUpperCase());
-        if (matchScp) poData = matchScp;
-      }
+      const matchScp = (localScp || []).find((p: any) => String(p.po_no || '').trim().toUpperCase().replace(/^#/, '') === cleanPo.toUpperCase());
+      if (matchPm && matchScp) poData = { ...matchPm, ...matchScp };
+      else if (matchPm) poData = matchPm;
+      else if (matchScp) poData = matchScp;
     }
 
     if (poDetails.length === 0) {
-      const [localPdm, localScpd] = await Promise.all([
+      const [localPdm, localScpD] = await Promise.all([
         dbModule.fetchAll('purchase_detail_master').catch(() => []),
         dbModule.fetchAll('sauda_check_point_details').catch(() => [])
       ]);
       const matchPdm = (localPdm || []).filter((d: any) => String(d.po_no || '').trim().toUpperCase().replace(/^#/, '') === cleanPo.toUpperCase());
+      const matchScpd = (localScpD || []).filter((d: any) => String(d.po_no || '').trim().toUpperCase().replace(/^#/, '') === cleanPo.toUpperCase());
+      if (matchScpd.length > 0) scpItemsForMerge = [...scpItemsForMerge, ...matchScpd];
       if (matchPdm.length > 0) poDetails = matchPdm;
-      else {
-        const matchScpd = (localScpd || []).filter((d: any) => String(d.po_no || '').trim().toUpperCase().replace(/^#/, '') === cleanPo.toUpperCase());
-        if (matchScpd.length > 0) poDetails = matchScpd;
-      }
+      else if (matchScpd.length > 0) poDetails = matchScpd;
     }
   } catch (err) {
     console.warn("Error in fetchPoAndItemDetails:", err);
@@ -701,7 +746,7 @@ export const fetchPoAndItemDetails = async (
     } catch (e) {}
   }
 
-  const enrichedItems = poDetails.map((item: any) => {
+  const enrichedItems = poDetails.map((item: any, idx: number) => {
     let gradeName = item.grade_name || item.grade || item.quality || '';
     if (!gradeName && item.grade_code && gList && gList.length > 0) {
       const match = gList.find((g: any) => String(g.grade_code || g.code || g.id || '').trim().toUpperCase() === String(item.grade_code).trim().toUpperCase());
@@ -714,7 +759,22 @@ export const fetchPoAndItemDetails = async (
       if (match) agencyName = match.agency_name || match.name || '';
     }
 
-    const rateVal = Number(item.rate_qntl || item.rate_per_mt || item.rate_mt || item.rate || poData?.b_rate || poData?.rate_qntl || 0);
+    const resolvedG = (gradeName || item.grade_code || '').trim().toUpperCase();
+    const matchedScpItem = scpItemsForMerge.find((s: any) => {
+      const sG = (resolveGradeName(s.grade_name || s.grade || s.quality || s.grade_code, gList) || String(s.grade_name || s.grade || s.grade_code || '')).trim().toUpperCase();
+      return Boolean(sG && resolvedG && sG === resolvedG);
+    }) || scpItemsForMerge[idx];
+
+    const rateVal = Number(
+      item.rate_qntl || item.rate_per_mt || item.rate_mt || item.rate ||
+      matchedScpItem?.rate_qntl || matchedScpItem?.rate_per_mt || matchedScpItem?.rate ||
+      poData?.b_rate || poData?.rate_qntl || 0
+    );
+    const premVal = Number(
+      item.premium || item.premium_amount || item.prem ||
+      matchedScpItem?.premium || matchedScpItem?.premium_amount || matchedScpItem?.prem ||
+      poData?.premium || 0
+    );
 
     return {
       ...item,
@@ -722,7 +782,8 @@ export const fetchPoAndItemDetails = async (
       agency_name: agencyName || item.agency_code || '',
       rate_qntl: rateVal,
       rate_per_mt: rateVal,
-      rate: rateVal
+      rate: rateVal,
+      premium: premVal
     };
   });
 
