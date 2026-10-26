@@ -725,7 +725,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                         <td></td>
                         <td className="px-1 text-right">Moisture:</td>
                         <td className="px-1 text-right">{moistClaim}</td>
-                        <td className="px-1 text-right">{moistSett > 0 ? moistSett : ""}</td>
+                        <td className="px-1 text-right"></td>
                         <td colSpan={3}></td>
                       </tr>
 
