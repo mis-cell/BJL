@@ -5,14 +5,31 @@ import { cleanSaudaNo } from '../lib/utils';
 interface Props {
   sauda: Sauda;
   onClose?: () => void;
+  isPreview?: boolean;
 }
 
-export default function SaudaPrintSlip({ sauda }: Props) {
+export default function SaudaPrintSlip({ sauda, isPreview = false }: Props) {
   const rawQualityRows = sauda.quality_details || [];
 
   // Contract-level defaults if no rows exist at all
   const contractQuality = (sauda as any).quality || '';
   const contractRate = Number(sauda.b_rate) || 0;
+
+  const defaultAgency = String(
+    sauda.agency ||
+    rawQualityRows.find((r: any) => r.agency)?.agency ||
+    (Array.isArray(rawQualityRows.find((r: any) => Array.isArray(r.agencies) && r.agencies.length > 0)?.agencies)
+      ? rawQualityRows.find((r: any) => Array.isArray(r.agencies) && r.agencies.length > 0)!.agencies!.join(', ')
+      : '')
+  ).trim();
+
+  const defaultMarka = String(
+    sauda.marks ||
+    rawQualityRows.find((r: any) => r.marka)?.marka ||
+    (Array.isArray(rawQualityRows.find((r: any) => Array.isArray(r.markas) && r.markas.length > 0)?.markas)
+      ? rawQualityRows.find((r: any) => Array.isArray(r.markas) && r.markas.length > 0)!.markas!.join(', ')
+      : '')
+  ).trim();
 
   // Process rows cleanly without unnecessary cross-product duplication
   const expandedList: any[] = [];
@@ -23,8 +40,8 @@ export default function SaudaPrintSlip({ sauda }: Props) {
       if (enabledCombs.length > 0) {
         enabledCombs.forEach((comb: any) => {
           expandedList.push({
-            agency: String(comb.agency || row.agency || '').trim(),
-            marka: String(comb.marka || row.marka || '').trim(),
+            agency: String(comb.agency || row.agency || defaultAgency || '').trim(),
+            marka: String(comb.marka || row.marka || defaultMarka || '').trim(),
             quality: String(comb.quality || row.quality || '').trim(),
             rs: comb.rs ? Number(comb.rs) : (row.rs ? Number(row.rs) : 0),
             qty: Number(comb.qty) || Number(row.qty) || 0
@@ -35,8 +52,8 @@ export default function SaudaPrintSlip({ sauda }: Props) {
     }
 
     // 2. Otherwise render the row directly as specified in the form
-    const rowAgency = String(row.agency || (Array.isArray(row.agencies) ? row.agencies.join(', ') : '')).trim();
-    const rowMarka = String(row.marka || (Array.isArray(row.markas) ? row.markas.join(', ') : '')).trim();
+    const rowAgency = String(row.agency || (Array.isArray(row.agencies) && row.agencies.length > 0 ? row.agencies.join(', ') : '') || defaultAgency).trim();
+    const rowMarka = String(row.marka || (Array.isArray(row.markas) && row.markas.length > 0 ? row.markas.join(', ') : '') || defaultMarka).trim();
     const rowQuality = String(row.quality || '').trim();
     const rowRs = row.rs !== undefined && row.rs !== null && String(row.rs).trim() !== '' ? Number(row.rs) : 0;
 
@@ -56,12 +73,12 @@ export default function SaudaPrintSlip({ sauda }: Props) {
     : (rawQualityRows.length > 0
         ? rawQualityRows.map(r => ({
             ...r,
-            agency: r.agency || '',
-            marka: r.marka || '',
+            agency: r.agency || defaultAgency || '',
+            marka: r.marka || defaultMarka || '',
             quality: r.quality || '',
             rs: Number(r.rs) || 0
           }))
-        : [{ agency: '', marka: '', quality: contractQuality, rs: contractRate, qty: 0 }]
+        : [{ agency: defaultAgency, marka: defaultMarka, quality: contractQuality, rs: contractRate, qty: 0 }]
       );
   
   // Pad local qualities to at least 7 rows to match physical slip layout
@@ -90,7 +107,11 @@ export default function SaudaPrintSlip({ sauda }: Props) {
   };
 
   return (
-    <div className="bg-white w-full max-w-[148mm] sm:w-[148mm] min-h-[210mm] mx-auto p-3 sm:p-6 flex flex-col font-sans text-black print:w-[148mm] print:h-[210mm] print:max-h-[210mm] print:p-6 print:m-0 box-border text-[10px] sm:text-[11px] leading-relaxed relative overflow-x-auto page-break-inside-avoid shadow-lg print:shadow-none">
+    <div className={
+      isPreview
+        ? "bg-white w-full max-w-[680px] mx-auto p-4 sm:p-6 flex flex-col font-sans text-black box-border text-[11px] leading-relaxed relative overflow-x-auto border border-slate-300 rounded-xl shadow-sm"
+        : "bg-white w-full max-w-[148mm] sm:w-[148mm] min-h-[210mm] mx-auto p-3 sm:p-6 flex flex-col font-sans text-black print:w-[148mm] print:h-[210mm] print:max-h-[210mm] print:p-6 print:m-0 box-border text-[10px] sm:text-[11px] leading-relaxed relative overflow-x-auto page-break-inside-avoid shadow-lg print:shadow-none"
+    }>
        {/* Invoice/Contract Header */}
        <div className="flex justify-between items-center mb-2 flex-none border-b-2 border-black pb-2">
           <div className="flex items-center gap-3">

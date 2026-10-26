@@ -1022,6 +1022,35 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
     setPrintingSauda(fullSauda);
   };
 
+  const handleViewDetails = async (sauda: Sauda) => {
+    let fullSauda = { ...sauda };
+    setViewingDetailsSauda(fullSauda);
+    try {
+      if ((!fullSauda.quality_details || fullSauda.quality_details.length === 0) && sauda.sauda_id) {
+        const { supabase } = await import('../lib/supabase.ts');
+        if (supabase) {
+          const { data } = await supabase.from('sauda_quality_details').select('*').eq('sauda_id', sauda.sauda_id);
+          if (data && data.length > 0) {
+            const sorted = (data || []).sort((a: any, b: any) => compareQualities(a.quality || '', b.quality || ''));
+            const fallbackQ = (sorted.find((s: any) => s.quality)?.quality) || (sauda as any).quality || 'TD5';
+            const fallbackR = Number(sauda.b_rate) || Number(sorted.find((s: any) => s.rs && Number(s.rs) > 0)?.rs) || 13500;
+            fullSauda = {
+              ...fullSauda,
+              quality_details: sorted.map((s: any) => ({
+                ...s,
+                quality: s.quality || fallbackQ,
+                rs: Number(s.rs) > 0 ? Number(s.rs) : fallbackR
+              }))
+            };
+            setViewingDetailsSauda(fullSauda);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Could not fetch qualities for preview", e);
+    }
+  };
+
   if (printingSauda) {
     const portalModal = (
       <div className="fixed inset-0 z-[200] bg-[#525659] flex flex-col print:bg-white print:static print:z-auto print-modal">
@@ -1889,21 +1918,21 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                       onClick={() => setSelectedSaudaId(entry.sauda_id!)}
                       onDoubleClick={() => {
                         if (isChecked || isPending) {
-                          setViewingDetailsSauda(entry);
+                          handleViewDetails(entry);
                           return;
                         }
                         if (isRejected || isDraft) {
                           if (isUser2 || isUserAdmin()) {
                             handleEdit(entry);
                           } else {
-                            setViewingDetailsSauda(entry);
+                            handleViewDetails(entry);
                           }
                           return;
                         }
                         if (canEditSaudaContract(entry)) {
                           handleEdit(entry);
                         } else {
-                          setViewingDetailsSauda(entry);
+                          handleViewDetails(entry);
                         }
                       }}
                       className={cn(
@@ -2105,7 +2134,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setViewingDetailsSauda(entry);
+                                  handleViewDetails(entry);
                                 }}
                                 className={cn(
                                   "p-1.5 rounded-lg transition-all cursor-pointer shadow-2xs inline-flex items-center justify-center",
@@ -2183,7 +2212,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setOpenActionDropdownId(null);
-                                        setViewingDetailsSauda(entry);
+                                        handleViewDetails(entry);
                                       }}
                                       className="w-full px-3 py-1.5 text-left text-slate-800 hover:bg-slate-100 font-bold flex items-center gap-2 cursor-pointer"
                                       title="View Complete Sauda Details"
@@ -2796,10 +2825,10 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
         </div>
       )}
 
-      {/* 3. View Details Modal (Read-Only Review) */}
+      {/* 3. View Details Modal (Read-Only Review - Matches Print Slip View) */}
       {viewingDetailsSauda && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-4 flex justify-between items-center shrink-0 border-b border-slate-700 text-white">
               <div className="flex items-center gap-2.5">
@@ -2807,7 +2836,7 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                   <FileText className="h-5 w-5 text-amber-300" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black">Sauda Contract Details – #{viewingDetailsSauda.sauda_no}</h3>
+                  <h3 className="text-base font-black !text-white">Sauda Contract Details – #{viewingDetailsSauda.sauda_no}</h3>
                   <p className="text-xs text-slate-300 font-medium">
                     Date: {new Date(viewingDetailsSauda.date).toLocaleDateString('en-GB')} • Session: {viewingDetailsSauda.session || '-'}
                   </p>
@@ -2823,9 +2852,9 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
             </div>
 
             {/* Modal Body */}
-            <div className="p-5 overflow-y-auto space-y-4">
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 bg-slate-50/60">
               {/* Status Banner */}
-              <div className="flex items-center justify-between p-3 rounded-xl border bg-slate-50 border-slate-200">
+              <div className="flex items-center justify-between p-3 rounded-xl border bg-white border-slate-200 shadow-2xs">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Approval Status:</span>
                   {isApprovedSauda(viewingDetailsSauda) ? (
@@ -2872,101 +2901,11 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 </div>
               )}
 
-              {/* Key Details Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Broker</span>
-                  <span className="font-extrabold text-slate-900 block truncate">{viewingDetailsSauda.broker || '-'}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Supplier</span>
-                  <span className="font-extrabold text-slate-900 block truncate">{viewingDetailsSauda.supplier || '-'}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Area</span>
-                  <span className="font-bold text-slate-800 block truncate">{viewingDetailsSauda.area || '-'}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Agency</span>
-                  <span className="font-bold text-slate-800 block truncate">{viewingDetailsSauda.agency || '-'}</span>
-                </div>
-
-                <div className="border-t border-slate-200 pt-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Basic Rate</span>
-                  <span className="font-black text-rose-700 font-mono text-sm">₹{Number(viewingDetailsSauda.b_rate || 0).toLocaleString()}</span>
-                </div>
-                <div className="border-t border-slate-200 pt-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Weight</span>
-                  <span className="font-black text-slate-900 font-mono text-sm">{Number(viewingDetailsSauda.total_wt_in_ton || 0).toFixed(3)} MT</span>
-                </div>
-                <div className="border-t border-slate-200 pt-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Unit Type</span>
-                  <span className="font-bold text-slate-800 uppercase">{viewingDetailsSauda.unit_type || 'BALES'}</span>
-                </div>
-                <div className="border-t border-slate-200 pt-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Units/Lorry</span>
-                  <span className="font-bold text-slate-800 font-mono">{viewingDetailsSauda.units_per_lorry || '-'}</span>
-                </div>
-
-                <div className="border-t border-slate-200 pt-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Freight Type</span>
-                  <span className="font-bold text-slate-800">{viewingDetailsSauda.freight_type || '-'}</span>
-                </div>
-                <div className="border-t border-slate-200 pt-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Delivery Type</span>
-                  <span className="font-bold text-slate-800">{viewingDetailsSauda.delivery_type || '-'}</span>
-                </div>
-                <div className="border-t border-slate-200 pt-2 col-span-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Delivery Window</span>
-                  <span className="font-bold text-slate-800 font-mono">
-                    {viewingDetailsSauda.delivery_from ? new Date(viewingDetailsSauda.delivery_from).toLocaleDateString('en-GB') : '-'}
-                    {' '}to{' '}
-                    {viewingDetailsSauda.delivery_to ? new Date(viewingDetailsSauda.delivery_to).toLocaleDateString('en-GB') : '-'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Quality Breakdown Table */}
-              {(() => {
-                const qualities = ((viewingDetailsSauda.quality_details && viewingDetailsSauda.quality_details.length > 0)
-                  ? viewingDetailsSauda.quality_details
-                  : (viewingDetailsSauda.sauda_qualities || [])) as any[];
-                if (qualities.length === 0) return null;
-                return (
-                  <div className="space-y-1.5">
-                    <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">Quality Breakdown</h4>
-                    <div className="border border-slate-200 rounded-xl overflow-hidden">
-                      <table className="w-full text-xs text-left">
-                        <thead className="bg-slate-100 text-slate-700 font-black text-[10px] uppercase">
-                          <tr>
-                            <th className="p-2">Item No</th>
-                            <th className="p-2">Marka</th>
-                            <th className="p-2">Quality</th>
-                            <th className="p-2 text-right">Units</th>
-                            <th className="p-2 text-right">Weight (MT)</th>
-                            <th className="p-2 text-right">Rate</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 font-medium">
-                          {qualities.map((q: any, i: number) => (
-                            <tr key={i} className="hover:bg-slate-50">
-                              <td className="p-2 font-mono">{q.item_no || i + 1}</td>
-                              <td className="p-2 font-bold">{q.marka || '-'}</td>
-                              <td className="p-2">{q.quality || '-'}</td>
-                              <td className="p-2 text-right font-mono">{q.units || q.qty || '-'}</td>
-                              <td className="p-2 text-right font-mono font-bold">{Number(q.weight_in_ton || q.weight || 0).toFixed(3)}</td>
-                              <td className="p-2 text-right font-mono font-bold text-rose-700">₹{Number(q.rate || q.rs || viewingDetailsSauda.b_rate || 0).toLocaleString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                );
-              })()}
+              {/* Full Print Slip Preview (Same To Same as Print Slip) */}
+              <SaudaPrintSlip sauda={viewingDetailsSauda} isPreview={true} />
 
               {/* Workflow Audit Details */}
-              <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 text-[11px] grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-600">
+              <div className="border border-slate-200 rounded-xl p-3 bg-white text-[11px] grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-600 shadow-2xs">
                 <div>
                   <span className="font-bold block text-slate-400 uppercase text-[9px]">Maker (User ID)</span>
                   <span className="font-extrabold text-slate-800">{viewingDetailsSauda.submitted_by || viewingDetailsSauda.user_id || 'User 002'}</span>
@@ -2979,12 +2918,16 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
                 </div>
                 <div>
                   <span className="font-bold block text-slate-400 uppercase text-[9px]">Checker / Approver</span>
-                  <span className="font-extrabold text-slate-800">{viewingDetailsSauda.approved_by || viewingDetailsSauda.checked_by || '-'}</span>
+                  <span className="font-extrabold text-slate-800">{viewingDetailsSauda.approved_by || viewingDetailsSauda.checked_by || viewingDetailsSauda.rejected_by || '-'}</span>
                 </div>
                 <div>
-                  <span className="font-bold block text-slate-400 uppercase text-[9px]">Approved At</span>
+                  <span className="font-bold block text-slate-400 uppercase text-[9px]">Approved / Reviewed At</span>
                   <span className="font-medium text-slate-700">
-                    {viewingDetailsSauda.approved_at ? new Date(viewingDetailsSauda.approved_at).toLocaleString('en-GB') : '-'}
+                    {viewingDetailsSauda.approved_at
+                      ? new Date(viewingDetailsSauda.approved_at).toLocaleString('en-GB')
+                      : viewingDetailsSauda.rejected_at
+                        ? new Date(viewingDetailsSauda.rejected_at).toLocaleString('en-GB')
+                        : '-'}
                   </span>
                 </div>
               </div>
