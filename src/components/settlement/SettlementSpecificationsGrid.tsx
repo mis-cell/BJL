@@ -282,15 +282,17 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                       />
                     </td>
 
-                    {/* Premium */}
-                    <td className="p-0.5 border-r border-gray-200">
+                    {/* Premium (₹/Qtl) */}
+                    <td className="p-0.5 border-r border-gray-200 bg-amber-50/20">
                       <input
                         id={`premium_col_${colIdx}`}
                         name={`premium_col_${colIdx}`}
                         aria-label={`Premium Col ${colIdx}`}
                         type="number"
-                        className="w-full p-1 bg-transparent text-center font-mono text-amber-800 outline-none focus:bg-amber-50"
-                        value={col.premium || ""}
+                        step="0.01"
+                        placeholder="0.00"
+                        className="w-full p-1 bg-transparent text-center font-mono text-amber-900 font-black outline-none focus:bg-amber-100/50"
+                        value={Number(col.premium) > 0 ? col.premium : ""}
                         onChange={(e) =>
                           handleColChange(colIdx, "premium", parseFloat(e.target.value) || 0)
                         }

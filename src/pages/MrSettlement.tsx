@@ -268,7 +268,20 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                         });
           if (match) {
             const origRate = Number(match.rate_value) > 0 ? Number(match.rate_value) : Number(col.rate_value || 0);
-            const prem = Number(match.premium) > 0 ? Number(match.premium) : Number(col.premium || 0);
+            let prem = Number(match.premium) || 0;
+            if (!prem && matchingPayments.length > 0) {
+              const pMasterPremRate = Number(matchingPayments[0].summary_premium_amount || 0);
+              if (pMasterPremRate > 0) prem = pMasterPremRate;
+              else if (Number(matchingPayments[0].val_premium_amt || 0) > 0) {
+                const pWeight = Number(matchingPayments[0].electronic_scale_net || matchingPayments[0].challan_weight || 0);
+                const pQtl = pWeight > 0 ? (pWeight <= 50 ? pWeight * 10 : pWeight) : 0;
+                if (pQtl > 0) {
+                  prem = Number((Number(matchingPayments[0].val_premium_amt) / pQtl).toFixed(2));
+                }
+              }
+            }
+            if (!prem) prem = Number(col.premium || 0);
+
             const settPct = match.sett_pct !== undefined && match.sett_pct !== null && Number(match.sett_pct) > 0
               ? Number(match.sett_pct)
               : (Number(col.gd_sett) > 0 ? Number(col.gd_sett) : Number(col.gd_claim || 0));
@@ -1814,9 +1827,34 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                 if (fallbackCol.rate_value && Number(fallbackCol.rate_value) > 0) {
                   merged.rate_value = fallbackCol.rate_value;
                 }
-                if (!merged.premium && fallbackCol.premium) {
-                  merged.premium = fallbackCol.premium;
+                // Robust Premium resolution: dbMatch -> fallbackCol -> matchedPayDetails -> existingMaster.summary_premium_amount -> calculatedPremRatePerQtl
+                let resolvedPrem = Number(dbMatch.premium) || 0;
+                if (!resolvedPrem) resolvedPrem = Number(fallbackCol.premium) || 0;
+                if (!resolvedPrem && matchedPayDetails && matchedPayDetails.length > 0) {
+                  const pdMatch = matchedPayDetails.find((pd: any) => Number(pd.col_index) === idx) ||
+                    matchedPayDetails.find((pd: any) => {
+                      const pdG = String(pd.grade || '').trim().toUpperCase();
+                      const colG = String(merged.grade || fallbackCol.grade || '').trim().toUpperCase();
+                      return Boolean(pdG && colG && pdG === colG);
+                    });
+                  if (pdMatch && Number(pdMatch.premium) > 0) {
+                    resolvedPrem = Number(pdMatch.premium);
+                  }
                 }
+                if (!resolvedPrem) {
+                  const masterPremRate = Number(existingMaster.summary_premium_amount || 0);
+                  if (masterPremRate > 0) {
+                    resolvedPrem = masterPremRate;
+                  } else if (calculatedPremRatePerQtl > 0) {
+                    resolvedPrem = calculatedPremRatePerQtl;
+                  } else if (Number(existingMaster.val_premium_amt || 0) > 0) {
+                    const scaleWt = Number(existingMaster.electronic_scale_net || existingMaster.challan_weight || 0);
+                    const qtl = scaleWt > 0 ? (scaleWt <= 50 ? scaleWt * 10 : scaleWt) : 0;
+                    if (qtl > 0) resolvedPrem = Number((Number(existingMaster.val_premium_amt) / qtl).toFixed(2));
+                  }
+                }
+                merged.premium = resolvedPrem;
+
                 if (merged.gd_sett == null || merged.gd_sett === 0) merged.gd_sett = fallbackCol.gd_sett;
                 if (merged.gd_claim == null || merged.gd_claim === 0) merged.gd_claim = fallbackCol.gd_claim;
                 if (merged.moist_sett == null || merged.moist_sett === 0) merged.moist_sett = fallbackCol.moist_sett;
@@ -2662,6 +2700,23 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       await dbModule.upsert('mr_settlement_master', masterPayload, 'mr_no');
 
+      try {
+        await supabase.rpc('exec_sql', {
+          query: `
+            ALTER TABLE IF EXISTS mr_settlement_detail ADD COLUMN IF NOT EXISTS premium NUMERIC DEFAULT 0;
+            ALTER TABLE IF EXISTS mr_settlement_detail ADD COLUMN IF NOT EXISTS sett_pct NUMERIC DEFAULT 0;
+            ALTER TABLE IF EXISTS mr_settlement_detail ADD COLUMN IF NOT EXISTS deduction_rate NUMERIC DEFAULT 0;
+            ALTER TABLE IF EXISTS mr_settlement_detail ADD COLUMN IF NOT EXISTS sett_rate NUMERIC DEFAULT 0;
+            ALTER TABLE IF EXISTS mr_settlement_detail ADD COLUMN IF NOT EXISTS quantity_qtl NUMERIC DEFAULT 0;
+            ALTER TABLE IF EXISTS mr_settlement_detail ADD COLUMN IF NOT EXISTS amount NUMERIC DEFAULT 0;
+            ALTER TABLE IF EXISTS mr_settlement_detail ADD COLUMN IF NOT EXISTS lower_grade TEXT DEFAULT '';
+            ALTER TABLE IF EXISTS mr_settlement_detail ADD COLUMN IF NOT EXISTS target_lower_grade TEXT DEFAULT '';
+            ALTER TABLE IF EXISTS mr_settlement_detail ADD COLUMN IF NOT EXISTS lower_grade_rate NUMERIC DEFAULT 0;
+            ALTER TABLE IF EXISTS mr_settlement_detail ADD COLUMN IF NOT EXISTS grade_diff NUMERIC DEFAULT 0;
+          `
+        });
+      } catch (_sqlErr) {}
+
       // 2. Clear old detail rows 
       await supabase
         .from('mr_settlement_detail')
@@ -2684,6 +2739,16 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           wt_phota: Number(c.wt_phota) || 0,
           wt_quantity: Number(c.wt_quantity) || 0,
           rate_value: Number(c.rate_value) || 0,
+          premium: Number(c.premium) || 0,
+          sett_pct: Number(c.sett_pct) || (Number(c.gd_sett) > 0 ? Number(c.gd_sett) : Number(c.gd_claim || 0)),
+          deduction_rate: Number(c.deduction_rate) || 0,
+          sett_rate: getEffectiveColSettRate(c),
+          quantity_qtl: Number(c.quantity_qtl) > 0 ? Number(c.quantity_qtl) : Number((getColWtMt(c) * 10).toFixed(2)),
+          amount: getColAmount(c),
+          lower_grade: c.lower_grade || '',
+          target_lower_grade: c.target_lower_grade || '',
+          lower_grade_rate: Number(c.lower_grade_rate) || 0,
+          grade_diff: Number(c.grade_diff) || 0,
           gd_claim: Number(c.gd_claim) || 0,
           gd_sett: Number(c.gd_sett) || 0,
           gd_rev: Number(c.gd_rev) || 0,

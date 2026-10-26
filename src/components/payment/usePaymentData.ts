@@ -255,18 +255,25 @@ export function usePaymentData(onSaveSuccess?: () => void) {
 
         let payDetailsData: any[] = [];
         try {
-          const [pRes, pdRes] = await Promise.all([
-            supabase.from('payment_master').select('*').order('created_at', { ascending: false }),
-            supabase.from('payment_details').select('*')
+          // Fetch complete payment_master and payment_details records without PostgREST 1000-row limit
+          const [pAll, pdAll] = await Promise.all([
+            dbModule.fetchAll('payment_master', { maxRows: 50000, pageSize: 1000 }).catch(async () => {
+              const { data } = await supabase.from('payment_master').select('*').order('created_at', { ascending: false });
+              return data || [];
+            }),
+            dbModule.fetchAll('payment_details', { maxRows: 50000, pageSize: 1000 }).catch(async () => {
+              const { data } = await supabase.from('payment_details').select('*');
+              return data || [];
+            })
           ]);
-          if (!pRes.error && pRes.data) {
-            payData = pRes.data;
+          if (pAll && pAll.length > 0) {
+            payData = pAll;
           } else {
             const { data: pDataPlain } = await supabase.from('payment_master').select('*');
             if (pDataPlain) payData = pDataPlain;
           }
-          if (pdRes && !pdRes.error && pdRes.data) {
-            payDetailsData = pdRes.data;
+          if (pdAll && pdAll.length > 0) {
+            payDetailsData = pdAll;
           }
         } catch (err) {
           console.warn("Supabase payment_master fetch error:", err);
@@ -275,27 +282,36 @@ export function usePaymentData(onSaveSuccess?: () => void) {
         if (payDetailsData.length > 0) {
           const detailsMap = new Map<string, any[]>();
           payDetailsData.forEach((d: any) => {
-            const keys = [d.voucher_no, d.payment_id, d.master_id, d.mr_no, d.po_no]
-              .map(k => String(k || '').trim().toUpperCase())
+            const keys = [
+              d.voucher_no,
+              d.payment_id,
+              d.master_id,
+              d.mr_no,
+              d.arrival_no
+            ]
+              .map(k => String(k || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))
               .filter(Boolean);
+
             keys.forEach(key => {
               const list = detailsMap.get(key) || [];
               if (!list.includes(d)) list.push(d);
               detailsMap.set(key, list);
             });
           });
+
           payData = payData.map((p: any) => {
-            const pKeys = [p.voucher_no, p.payment_id, p.mr_no, p.po_no]
-              .map(k => String(k || '').trim().toUpperCase())
-              .filter(Boolean);
+            const vKey = String(p.voucher_no || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const idKey = String(p.payment_id || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const mrKey = String(p.mr_no || p.arrival_no || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
             let details: any[] = p.details || [];
             if (details.length === 0) {
-              for (const key of pKeys) {
-                const found = detailsMap.get(key);
-                if (found && found.length > 0) {
-                  details = found;
-                  break;
-                }
+              if (vKey && detailsMap.has(vKey)) {
+                details = detailsMap.get(vKey)!;
+              } else if (idKey && detailsMap.has(idKey)) {
+                details = detailsMap.get(idKey)!;
+              } else if (mrKey && detailsMap.has(mrKey)) {
+                details = detailsMap.get(mrKey)!;
               }
             }
             return details.length > 0 ? { ...p, details } : p;
@@ -407,11 +423,15 @@ export function usePaymentData(onSaveSuccess?: () => void) {
       }
 
       try {
-        const localPay = await dbModule.fetchAll('payment_master').catch(() => []);
+        const localPay = await dbModule.fetchAll('payment_master', { maxRows: 50000, pageSize: 1000 }).catch(() => []);
         if (localPay && localPay.length > 0) {
           const map = new Map<string, any>();
           payData.forEach((p: any) => { if (p.voucher_no) map.set(p.voucher_no, p); });
-          localPay.forEach((p: any) => { if (p.voucher_no && !map.has(p.voucher_no)) map.set(p.voucher_no, p); });
+          localPay.forEach((p: any) => { 
+            if (p.voucher_no && !map.has(p.voucher_no)) {
+              map.set(p.voucher_no, p);
+            } 
+          });
           payData = Array.from(map.values());
         }
 

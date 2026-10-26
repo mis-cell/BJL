@@ -301,9 +301,29 @@ export function PaymentDashboardView({
 
       const cleanMr = normalizeKey(p.mr_no || (p as any).arrival_no);
       const cleanVoucher = normalizeKey(p.voucher_no);
+      const mrCleanStripped = cleanMr.replace(/^MR/, '');
+      const voucherCleanStripped = cleanVoucher.replace(/^PAY/, '');
+
       const mrPremSummary = (cleanMr ? aggregatedPremiums.byMrMap.get(cleanMr) : undefined)
-        || (cleanVoucher ? aggregatedPremiums.byVoucherMap.get(cleanVoucher) : undefined);
-      const rowPremium = mrPremSummary ? mrPremSummary.totalPremiumAmount : 0;
+        || (cleanVoucher ? aggregatedPremiums.byVoucherMap.get(cleanVoucher) : undefined)
+        || (mrCleanStripped ? aggregatedPremiums.byMrMap.get(mrCleanStripped) : undefined)
+        || (voucherCleanStripped ? aggregatedPremiums.byVoucherMap.get(voucherCleanStripped) : undefined);
+
+      const directPremFromDetails = Array.isArray((p as any).details)
+        ? (p as any).details.reduce((sum: number, d: any) => {
+            const qtl = Number(d.quantity_qtl ?? ((Number(d.arr_qty_wt ?? d.wt_quantity ?? 0)) * 10) ?? 0);
+            const prem = Number(d.premium ?? d.premium_rate ?? 0);
+            const explicitAmt = Number(d.premium_amount ?? d.val_premium_amt ?? 0);
+            if (explicitAmt > 0 && Math.abs(explicitAmt - Number(d.amount || 0)) > 1) {
+              return sum + explicitAmt;
+            }
+            return sum + (prem > 0 && qtl > 0 ? prem * qtl : 0);
+          }, 0)
+        : 0;
+
+      const rowPremium = (mrPremSummary && mrPremSummary.totalPremiumAmount > 0)
+        ? mrPremSummary.totalPremiumAmount
+        : (directPremFromDetails > 0 ? directPremFromDetails : Number((p as any).val_premium_amt || (p as any).summary_premium_amount || 0));
 
       let statusText = 'Pending';
       if (payable > 0 && paid >= payable - 0.01) {
@@ -609,9 +629,30 @@ export function PaymentDashboardView({
 
                   const cleanMr = normalizeKey(p.mr_no || (p as any).arrival_no);
                   const cleanVoucher = normalizeKey(p.voucher_no);
+                  const mrCleanStripped = cleanMr.replace(/^MR/, '');
+                  const voucherCleanStripped = cleanVoucher.replace(/^PAY/, '');
+
                   const mrPremSummary = (cleanMr ? aggregatedPremiums.byMrMap.get(cleanMr) : undefined)
-                    || (cleanVoucher ? aggregatedPremiums.byVoucherMap.get(cleanVoucher) : undefined);
-                  const rowPremium = mrPremSummary ? mrPremSummary.totalPremiumAmount : 0;
+                    || (cleanVoucher ? aggregatedPremiums.byVoucherMap.get(cleanVoucher) : undefined)
+                    || (mrCleanStripped ? aggregatedPremiums.byMrMap.get(mrCleanStripped) : undefined)
+                    || (voucherCleanStripped ? aggregatedPremiums.byVoucherMap.get(voucherCleanStripped) : undefined);
+
+                  // Direct calculation from p.details as fallback
+                  const directPremFromDetails = Array.isArray((p as any).details)
+                    ? (p as any).details.reduce((sum: number, d: any) => {
+                        const qtl = Number(d.quantity_qtl ?? ((Number(d.arr_qty_wt ?? d.wt_quantity ?? 0)) * 10) ?? 0);
+                        const prem = Number(d.premium ?? d.premium_rate ?? 0);
+                        const explicitAmt = Number(d.premium_amount ?? d.val_premium_amt ?? 0);
+                        if (explicitAmt > 0 && Math.abs(explicitAmt - Number(d.amount || 0)) > 1) {
+                          return sum + explicitAmt;
+                        }
+                        return sum + (prem > 0 && qtl > 0 ? prem * qtl : 0);
+                      }, 0)
+                    : 0;
+
+                  const rowPremium = (mrPremSummary && mrPremSummary.totalPremiumAmount > 0)
+                    ? mrPremSummary.totalPremiumAmount
+                    : (directPremFromDetails > 0 ? directPremFromDetails : Number((p as any).val_premium_amt || (p as any).summary_premium_amount || 0));
 
                   return (
                     <tr 
@@ -661,8 +702,15 @@ export function PaymentDashboardView({
                       </td>
                       <td className="p-2.5 text-right font-bold">
                         {rowPremium > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-300 font-mono shadow-2xs">
-                            +₹{rowPremium.toLocaleString()}
+                          <span 
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-300 font-mono shadow-2xs"
+                            title={
+                              mrPremSummary?.grades && mrPremSummary.grades.length > 0
+                                ? mrPremSummary.grades.map(g => `${g.grade}: ${g.quantityQtl} Qtl × ₹${g.premiumRatePerQtl} = ₹${Math.round(g.premiumAmount).toLocaleString('en-IN')}`).join(' | ') + ` | Total: ₹${Math.round(rowPremium).toLocaleString('en-IN')}`
+                                : `Total Premium: ₹${Math.round(rowPremium).toLocaleString('en-IN')}`
+                            }
+                          >
+                            ₹{Math.round(rowPremium).toLocaleString('en-IN')}
                           </span>
                         ) : (
                           <span className="text-slate-400 font-mono">—</span>

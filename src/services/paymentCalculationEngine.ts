@@ -177,7 +177,7 @@ export function aggregatePremiumsFromTables(
         settRate: Number(det.sett_rate || 0)
       };
 
-      const existing = mrMap.get(primaryKey);
+      const existing = mrMap.get(primaryKey) || (cleanVoucher ? voucherMap.get(cleanVoucher) : undefined);
       if (existing) {
         existing.grades.push(gradeItem);
         existing.totalPremiumAmount = Number((existing.totalPremiumAmount + calculatedAmt).toFixed(2));
@@ -185,6 +185,18 @@ export function aggregatePremiumsFromTables(
         existing.avgPremiumRatePerQtl = existing.totalQuantityQtl > 0 
           ? Number((existing.totalPremiumAmount / existing.totalQuantityQtl).toFixed(2)) 
           : existing.avgPremiumRatePerQtl;
+        if (!existing.voucherNo && (rawVoucher || parentMaster.voucher_no)) {
+          existing.voucherNo = rawVoucher || parentMaster.voucher_no;
+        }
+        if (existing.voucherNo) {
+          const vKey = normalizeKey(existing.voucherNo);
+          voucherMap.set(vKey, existing);
+          voucherMap.set(vKey.replace(/^PAY/, ''), existing);
+        }
+        if (cleanMr) {
+          mrMap.set(cleanMr, existing);
+          mrMap.set(cleanMr.replace(/^MR/, ''), existing);
+        }
       } else {
         const summary: MrPremiumSummary = {
           mrNo: resolvedMr,
@@ -204,8 +216,14 @@ export function aggregatePremiumsFromTables(
           partyName: parentMaster.party_name || parentMaster.supplier || ''
         };
         mrMap.set(primaryKey, summary);
+        if (cleanMr) {
+          mrMap.set(cleanMr, summary);
+          mrMap.set(cleanMr.replace(/^MR/, ''), summary);
+        }
         if (summary.voucherNo) {
-          voucherMap.set(normalizeKey(summary.voucherNo), summary);
+          const vKey = normalizeKey(summary.voucherNo);
+          voucherMap.set(vKey, summary);
+          voucherMap.set(vKey.replace(/^PAY/, ''), summary);
         }
         if (summary.poNo) {
           const cleanPo = normalizeKey(summary.poNo);
@@ -278,7 +296,15 @@ export function aggregatePremiumsFromTables(
           partyName: pm.party_name || pm.supplier || ''
         };
         mrMap.set(primaryKey, summary);
-        if (summary.voucherNo) voucherMap.set(normalizeKey(summary.voucherNo), summary);
+        if (cleanMr) {
+          mrMap.set(cleanMr, summary);
+          mrMap.set(cleanMr.replace(/^MR/, ''), summary);
+        }
+        if (summary.voucherNo) {
+          const vKey = normalizeKey(summary.voucherNo);
+          voucherMap.set(vKey, summary);
+          voucherMap.set(vKey.replace(/^PAY/, ''), summary);
+        }
         if (summary.poNo) {
           const cleanPo = normalizeKey(summary.poNo);
           const poList = poMap.get(cleanPo) || [];
@@ -289,7 +315,7 @@ export function aggregatePremiumsFromTables(
     }
   });
 
-  const mrsWithPremium = Array.from(mrMap.values());
+  const mrsWithPremium = Array.from(new Set(mrMap.values()));
   let totalPremiumSum = 0;
   let totalGradeLotsCount = 0;
   let totalWeightQtl = 0;
