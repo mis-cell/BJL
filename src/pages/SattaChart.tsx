@@ -1006,8 +1006,8 @@ export default function SattaChart({
 
         try {
           const changedDate = new Date().toISOString().split('T')[0];
-          const userCtx = getCurrentUserContext();
-          const changedBy = userCtx?.username || userCtx?.userName || 'ADMIN';
+          const authUser = getAuthenticatedUser();
+          const changedBy = authUser.displayLabel || authUser.username || 'Unknown User';
           const nowIso = new Date().toISOString();
 
           // Prepare audit log entries for any differential that changed or was newly set
@@ -1377,10 +1377,16 @@ export default function SattaChart({
           </button>
 
           <div className="bg-[#D94B5A] border border-[#FBCFCB] px-3.5 py-1.5 rounded-xl text-right shrink-0">
-            <div className="text-[10px] text-[#FBCFCB] font-black uppercase tracking-wider">Last Updated</div>
+            <div className="text-[10px] text-[#FBCFCB] font-black uppercase tracking-wider">
+              Last Updated {latestRateRecord?.updated_by_display ? `by ${latestRateRecord.updated_by_display}` : ''}
+            </div>
             <div className="text-xs font-mono font-bold text-white flex items-center gap-1 justify-end">
               <Clock className="h-3 w-3 text-[#FDE7E6]" />
-              <span className="text-white font-black">Today {lastSyncedAt}</span>
+              <span className="text-white font-black">
+                {latestRateRecord
+                  ? formatDateTime(latestRateRecord.updated_at || latestRateRecord.created_at) || formatDateDMY(latestRateRecord.start_date)
+                  : `Today ${lastSyncedAt}`}
+              </span>
             </div>
           </div>
         </div>
@@ -1672,11 +1678,11 @@ export default function SattaChart({
                                     title={
                                       tooltipText ||
                                       `Base Rate: ₹${rateVal.toLocaleString('en-IN')}${
-                                        latestUserDisplay ? ` (Updated by ${latestUserDisplay})` : ''
+                                        latestUserDisplay ? ` | Updated by: ${latestUserDisplay}` : ''
                                       }`
                                     }
                                     className={cn(
-                                      "font-bold px-1.5 py-0.5 rounded border inline-block min-w-[56px] text-center",
+                                      "font-bold px-1.5 py-0.5 rounded border inline-block min-w-[56px] text-center cursor-help",
                                       isCellPending
                                         ? "bg-amber-50 text-amber-950 border-amber-400"
                                         : "bg-emerald-50 text-emerald-950 border-emerald-200"
@@ -1702,8 +1708,11 @@ export default function SattaChart({
                                   )}
                                   {latestUserDisplay ? (
                                     <span 
-                                      className="text-[7.5px] text-slate-600 font-sans truncate max-w-[68px] font-bold"
-                                      title={`Updated by: ${latestUserDisplay}${latestTimeStr ? ` on ${latestTimeStr}` : ''}`}
+                                      className="text-[8px] text-indigo-900 bg-indigo-50/90 border border-indigo-200 px-1 py-0.2 rounded font-sans truncate max-w-[76px] font-bold leading-tight cursor-help"
+                                      title={
+                                        tooltipText ||
+                                        `Updated by: ${latestUserDisplay}${latestTimeStr ? ` on ${latestTimeStr}` : ''}`
+                                      }
                                     >
                                       {latestUserDisplay}
                                     </span>
@@ -2411,7 +2420,7 @@ export default function SattaChart({
                     "Previous Differential": log.old_differential !== null && log.old_differential !== undefined ? log.old_differential : '',
                     "New Differential": log.new_differential !== null && log.new_differential !== undefined ? log.new_differential : '',
                     "Change": log.differential_change !== null && log.differential_change !== undefined ? (log.differential_change > 0 ? `+${log.differential_change}` : log.differential_change) : '',
-                    "Changed By": log.changed_by || 'ADMIN',
+                    "Changed By": resolveUserIdentity(log.changed_by, log.updated_by_id).displayLabel || log.changed_by || '—',
                     "Changed At": formatDateTime(log.created_at),
                     "Remarks": log.remarks || ''
                   }));
@@ -2654,7 +2663,7 @@ export default function SattaChart({
                           </td>
                           <td className="py-3 px-4 text-center whitespace-nowrap">
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300">
-                              {log.changed_by || 'ADMIN'}
+                              {resolveUserIdentity(log.changed_by, log.updated_by_id).displayLabel || log.changed_by || '—'}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-right font-mono text-slate-500 whitespace-nowrap">

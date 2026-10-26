@@ -628,7 +628,12 @@ export default function App() {
     });
 
     if (supabase) {
-      const username = getCurrentUserContext().username || "ADMIN";
+      const ctx = getCurrentUserContext();
+      const username =
+        ctx.username && ctx.username !== "Operator" && ctx.username !== "default_operator"
+          ? ctx.username
+          : "";
+      if (!username) return;
       supabase
         .from("user_activity_logs")
         .insert([

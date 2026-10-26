@@ -206,9 +206,9 @@ export async function ensureSattaBaseRateApprovalSchema(): Promise<void> {
       ADD COLUMN IF NOT EXISTS approved_at timestamptz;
   `;
   try {
-    const { error } = await supabase.rpc('exec_sql', { sql_query: alterSql });
+    const { error } = await supabase.rpc('exec_sql', { query: alterSql });
     if (error) {
-      await supabase.rpc('exec_sql', { sql: alterSql });
+      await supabase.rpc('exec_sql', { sql_query: alterSql });
     }
   } catch {
     // Fallback handled seamlessly via remarks ||META: and satta_base_rate_audit_logs
@@ -374,7 +374,7 @@ export async function fetchSattaBaseRates(): Promise<SattaBaseRate[]> {
     await initUserMap().catch(() => {});
     ensureSattaBaseRateApprovalSchema().catch(() => {});
 
-    const [ratesRes, auditRes, sysLogRes] = await Promise.all([
+    const [ratesRes, auditRes, appAuditRes, actLogRes] = await Promise.all([
       supabase
         .from('satta_base_rates')
         .select('*')
@@ -384,19 +384,26 @@ export async function fetchSattaBaseRates(): Promise<SattaBaseRate[]> {
         .from('satta_base_rate_audit_logs')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(200),
+        .limit(300),
       supabase
-        .from('system_change_logs')
+        .from('app_audit_logs')
         .select('*')
         .eq('entity_name', 'Satta Base Rate')
         .order('created_at', { ascending: false })
-        .limit(200),
+        .limit(300),
+      supabase
+        .from('user_activity_logs')
+        .select('username, activity_type, module_name, action_details, created_at')
+        .ilike('module_name', '%satta%')
+        .order('created_at', { ascending: false })
+        .limit(500),
     ]);
 
     if (ratesRes.error) throw ratesRes.error;
     const rawRates: any[] = ratesRes.data || [];
     const auditLogs: any[] = auditRes.data || [];
-    const sysLogs: any[] = sysLogRes.data || [];
+    const appAuditLogs: any[] = appAuditRes.data || [];
+    const actLogs: any[] = actLogRes.data || [];
     const localMetaMap = loadLocalRateMetaMap();
 
     // Sort oldest -> newest first so we can compute accurate previous_rate progression
@@ -412,28 +419,54 @@ export async function fetchSattaBaseRates(): Promise<SattaBaseRate[]> {
       prevRateById.set(String(asc[i].id), prev !== null && !isNaN(prev) ? prev : null);
     }
 
-    // Identify latest date for intraday / active rate checks
-    const newestDate = rawRates[0]?.start_date || null;
-    const authUser = getAuthenticatedUser();
-
     const enriched: SattaBaseRate[] = rawRates.map((row, idx) => {
       const rowId = String(row.id || '');
       const dateRateKey = `${row.start_date}_${Number(row.base_rate)}`;
       const { cleanRemarks, meta: remarksMeta } = parseBaseRateRemarks(row.remarks);
       const localMeta = localMetaMap[rowId] || localMetaMap[dateRateKey] || null;
+      const rowCreatedMs = row.created_at ? new Date(row.created_at).getTime() : 0;
 
-      // Match audit log or system change log if needed
+      // Match satta_base_rate_audit_logs, app_audit_logs, or user_activity_logs if needed
       const matchedAudit = auditLogs.find(
         (a) =>
           (a.base_rate_id && String(a.base_rate_id) === rowId) ||
           (String(a.changed_date || '') === String(row.start_date || '') &&
             Number(a.new_rate) === Number(row.base_rate))
       );
-      const matchedSysLog = sysLogs.find(
-        (s) =>
-          String(s.record_id || '') === String(row.start_date || '') &&
-          String(s.new_value || '').replace(/[^0-9.]/g, '') === String(Number(row.base_rate))
-      );
+      const matchedAppAudit =
+        appAuditLogs.find(
+          (s) =>
+            String(s.record_id || '') === String(row.start_date || '') &&
+            String(s.new_value || '').replace(/[^0-9.]/g, '') === String(Number(row.base_rate))
+        ) ||
+        (rowCreatedMs > 0
+          ? appAuditLogs.find(
+              (s) =>
+                s.created_at &&
+                Math.abs(new Date(s.created_at).getTime() - rowCreatedMs) < 90000
+            )
+          : undefined);
+
+      let matchedActUser = '';
+      if (!row.updated_by && !remarksMeta?.by && !localMeta?.by && !matchedAudit?.changed_by && !matchedAppAudit?.user_name && rowCreatedMs > 0) {
+        let bestDiff = Infinity;
+        for (const a of actLogs) {
+          if (!a.username) continue;
+          // Never use generic auto-boot ADMIN navigation events as fallback updater
+          if (
+            String(a.username).toUpperCase() === 'ADMIN' &&
+            (a.activity_type === 'NAVIGATION' || a.activity_type === 'SYSTEM_BOOT' || a.activity_type === 'TASK_STARTED')
+          ) {
+            continue;
+          }
+          const aMs = new Date(a.created_at).getTime();
+          const diff = rowCreatedMs - aMs;
+          if (diff >= -120000 && diff <= 30 * 60 * 1000 && Math.abs(diff) < bestDiff) {
+            bestDiff = Math.abs(diff);
+            matchedActUser = a.username;
+          }
+        }
+      }
 
       // Resolve who updated this base rate (NEVER default to 'Admin' unless explicitly recorded as Admin)
       let rawBy =
@@ -441,7 +474,8 @@ export async function fetchSattaBaseRates(): Promise<SattaBaseRate[]> {
         remarksMeta?.by ||
         localMeta?.by ||
         matchedAudit?.changed_by ||
-        matchedSysLog?.user_name ||
+        matchedAppAudit?.user_name ||
+        matchedActUser ||
         '';
       let rawById =
         row.updated_by_id ||
@@ -457,19 +491,6 @@ export async function fetchSattaBaseRates(): Promise<SattaBaseRate[]> {
           rawBy = byMatch[1].trim();
           if (byMatch[2] && !rawById) rawById = byMatch[2].trim();
         }
-      }
-
-      // If a legacy row on the newest date had 'ADMIN' written due to old fallback bug while a non-admin user is active
-      if (
-        !remarksMeta &&
-        !localMeta &&
-        row.start_date === newestDate &&
-        (!rawBy || rawBy.toUpperCase() === 'ADMIN') &&
-        authUser.username &&
-        authUser.username.toUpperCase() !== 'ADMIN'
-      ) {
-        rawBy = authUser.username;
-        rawById = authUser.userId;
       }
 
       const updaterIdentity = resolveUserIdentity(rawBy, rawById);
