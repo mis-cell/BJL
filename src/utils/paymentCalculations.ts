@@ -953,7 +953,7 @@ export const mapItemsToDetailCols = (
         amount: amount,
         gd_claim: gdClaim,
         gd_sett: gdSett,
-        moist_claim: Number(item.moist_claim ?? item.moisture_claim ?? item.claim_moisture ?? item.moisture_act ?? 0),
+        moist_claim: Number(item.moist ?? item.moist_claim ?? item.moisture_claim ?? item.claim_moisture ?? 0),
         moist_sett: Number(item.moist_sett ?? item.settlement_moisture ?? item.moisture_sett ?? 0),
         dust_claim: Number(item.dust_claim ?? item.dust_claim ?? item.claim_dust ?? item.dust_act ?? 0),
         dust_sett: Number(item.dust_sett ?? item.settlement_dust ?? item.dust_sett ?? 0),

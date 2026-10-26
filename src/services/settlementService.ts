@@ -242,18 +242,21 @@ export const buildSettlementCol = (
   if (rawGdClaim != null) col.gd_claim = Number(rawGdClaim);
   else if (inspMaster?.claim_grade_down != null) col.gd_claim = Number(inspMaster.claim_grade_down);
 
-  const rawMoistSett = inspItem?.settlement_moisture ?? item?.settlement_moisture ?? 
+  const rawMoistSett =
+    payDetailItem?.moist_sett ?? payDetailItem?.moisture_sett ?? payDetailItem?.settlement_moisture ??
+    inspItem?.settlement_moisture ?? item?.settlement_moisture ?? 
     inspItem?.moisture_sett ?? item?.moisture_sett ?? 
     inspItem?.moist_sett ?? item?.moist_sett ?? 
-    inspItem?.sett_moisture ?? item?.sett_moisture;
+    inspItem?.sett_moisture ?? item?.sett_moisture ??
+    inspMaster?.settlement_moisture;
   if (rawMoistSett != null) col.moist_sett = Number(rawMoistSett);
 
-  const rawMoistClaim = inspItem?.moisture_claim ?? item?.moisture_claim ?? 
+  const rawMoistClaim =
+    payDetailItem?.moist ?? payDetailItem?.moist_claim ?? payDetailItem?.moisture_claim ?? payDetailItem?.claim_moisture ??
+    inspItem?.moisture_claim ?? item?.moisture_claim ?? 
     inspItem?.claim_moisture ?? item?.claim_moisture ?? 
-    inspItem?.moisture_act ?? item?.moisture_act ?? 
-    inspItem?.actual_moisture ?? item?.actual_moisture ?? 
-    inspItem?.insp_read_avg ?? item?.insp_read_avg ?? 
-    inspItem?.moist_claim ?? item?.moist_claim;
+    inspItem?.moist_claim ?? item?.moist_claim ??
+    inspMaster?.claim_moisture;
   if (rawMoistClaim != null) col.moist_claim = Number(rawMoistClaim);
   else if (inspMaster?.claim_moisture != null) col.moist_claim = Number(inspMaster.claim_moisture);
 
@@ -410,6 +413,14 @@ export const buildAlignedSettlementColumns = (
         if (!col.marka_crop && pd.marka_crop) col.marka_crop = pd.marka_crop;
         if (Number(pd.quantity) > 0 && (!col.quantity || col.quantity === 0)) col.quantity = Number(pd.quantity);
         if (Number(pd.arr_qty_wt) > 0 && (!col.arr_qty_wt || col.arr_qty_wt === 0)) col.arr_qty_wt = Number(pd.arr_qty_wt);
+        const pdMoistClaim = pd.moist ?? pd.moist_claim ?? pd.moisture_claim ?? pd.claim_moisture;
+        if (pdMoistClaim !== undefined && pdMoistClaim !== null && !isNaN(Number(pdMoistClaim))) {
+          col.moist_claim = Number(pdMoistClaim);
+        }
+        const pdMoistSett = pd.moist_sett ?? pd.moisture_sett ?? pd.settlement_moisture;
+        if (pdMoistSett !== undefined && pdMoistSett !== null && !isNaN(Number(pdMoistSett))) {
+          col.moist_sett = Number(pdMoistSett);
+        }
       }
 
       const hasData = Boolean(col.grade || Number(col.quantity) > 0 || Number(col.arr_qty_wt) > 0);

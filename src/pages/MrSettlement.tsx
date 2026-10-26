@@ -637,7 +637,14 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         }
       }
 
-      const faGridArr = parseGridOrItems(faRecord?.specification_grid || faRecord?.items || inspRecord?.specification_grid || inspRecord?.items);
+      const faGridArr = parseGridOrItems(
+        faRecord?.specification_grid ||
+        faRecord?.items ||
+        faRecord?.grid_details ||
+        inspRecord?.specification_grid ||
+        inspRecord?.items ||
+        inspRecord?.grid_details
+      );
       const alignedFallbackCols = buildAlignedSettlementColumns(
         viewPoDetails,
         inspDetailsList,
@@ -654,7 +661,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       const activeDetails: SettlementDetailColumn[] = [1, 2, 3, 4].map(idx => {
         const existing = foundDetails.find((d: any) => Number(d.col_index) === idx);
-        const fb = alignedFallbackCols[idx - 1] || detailCols[idx - 1] || emptyDetailColumn(idx);
+        const currentScreenCol = (targetMrNo === masterData.mr_no && detailCols[idx - 1]?.grade) ? detailCols[idx - 1] : null;
+        const fb = currentScreenCol || alignedFallbackCols[idx - 1] || detailCols[idx - 1] || emptyDetailColumn(idx);
         if (existing) {
           const merged: SettlementDetailColumn = {
             ...emptyDetailColumn(idx),
@@ -669,6 +677,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             sett_pct: existing.sett_pct !== undefined && Number(existing.sett_pct) > 0 ? Number(existing.sett_pct) : (Number(existing.gd_sett) > 0 ? Number(existing.gd_sett) : Number(fb.sett_pct || fb.gd_claim || 0)),
             deduction_rate: existing.deduction_rate !== undefined && Number(existing.deduction_rate) > 0 ? Number(existing.deduction_rate) : Number(fb.deduction_rate || 0),
             sett_rate: existing.sett_rate !== undefined && Number(existing.sett_rate) > 0 ? Number(existing.sett_rate) : Number(fb.sett_rate || 0),
+            moist_claim: existing.moist_claim !== undefined && Number(existing.moist_claim) > 0 ? Number(existing.moist_claim) : Number(fb.moist_claim || 0),
+            moist_sett: existing.moist_sett !== undefined && Number(existing.moist_sett) > 0 ? Number(existing.moist_sett) : Number(fb.moist_sett || 0),
           };
           merged.sett_rate = getEffectiveColSettRate(merged);
           merged.amount = getColAmount(merged);

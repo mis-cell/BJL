@@ -686,10 +686,13 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                   const gdRateAdj = gdDedRate > 0 ? -gdDedRate : 0;
 
                   const moistClaim =
-                    Number(col.moist_claim) > 0
+                    col.moist_claim !== undefined && col.moist_claim !== null && !isNaN(Number(col.moist_claim))
                       ? Number(col.moist_claim)
                       : Number(master.summary_rate_wt_claim) || 0;
-                  const moistSett = Number(col.moist_sett) || 0;
+                  const moistSett =
+                    col.moist_sett !== undefined && col.moist_sett !== null && !isNaN(Number(col.moist_sett))
+                      ? Number(col.moist_sett)
+                      : 0;
 
                   const netRateAdj = premVal - gdDedRate;
                   const settRate = getEffectiveColSettRate(col);
