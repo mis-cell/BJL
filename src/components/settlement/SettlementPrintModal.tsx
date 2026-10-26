@@ -484,8 +484,8 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
     >
       <div
         id="print-modal-children-canvas"
-        className="bg-white text-black px-4 py-3 mx-auto w-full max-w-[210mm] min-h-[297mm] flex flex-col justify-between text-[11px] leading-tight select-text"
-        style={{ fontFamily: "'Courier New', Courier, monospace" }}
+        className="bg-white text-black px-3 py-2 mx-auto w-full max-w-[190mm] min-h-[285mm] flex flex-col justify-between text-[11px] leading-tight select-text"
+        style={{ fontFamily: "'Courier New', Courier, monospace", boxSizing: "border-box" }}
       >
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
@@ -503,20 +503,21 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
               min-height: auto !important;
               padding: 0 !important;
               margin: 0 !important;
+              box-sizing: border-box !important;
             }
           }
         `}} />
 
         <div>
           {/* Top Header Line */}
-          <div className="grid grid-cols-12 items-end pb-1.5 text-[10.5px]">
-            <div className="col-span-3 text-left text-[10px] text-gray-800">
-              Powered by
+          <div className="flex justify-between items-baseline pb-1.5 text-[9.5px] w-full">
+            <div className="text-left font-normal text-gray-800 whitespace-nowrap">
+              Powered by KatEye
             </div>
-            <div className="col-span-3 text-center font-bold text-[14px] tracking-wider uppercase">
+            <div className="text-center font-bold text-[13.5px] tracking-widest uppercase">
               {master.unit_name || "BALLY"}
             </div>
-            <div className="col-span-6 text-right text-[10.5px] whitespace-nowrap">
+            <div className="text-right whitespace-nowrap text-[9.5px] tracking-tight">
               Printed On : {todaySlash} by {printedByDisplay}, No of Times Printed - {printCountWord}
             </div>
           </div>
@@ -617,42 +618,42 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
 
           {/* Material Details Table */}
           <div className="mt-1">
-            <table className="w-full border-collapse text-[11px] table-fixed">
+            <table className="w-full border-collapse text-[11px] table-fixed" style={{ boxSizing: "border-box" }}>
               <colgroup>
-                <col style={{ width: "8%" }} />
-                <col style={{ width: "8%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "7%" }} />
-                <col style={{ width: "8%" }} />
-                <col style={{ width: "14%" }} />
-                <col style={{ width: "7%" }} />
-                <col style={{ width: "7%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "13%" }} />
+                <col style={{ width: "8.5%" }} />
+                <col style={{ width: "7.5%" }} />
+                <col style={{ width: "11.0%" }} />
+                <col style={{ width: "6.5%" }} />
+                <col style={{ width: "8.0%" }} />
+                <col style={{ width: "12.0%" }} />
+                <col style={{ width: "6.0%" }} />
+                <col style={{ width: "6.0%" }} />
+                <col style={{ width: "9.0%" }} />
+                <col style={{ width: "10.0%" }} />
+                <col style={{ width: "15.5%" }} />
               </colgroup>
               <thead>
-                <tr className="border-t border-b border-black font-bold bg-[#fde8e4] text-black">
-                  <th className="py-1 px-1 text-left align-top">Grade</th>
-                  <th className="py-1 px-1 text-left align-top">Marka</th>
-                  <th className="py-1 px-1 text-right align-top">Quantity</th>
-                  <th className="py-1 px-1 text-center align-top">Unit</th>
-                  <th className="py-1 px-1 text-right align-top leading-tight">
+                <tr className="border border-black font-bold bg-[#fde8e4] text-black text-[10px]">
+                  <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap overflow-hidden">Grade</th>
+                  <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap overflow-hidden">Marka</th>
+                  <th className="py-1 px-1 text-right align-middle border-r border-black whitespace-nowrap overflow-hidden">Quantity</th>
+                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap overflow-hidden">Unit</th>
+                  <th className="py-0.5 px-1 text-right align-middle border-r border-black leading-tight whitespace-nowrap overflow-hidden">
                     <div>P.O</div>
                     <div>Rate</div>
                   </th>
-                  <th className="py-1 px-1 text-right align-top">Type</th>
-                  <th className="py-1 px-1 text-right align-top">Claim</th>
-                  <th className="py-1 px-1 text-right align-top">Sett.</th>
-                  <th className="py-1 px-1 text-right align-top leading-tight">
+                  <th className="py-1 px-1 text-right align-middle border-r border-black whitespace-nowrap overflow-hidden">Type</th>
+                  <th className="py-1 px-1 text-right align-middle border-r border-black whitespace-nowrap overflow-hidden">Claim</th>
+                  <th className="py-1 px-1 text-right align-middle border-r border-black whitespace-nowrap overflow-hidden">Sett.</th>
+                  <th className="py-0.5 px-1 text-right align-middle border-r border-black leading-tight whitespace-nowrap overflow-hidden">
                     <div>Rate</div>
                     <div>(+/-)</div>
                   </th>
-                  <th className="py-1 px-1 text-right align-top leading-tight">
+                  <th className="py-0.5 px-1 text-right align-middle border-r border-black leading-tight whitespace-nowrap overflow-hidden">
                     <div>Sett.</div>
                     <div>Rate</div>
                   </th>
-                  <th className="py-1 px-1 text-right align-top">Value</th>
+                  <th className="py-1 px-1 text-right align-middle whitespace-nowrap overflow-hidden">Value</th>
                 </tr>
               </thead>
               <tbody>
