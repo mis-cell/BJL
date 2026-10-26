@@ -186,24 +186,27 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
     return str.slice(0, 10);
   };
 
+  const sortedBaseRates = React.useMemo(() => {
+    const baseList = sattaBaseRates || [];
+    return baseList
+      .map((b: any) => ({
+        ymd: normalizeDateYMD(b.start_date || b.start || b.date || ''),
+        rate: Number(b.base_rate || b.rate || 0)
+      }))
+      .filter((b: any) => b.ymd && b.rate > 0)
+      .sort((a: any, b: any) => b.ymd.localeCompare(a.ymd));
+  }, [sattaBaseRates]);
+
   const getTd5BaseRateForDate = (dateStr: string): number => {
     const targetYmd = normalizeDateYMD(dateStr);
-    const baseList = sattaBaseRates || [];
-    if (baseList.length > 0) {
-      const matches = baseList.filter((b: any) => {
-        const bDateYmd = normalizeDateYMD(b.start_date || b.start || b.date || '');
-        return bDateYmd && bDateYmd <= targetYmd;
-      }).sort((a: any, b: any) => {
-        const d1 = normalizeDateYMD(a.start_date || a.start || a.date || '');
-        const d2 = normalizeDateYMD(b.start_date || b.start || b.date || '');
-        return d2.localeCompare(d1);
-      });
-      if (matches.length > 0) {
-        const r = Number(matches[0].base_rate || matches[0].rate || 0);
-        if (r > 0) return r;
+    if (targetYmd) {
+      for (let i = 0; i < sortedBaseRates.length; i++) {
+        if (sortedBaseRates[i].ymd <= targetYmd) {
+          return sortedBaseRates[i].rate;
+        }
       }
     }
-    return 13500;
+    return sortedBaseRates[0]?.rate || 13500;
   };
 
   const handleRowDoubleClick = (item: any) => {
@@ -924,23 +927,9 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                         );
                       }
 
-                      const cleanPo = (s: any) =>
-                        String(s || '')
-                          .trim()
-                          .replace(/[^a-zA-Z0-9]/g, '')
-                          .toUpperCase();
-                      const targetPo = cleanPo(item.po_no);
-                      const targetSauda = cleanPo(item.sauda_no || item.contract_po_no);
-                      const matchedArrival = allTempArrivals?.find((ar: any) => {
-                        const arPo = cleanPo(ar.po_no || ar.sauda_no || ar.contract_po_no || ar.temporary_arrival_no);
-                        return arPo && (arPo === targetPo || arPo === targetSauda);
-                      });
-
                       const saudaDateStr =
                         item.s_date || item.po_date || item.date || item.contract_date || item.created_at?.slice(0, 10) || '';
                       const arrivalDateStr =
-                        matchedArrival?.date ||
-                        matchedArrival?.arrival_date ||
                         item.last_arrival_date ||
                         item.arrival_date ||
                         saudaDateStr;

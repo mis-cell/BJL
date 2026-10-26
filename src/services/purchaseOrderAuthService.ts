@@ -158,6 +158,11 @@ export const verifyAdminOrSuperPassword = async (
 export const checkIsAdvancePaymentDone = (item: any, paymentsList: any[]): boolean => {
   if (!item) return false;
   if (item.has_payment_done === true || item.advance_payment_done === 'Yes' || item.advance_payment_done === 'yes') return true;
+  if (item.has_payment_done === false && !item.advance_payment_done) return false;
+
+  if (!paymentsList || paymentsList.length === 0) {
+    return Boolean(item.has_payment_done && !item.pending_payment);
+  }
 
   const cleanPoVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
   const pPoClean = cleanPoVal(item.po_no);
@@ -165,10 +170,9 @@ export const checkIsAdvancePaymentDone = (item: any, paymentsList: any[]): boole
   const ptfClean = cleanPoVal(item.ptf_no);
   const saudaClean = cleanPoVal(item.sauda_no || item.po_contract || item.contract_no);
 
-  const poPayments = (paymentsList || []).filter((pay: any) => {
+  const poPayments = paymentsList.filter((pay: any) => {
     const payPo = String(pay.po_no || pay.po_contract || pay.contract_po_no || pay.m_r_no || '').trim().toUpperCase();
     const payPoClean = cleanPoVal(payPo);
-    const payMrClean = cleanPoVal(pay.mr_no);
     const paySaudaClean = cleanPoVal(pay.sauda_no);
 
     return (
@@ -224,12 +228,6 @@ export const checkIsSettlementDone = (
     return true;
   }
 
-  const cleanPoVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
-  const pPoClean = cleanPoVal(item.po_no);
-  const pContractClean = cleanPoVal(item.contract_po_no);
-  const ptfClean = cleanPoVal(item.ptf_no);
-  const saudaClean = cleanPoVal(item.sauda_no || item.po_contract || item.contract_no);
-
   const key = String(item.po_no || '').trim().toUpperCase();
   if (
     settledDeductions &&
@@ -238,7 +236,21 @@ export const checkIsSettlementDone = (
     return true;
   }
 
-  return (settlementsList || []).some((s: any) => {
+  if (item.has_settlement_done === false) {
+    return false;
+  }
+
+  if (!settlementsList || settlementsList.length === 0) {
+    return false;
+  }
+
+  const cleanPoVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
+  const pPoClean = cleanPoVal(item.po_no);
+  const pContractClean = cleanPoVal(item.contract_po_no);
+  const ptfClean = cleanPoVal(item.ptf_no);
+  const saudaClean = cleanPoVal(item.sauda_no || item.po_contract || item.contract_no);
+
+  return settlementsList.some((s: any) => {
     const sPo = String(s.po_no || s.po_contract || s.contract_po_no || '').trim().toUpperCase();
     const sPoClean = cleanPoVal(sPo);
     return (

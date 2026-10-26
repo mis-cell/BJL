@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Papa from 'papaparse';
 import { dbModule } from '../../services/dbModule';
 import { supabase } from '../../lib/supabase';
@@ -86,30 +86,58 @@ export function usePurchaseOrderData({
       } catch (_e) { /* non-fatal */ }
     })();
     return () => { cancelled = true; };
-  }, [isTempPo, poList]);
+  }, [isTempPo]);
 
-  function isPoMismatchResolved(poOrItem: any): boolean {
-    if (!poOrItem) return false;
-    const item = typeof poOrItem === 'object' 
-      ? poOrItem 
-      : poList.find((p: any) => String(p.po_no || p.contract_po_no || '').trim().toUpperCase() === String(poOrItem).trim().toUpperCase()) || { po_no: String(poOrItem) };
-    
-    const poNo = String(item.po_no || '').trim().toUpperCase();
-    const contractPoNo = String(item.contract_po_no || '').trim().toUpperCase();
-    const saudaNo = String(item.sauda_no || item.po_contract || item.contract_no || '').trim().toUpperCase();
-    const ptfNo = String(item.ptf_no || '').trim().toUpperCase();
-    
-    const poSuffix = poNo.split('/').pop() || '';
-    const saudaSuffix = saudaNo.split('/').pop() || '';
-    const tokens = [poNo, contractPoNo, saudaNo, ptfNo, poSuffix, saudaSuffix].filter(t => t && t !== 'N/A' && t !== 'UNDEFINED');
+  // Pre-index resolved mismatch tokens for O(1) lookup
+  const resolvedDbMismatchTokens = useMemo(() => {
+    const tokenSet = new Set<string>();
+    const addToken = (val: any) => {
+      const s = String(val || '').trim().toUpperCase();
+      if (!s || s === 'N/A' || s === 'UNDEFINED') return;
+      tokenSet.add(s);
+      const suffix = s.split('/').pop();
+      if (suffix) tokenSet.add(suffix);
+      const stripped = s.replace(/^(MIS-|SAT-)/i, '');
+      if (stripped) tokenSet.add(stripped);
+    };
+
+    for (let i = 0; i < dbMaterialMismatches.length; i++) {
+      const m = dbMaterialMismatches[i];
+      if (!m) continue;
+      const st = String(m.status || m.resolution_status || '').toLowerCase();
+      const isResolvedStatus = st === 'resolved' || st === 'approved' || st === 'cleared' || Boolean(m.approved_by) || String(m.remarks || '').toUpperCase().includes('APPROVED');
+      if (isResolvedStatus) {
+        addToken(m.po_no);
+        addToken(m.mismatch_id || m.id);
+      }
+    }
+
+    for (let i = 0; i < dbSattaMismatches.length; i++) {
+      const s = dbSattaMismatches[i];
+      if (!s) continue;
+      const st = String(s.status || s.resolution_status || '').toLowerCase();
+      const isResolvedStatus = st === 'resolved' || st === 'approved' || st === 'cleared' || Boolean(s.approved_by) || String(s.remarks || '').toUpperCase().includes('APPROVED');
+      if (isResolvedStatus) {
+        addToken(s.po_no);
+        addToken(s.sauda_no);
+        addToken(s.mismatch_id || s.id);
+      }
+    }
+
+    return tokenSet;
+  }, [dbMaterialMismatches, dbSattaMismatches]);
+
+  const checkPoMismatchResolvedInternal = useCallback((item: any, resolvedTokens: Set<string>): boolean => {
+    if (!item) return false;
+    if (item._isMismatchResolved === true) return true;
 
     // 1. Direct record flags on item
     if (
       item.pass_status === 'pass' ||
       item.is_pass === true ||
-      item.mismatch_cleared === true || 
-      item.mismatch_cleared === 'true' || 
-      item.satta_dispute_approved === true || 
+      item.mismatch_cleared === true ||
+      item.mismatch_cleared === 'true' ||
+      item.satta_dispute_approved === true ||
       item.satta_dispute_approved === 'true' ||
       item.status === 'resolved' ||
       item.status === 'cleared' ||
@@ -122,120 +150,46 @@ export function usePurchaseOrderData({
       return true;
     }
 
-    // 2. Check localStorage tokens
-    for (const token of tokens) {
-      const tu = token.toUpperCase();
-      const matCache = localStorage.getItem(`material_resolved_${tu}`);
-      const satCache = localStorage.getItem(`satta_resolved_${tu}`);
-      const misCache = localStorage.getItem(`material_resolved_MIS-${tu}`);
-      const genCache = localStorage.getItem(`mismatch_resolved_${tu}`);
-      const clrCache = localStorage.getItem(`mismatch_cleared_${tu}`);
-      const passCache = localStorage.getItem(`pass_status_${tu}`);
-      const saudaClrCache = localStorage.getItem(`sauda_resolved_${tu}`);
-      if (matCache || satCache || misCache || genCache || clrCache || passCache || saudaClrCache) {
+    const poNo = String(item.po_no || '').trim().toUpperCase();
+    const contractPoNo = String(item.contract_po_no || '').trim().toUpperCase();
+    const saudaNo = String(item.sauda_no || item.po_contract || item.contract_no || '').trim().toUpperCase();
+    const ptfNo = String(item.ptf_no || '').trim().toUpperCase();
+
+    const poSuffix = poNo.split('/').pop() || '';
+    const saudaSuffix = saudaNo.split('/').pop() || '';
+    const tokens = [poNo, contractPoNo, saudaNo, ptfNo, poSuffix, saudaSuffix].filter(t => t && t !== 'N/A' && t !== 'UNDEFINED');
+
+    for (let i = 0; i < tokens.length; i++) {
+      const tu = tokens[i].toUpperCase();
+      if (resolvedTokens.has(tu)) return true;
+      if (
+        localStorage.getItem(`material_resolved_${tu}`) ||
+        localStorage.getItem(`satta_resolved_${tu}`) ||
+        localStorage.getItem(`material_resolved_MIS-${tu}`) ||
+        localStorage.getItem(`mismatch_resolved_${tu}`) ||
+        localStorage.getItem(`mismatch_cleared_${tu}`) ||
+        localStorage.getItem(`pass_status_${tu}`) ||
+        localStorage.getItem(`sauda_resolved_${tu}`)
+      ) {
         return true;
       }
     }
 
-    // 3. Check dbMaterialMismatches
-    const hasMaterialResolved = dbMaterialMismatches.some((m: any) => {
-      const mPo = String(m.po_no || '').trim().toUpperCase();
-      const mId = String(m.mismatch_id || m.id || '').toUpperCase();
-      const st = String(m.status || m.resolution_status || '').toLowerCase();
-      const isResolvedStatus = st === 'resolved' || st === 'approved' || st === 'cleared' || Boolean(m.approved_by) || String(m.remarks || '').toUpperCase().includes('APPROVED');
-      if (!isResolvedStatus) return false;
-      
-      return tokens.some(t => {
-        const tu = t.toUpperCase();
-        return (mPo && (mPo === tu || mPo.includes(tu) || tu.includes(mPo))) ||
-               (mId && (mId === `MIS-${tu}` || mId.includes(tu)));
-      });
-    });
-    if (hasMaterialResolved) return true;
-
-    // 4. Check dbSattaMismatches
-    const hasSattaResolved = dbSattaMismatches.some((s: any) => {
-      const sPo = String(s.po_no || '').trim().toUpperCase();
-      const sSauda = String(s.sauda_no || '').trim().toUpperCase();
-      const sId = String(s.mismatch_id || s.id || '').toUpperCase();
-      const st = String(s.status || s.resolution_status || '').toLowerCase();
-      const isResolvedStatus = st === 'resolved' || st === 'approved' || st === 'cleared' || Boolean(s.approved_by) || String(s.remarks || '').toUpperCase().includes('APPROVED');
-      if (!isResolvedStatus) return false;
-
-      return tokens.some(t => {
-        const tu = t.toUpperCase();
-        return (sPo && (sPo === tu || sPo.includes(tu) || tu.includes(sPo))) ||
-               (sSauda && (sSauda === tu || sSauda.includes(tu) || tu.includes(sSauda))) ||
-               (sId && (sId === `SAT-${tu}` || sId.includes(tu)));
-      });
-    });
-    if (hasSattaResolved) return true;
-
     return false;
+  }, []);
+
+  function isPoMismatchResolved(poOrItem: any): boolean {
+    if (!poOrItem) return false;
+    if (typeof poOrItem === 'object') {
+      if (typeof poOrItem._isMismatchResolved === 'boolean') {
+        if (poOrItem._isMismatchResolved) return true;
+      }
+      return checkPoMismatchResolvedInternal(poOrItem, resolvedDbMismatchTokens);
+    }
+    const target = String(poOrItem).trim().toUpperCase();
+    const item = poList.find((p: any) => String(p.po_no || p.contract_po_no || '').trim().toUpperCase() === target) || { po_no: target };
+    return checkPoMismatchResolvedInternal(item, resolvedDbMismatchTokens);
   }
-
-  // Header-level match against Material Inspection
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!supabase || poList.length === 0) {
-        setMatchResults({});
-        return;
-      }
-      try {
-        const [matInspRes, detailsRes] = await Promise.all([
-          supabase.from('material_inspection').select('*').then(r => r, () => ({ data: [] as any[] })),
-          supabase.from('sauda_check_point_details').select('*').then(r => r, () => ({ data: [] as any[] })),
-        ]);
-
-        const inspList = (matInspRes as any)?.data || [];
-        const detailsList = (detailsRes as any)?.data || [];
-
-        const clean = (v: any) => String(v ?? '').replace(/[^a-z0-9]/gi, '').toLowerCase();
-        const results: Record<string, PoMatchResult> = {};
-
-        for (const po of poList) {
-          const poNoClean = clean(po.po_no || po.contract_po_no || po.ptf_no);
-          const matchInsp = inspList.find((i: any) => {
-            const inspPoClean = clean(i.po_no);
-            const inspMillPoClean = clean(i.mill_po_no);
-            const inspPtfClean = clean(i.ptf_no);
-            return (
-              (inspPoClean && inspPoClean === poNoClean) || 
-              (inspMillPoClean && inspMillPoClean === poNoClean) ||
-              (inspPtfClean && inspPtfClean === poNoClean) ||
-              (po.ptf_no && clean(po.ptf_no) && clean(po.ptf_no) === inspPoClean) ||
-              (po.po_no && clean(po.po_no) && clean(po.po_no) === inspPoClean)
-            );
-          });
-          const poDetails = detailsList.filter((d: any) => d.po_no && clean(d.po_no) === poNoClean);
-          const allReceipts = inspList.filter((i: any) => {
-            const inspPoClean = clean(i.po_no);
-            const inspMillPoClean = clean(i.mill_po_no);
-            const inspPtfClean = clean(i.ptf_no);
-            return (
-              (inspPoClean && inspPoClean === poNoClean) || 
-              (inspMillPoClean && inspMillPoClean === poNoClean) ||
-              (inspPtfClean && inspPtfClean === poNoClean)
-            );
-          });
-
-          const res = comparePoInspection(po, poDetails, matchInsp || null, allReceipts);
-          if (isPoMismatchResolved(po)) {
-            res.status = 'match';
-            res.mismatches = [];
-          }
-          if (po.po_no) results[po.po_no] = res;
-          if (po.contract_po_no) results[po.contract_po_no] = res;
-          if (po.ptf_no) results[po.ptf_no] = res;
-        }
-        if (!cancelled) setMatchResults(results);
-      } catch (_e) {
-        /* inspection match is non-fatal */
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [poList, isTempPo]);
 
   // Fetch all registered records and masters
   const fetchPosAndMasters = useCallback(async () => {
@@ -279,28 +233,27 @@ export function usePurchaseOrderData({
       }
 
       const [
-        brokers, 
-        suppliers, 
-        areas, 
-        saudas, 
-        grades, 
-        markas, 
-        agencies, 
-        arrivals, 
-        finalArrivals, 
-        inspections, 
+        brokers,
+        suppliers,
+        areas,
+        saudas,
+        grades,
+        markas,
+        agencies,
+        arrivals,
+        finalArrivals,
+        inspections,
         matInspections,
-        sattaBasesRes, 
-        sattaCalculatedRes, 
+        sattaBasesRes,
+        sattaCalculatedRes,
         sattaDiffsRes,
-        matMismatchesRes,
-        satMismatchesRes,
         dbMatMismatches,
         dbSatMismatches,
         scpDeductions,
         payments,
         mrSettlementsRes,
-        mrSettlementAltRes
+        mrSettlementAltRes,
+        scpDetailsFetched
       ] = await Promise.all([
         safeFetch('broker_master'),
         safeFetch('supply_master'),
@@ -316,19 +269,20 @@ export function usePurchaseOrderData({
         safeSupabaseSelect('satta_base_rates', 'start_date', false),
         safeSupabaseSelect('satta_calculated_rates'),
         safeSupabaseSelect('satta_differentials'),
-        safeSupabaseSelect('material_mismatch'),
-        safeSupabaseSelect('satta_mismatch'),
         safeFetch('material_mismatch'),
         safeFetch('satta_mismatch'),
         safeFetch('sauda_check_point_deductions'),
         safeFetch('payment_master', 'created_at', false),
         safeFetch('mr_settlement_master', 'created_at', false),
-        safeFetch('m_r_settlement', 'created_at', false)
+        safeFetch('m_r_settlement', 'created_at', false),
+        safeFetch('sauda_check_point_details')
       ]);
 
-      const combinedMatMismatches = [...((matMismatchesRes as any)?.data || []), ...(dbMatMismatches || [])];
-      const combinedSatMismatches = [...((satMismatchesRes as any)?.data || []), ...(dbSatMismatches || [])];
+      const combinedMatMismatches = dbMatMismatches || [];
+      const combinedSatMismatches = dbSatMismatches || [];
       const combinedSettlements = [...(mrSettlementsRes || []), ...(mrSettlementAltRes || [])];
+      const scpDetailsList = scpDetailsFetched || [];
+
       setDbMaterialMismatches(combinedMatMismatches);
       setDbSattaMismatches(combinedSatMismatches);
       const sBasesList = (sattaBasesRes as any)?.data || sattaBasesRes || [];
@@ -336,7 +290,7 @@ export function usePurchaseOrderData({
       setSattaCalcs((sattaCalculatedRes as any)?.data || sattaCalculatedRes || []);
       setAllPayments(payments || []);
       setAllSettlements(combinedSettlements);
-      if (supabase) { supabase.from('sauda_check_point_details').select('*').then(({ data }) => setAllScpDetails(data || [])); }
+      setAllScpDetails(scpDetailsList);
 
       const dedMap: Record<string, any> = {};
       const cleanKeyFormat = (v: any) => String(v || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
@@ -360,42 +314,35 @@ export function usePurchaseOrderData({
         return str.slice(0, 10);
       };
 
+      // Pre-sort Satta Base Rates once for O(1)/fast lookup
+      const sortedBaseRates = (Array.isArray(sBasesList) ? sBasesList : [])
+        .map((b: any) => ({
+          ymd: normalizeDateYMD(b.start_date || b.effective_date || b.satta_date || b.start || b.date || ''),
+          rate: Number(b.base_rate || b.rate || b.b_rate || 0)
+        }))
+        .filter(b => b.ymd && b.rate > 0)
+        .sort((a, b) => b.ymd.localeCompare(a.ymd));
+      const fallbackBaseRate = sortedBaseRates[0]?.rate || 13500;
+
       const getTd5BaseRateForDate = (dateStr: string): number => {
         const targetYmd = normalizeDateYMD(dateStr);
-        const baseList = Array.isArray(sBasesList) ? sBasesList : [];
-        if (baseList.length > 0) {
-          const matches = baseList.filter((b: any) => {
-            const bDateYmd = normalizeDateYMD(b.start_date || b.effective_date || b.satta_date || b.start || b.date || '');
-            return bDateYmd && bDateYmd <= targetYmd;
-          }).sort((a: any, b: any) => {
-            const d1 = normalizeDateYMD(a.start_date || a.start || a.date || '');
-            const d2 = normalizeDateYMD(b.start_date || b.start || b.date || '');
-            return d2.localeCompare(d1);
-          });
-          if (matches.length > 0) {
-            const r = Number(matches[0].base_rate || matches[0].rate || matches[0].b_rate || 0);
-            if (r > 0) return r;
+        if (targetYmd) {
+          for (let i = 0; i < sortedBaseRates.length; i++) {
+            if (sortedBaseRates[i].ymd <= targetYmd) {
+              return sortedBaseRates[i].rate;
+            }
           }
-          const firstValid = baseList.find((b: any) => Number(b.base_rate || b.rate || b.b_rate || 0) > 0);
-          if (firstValid) return Number(firstValid.base_rate || firstValid.rate || firstValid.b_rate);
         }
-        return 13500;
+        return fallbackBaseRate;
       };
 
-      const deductionsToAutoSync: Array<{ existingId?: any; payload: Record<string, any> }> = [];
       const nowIso = new Date().toISOString();
-
       const allMergedInspections = [...(matInspections || []), ...(inspections || [])];
-      const pos = initialPos;
+      const pos = initialPos || [];
       setAllTempArrivals(arrivals || []);
       setAllFinalArrivals(finalArrivals || []);
       setAllInspections(allMergedInspections);
 
-      const exactPo = (a: any, b: any) => {
-        const x = String(a || '').trim().toUpperCase();
-        const y = String(b || '').trim().toUpperCase();
-        return x !== '' && x === y;
-      };
       const cleanVal = (v: any) => String(v || '').trim().replace(/[^a-z0-9]/gi, '').toLowerCase();
 
       const NON_PO_TOKENS = new Set([
@@ -403,9 +350,14 @@ export function usePurchaseOrderData({
         'pending', 'temp', 'final', 'finalpo', 'direct', 'no', 'yes', 'mr', 'bales', 'loose'
       ]);
 
+      // Memoized canonical PO serial extractor
+      const canonicalSerialCache = new Map<string, string>();
       const extractCanonicalPoSerial = (raw: any): string => {
         const str = String(raw || '').trim().toUpperCase();
         if (!str) return '';
+        const cached = canonicalSerialCache.get(str);
+        if (cached !== undefined) return cached;
+
         const isPtf = str.includes('PTF');
         const withoutPrefix = str
           .replace(/^BJCL\//i, '')
@@ -421,88 +373,203 @@ export function usePurchaseOrderData({
           .replace(/\/\d{2}-\d{2}$/g, '')
           .replace(/^\d{2}-\d{2}\//g, '')
           .replace(/[^0-9A-Z]/g, '');
-        if (!withoutYear) return '';
-        const strippedZeros = withoutYear.replace(/^0+/, '') || '0';
-        return isPtf ? `PTF_${strippedZeros}` : strippedZeros;
-      };
-
-      const isSamePoIdentifier = (a: any, b: any): boolean => {
-        const rawA = String(a || '').trim().toUpperCase();
-        const rawB = String(b || '').trim().toUpperCase();
-        if (!rawA || !rawB) return false;
-        const cleanA = cleanVal(rawA);
-        const cleanB = cleanVal(rawB);
-        if (NON_PO_TOKENS.has(cleanA) || NON_PO_TOKENS.has(cleanB)) return false;
-        if (rawA === rawB || cleanA === cleanB) return true;
-        const serialA = extractCanonicalPoSerial(rawA);
-        const serialB = extractCanonicalPoSerial(rawB);
-        if (serialA && serialB && !NON_PO_TOKENS.has(serialA.toLowerCase()) && serialA === serialB) {
-          return true;
+        if (!withoutYear) {
+          canonicalSerialCache.set(str, '');
+          return '';
         }
-        return false;
+        const strippedZeros = withoutYear.replace(/^0+/, '') || '0';
+        const res = isPtf ? `PTF_${strippedZeros}` : strippedZeros;
+        canonicalSerialCache.set(str, res);
+        return res;
       };
 
-      const matchPoRecord = (po: any, rec: any) => {
-        if (!po || !rec) return false;
-        const pCandidates = [
-          po.po_no,
-          po.contract_po_no,
-          po.ptf_no,
-          po.sauda_no,
-          po.contract_no
-        ].filter(Boolean);
-
-        const rCandidates = [
-          rec.po_no,
-          rec.mill_po_no,
-          rec.contract_po_no,
-          rec.sauda_no,
-          rec.contract_no,
-          rec.ptf_no
-        ].filter(Boolean);
-
-        for (const pk of pCandidates) {
-          for (const rk of rCandidates) {
-            if (isSamePoIdentifier(pk, rk)) return true;
+      const getIdentifierIndexKeys = (candidates: any[]): string[] => {
+        const keys: string[] = [];
+        for (let i = 0; i < candidates.length; i++) {
+          const raw = String(candidates[i] || '').trim().toUpperCase();
+          if (!raw || raw === 'N/A' || raw === 'UNDEFINED') continue;
+          const clean = cleanVal(raw);
+          if (NON_PO_TOKENS.has(clean)) continue;
+          keys.push(`R:${raw}`);
+          if (clean) keys.push(`C:${clean}`);
+          const serial = extractCanonicalPoSerial(raw);
+          if (serial && !NON_PO_TOKENS.has(serial.toLowerCase())) {
+            keys.push(`S:${serial}`);
           }
         }
-        return false;
+        return keys;
       };
 
-      setPoList((pos || []).map((p: any) => {
+      const defaultRecCandidates = (rec: any) => [
+        rec.po_no,
+        rec.mill_po_no,
+        rec.contract_po_no,
+        rec.sauda_no,
+        rec.po_contract,
+        rec.contract_no,
+        rec.ptf_no
+      ];
+
+      const buildRecordIndex = (
+        records: any[],
+        getCandidates: (rec: any) => any[] = defaultRecCandidates
+      ): Map<string, any[]> => {
+        const index = new Map<string, any[]>();
+        const list = records || [];
+        for (let i = 0; i < list.length; i++) {
+          const rec = list[i];
+          if (!rec) continue;
+          const keys = getIdentifierIndexKeys(getCandidates(rec));
+          for (let k = 0; k < keys.length; k++) {
+            const key = keys[k];
+            let bucket = index.get(key);
+            if (!bucket) {
+              bucket = [rec];
+              index.set(key, bucket);
+            } else if (bucket[bucket.length - 1] !== rec && !bucket.includes(rec)) {
+              bucket.push(rec);
+            }
+          }
+        }
+        return index;
+      };
+
+      const queryRecordIndex = (index: Map<string, any[]>, poKeys: string[]): any[] => {
+        if (poKeys.length === 0 || index.size === 0) return [];
+        let result: any[] | null = null;
+        let seen: Set<any> | null = null;
+        for (let k = 0; k < poKeys.length; k++) {
+          const bucket = index.get(poKeys[k]);
+          if (!bucket) continue;
+          if (!result) result = [];
+          for (let j = 0; j < bucket.length; j++) {
+            const item = bucket[j];
+            if (!seen) {
+              if (result.length === 0) {
+                result.push(item);
+              } else if (result.length < 4) {
+                if (!result.includes(item)) result.push(item);
+              } else {
+                seen = new Set(result);
+                if (!seen.has(item)) {
+                  seen.add(item);
+                  result.push(item);
+                }
+              }
+            } else if (!seen.has(item)) {
+              seen.add(item);
+              result.push(item);
+            }
+          }
+        }
+        return result || [];
+      };
+
+      // Build O(1) lookup indices once across all collections
+      const finalArrivalsIndex = buildRecordIndex(finalArrivals || []);
+      const tempArrivalsIndex = buildRecordIndex(arrivals || [], (ar: any) => [
+        ar.po_no,
+        ar.mill_po_no,
+        ar.contract_po_no,
+        ar.sauda_no,
+        ar.po_contract,
+        ar.contract_no,
+        ar.ptf_no,
+        ar.temporary_arrival_no
+      ]);
+      const mergedInspectionsIndex = buildRecordIndex(allMergedInspections);
+      const matInspectionsIndex = buildRecordIndex(matInspections || []);
+      const scpDetailsIndex = buildRecordIndex(scpDetailsList);
+      const paymentsIndex = buildRecordIndex(payments || []);
+      const settlementsIndex = buildRecordIndex(combinedSettlements);
+
+      // Build resolved & unresolved mismatch lookup sets
+      const localResolvedTokens = new Set<string>();
+      const addResolvedToken = (val: any) => {
+        const s = String(val || '').trim().toUpperCase();
+        if (!s || s === 'N/A' || s === 'UNDEFINED') return;
+        localResolvedTokens.add(s);
+        const suffix = s.split('/').pop();
+        if (suffix) localResolvedTokens.add(suffix);
+        const stripped = s.replace(/^(MIS-|SAT-)/i, '');
+        if (stripped) localResolvedTokens.add(stripped);
+      };
+
+      const unresolvedMatMismatches: any[] = [];
+      for (let i = 0; i < combinedMatMismatches.length; i++) {
+        const m = combinedMatMismatches[i];
+        if (!m) continue;
+        const st = String(m.status || m.resolution_status || '').toLowerCase();
+        const isResolved = st === 'resolved' || st === 'approved' || st === 'cleared' || Boolean(m.approved_by) || String(m.remarks || '').toUpperCase().includes('APPROVED');
+        if (isResolved) {
+          addResolvedToken(m.po_no);
+          addResolvedToken(m.mismatch_id || m.id);
+        } else {
+          unresolvedMatMismatches.push(m);
+        }
+      }
+
+      const unresolvedSatMismatches: any[] = [];
+      for (let i = 0; i < combinedSatMismatches.length; i++) {
+        const s = combinedSatMismatches[i];
+        if (!s) continue;
+        const st = String(s.status || s.resolution_status || '').toLowerCase();
+        const isResolved = st === 'resolved' || st === 'approved' || st === 'cleared' || Boolean(s.approved_by) || String(s.remarks || '').toUpperCase().includes('APPROVED');
+        if (isResolved) {
+          addResolvedToken(s.po_no);
+          addResolvedToken(s.sauda_no);
+          addResolvedToken(s.mismatch_id || s.id);
+        } else {
+          unresolvedSatMismatches.push(s);
+        }
+      }
+
+      const unresolvedMatIndex = buildRecordIndex(unresolvedMatMismatches);
+      const unresolvedSatIndex = buildRecordIndex(unresolvedSatMismatches);
+
+      const tempWeightOf = (ar: any) => {
+        if (ar.challan_material_weight && Number(ar.challan_material_weight) > 0) return Number(ar.challan_material_weight);
+        if (ar.weight_reduced && Number(ar.weight_reduced) > 0) return Number(ar.weight_reduced);
+        if (ar.weight_qtl && Number(ar.weight_qtl) > 0) return Number(ar.weight_qtl) / 10;
+        if (ar.weight && Number(ar.weight) > 0) return Number(ar.weight) / 10;
+        if (ar.electronic_net_weight && Number(ar.electronic_net_weight) > 0) {
+          return Number(ar.electronic_net_weight) > 50 ? Number(ar.electronic_net_weight) / 10 : Number(ar.electronic_net_weight);
+        }
+        return 0;
+      };
+      const finalWeightOf = (ar: any) => {
+        if (ar.weight_qtl && Number(ar.weight_qtl) > 0) return Number(ar.weight_qtl) / 10;
+        if (ar.weight && Number(ar.weight) > 0) return Number(ar.weight) / 10;
+        if (ar.electronic_net_weight && Number(ar.electronic_net_weight) > 0) {
+          return Number(ar.electronic_net_weight) > 50 ? Number(ar.electronic_net_weight) / 10 : Number(ar.electronic_net_weight);
+        }
+        if (ar.challan_material_weight && Number(ar.challan_material_weight) > 0) return Number(ar.challan_material_weight);
+        return 0;
+      };
+
+      const nextMatchResults: Record<string, PoMatchResult> = {};
+
+      const mappedPoList = pos.map((p: any) => {
+        const poKeys = getIdentifierIndexKeys([
+          p.po_no,
+          p.contract_po_no,
+          p.ptf_no,
+          p.sauda_no,
+          p.po_contract,
+          p.contract_no
+        ]);
+
         const contractWeight = parseFloat(p.total_contract_mt) || 0;
-        const matchingFinal = (finalArrivals || []).filter((ar: any) =>
-          matchPoRecord(p, ar) || exactPo(p.po_no, ar.po_no) || exactPo(p.contract_po_no, ar.po_no)
-        );
-        const matchingTemp = (arrivals || []).filter((ar: any) =>
-          (matchPoRecord(p, ar) || exactPo(p.po_no, ar.po_no) || exactPo(p.contract_po_no, ar.po_no)) &&
-          !matchingFinal.some(f => 
+        const matchingFinal = queryRecordIndex(finalArrivalsIndex, poKeys);
+        const matchingTempArrivals = queryRecordIndex(tempArrivalsIndex, poKeys);
+        const matchingTemp = matchingTempArrivals.filter((ar: any) =>
+          !matchingFinal.some(f =>
             (f.temporary_arrival_no && (ar.temporary_arrival_no || ar.amad_no) && String(f.temporary_arrival_no).trim().toUpperCase() === String(ar.temporary_arrival_no || ar.amad_no).trim().toUpperCase()) ||
             (f.arrival_no && (ar.temporary_arrival_no || ar.amad_no) && String(f.arrival_no).trim().toUpperCase() === String(ar.temporary_arrival_no || ar.amad_no).trim().toUpperCase()) ||
             (f.mr_no && (ar.temporary_arrival_no || ar.amad_no) && String(f.mr_no).trim().toUpperCase() === String(ar.temporary_arrival_no || ar.amad_no).trim().toUpperCase()) ||
             (f.lorry_number && ar.lorry_number && String(f.lorry_number).trim().toUpperCase() === String(ar.lorry_number).trim().toUpperCase())
           )
         );
-
-        const tempWeightOf = (ar: any) => {
-          if (ar.challan_material_weight && Number(ar.challan_material_weight) > 0) return Number(ar.challan_material_weight);
-          if (ar.weight_reduced && Number(ar.weight_reduced) > 0) return Number(ar.weight_reduced);
-          if (ar.weight_qtl && Number(ar.weight_qtl) > 0) return Number(ar.weight_qtl) / 10;
-          if (ar.weight && Number(ar.weight) > 0) return Number(ar.weight) / 10;
-          if (ar.electronic_net_weight && Number(ar.electronic_net_weight) > 0) {
-            return Number(ar.electronic_net_weight) > 50 ? Number(ar.electronic_net_weight) / 10 : Number(ar.electronic_net_weight);
-          }
-          return 0;
-        };
-        const finalWeightOf = (ar: any) => {
-          if (ar.weight_qtl && Number(ar.weight_qtl) > 0) return Number(ar.weight_qtl) / 10;
-          if (ar.weight && Number(ar.weight) > 0) return Number(ar.weight) / 10;
-          if (ar.electronic_net_weight && Number(ar.electronic_net_weight) > 0) {
-            return Number(ar.electronic_net_weight) > 50 ? Number(ar.electronic_net_weight) / 10 : Number(ar.electronic_net_weight);
-          }
-          if (ar.challan_material_weight && Number(ar.challan_material_weight) > 0) return Number(ar.challan_material_weight);
-          return 0;
-        };
 
         const totalFinalMt = matchingFinal.reduce((sum: number, ar: any) => sum + finalWeightOf(ar), 0);
         const totalTempMt = matchingTemp.reduce((sum: number, ar: any) => sum + tempWeightOf(ar), 0);
@@ -513,19 +580,16 @@ export function usePurchaseOrderData({
         const isExplicitCompleted = p.status === 'completed' || p.status === 'settled';
         const isWeightCompleted = tol.isCompleted;
 
-        // Automatically calculate WT STATUS and queue save to sauda_check_point_deductions
         const poNoStr = String(p.po_no || p.contract_po_no || '').trim();
         const saudaNoStr = String(p.sauda_no || p.sauda_ref || p.contract_po_no || p.po_no || '').trim();
+        const matchedArrivalForWt = matchingTempArrivals[0] || matchingTemp[0] || matchingFinal[0];
+        const saudaDateStr = p.s_date || p.po_date || p.date || p.contract_date || (p.created_at ? p.created_at.slice(0, 10) : '');
+        const arrivalDateStr = matchedArrivalForWt?.date || matchedArrivalForWt?.arrival_date || p.last_arrival_date || p.arrival_date || saudaDateStr;
+        const normalizedArrivalDate = normalizeDateYMD(arrivalDateStr) || null;
+
         if (poNoStr && contractWeight > 0) {
           const targetPoClean = cleanKeyFormat(poNoStr);
           const targetSaudaClean = cleanKeyFormat(saudaNoStr);
-          const matchedArrivalForWt = (arrivals || []).find((ar: any) => {
-            const arPo = cleanKeyFormat(ar.po_no || ar.sauda_no || ar.contract_po_no || ar.temporary_arrival_no);
-            return arPo && (arPo === targetPoClean || (targetSaudaClean && arPo === targetSaudaClean));
-          }) || matchingTemp[0] || matchingFinal[0];
-
-          const saudaDateStr = p.s_date || p.po_date || p.date || p.contract_date || (p.created_at ? p.created_at.slice(0, 10) : '');
-          const arrivalDateStr = matchedArrivalForWt?.date || matchedArrivalForWt?.arrival_date || p.last_arrival_date || p.arrival_date || saudaDateStr;
 
           const saudaTd5Rate = parseFloat(p.b_rate || 0) > 0 ? parseFloat(p.b_rate) : getTd5BaseRateForDate(saudaDateStr);
           const arrivalTd5Rate = getTd5BaseRateForDate(arrivalDateStr);
@@ -540,9 +604,6 @@ export function usePurchaseOrderData({
           if (totalReceivedMt > 0) {
             if (tol.isWithinTolerance) {
               variationType = 'within_tolerance';
-              deductionQtyMt = 0;
-              deductionQtyQtl = 0;
-              penaltyAmount = 0;
               wtStatusRemarks = `✓ TOLERABLE (±${tol.toleranceMt.toFixed(2)} MT) | Diff: ${tol.diffMt >= 0 ? `+${tol.diffMt.toFixed(3)}` : tol.diffMt.toFixed(3)} MT`;
             } else if (tol.isOverDelivery) {
               variationType = 'excess';
@@ -592,7 +653,7 @@ export function usePurchaseOrderData({
             selected_grade: p.selected_grade || p.grade || 'TD6',
             sauda_rate: Number(saudaTd5Rate),
             satta_rate: Number(arrivalTd5Rate),
-            last_arrival_date: normalizeDateYMD(arrivalDateStr) || null,
+            last_arrival_date: normalizedArrivalDate,
             last_mr_no: lastMrNo,
             applicable_rate: Number(td5RateDiff),
             rate_basis: 'rate_difference',
@@ -608,45 +669,16 @@ export function usePurchaseOrderData({
             updated_at: nowIso
           };
 
-          if (totalReceivedMt > 0) {
-            try {
-              localStorage.setItem(`sauda_settled_${targetPoClean}`, 'true');
-              localStorage.setItem(`sauda_settlement_${targetPoClean}`, JSON.stringify(dedPayload));
-              if (targetSaudaClean) {
-                localStorage.setItem(`sauda_settled_${targetSaudaClean}`, 'true');
-                localStorage.setItem(`sauda_settlement_${targetSaudaClean}`, JSON.stringify(dedPayload));
-              }
-            } catch (_e) {}
-          }
-
           const existingDed = dedMap[poNoStr.toUpperCase()] ||
                               dedMap[targetPoClean] ||
                               (saudaNoStr ? (dedMap[saudaNoStr.toUpperCase()] || dedMap[targetSaudaClean]) : null);
 
           dedMap[poNoStr.toUpperCase()] = existingDed ? { ...existingDed, ...dedPayload } : dedPayload;
           dedMap[targetPoClean] = dedMap[poNoStr.toUpperCase()];
-
-          const isCustomLocked = existingDed && existingDed.rate_basis === 'custom' && Number(existingDed.total_received_mt || 0) === dedPayload.total_received_mt;
-          const needsDbSync = !isCustomLocked && (
-            !existingDed ||
-            Number(existingDed.contract_weight_mt || 0) !== dedPayload.contract_weight_mt ||
-            Number(existingDed.total_received_mt || 0) !== dedPayload.total_received_mt ||
-            String(existingDed.variation_type || '') !== dedPayload.variation_type ||
-            Number(existingDed.deduction_qty_mt || 0) !== dedPayload.deduction_qty_mt ||
-            Number(existingDed.deduction_amount || 0) !== dedPayload.deduction_amount ||
-            String(existingDed.remarks || '') !== dedPayload.remarks
-          );
-
-          if (needsDbSync) {
-            deductionsToAutoSync.push({
-              existingId: existingDed?.id,
-              payload: existingDed?.id ? dedPayload : { ...dedPayload, created_at: nowIso }
-            });
-          }
         }
 
         // 1. Check Temporary Arrival Dashboard
-        const hasTempArrival = (arrivals || []).some((ar: any) => matchPoRecord(p, ar)) ||
+        const hasTempArrival = matchingTempArrivals.length > 0 ||
                                matchingFinal.length > 0 ||
                                totalReceivedMt > 0;
 
@@ -654,34 +686,22 @@ export function usePurchaseOrderData({
         const hasFinalArrival = matchingFinal.length > 0 || totalReceivedMt > 0;
 
         // 3. Check Mill Inspection
-        const matchingInsp = allMergedInspections.find((i: any) => matchPoRecord(p, i));
+        const matchingInspList = queryRecordIndex(mergedInspectionsIndex, poKeys);
+        const matchingInsp = matchingInspList[0];
         const hasInspection = Boolean(matchingInsp);
 
         // 4. Check Mismatch
-        const isCleared = p.mismatch_cleared === true || 
-          p.mismatch_cleared === 'true' || 
-          p.satta_dispute_approved === true || 
-          p.satta_dispute_approved === 'true' || 
-          p.pass_status === 'pass' ||
-          p.is_pass === true ||
-          p.status === 'final' ||
-          p.status === 'moved_to_final' ||
-          isPoMismatchResolved(p);
+        const isCleared = checkPoMismatchResolvedInternal(p, localResolvedTokens);
 
-        const hasDbMismatch = (combinedMatMismatches || []).some((m: any) => {
-          if (!matchPoRecord(p, m)) return false;
-          const st = String(m.status || m.resolution_status || '').toLowerCase();
-          return st !== 'resolved' && st !== 'cleared' && st !== 'approved';
-        }) || (combinedSatMismatches || []).some((m: any) => {
-          if (!matchPoRecord(p, m)) return false;
-          const st = String(m.status || m.resolution_status || '').toLowerCase();
-          return st !== 'resolved' && st !== 'cleared' && st !== 'approved';
-        });
+        const hasDbMismatch = !isCleared && (
+          queryRecordIndex(unresolvedMatIndex, poKeys).length > 0 ||
+          queryRecordIndex(unresolvedSatIndex, poKeys).length > 0
+        );
 
+        const poDetails = queryRecordIndex(scpDetailsIndex, poKeys);
         const mismatchFields: string[] = [];
         if (!isCleared) {
-          const poDetails = (allScpDetails || []).filter((d: any) => matchPoRecord(p, d));
-          const activeArrival = matchingTemp[0] || (arrivals || []).find((ar: any) => matchPoRecord(p, ar));
+          const activeArrival = matchingTemp[0] || matchingTempArrivals[0];
           if (activeArrival || matchingInsp) {
             const tempMatchRes = compareSaudaTempArrival(p, poDetails, activeArrival || matchingInsp, matchingInsp ? [matchingInsp] : []);
             if (tempMatchRes.hasInspection && tempMatchRes.status === 'mismatch') {
@@ -690,12 +710,19 @@ export function usePurchaseOrderData({
           }
         }
 
+        // Compute header-level inspection match result in the same pass
+        const allMatReceipts = queryRecordIndex(matInspectionsIndex, poKeys);
+        const headerMatchRes = comparePoInspection(p, poDetails, allMatReceipts[0] || null, allMatReceipts);
+        if (isCleared) {
+          headerMatchRes.status = 'match';
+          headerMatchRes.mismatches = [];
+        }
+        if (p.po_no) nextMatchResults[p.po_no] = headerMatchRes;
+        if (p.contract_po_no) nextMatchResults[p.contract_po_no] = headerMatchRes;
+        if (p.ptf_no) nextMatchResults[p.ptf_no] = headerMatchRes;
+
         const isMismatch = !isCleared && (hasDbMismatch || mismatchFields.length > 0 || (p.pass_status === 'mismatch' && !isCleared));
 
-        const matchingTempArrivals = (arrivals || []).filter((ar: any) =>
-          matchPoRecord(p, ar) || exactPo(p.po_no, ar.po_no) || exactPo(p.contract_po_no, ar.po_no)
-        );
-        // Count unique lorries across Final Arrival and unpromoted Temporary Arrivals so a promoted lorry is never counted twice
         const receivedLorries = Math.max(matchingTempArrivals.length, matchingFinal.length + matchingTemp.length);
         const contractLorries = Math.max(1, parseInt(p.total_lorries || p.total_no_of_lorries || p.no_of_lorries || p.lorries || 1, 10) || 1);
 
@@ -703,13 +730,13 @@ export function usePurchaseOrderData({
         const cleanSaudaKey = String(p.sauda_no || p.contract_po_no || '').trim().toUpperCase();
         let parsedOpenRemarks = p.open_remarks;
         if (typeof parsedOpenRemarks === 'string') {
-          try { parsedOpenRemarks = JSON.parse(parsedOpenRemarks); } catch(e) { parsedOpenRemarks = null; }
+          try { parsedOpenRemarks = JSON.parse(parsedOpenRemarks); } catch (_e) { parsedOpenRemarks = null; }
         }
         if (!parsedOpenRemarks) {
           try {
             const localRemarks = localStorage.getItem(`sauda_open_remarks_${cleanPoKey}`) || (cleanSaudaKey ? localStorage.getItem(`sauda_open_remarks_${cleanSaudaKey}`) : null);
             if (localRemarks) parsedOpenRemarks = JSON.parse(localRemarks);
-          } catch(e) {}
+          } catch (_e) {}
         }
 
         let cachedDeliveryDates: any = null;
@@ -730,40 +757,25 @@ export function usePurchaseOrderData({
                                 (cleanSaudaKey ? localStorage.getItem(`sauda_reopened_${cleanSaudaKey}`) === 'true' : false);
 
         const isExplicitReopened = !isCancelledLocal && !isForceClosedLocal && statusLower !== 'closed' && (
-                                   p.is_reopened === true || 
-                                   p.reopened === true || 
+                                   p.is_reopened === true ||
+                                   p.reopened === true ||
                                    statusLower === 'open' ||
                                    Boolean(parsedOpenRemarks && typeof parsedOpenRemarks === 'object' && Object.keys(parsedOpenRemarks).length > 0) ||
                                    isReopenedLocal
         );
 
         const isExplicitClosed = !isExplicitReopened && (
-                                 p.is_closed === true || 
-                                 p.sauda_closed === true || 
-                                 statusLower === 'closed' || 
+                                 p.is_closed === true ||
+                                 p.sauda_closed === true ||
+                                 statusLower === 'closed' ||
                                  isForceClosedLocal
         );
 
         const isLorryClosed = contractLorries > 0 && receivedLorries >= contractLorries;
         const isClosed = !isExplicitReopened && (isExplicitClosed || isLorryClosed);
 
-        // Payment status in payment_master
-        const pPoClean = cleanVal(p.po_no);
-        const pContractClean = cleanVal(p.contract_po_no);
-        const pPtfClean = cleanVal(p.ptf_no);
-        const pSaudaClean = cleanVal(p.sauda_no || p.po_contract || p.contract_no);
-
-        const matchingPayments = (payments || []).filter((pay: any) => {
-          const payPoClean = cleanVal(pay.po_no);
-          const paySaudaClean = cleanVal(pay.sauda_no);
-          return exactPo(p.po_no, pay.po_no) || 
-                 exactPo(p.contract_po_no, pay.po_no) ||
-                 matchPoRecord(p, pay) ||
-                 (pPoClean && pPoClean === payPoClean) ||
-                 (pContractClean && pContractClean === payPoClean) ||
-                 (pPtfClean && pPtfClean === payPoClean) ||
-                 (pSaudaClean && paySaudaClean && pSaudaClean === paySaudaClean);
-        });
+        // Payment status in payment_master via O(1) index
+        const matchingPayments = queryRecordIndex(paymentsIndex, poKeys);
         const hasPaymentDone = matchingPayments.some((pay: any) => {
           const advDone = String(pay.advance_payment_done || pay.advance_done || '').trim().toLowerCase();
           const paid = Number(pay.paid_amount || 0);
@@ -775,15 +787,8 @@ export function usePurchaseOrderData({
           return false;
         }) || Boolean(p.has_payment_done || (p.advance_payment_done && String(p.advance_payment_done).toLowerCase() === 'yes'));
 
-        // Settlement status in mr_settlement_master / m_r_settlement
-        const matchingSettlements = (combinedSettlements || []).filter((s: any) => {
-          const sPoClean = cleanVal(s.po_no || s.po_contract || s.contract_po_no);
-          return exactPo(p.po_no, s.po_no) || 
-                 exactPo(p.contract_po_no, s.po_no) || 
-                 matchPoRecord(p, s) || 
-                 (pPoClean && pPoClean === sPoClean) || 
-                 (pContractClean && pContractClean === sPoClean);
-        });
+        // Settlement status in mr_settlement_master / m_r_settlement via O(1) index
+        const matchingSettlements = queryRecordIndex(settlementsIndex, poKeys);
         const hasSettlementDone = matchingSettlements.length > 0 || p.status === 'settled';
 
         let workflowStage: 'temp_arrival_pending' | 'final_arrival_pending' | 'mismatch' | 'inspection_pending' | 'adv_payment_not_done' | 'settlement_pending' | 'final_po' = 'temp_arrival_pending';
@@ -806,7 +811,7 @@ export function usePurchaseOrderData({
 
         const isPass = isCleared || (workflowStage === 'final_po');
         const isWeightFulfilled = !isExplicitReopened && (isExplicitCompleted || isWeightCompleted || isClosed);
-        const isFullyComplete = isTempPo 
+        const isFullyComplete = isTempPo
           ? (isWeightFulfilled && isPass)
           : isWeightFulfilled;
         const computedPending = !isFullyComplete;
@@ -819,6 +824,7 @@ export function usePurchaseOrderData({
           ...p,
           status: isCancelledLocal ? 'cancelled' : (isExplicitReopened ? 'open' : p.status),
           date: p.date || p.po_date || (p.created_at ? p.created_at.slice(0, 10) : ''),
+          last_arrival_date: normalizedArrivalDate || p.last_arrival_date || null,
           delivery_from: effectiveDeliveryFrom,
           delivery_to: effectiveDeliveryTo,
           shipment_date: effectiveDeliveryTo || p.shipment_date,
@@ -843,43 +849,14 @@ export function usePurchaseOrderData({
           pass_status: isCleared ? 'pass' : (workflowStage === 'final_po' ? 'pass' : (isMismatch ? 'mismatch' : workflowStage)),
           mismatch_fields: isCleared ? [] : mismatchFields,
           has_payment_done: hasPaymentDone,
-          is_fully_completed: isFullyComplete
+          is_fully_completed: isFullyComplete,
+          _isMismatchResolved: isCleared
         };
-      }));
+      });
 
+      setPoList(mappedPoList);
+      setMatchResults(nextMatchResults);
       setSettledDeductions(dedMap);
-
-      if (supabase && deductionsToAutoSync.length > 0) {
-        (async () => {
-          const writeWithRetry = async (existingId: any, rawPayload: Record<string, any>) => {
-            let activePayload = { ...rawPayload };
-            for (let attempt = 0; attempt < 8; attempt++) {
-              const res = existingId
-                ? await supabase.from('sauda_check_point_deductions').update(activePayload).eq('id', existingId)
-                : await supabase.from('sauda_check_point_deductions').insert([activePayload]);
-              if (!res.error) return;
-              const errMsg = res.error.message || '';
-              const match = errMsg.match(/['"]([a-zA-Z0-9_]+)['"]\s+column/i) ||
-                            errMsg.match(/column\s+['"]([a-zA-Z0-9_]+)['"]/i) ||
-                            errMsg.match(/Could not find the '([a-zA-Z0-9_]+)' column/i);
-              if (match && match[1] && activePayload[match[1]] !== undefined) {
-                delete activePayload[match[1]];
-                continue;
-              }
-              break;
-            }
-          };
-
-          try {
-            await Promise.all(
-              deductionsToAutoSync.map(item => writeWithRetry(item.existingId, item.payload).catch(() => {}))
-            );
-            dbModule.invalidateCache('sauda_check_point_deductions');
-          } catch (e) {
-            console.warn('Auto-save to sauda_check_point_deductions warning:', e);
-          }
-        })();
-      }
 
       setBrokerList((brokers || []).map((b: any) => ({
         ...b,
@@ -915,26 +892,25 @@ export function usePurchaseOrderData({
     } finally {
       setLoading(false);
     }
-  }, [MASTER_TABLE, isArchiveView, isTempPo]);
+  }, [MASTER_TABLE, isArchiveView, isTempPo, checkPoMismatchResolvedInternal]);
 
   // Live Auto Refresh hook
-  useLiveAutoRefresh(fetchPosAndMasters, [isArchiveView, isTempPo], { 
+  useLiveAutoRefresh(fetchPosAndMasters, [isArchiveView, isTempPo], {
     tables: [
-      'purchase_master', 
-      'purchase_detail_master', 
-      'sauda_check_point', 
-      'sauda_check_point_details', 
-      'sauda_check_point_deductions', 
-      'p.o_archive', 
-      'po_archive', 
+      'purchase_master',
+      'purchase_detail_master',
+      'sauda_check_point',
+      'sauda_check_point_details',
+      'p.o_archive',
+      'po_archive',
       'temporary_material_received',
       'final_arrival',
-      'material_inspection', 
-      'mill_inspection_master', 
+      'material_inspection',
+      'mill_inspection_master',
       'material_mismatch',
       'satta_mismatch',
       'payment_master'
-    ] 
+    ]
   });
 
   // Custom event listener for explicit mismatch resolution
