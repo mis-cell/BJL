@@ -131,6 +131,10 @@ export interface SettlementMaster {
   pan_no?: string;
   unit_name?: string;
   printed_by?: string;
+  print_count?: number;
+  last_printed_at?: string;
+  last_printed_by?: string;
+  last_printed_by_name?: string;
   on_ac_total_advance?: number;
   on_ac_total_adv_adjusted?: number;
   cheque_adjustments?: Array<{ cheque_no: string; date: string; adjusted_value: number }>;

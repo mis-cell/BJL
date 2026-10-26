@@ -42,9 +42,10 @@ interface PrintModalProps {
   showTip?: boolean;
   copyType?: string | null;
   setCopyType?: (val: any) => void;
+  onPrint?: () => void | Promise<void>;
 }
 
-export default function PrintModal({ isOpen, onClose, title, children, showTip = true, copyType, setCopyType}: PrintModalProps) {
+export default function PrintModal({ isOpen, onClose, title, children, showTip = true, copyType, setCopyType, onPrint }: PrintModalProps) {
   const [emailRecipient, setEmailRecipient] = useState("");
   const [emailSubject, setEmailSubject] = useState(`[Bally Jute ERP] ${title}`);
   const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
@@ -241,7 +242,16 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
             </button>
             <button 
               type="button"
-              onClick={() => window.print()}
+              onClick={async () => {
+                if (onPrint) {
+                  try {
+                    await onPrint();
+                  } catch (e) {
+                    console.warn("Print action callback failed:", e);
+                  }
+                }
+                window.print();
+              }}
               className="bg-red-700 hover:bg-red-800 text-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-4 text-xs font-black h-8 flex items-center gap-1.5 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] font-mono cursor-pointer"
             >
               <Printer className="w-4 h-4" /> SEND TO PRINTER

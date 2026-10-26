@@ -59,6 +59,21 @@ export async function runDatabaseMigrations() {
           ALTER TABLE IF EXISTS satta_calculated_rates ADD COLUMN IF NOT EXISTS updated_by TEXT;
 
           ALTER TABLE IF EXISTS user_master ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
+          ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS print_count INTEGER DEFAULT 0;
+          ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS last_printed_at TIMESTAMP WITH TIME ZONE;
+          ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS last_printed_by TEXT;
+          ALTER TABLE IF EXISTS mr_settlement_master ADD COLUMN IF NOT EXISTS last_printed_by_name TEXT;
+
+          CREATE TABLE IF NOT EXISTS settlement_print_history (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            mr_no TEXT NOT NULL,
+            print_count INTEGER NOT NULL,
+            printed_by_name TEXT,
+            printed_by_id TEXT,
+            printed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          );
+          ALTER TABLE IF EXISTS settlement_print_history DISABLE ROW LEVEL SECURITY;
+
           ALTER TABLE IF EXISTS mill_inspection_master ADD COLUMN IF NOT EXISTS lorry_number TEXT;
           ALTER TABLE IF EXISTS mill_inspection_master ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;
           ALTER TABLE IF EXISTS inspection_master ADD COLUMN IF NOT EXISTS arival_apmc_fees NUMERIC DEFAULT 0;
