@@ -80,10 +80,13 @@ export const getActivePoItemsGlobal = () => activePoItemsGlobal;
 export interface SattaDeductionResult {
   deduction: number;         // Calculated Deduction (₹/Qtl) = GradeDiff * (Sett% / 100)
   gradeDiff: number;         // Absolute difference between current and lower grade
+  diff?: number;             // Alias for gradeDiff
   currentGrade: string;      // Contracted / original grade (e.g. 'TD5')
   lowerGrade: string | null; // Next grade down or stock grade (e.g. 'TD6')
+  targetGradeName?: string;  // Alias for lowerGrade
   currentDiff: number;       // Rate or differential of current grade
   lowerDiff: number;         // Rate or differential of lower grade
+  lowerRate?: number;        // Alias for lowerDiff
   settPct: number;           // Settlement % (Claim %) (e.g. 40%)
   origRate: number;          // Original Rate (₹/Qtl) (e.g. 13500)
   settRate: number;          // Settled Rate = origRate - deduction (₹/Qtl)
@@ -103,26 +106,43 @@ export interface SattaDeductionResult {
  * 3. Satta Differentials Chart (fallback if contract rates are unavailable)
  */
 export function calculateSattaDeduction(
-  col: {
-    grade?: string | null;
-    area?: string | null;
-    agency?: string | null;
-    rate_value?: number | string | null;
-    sett_pct?: number | string | null;
-    gd_claim?: number | string | null;
-    gd_sett?: number | string | null;
-    stock_grade_name?: string | null;
-    stock_grade_code?: string | null;
-    lower_grade?: string | null;
-    target_lower_grade?: string | null;
-    lower_grade_rate?: number | string | null;
-    po_items?: any[] | null;
-    all_cols?: any[] | null;
-  },
-  dbDiffsList?: SattaDifferential[],
-  customSettPct?: number,
-  explicitPoItems?: any[]
+  colOrGrade: any,
+  dbDiffsOrRate?: any,
+  customSettPctOrSettPct?: any,
+  explicitPoItemsOrDiffs?: any,
+  gradeMasters?: any,
+  poItemsList?: any,
+  lowerGradeArg?: any,
+  lowerGradeRateArg?: any,
+  allColsArg?: any
 ): SattaDeductionResult {
+  let col: any = {};
+  let dbDiffsList: SattaDifferential[] | undefined = undefined;
+  let customSettPct: number | undefined = undefined;
+  let explicitPoItems: any[] | undefined = undefined;
+
+  if (typeof colOrGrade === 'string') {
+    // Positional call convention: (grade, origRate, settPct, diffs, masters, poItems, lowerGrade, lowerGradeRate, allCols)
+    col = {
+      grade: colOrGrade,
+      rate_value: typeof dbDiffsOrRate === 'number' ? dbDiffsOrRate : Number(dbDiffsOrRate) || 0,
+      sett_pct: typeof customSettPctOrSettPct === 'number' ? customSettPctOrSettPct : Number(customSettPctOrSettPct) || 0,
+      lower_grade: lowerGradeArg,
+      target_lower_grade: lowerGradeArg,
+      lower_grade_rate: lowerGradeRateArg,
+      po_items: poItemsList,
+      all_cols: allColsArg
+    };
+    dbDiffsList = Array.isArray(explicitPoItemsOrDiffs) ? explicitPoItemsOrDiffs : undefined;
+    customSettPct = col.sett_pct;
+    explicitPoItems = Array.isArray(poItemsList) ? poItemsList : undefined;
+  } else if (colOrGrade && typeof colOrGrade === 'object') {
+    col = colOrGrade;
+    dbDiffsList = Array.isArray(dbDiffsOrRate) ? dbDiffsOrRate : undefined;
+    customSettPct = customSettPctOrSettPct;
+    explicitPoItems = Array.isArray(explicitPoItemsOrDiffs) ? explicitPoItemsOrDiffs : undefined;
+  }
+
   const currentGrade = normalizeGrade(col.grade) || 'TD5';
   let origRate = Number(col.rate_value) || 0;
 
@@ -263,10 +283,13 @@ export function calculateSattaDeduction(
     return {
       deduction,
       gradeDiff,
+      diff: gradeDiff,
       currentGrade,
       lowerGrade,
+      targetGradeName: lowerGrade || '',
       currentDiff: origRate,
       lowerDiff: lowerGradeRate,
+      lowerRate: lowerGradeRate,
       settPct,
       origRate,
       settRate,
@@ -293,10 +316,13 @@ export function calculateSattaDeduction(
     return {
       deduction,
       gradeDiff,
+      diff: gradeDiff,
       currentGrade,
       lowerGrade,
+      targetGradeName: lowerGrade || '',
       currentDiff,
       lowerDiff,
+      lowerRate: lowerDiff,
       settPct,
       origRate,
       settRate,
@@ -311,10 +337,13 @@ export function calculateSattaDeduction(
   return {
     deduction: 0,
     gradeDiff: 0,
+    diff: 0,
     currentGrade,
     lowerGrade,
+    targetGradeName: lowerGrade || '',
     currentDiff: origRate,
     lowerDiff: 0,
+    lowerRate: 0,
     settPct,
     origRate,
     settRate: origRate,

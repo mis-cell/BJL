@@ -258,8 +258,6 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       // Also live-update detailCols with Payment Operations -> Details fields (preserving original PO rate in rate_value!)
       if (matchedDetailsList.length > 0) {
         setDetailCols(prevCols => prevCols.map(col => {
-          const hasData = Boolean(col.grade || col.quantity || col.arr_qty_wt);
-          if (!hasData) return col;
           const match = matchedDetailsList.find(pd => Number(pd.col_index) === col.col_index) ||
                         matchedDetailsList.find(pd => {
                           const pdGrade = (resolveGradeName(pd.grade, gradeMasterList) || String(pd.grade || '')).trim().toUpperCase();
@@ -282,12 +280,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             }
             if (!prem) prem = Number(col.premium || 0);
 
-            const settPct = match.sett_pct !== undefined && match.sett_pct !== null && Number(match.sett_pct) > 0
+            const settPct = match.sett_pct !== undefined && match.sett_pct !== null && !isNaN(Number(match.sett_pct)) && Number(match.sett_pct) >= 0
               ? Number(match.sett_pct)
               : (Number(col.gd_sett) > 0 ? Number(col.gd_sett) : Number(col.gd_claim || 0));
 
             const sattaObj = calculateSattaDeduction(
-              col.grade,
+              col.grade || match.grade,
               origRate,
               settPct,
               getCachedSattaDiffs(),
@@ -298,17 +296,26 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
               prevCols
             );
 
-            const pdDedRate = Number(match.deduction_rate) > 0 ? Number(match.deduction_rate) : sattaObj.deduction;
+            const pdDedRate = Number(match.deduction_rate) >= 0 ? Number(match.deduction_rate) : sattaObj.deduction;
             const pdSettRate = (match.sett_rate !== undefined && match.sett_rate !== null && Number(match.sett_rate) > 0)
               ? Number(match.sett_rate)
               : (origRate > 0 ? Number((origRate + prem - pdDedRate).toFixed(2)) : 0);
 
-            const wtMt = getColWtMt(col);
-            const qtyQtl = Number((wtMt * 10).toFixed(2));
-            const colAmt = Number((qtyQtl * pdSettRate).toFixed(2));
+            const qtyVal = Number(match.quantity) > 0 ? Number(match.quantity) : Number(col.quantity || 0);
+            const wtMt = Number(match.arr_qty_wt) > 0 ? Number(match.arr_qty_wt) : getColWtMt(col);
+            const qtyQtl = Number(match.quantity_qtl) > 0 ? Number(match.quantity_qtl) : Number((wtMt * 10).toFixed(2));
+            const colAmt = Number(match.amount) > 0 ? Number(match.amount) : Number((qtyQtl * pdSettRate).toFixed(2));
 
             return {
               ...col,
+              grade: col.grade || match.grade,
+              area: col.area || match.area,
+              agency: col.agency || match.agency,
+              marka_crop: col.marka_crop || match.marka_crop,
+              quantity: qtyVal,
+              arr_qty_wt: wtMt,
+              min_qty_wt: Number(match.min_qty_wt) > 0 ? Number(match.min_qty_wt) : (wtMt > 0 ? Number((wtMt * 0.97).toFixed(3)) : 0),
+              wt_quantity: Number(match.wt_quantity) > 0 ? Number(match.wt_quantity) : (qtyVal > 0 && wtMt > 0 ? Math.round((wtMt * 1000) / qtyVal) : 0),
               rate_value: origRate,
               premium: prem,
               sett_pct: settPct,
@@ -1386,8 +1393,26 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       setLastSyncTime(new Date().toLocaleTimeString());
 
-      // If preserveMrNo is false, clear MR and prepare base PO columns so user can select from the filtered FA dropdown
+      // If preserveMrNo is false, check if this PO has a linked inspection or payment MR to load automatically
       if (!preserveMrNo) {
+        const uniqueMrs = Array.from(new Set(
+          incomingList.map(i => String(i.mr_no || i.final_arrival_no || i.arrival_no || '')).filter(Boolean)
+        ));
+        let autoMr = uniqueMrs.length === 1 ? uniqueMrs[0] : '';
+        if (!autoMr && paymentList && paymentList.length > 0) {
+          const cleanP = cleanPoNo.toLowerCase();
+          const matchedPay = paymentList.find((p: any) => {
+            const pPo = String(p.po_no || '').replace(/#/g, '').trim().toLowerCase();
+            return pPo === cleanP;
+          });
+          if (matchedPay?.mr_no) autoMr = matchedPay.mr_no;
+        }
+
+        if (autoMr) {
+          await handleProceedWithMrNo(autoMr);
+          return;
+        }
+
         const poDetails = (fetchedDetails && fetchedDetails.length > 0) ? fetchedDetails : [];
 
         const newCols = [1, 2, 3, 4].map(idx => {
@@ -1427,6 +1452,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           arrival_date: ''
         }));
         setDetailCols(newCols);
+        await syncPaymentModuleData('', poData.po_no || cleanPoNo);
       }
 
       if (onLogEvent) {

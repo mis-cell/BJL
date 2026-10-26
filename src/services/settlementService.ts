@@ -142,7 +142,8 @@ export const buildSettlementCol = (
     (rawCrop ? (resolvedMarka ? ` / ${rawCrop}` : rawCrop) : '');
 
   // 5. Quantity (Bales)
-  const rawQty = (inspItem || item) ? (
+  const rawQty = (inspItem || item || payDetailItem) ? (
+    payDetailItem?.quantity ||
     inspItem?.quantity || inspItem?.bales ||
     item?.quantity || item?.quantity_rcpt || item?.quantity_chln || item?.qty || item?.packets || item?.total_packets || item?.bales || 0
   ) : 0;
@@ -151,7 +152,9 @@ export const buildSettlementCol = (
 
   // 6. Arrival Quantity / Weight
   let rawWt = 0;
-  if (inspItem || item) {
+  if (payDetailItem?.arr_qty_wt !== undefined && payDetailItem?.arr_qty_wt !== null && Number(payDetailItem.arr_qty_wt) > 0) {
+    rawWt = Number(payDetailItem.arr_qty_wt);
+  } else if (inspItem || item) {
     if (inspItem?.final_receipt_wt !== undefined && inspItem?.final_receipt_wt !== null && Number(inspItem.final_receipt_wt) > 0) {
       rawWt = Number(inspItem.final_receipt_wt);
     } else if (item?.final_receipt_wt !== undefined && item?.final_receipt_wt !== null && Number(item.final_receipt_wt) > 0) {
@@ -311,11 +314,13 @@ export const buildAlignedSettlementColumns = (
   payDetails: any[] = []
 ): SettlementDetailColumn[] => {
   const arrivalRows: Array<{ inspItem: any; faItem: any; rawGrade: string; gradeName: string; gradeCode: string; hasData: boolean }> = [];
-  const maxArrivalLen = Math.max(inspDetails?.length || 0, faGridArr?.length || 0);
+  const maxArrivalLen = Math.max(inspDetails?.length || 0, faGridArr?.length || 0, payDetails?.length || 0);
   for (let i = 0; i < maxArrivalLen; i++) {
     const inspItem = inspDetails?.[i] || null;
     const faItem = faGridArr?.[i] || null;
+    const payItem = payDetails?.[i] || null;
     const rawG = 
+      payItem?.grade ||
       inspItem?.stock_grade_name || inspItem?.arrival_grade || inspItem?.grade || inspItem?.grade_name || 
       inspItem?.stock_grade_code || inspItem?.grade_code ||
       faItem?.receipt_grade_name || faItem?.challan_grade_name || faItem?.stock_grade_name || faItem?.arrival_grade || 
@@ -326,9 +331,9 @@ export const buildAlignedSettlementColumns = (
     ).trim();
     const nameG = (resolveGradeName(rawG || codeG, gList) || rawG || '').trim().toUpperCase();
 
-    const wt = Number(inspItem?.weight_qtl || inspItem?.arr_qty_wt || faItem?.weight_qtl || faItem?.arr_qty_wt || 0);
-    const qty = Number(inspItem?.bales || inspItem?.quantity || faItem?.bales || faItem?.quantity || 0);
-    const hasData = wt > 0 || qty > 0 || Boolean(nameG || codeG);
+    const wt = Number(payItem?.arr_qty_wt || inspItem?.final_receipt_wt || inspItem?.weight_qtl || inspItem?.arr_qty_wt || faItem?.weight_qtl || faItem?.arr_qty_wt || 0);
+    const qty = Number(payItem?.quantity || inspItem?.bales || inspItem?.quantity || faItem?.bales || faItem?.quantity || faItem?.quantity_rcpt || 0);
+    const hasData = wt > 0 || qty > 0;
 
     if (hasData) {
       arrivalRows.push({
@@ -390,14 +395,26 @@ export const buildAlignedSettlementColumns = (
     });
 
     const computedCols = cols.map((col, i) => {
-      const hasData = Boolean(col.grade || Number(col.quantity) > 0 || Number(col.arr_qty_wt) > 0);
-      if (!hasData) return { ...col, po_items: poDetails || [], all_cols: colsWithOrigRates };
-
       const meta = rawItemsByCol[i] || {};
       const pd = meta.payDetail;
       const pDet = meta.pDet;
       const inspItem = meta.inspItem;
+      const item = meta.faItem || meta.inspItem;
       const origRate = colsWithOrigRates[i].rate_value;
+
+      // If pd has specs or values, backfill them into col
+      if (pd) {
+        if (!col.grade && pd.grade) col.grade = resolveGradeName(pd.grade, gList) || pd.grade;
+        if (!col.area && pd.area) col.area = resolveAreaName(pd.area, arList) || pd.area;
+        if (!col.agency && pd.agency) col.agency = resolveAgencyName(pd.agency, agList) || pd.agency;
+        if (!col.marka_crop && pd.marka_crop) col.marka_crop = pd.marka_crop;
+        if (Number(pd.quantity) > 0 && (!col.quantity || col.quantity === 0)) col.quantity = Number(pd.quantity);
+        if (Number(pd.arr_qty_wt) > 0 && (!col.arr_qty_wt || col.arr_qty_wt === 0)) col.arr_qty_wt = Number(pd.arr_qty_wt);
+      }
+
+      const hasData = Boolean(col.grade || Number(col.quantity) > 0 || Number(col.arr_qty_wt) > 0);
+      if (!hasData) return { ...col, po_items: poDetails || [], all_cols: colsWithOrigRates };
+
       const parsePrem = (raw: any): number => {
         if (raw === undefined || raw === null) return 0;
         if (typeof raw === 'number') return isNaN(raw) ? 0 : raw;
@@ -425,20 +442,22 @@ export const buildAlignedSettlementColumns = (
 
       // Extract Grade Down Claim / Sett % using the exact same fields as Payment Operations (mapItemsToDetailCols)
       const payGdClaim = Number(
+        pd?.gd_claim ??
         inspItem?.gd_claim ?? item?.gd_claim ??
         inspItem?.grade_down_claim ?? item?.grade_down_claim ??
         inspItem?.claim_grade_down ?? item?.claim_grade_down ??
         inspItem?.claim_gr_down ?? item?.claim_gr_down ??
         inspItem?.grade_down_act ?? item?.grade_down_act ??
         inspItem?.actual_grade_down ?? item?.actual_grade_down ??
-        pd?.gd_claim ?? col.gd_claim ?? 0
+        col.gd_claim ?? 0
       );
       const payGdSett = Number(
+        pd?.gd_sett ??
         inspItem?.gd_sett ?? item?.gd_sett ??
         inspItem?.settlement_grade_down ?? item?.settlement_grade_down ??
         inspItem?.grade_down_sett ?? item?.grade_down_sett ??
         inspItem?.mill_sett_gr_down ?? item?.mill_sett_gr_down ??
-        pd?.gd_sett ?? col.gd_sett ?? 0
+        col.gd_sett ?? 0
       );
 
       let settPct = 0;
@@ -464,11 +483,14 @@ export const buildAlignedSettlementColumns = (
       const calculatedPaymentSettRate = getColSettRate(colForPaymentCalc, diffs, poDetails || []);
       const calcDedRate = Math.max(0, Number((origRate + premium - calculatedPaymentSettRate).toFixed(2)));
       const pdDedRate = pd && pd.deduction_rate !== undefined && pd.deduction_rate !== null ? Number(pd.deduction_rate) : 0;
-      const finalDedRate = calcDedRate > 0 ? calcDedRate : pdDedRate;
-      const finalSettRate = Math.max(0, Number((origRate + premium - finalDedRate).toFixed(2)));
-      const wtMt = Number(col.arr_qty_wt) || 0;
-      const qtyQtl = Number((wtMt * 10).toFixed(3));
-      const rowAmount = Number((qtyQtl * finalSettRate).toFixed(2));
+      const finalDedRate = pdDedRate > 0 ? pdDedRate : calcDedRate;
+      const pdSettRate = pd && pd.sett_rate !== undefined && pd.sett_rate !== null && Number(pd.sett_rate) > 0 ? Number(pd.sett_rate) : 0;
+      const finalSettRate = pdSettRate > 0 ? pdSettRate : Math.max(0, Number((origRate + premium - finalDedRate).toFixed(2)));
+      
+      const wtMt = Number(col.arr_qty_wt) > 0 ? Number(col.arr_qty_wt) : (Number(pd?.arr_qty_wt) || 0);
+      const qtyQtl = Number(pd?.quantity_qtl) > 0 ? Number(pd.quantity_qtl) : Number((wtMt * 10).toFixed(3));
+      const pdAmt = pd && pd.amount !== undefined && pd.amount !== null && Number(pd.amount) > 0 ? Number(pd.amount) : 0;
+      const rowAmount = pdAmt > 0 ? pdAmt : Number((qtyQtl * finalSettRate).toFixed(2));
 
       return {
         ...col,

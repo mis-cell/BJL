@@ -27,7 +27,7 @@ export interface SettlementSpecificationsGridProps {
   areaMasterList?: string[];
   agencyMasterList?: string[];
   activePoItems?: any[];
-  sattaDiffsList?: { grade_from: string; grade_to: string; rate_diff: number }[];
+  sattaDiffsList?: any[];
 }
 
 export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGridProps> = ({
@@ -103,15 +103,16 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                     : Number(col.gd_claim) || 0;
 
                 const calcObj = calculateSattaDeduction(
-                  col.grade,
-                  rateVal,
-                  settPctVal,
-                  sattaDiffsList,
-                  gradeMasterList,
-                  activePoItems.length > 0 ? activePoItems : col.po_items,
-                  col.lower_grade || col.target_lower_grade,
-                  col.lower_grade_rate,
-                  detailCols
+                  {
+                    ...col,
+                    rate_value: rateVal,
+                    sett_pct: settPctVal,
+                    lower_grade: col.lower_grade || col.target_lower_grade,
+                    lower_grade_rate: col.lower_grade_rate,
+                    all_cols: detailCols,
+                    po_items: activePoItems.length > 0 ? activePoItems : col.po_items
+                  },
+                  sattaDiffsList
                 );
 
                 const dedVal =

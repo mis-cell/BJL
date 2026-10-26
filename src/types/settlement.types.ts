@@ -120,6 +120,10 @@ export interface SettlementMaster {
   payment_status: string;
 
   // Extended print/header metadata
+  mr_date?: string;
+  challan_no?: string;
+  less_advance_amount?: number;
+  on_account_Effect?: string;
   supplier_address?: string;
   consign_no?: string;
   consign_date?: string;
