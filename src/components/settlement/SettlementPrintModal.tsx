@@ -620,40 +620,40 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
           <div className="mt-1">
             <table className="w-full border-collapse text-[11px] table-fixed" style={{ boxSizing: "border-box" }}>
               <colgroup>
-                <col style={{ width: "8.5%" }} />
                 <col style={{ width: "7.5%" }} />
+                <col style={{ width: "6.5%" }} />
                 <col style={{ width: "11.0%" }} />
                 <col style={{ width: "6.5%" }} />
-                <col style={{ width: "8.0%" }} />
-                <col style={{ width: "12.0%" }} />
-                <col style={{ width: "6.0%" }} />
-                <col style={{ width: "6.0%" }} />
+                <col style={{ width: "8.5%" }} />
+                <col style={{ width: "11.5%" }} />
+                <col style={{ width: "7.5%" }} />
+                <col style={{ width: "7.5%" }} />
                 <col style={{ width: "9.0%" }} />
-                <col style={{ width: "10.0%" }} />
-                <col style={{ width: "15.5%" }} />
+                <col style={{ width: "9.5%" }} />
+                <col style={{ width: "15.0%" }} />
               </colgroup>
               <thead>
-                <tr className="border border-black font-bold bg-[#fde8e4] text-black text-[10px]">
-                  <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap overflow-hidden">Grade</th>
-                  <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap overflow-hidden">Marka</th>
-                  <th className="py-1 px-1 text-right align-middle border-r border-black whitespace-nowrap overflow-hidden">Quantity</th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap overflow-hidden">Unit</th>
-                  <th className="py-0.5 px-1 text-right align-middle border-r border-black leading-tight whitespace-nowrap overflow-hidden">
+                <tr className="border border-black font-bold bg-[#fde8e4] text-black text-[9.5px]">
+                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Grade</th>
+                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Marka</th>
+                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Quantity</th>
+                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Unit</th>
+                  <th className="py-0.5 px-0.5 text-center align-middle border-r border-black leading-tight whitespace-nowrap">
                     <div>P.O</div>
                     <div>Rate</div>
                   </th>
-                  <th className="py-1 px-1 text-right align-middle border-r border-black whitespace-nowrap overflow-hidden">Type</th>
-                  <th className="py-1 px-1 text-right align-middle border-r border-black whitespace-nowrap overflow-hidden">Claim</th>
-                  <th className="py-1 px-1 text-right align-middle border-r border-black whitespace-nowrap overflow-hidden">Sett.</th>
-                  <th className="py-0.5 px-1 text-right align-middle border-r border-black leading-tight whitespace-nowrap overflow-hidden">
+                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Type</th>
+                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Claim</th>
+                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Sett.</th>
+                  <th className="py-0.5 px-0.5 text-center align-middle border-r border-black leading-tight whitespace-nowrap">
                     <div>Rate</div>
                     <div>(+/-)</div>
                   </th>
-                  <th className="py-0.5 px-1 text-right align-middle border-r border-black leading-tight whitespace-nowrap overflow-hidden">
+                  <th className="py-0.5 px-0.5 text-center align-middle border-r border-black leading-tight whitespace-nowrap">
                     <div>Sett.</div>
                     <div>Rate</div>
                   </th>
-                  <th className="py-1 px-1 text-right align-middle whitespace-nowrap overflow-hidden">Value</th>
+                  <th className="py-1 px-1 text-center align-middle whitespace-nowrap">Value</th>
                 </tr>
               </thead>
               <tbody>
