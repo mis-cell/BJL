@@ -156,7 +156,12 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               type="number"
               step="0.01"
               className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
-              value={masterData.summary_instl_rate || ""}
+              value={
+                masterData.summary_instl_rate &&
+                Number(masterData.summary_instl_rate) !== Number(masterData.summary_premium_wt)
+                  ? masterData.summary_instl_rate
+                  : ""
+              }
               onChange={(e) => handleMasterChange("summary_instl_rate", parseFloat(e.target.value) || 0)}
             />
           </div>
@@ -170,7 +175,7 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               type="number"
               step="0.01"
               className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
-              value={masterData.summary_premium_wt !== undefined && masterData.summary_premium_wt !== null ? masterData.summary_premium_wt : (masterData.summary_less_amount || "")}
+              value={masterData.summary_premium_wt ? masterData.summary_premium_wt : ""}
               onChange={(e) => {
                 const val = parseFloat(e.target.value) || 0;
                 handleMasterChange("summary_premium_wt", val);

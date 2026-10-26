@@ -1884,9 +1884,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             summary_deduction_qty: (Number(existingMaster.summary_deduction_qty) > 0) ? existingMaster.summary_deduction_qty : (inspDeductionQty || (deductionSummaryText ? 1 : 0)),
             summary_deduction_amount: effectiveDeductionAmount,
             deductions: effectiveDeductions,
+            summary_instl_rate: (Number(existingMaster.summary_instl_rate) === Number(existingMaster.summary_premium_wt) || Number(existingMaster.summary_instl_rate) === calculatedPremWtQtl)
+              ? 0
+              : (Number(existingMaster.summary_instl_rate) || 0),
             summary_premium_wt: (existingMaster.summary_premium_wt !== undefined && existingMaster.summary_premium_wt !== null && Number(existingMaster.summary_premium_wt) > 0) 
               ? existingMaster.summary_premium_wt 
-              : (existingMaster.summary_instl_rate || calculatedPremWtQtl),
+              : calculatedPremWtQtl,
             summary_premium_amount: (existingMaster.summary_premium_amount !== undefined && existingMaster.summary_premium_amount !== null && Number(existingMaster.summary_premium_amount) > 0)
               ? existingMaster.summary_premium_amount
               : calculatedPremRatePerQtl,
@@ -2076,7 +2079,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           summary_deduction_amount: inspDeductionAmount,
           deductions: parsedDeductions,
           summary_premium_wt: calculatedPremWtQtl,
-          summary_instl_rate: calculatedPremWtQtl,
+          summary_instl_rate: 0,
           summary_premium_amount: calculatedPremRatePerQtl,
           val_premium_amt: calculatedPremTotalAmt,
           val_ex_short: (isLastMr && saudaDedRecord && Number(saudaDedRecord.deduction_amount) > 0) ? Number(saudaDedRecord.deduction_amount) : 0,
@@ -2180,7 +2183,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         summary_deduction_amount: inspDeductionAmount,
         deductions: parsedDeductions,
         summary_premium_wt: calculatedPremWtQtl,
-        summary_instl_rate: calculatedPremWtQtl,
+        summary_instl_rate: 0,
         summary_premium_amount: calculatedPremRatePerQtl,
         val_premium_amt: calculatedPremTotalAmt,
         val_ex_short: (isLastMr && saudaDedRecord && Number(saudaDedRecord.deduction_amount) > 0) ? Number(saudaDedRecord.deduction_amount) : 0,
@@ -2785,7 +2788,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         summary_rate_aff_cd_cl: Number(masterData.summary_rate_aff_cd_cl) || 0,
         summary_delivery_claim: Number(masterData.summary_delivery_claim) || 0,
         summary_rate_wt_claim: Number(masterData.summary_rate_wt_claim) || 0,
-        summary_instl_rate: Number(masterData.summary_premium_wt ?? masterData.summary_instl_rate ?? 0),
+        summary_instl_rate: Number(masterData.summary_instl_rate) || 0,
         summary_premium_wt: Number(masterData.summary_premium_wt ?? 0),
         summary_material_value: Number(masterData.summary_material_value) || 0,
         summary_misc_add: Number(masterData.summary_misc_add) || 0,
