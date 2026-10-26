@@ -89,16 +89,18 @@ const formatDisplayDate = (dStr: any): string => {
   return String(dStr);
 };
 
+const EMPTY_ARRAY: any[] = [];
+
 export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProps> = ({
   po,
   onClose,
   onSaveSuccess,
-  allFinalArrivals = [],
-  allTempArrivals = [],
-  allScpDetails = [],
-  allInspections = [],
-  sattaCalculatedRates = [],
-  sattaBaseRates = []
+  allFinalArrivals = EMPTY_ARRAY,
+  allTempArrivals = EMPTY_ARRAY,
+  allScpDetails = EMPTY_ARRAY,
+  allInspections = EMPTY_ARRAY,
+  sattaCalculatedRates = EMPTY_ARRAY,
+  sattaBaseRates = EMPTY_ARRAY
 }) => {
   if (!po) return null;
 
@@ -117,12 +119,12 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
   const cleanKey = cleanPoVal(poNo);
   const cleanSaudaKey = cleanPoVal(saudaNo);
 
-  // State variables for fetched data
-  const [liveBaseRates, setLiveBaseRates] = useState<any[]>(sattaBaseRates || []);
-  const [liveInspections, setLiveInspections] = useState<any[]>(allInspections || []);
-  const [liveInspectionDetails, setLiveInspectionDetails] = useState<any[]>([]);
-  const [liveTempArrivals, setLiveTempArrivals] = useState<any[]>(allTempArrivals || []);
-  const [liveFinalArrivals, setLiveFinalArrivals] = useState<any[]>(allFinalArrivals || []);
+  // State variables for fetched data (only populated if parent props are empty)
+  const [liveBaseRates, setLiveBaseRates] = useState<any[]>(EMPTY_ARRAY);
+  const [liveInspections, setLiveInspections] = useState<any[]>(EMPTY_ARRAY);
+  const [liveInspectionDetails, setLiveInspectionDetails] = useState<any[]>(EMPTY_ARRAY);
+  const [liveTempArrivals, setLiveTempArrivals] = useState<any[]>(EMPTY_ARRAY);
+  const [liveFinalArrivals, setLiveFinalArrivals] = useState<any[]>(EMPTY_ARRAY);
   
   // Sauda Date state (Defaults to PO date or today)
   const [saudaDate, setSaudaDate] = useState<string>(() => {
@@ -180,12 +182,14 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
   // Fetch live active policy from Tolerance Policy Master
   useEffect(() => {
+    let cancelled = false;
     fetchTolerancePolicies().then(list => {
-      if (Array.isArray(list) && list.length > 0) {
+      if (!cancelled && Array.isArray(list) && list.length > 0) {
         const found = list.find((p: any) => p.is_active) || list[0];
         if (found) setActivePolicy(found);
       }
     }).catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   // Close modal safely on Escape key
@@ -199,8 +203,9 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Load Sauda, Mill Inspection, Inspection Details, Temporary Arrivals, Final Arrivals, and Satta Base Rates
+  // Load lightweight targeted records for this PO/Sauda without full-table dumps
   useEffect(() => {
+    let cancelled = false;
     const fetchData = async () => {
       try {
         const clean = (s: any) => String(s || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
@@ -213,7 +218,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
         if (localSavedStr) {
           try {
             const parsed = JSON.parse(localSavedStr);
-            if (parsed) {
+            if (parsed && !cancelled) {
               if (parsed.id) setExistingRecordId(parsed.id);
               if (parsed.remarks) setRemarks(parsed.remarks);
               if (parsed.applicable_rate != null) setCustomRateInput(Number(parsed.applicable_rate));
@@ -226,87 +231,159 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
           } catch (e) {}
         }
 
-        if (supabase) {
-          // 2. Fetch Sauda Master record
-          const { data: sMaster } = await supabase
-            .from('sauda_master')
-            .select('*')
-            .or(`sauda_no.ilike.%${saudaNo}%,sauda_no.ilike.%${poNo}%`)
-            .maybeSingle();
+        if (!supabase) return;
 
-          if (sMaster?.sauda_date || sMaster?.date) {
-            setSaudaDate(normalizeToYMD(sMaster.sauda_date || sMaster.date));
-            if (sMaster.total_amount) {
-              setExistingSaudaAmount(parseFloat(sMaster.total_amount));
+        // 2. Fetch Sauda Master & existing deduction record in parallel (targeted queries)
+        const saudaQuery = saudaNo || poNo
+          ? supabase
+              .from('sauda_master')
+              .select('sauda_no, sauda_date, date, total_amount')
+              .or([saudaNo ? `sauda_no.ilike.%${saudaNo}%` : '', poNo ? `sauda_no.ilike.%${poNo}%` : ''].filter(Boolean).join(','))
+              .limit(5)
+          : Promise.resolve({ data: [] as any[] });
+
+        const deductionQuery = poNo || saudaNo
+          ? supabase
+              .from('sauda_check_point_deductions')
+              .select('*')
+              .or([poNo ? `po_no.ilike.%${poNo}%` : '', saudaNo ? `sauda_no.ilike.%${saudaNo}%` : ''].filter(Boolean).join(','))
+              .limit(10)
+          : Promise.resolve({ data: [] as any[] });
+
+        const [sMasterRes, deductionRes] = await Promise.all([
+          saudaQuery.then(r => r.data || [], () => []),
+          deductionQuery.then(r => r.data || [], () => [])
+        ]);
+
+        if (cancelled) return;
+
+        const sMaster = Array.isArray(sMasterRes) ? sMasterRes[0] : sMasterRes;
+        if (sMaster?.sauda_date || sMaster?.date) {
+          setSaudaDate(normalizeToYMD(sMaster.sauda_date || sMaster.date));
+          if (sMaster.total_amount) {
+            setExistingSaudaAmount(parseFloat(sMaster.total_amount));
+          }
+        }
+
+        if (Array.isArray(deductionRes) && deductionRes.length > 0) {
+          const match = deductionRes.find((item: any) => {
+            const itemPoClean = clean(item.po_no);
+            const itemSaudaClean = clean(item.sauda_no || item.po_contract);
+            return (itemPoClean && itemPoClean === targetPo) ||
+                   (targetSauda && itemPoClean === targetSauda) ||
+                   (targetSauda && itemSaudaClean === targetSauda) ||
+                   (item.po_no && String(item.po_no).trim().toUpperCase() === String(poNo).trim().toUpperCase()) ||
+                   (item.sauda_no && targetSauda && String(item.sauda_no).trim().toUpperCase() === String(saudaNo).trim().toUpperCase());
+          });
+
+          if (match) {
+            setExistingRecordId(match.id);
+            if (match.remarks) setRemarks(match.remarks);
+            if (match.applicable_rate != null) {
+              setCustomRateInput(Number(match.applicable_rate));
+            }
+            if (match.rate_basis) {
+              setSelectedRateMode(match.rate_basis as RateMode);
+            }
+            setIsSettled(true);
+            setSettledAt(match.settled_at || match.updated_at || match.created_at);
+            setSettledBy(match.approved_by || match.settled_by || 'Operator');
+            if (match.approval_level) setApprovalLevel(match.approval_level);
+
+            localStorage.setItem(`sauda_settled_${targetPo}`, 'true');
+            localStorage.setItem(`sauda_settlement_${targetPo}`, JSON.stringify(match));
+            if (targetSauda) {
+              localStorage.setItem(`sauda_settled_${targetSauda}`, 'true');
+              localStorage.setItem(`sauda_settlement_${targetSauda}`, JSON.stringify(match));
             }
           }
+        }
 
-          // 3. Fetch Satta Base Rates
-          const { data: sBases } = await supabase
-            .from('satta_base_rates')
-            .select('*')
-            .order('start_date', { ascending: false });
-          if (sBases && sBases.length > 0) setLiveBaseRates(sBases);
+        // 3. Only fetch base rates / inspections / arrivals if parent didn't pass them
+        const needBaseRates = !sattaBaseRates || sattaBaseRates.length === 0;
+        const needInspections = !allInspections || allInspections.length === 0;
+        const needTempArrivals = !allTempArrivals || allTempArrivals.length === 0;
+        const needFinalArrivals = !allFinalArrivals || allFinalArrivals.length === 0;
 
-          // 4. Fetch Mill Inspections & Inspection Details
-          const [matInspRes, matDetRes, inspMasterRes, inspDetRes] = await Promise.all([
-            supabase.from('material_inspection').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
-            supabase.from('material_inspection_details').select('*').then(r => r.data || [], () => []),
-            supabase.from('mill_inspection_master').select('*').then(r => r.data || [], () => []),
-            supabase.from('mill_inspection_detail').select('*').then(r => r.data || [], () => []),
+        let activeInsps = allInspections;
+        let activeTemp = allTempArrivals;
+        let activeFinal = allFinalArrivals;
+
+        if (needBaseRates || needInspections || needTempArrivals || needFinalArrivals) {
+          const [sBases, matInspRes, inspMasterRes, tArrivals, fArrivals] = await Promise.all([
+            needBaseRates
+              ? supabase.from('satta_base_rates').select('*').order('start_date', { ascending: false }).then(r => r.data || [], () => [])
+              : Promise.resolve(EMPTY_ARRAY),
+            needInspections
+              ? supabase.from('material_inspection').select('*').or([poNo ? `po_no.ilike.%${poNo}%` : '', saudaNo ? `sauda_no.ilike.%${saudaNo}%` : ''].filter(Boolean).join(',')).then(r => r.data || [], () => [])
+              : Promise.resolve(EMPTY_ARRAY),
+            needInspections
+              ? supabase.from('mill_inspection_master').select('*').or([poNo ? `po_no.ilike.%${poNo}%` : '', saudaNo ? `sauda_no.ilike.%${saudaNo}%` : ''].filter(Boolean).join(',')).then(r => r.data || [], () => [])
+              : Promise.resolve(EMPTY_ARRAY),
+            needTempArrivals
+              ? supabase.from('temporary_material_received').select('*').or([poNo ? `po_no.ilike.%${poNo}%` : '', saudaNo ? `sauda_no.ilike.%${saudaNo}%` : ''].filter(Boolean).join(',')).then(r => r.data || [], () => [])
+              : Promise.resolve(EMPTY_ARRAY),
+            needFinalArrivals
+              ? supabase.from('final_arrival').select('*').or([poNo ? `po_no.ilike.%${poNo}%` : '', saudaNo ? `sauda_no.ilike.%${saudaNo}%` : ''].filter(Boolean).join(',')).then(r => r.data || [], () => [])
+              : Promise.resolve(EMPTY_ARRAY),
           ]);
 
-          const combinedInspections = [...(matInspRes || []), ...(inspMasterRes || [])];
-          if (combinedInspections.length > 0) setLiveInspections(combinedInspections);
+          if (cancelled) return;
+          if (needBaseRates && sBases.length > 0) setLiveBaseRates(sBases);
+          if (needInspections) {
+            const combined = [...matInspRes, ...inspMasterRes];
+            activeInsps = combined;
+            if (combined.length > 0) setLiveInspections(combined);
+          }
+          if (needTempArrivals && tArrivals.length > 0) {
+            activeTemp = tArrivals;
+            setLiveTempArrivals(tArrivals);
+          }
+          if (needFinalArrivals && fArrivals.length > 0) {
+            activeFinal = fArrivals;
+            setLiveFinalArrivals(fArrivals);
+          }
+        }
 
-          const combinedDetails = [...(matDetRes || []), ...(inspDetRes || [])];
-          if (combinedDetails.length > 0) setLiveInspectionDetails(combinedDetails);
+        // 4. Identify matched MR numbers for this PO first, then fetch ONLY their inspection details
+        const matchedMrSet = new Set<string>();
+        const matchesTarget = (rPo: any, rSauda: any) => {
+          const cPo = clean(rPo);
+          const cSauda = clean(rSauda);
+          return Boolean(
+            (cPo && (cPo === targetPo || cPo === targetSauda)) ||
+            (cSauda && (cSauda === targetPo || cSauda === targetSauda))
+          );
+        };
 
-          // 5. Fetch Temporary Arrivals & Final Arrivals
-          const [tArrivals, fArrivals] = await Promise.all([
-            supabase.from('temporary_material_received').select('*').then(r => r.data || [], () => []),
-            supabase.from('final_arrival').select('*').then(r => r.data || [], () => [])
+        (activeInsps || []).forEach((insp: any) => {
+          if (matchesTarget(insp.po_no, insp.sauda_no || insp.contract_po_no || insp.po_contract)) {
+            const num = String(insp.mr_no || insp.arrival_no || insp.final_arrival_no || '').trim();
+            if (num) matchedMrSet.add(num);
+          }
+        });
+        (activeTemp || []).forEach((ar: any) => {
+          if (matchesTarget(ar.po_no, ar.sauda_no || ar.contract_po_no)) {
+            const num = String(ar.temporary_arrival_no || ar.amad_no || ar.mr_no || ar.temp_mr_no || ar.chalan_no || ar.arrival_no || '').trim();
+            if (num) matchedMrSet.add(num);
+          }
+        });
+        (activeFinal || []).forEach((ar: any) => {
+          if (matchesTarget(ar.po_no, ar.sauda_no || ar.contract_po_no)) {
+            const num = String(ar.final_arrival_no || ar.mr_no || ar.arrival_no || '').trim();
+            if (num) matchedMrSet.add(num);
+          }
+        });
+
+        const mrArray = Array.from(matchedMrSet).filter(Boolean);
+        if (mrArray.length > 0) {
+          const [matDetRes, inspDetRes] = await Promise.all([
+            supabase.from('material_inspection_details').select('*').in('mr_no', mrArray).then(r => r.data || [], () => []),
+            supabase.from('mill_inspection_detail').select('*').in('mr_no', mrArray).then(r => r.data || [], () => [])
           ]);
-          if (tArrivals && tArrivals.length > 0) setLiveTempArrivals(tArrivals);
-          if (fArrivals && fArrivals.length > 0) setLiveFinalArrivals(fArrivals);
-
-          // 6. Check existing settlement in sauda_check_point_deductions
-          const { data: list } = await supabase
-            .from('sauda_check_point_deductions')
-            .select('*');
-
-          if (list && list.length > 0) {
-            const match = list.find((item: any) => {
-              const itemPoClean = clean(item.po_no);
-              const itemSaudaClean = clean(item.sauda_no || item.po_contract);
-              return (itemPoClean && itemPoClean === targetPo) ||
-                     (targetSauda && itemPoClean === targetSauda) ||
-                     (targetSauda && itemSaudaClean === targetSauda) ||
-                     (item.po_no && String(item.po_no).trim().toUpperCase() === String(poNo).trim().toUpperCase()) ||
-                     (item.sauda_no && targetSauda && String(item.sauda_no).trim().toUpperCase() === String(saudaNo).trim().toUpperCase());
-            });
-
-            if (match) {
-              setExistingRecordId(match.id);
-              if (match.remarks) setRemarks(match.remarks);
-              if (match.applicable_rate != null) {
-                setCustomRateInput(Number(match.applicable_rate));
-              }
-              if (match.rate_basis) {
-                setSelectedRateMode(match.rate_basis as RateMode);
-              }
-              setIsSettled(true);
-              setSettledAt(match.settled_at || match.updated_at || match.created_at);
-              setSettledBy(match.approved_by || match.settled_by || 'Operator');
-              if (match.approval_level) setApprovalLevel(match.approval_level);
-
-              localStorage.setItem(`sauda_settled_${targetPo}`, 'true');
-              localStorage.setItem(`sauda_settlement_${targetPo}`, JSON.stringify(match));
-              if (targetSauda) {
-                localStorage.setItem(`sauda_settled_${targetSauda}`, 'true');
-                localStorage.setItem(`sauda_settlement_${targetSauda}`, JSON.stringify(match));
-              }
-            }
+          if (!cancelled) {
+            const combinedDetails = [...matDetRes, ...inspDetRes];
+            if (combinedDetails.length > 0) setLiveInspectionDetails(combinedDetails);
           }
         }
       } catch (err) {
@@ -315,46 +392,39 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     };
 
     fetchData();
+    return () => { cancelled = true; };
   }, [poNo, saudaNo]);
+
+  // Pre-normalize and sort Satta Base Rates once so date lookups are fast O(N) scans
+  const normalizedBaseRates = useMemo(() => {
+    const baseList = liveBaseRates.length > 0 ? liveBaseRates : sattaBaseRates;
+    if (!baseList || baseList.length === 0) return EMPTY_ARRAY;
+    return baseList
+      .map((b: any) => ({
+        ymd: normalizeToYMD(b.start_date || b.effective_date || b.satta_date || b.date || b.base_date || b.start || ''),
+        rate: Number(b.base_rate || b.rate || b.b_rate || b.baseRate || 0)
+      }))
+      .filter((item: { ymd: string; rate: number }) => item.rate > 0)
+      .sort((a: { ymd: string; rate: number }, b: { ymd: string; rate: number }) => b.ymd.localeCompare(a.ymd));
+  }, [liveBaseRates, sattaBaseRates]);
 
   // Satta Base Rates lookup by date
   const getSattaBaseRateOnDate = (dateStr: string): number => {
+    if (normalizedBaseRates.length === 0) return 12000;
     const targetYmd = normalizeToYMD(dateStr);
-    const baseList = liveBaseRates.length > 0 ? liveBaseRates : (sattaBaseRates || []);
 
-    if (baseList && baseList.length > 0) {
+    if (targetYmd) {
       // 1. Try exact date match first
-      const exact = baseList.find((b: any) => {
-        const bDateYmd = normalizeToYMD(b.start_date || b.effective_date || b.satta_date || b.date || b.base_date || b.start || '');
-        return bDateYmd && bDateYmd === targetYmd;
-      });
-      if (exact) {
-        const r = Number(exact.base_rate || exact.rate || exact.b_rate || exact.baseRate || 0);
-        if (r > 0) return r;
-      }
+      const exact = normalizedBaseRates.find((b) => b.ymd === targetYmd);
+      if (exact) return exact.rate;
 
-      // 2. Try on-or-before target date (latest published rate up to target date)
-      const matches = baseList.filter((b: any) => {
-        const bDateYmd = normalizeToYMD(b.start_date || b.effective_date || b.satta_date || b.date || b.base_date || b.start || '');
-        return bDateYmd && bDateYmd <= targetYmd;
-      }).sort((a: any, b: any) => {
-        const d1 = normalizeToYMD(a.start_date || a.effective_date || a.satta_date || a.date || a.base_date || a.start || '');
-        const d2 = normalizeToYMD(b.start_date || b.effective_date || b.satta_date || b.date || b.base_date || b.start || '');
-        return d2.localeCompare(d1);
-      });
-
-      if (matches.length > 0) {
-        const r = Number(matches[0].base_rate || matches[0].rate || matches[0].b_rate || matches[0].baseRate || 0);
-        if (r > 0) return r;
-      }
-
-      // 3. Fallback: First valid rate in list
-      const firstValid = baseList.find((b: any) => Number(b.base_rate || b.rate || b.b_rate || 0) > 0);
-      if (firstValid) return Number(firstValid.base_rate || firstValid.rate || firstValid.b_rate);
+      // 2. Since normalizedBaseRates is sorted descending by ymd, first item <= targetYmd is the latest on-or-before rate
+      const onOrBefore = normalizedBaseRates.find((b) => b.ymd && b.ymd <= targetYmd);
+      if (onOrBefore) return onOrBefore.rate;
     }
 
-    // Default fallback rate if database is empty
-    return 12000;
+    // 3. Fallback: First valid rate in list
+    return normalizedBaseRates[0].rate || 12000;
   };
 
   // Sauda Date Satta Base Rate (Step 6)
@@ -370,7 +440,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     if (directContractRate > 0) return directContractRate;
 
     return 12000;
-  }, [saudaDate, liveBaseRates, sattaBaseRates, po]);
+  }, [saudaDate, normalizedBaseRates, po]);
 
   // 2. GET ACTUAL RECEIVED QUANTITY:
   // Sourced from Mill Inspection -> Inspection Details -> Final Receipt Wt. (Claim)
@@ -474,7 +544,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       });
 
       if (matchingDetails.length > 0) {
-        matchingDetails.forEach((d: any, idx: number) => {
+        matchingDetails.forEach((d: any) => {
           const rowGrade = d.receipt_grade_name || d.arrival_grade || d.challan_grade_name || d.stock_grade_name || d.grade || 'TD6';
           const rowMarka = d.marka || d.marks || '39';
           const rowCrop = d.crop_year || '2026-2027';
@@ -615,8 +685,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     saudaDate, 
     saudaDateSattaRate, 
     contractMt,
-    liveBaseRates,
-    sattaBaseRates
+    normalizedBaseRates
   ]);
 
   // 3. CALCULATE GROSS SHORT / EXCESS
@@ -718,83 +787,52 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     return linkedMrNosList.length > 0 ? linkedMrNosList.join(', ') : (lastMrNo || 'MR-001');
   }, [linkedMrNosList, lastMrNo]);
 
-  // Auto-sync calculated settlement to database and cache without requiring approval
+  // Lightweight local cache sync (does NOT fire dbModule events or trigger full-app live refresh loops on open)
   useEffect(() => {
     if (contractMt <= 0 || isSaving) return;
 
-    const timer = setTimeout(async () => {
-      try {
-        const nowIso = new Date().toISOString();
-        const payload = {
-          po_no: poNo,
-          sauda_no: saudaNo || poNo,
-          supplier: supplierName,
-          broker: brokerName,
-          contract_weight_mt: Number(contractMt.toFixed(3)),
-          tolerance_pct: exemptionPct,
-          tolerance_mt: Number(exemptionMt.toFixed(3)),
-          tolerance_type: '3% Sauda Total Contract Execution Exemption',
-          min_acceptable_mt: Number(Math.max(0, contractMt - exemptionMt).toFixed(3)),
-          max_acceptable_mt: Number((contractMt + exemptionMt).toFixed(3)),
-          total_received_mt: Number(totalFinalReceiptClaimMt.toFixed(3)),
-          variation_type: isWithin3PctExemption ? 'within_tolerance' : (isGrossExcess ? 'excess' : 'short'),
-          variation_mt: Number(grossVarianceMt.toFixed(3)),
-          selected_grade: po.selected_grade || po.grade || 'TD6',
-          sauda_rate: Number(saudaDateSattaRate),
-          satta_rate: Number(lastMrDateSattaRate),
-          last_arrival_date: normalizeToYMD(lastMrDate),
-          last_mr_no: lastMrNo,
-          applicable_rate: Number(applicableRate),
-          rate_basis: selectedRateMode,
-          rate_difference: Number(rateDifference),
-          deduction_qty_mt: Number(finalDeductibleQtyMt.toFixed(3)),
-          deduction_qty_qtl: Number(finalDeductibleQtyQtl.toFixed(2)),
-          deduction_amount: Number(totalCalculatedAmount),
-          status: 'approved',
-          remarks: remarks || `${policyStatusText}: Deductible ${finalDeductibleQtyQtl.toFixed(2)} Qtl at ₹${applicableRate}/Qtl = ₹${totalCalculatedAmount}.`,
-          arrival_numbers: arrivalNumbersString,
-          grade_breakdown: JSON.stringify(gradeWiseInspectionRows),
-          approved_by: settledBy || 'System Auto-Calculated',
-          approval_level: approvalLevel || 'ADMIN',
-          created_at: nowIso,
-          updated_at: nowIso
-        };
+    const nowIso = new Date().toISOString();
+    const payload = {
+      po_no: poNo,
+      sauda_no: saudaNo || poNo,
+      supplier: supplierName,
+      broker: brokerName,
+      contract_weight_mt: Number(contractMt.toFixed(3)),
+      tolerance_pct: exemptionPct,
+      tolerance_mt: Number(exemptionMt.toFixed(3)),
+      tolerance_type: '3% Sauda Total Contract Execution Exemption',
+      min_acceptable_mt: Number(Math.max(0, contractMt - exemptionMt).toFixed(3)),
+      max_acceptable_mt: Number((contractMt + exemptionMt).toFixed(3)),
+      total_received_mt: Number(totalFinalReceiptClaimMt.toFixed(3)),
+      variation_type: isWithin3PctExemption ? 'within_tolerance' : (isGrossExcess ? 'excess' : 'short'),
+      variation_mt: Number(grossVarianceMt.toFixed(3)),
+      selected_grade: po.selected_grade || po.grade || 'TD6',
+      sauda_rate: Number(saudaDateSattaRate),
+      satta_rate: Number(lastMrDateSattaRate),
+      last_arrival_date: normalizeToYMD(lastMrDate),
+      last_mr_no: lastMrNo,
+      applicable_rate: Number(applicableRate),
+      rate_basis: selectedRateMode,
+      rate_difference: Number(rateDifference),
+      deduction_qty_mt: Number(finalDeductibleQtyMt.toFixed(3)),
+      deduction_qty_qtl: Number(finalDeductibleQtyQtl.toFixed(2)),
+      deduction_amount: Number(totalCalculatedAmount),
+      status: 'approved',
+      remarks: remarks || `${policyStatusText}: Deductible ${finalDeductibleQtyQtl.toFixed(2)} Qtl at ₹${applicableRate}/Qtl = ₹${totalCalculatedAmount}.`,
+      arrival_numbers: arrivalNumbersString,
+      grade_breakdown: JSON.stringify(gradeWiseInspectionRows),
+      approved_by: settledBy || 'System Auto-Calculated',
+      approval_level: approvalLevel || 'ADMIN',
+      created_at: nowIso,
+      updated_at: nowIso
+    };
 
-        // Cache locally immediately
-        localStorage.setItem(`sauda_settled_${cleanKey}`, 'true');
-        localStorage.setItem(`sauda_settlement_${cleanKey}`, JSON.stringify(payload));
-        if (cleanSaudaKey) {
-          localStorage.setItem(`sauda_settled_${cleanSaudaKey}`, 'true');
-          localStorage.setItem(`sauda_settlement_${cleanSaudaKey}`, JSON.stringify(payload));
-        }
-
-        if (supabase) {
-          if (existingRecordId) {
-            await dbModule.update('sauda_check_point_deductions', 'id', existingRecordId, payload).catch(() => {});
-          } else {
-            const data = await dbModule.insert('sauda_check_point_deductions', payload).catch(() => null);
-            if (data?.id) setExistingRecordId(data.id);
-          }
-
-          const masterSettleUpdate = {
-            excess_short_deduction: totalCalculatedAmount,
-            excess_short_status: isWithin3PctExemption ? 'within_bounds' : 'settled',
-            final_payable_amount: totalFinalPayable,
-            is_settled: true
-          };
-
-          await dbModule.update('purchase_master', 'po_no', poNo, masterSettleUpdate).catch(() => {});
-          await dbModule.update('sauda_check_point', 'po_no', poNo, masterSettleUpdate).catch(() => {});
-          if (saudaNo) {
-            await dbModule.update('sauda_master', 'sauda_no', saudaNo, masterSettleUpdate).catch(() => {});
-          }
-        }
-      } catch (e) {
-        console.warn("Auto-syncing settlement deduction:", e);
+    try {
+      localStorage.setItem(`sauda_settlement_${cleanKey}`, JSON.stringify(payload));
+      if (cleanSaudaKey) {
+        localStorage.setItem(`sauda_settlement_${cleanSaudaKey}`, JSON.stringify(payload));
       }
-    }, 600);
-
-    return () => clearTimeout(timer);
+    } catch (_e) {}
   }, [
     contractMt,
     totalFinalReceiptClaimMt,
@@ -808,7 +846,6 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     saudaNo,
     cleanKey,
     cleanSaudaKey,
-    existingRecordId,
     totalFinalPayable
   ]);
 
