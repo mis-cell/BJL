@@ -328,9 +328,9 @@ export default function PurchaseOrder({
                 {BASE_RATE_APPROVAL_REQUIRED_MSG}
               </p>
               <p className="text-[10px] font-semibold text-amber-800">
-                Latest Base Rate: <span className="font-black">₹{baseRateApprovalState.currentRate.toLocaleString('en-IN')}</span>
-                {baseRateApprovalState.previousRate ? ` (Prev: ₹${baseRateApprovalState.previousRate.toLocaleString('en-IN')})` : ''}
-                {' • '}Updated By: <span className="font-black">{baseRateApprovalState.updatedByDisplay}</span>
+                Latest Base Rate: <span className="font-black">₹{Number(baseRateApprovalState.currentBaseRate ?? baseRateApprovalState.currentRate ?? 0).toLocaleString('en-IN')}</span>
+                {(baseRateApprovalState.previousBaseRate ?? baseRateApprovalState.previousRate) ? ` (Prev: ₹${Number(baseRateApprovalState.previousBaseRate ?? baseRateApprovalState.previousRate ?? 0).toLocaleString('en-IN')})` : ''}
+                {' • '}Updated By: <span className="font-black">{baseRateApprovalState.updatedByDisplay || 'User'}</span>
                 {' • '}Status: <span className="font-black text-amber-900">Pending Approval (User 010)</span>
               </p>
             </div>

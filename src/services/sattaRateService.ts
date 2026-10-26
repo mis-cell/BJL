@@ -60,7 +60,9 @@ export interface BaseRateApprovalState {
   isApproved: boolean;
   approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
   currentBaseRate: number | null;
+  currentRate: number;
   previousBaseRate: number | null;
+  previousRate: number | null;
   startDate: string | null;
   recordId: string | null;
   updatedBy: string;
@@ -522,16 +524,8 @@ export async function fetchSattaBaseRates(): Promise<SattaBaseRate[]> {
         explicitApprovalStatus === 'REJECTED'
       ) {
         finalApprovalStatus = explicitApprovalStatus;
-      } else if (idx === 0) {
-        // If the latest active Base Rate record changed from the previous rate or is an unapproved update on the latest date,
-        // require User 010 approval until explicitly approved.
-        const hasSameDayMultiple =
-          rawRates.filter((r) => r.start_date === row.start_date).length > 1;
-        const rateChangedFromPrev =
-          previousRate !== null && Number(previousRate) !== Number(row.base_rate);
-        if (hasSameDayMultiple || rateChangedFromPrev || updaterIdentity.username) {
-          finalApprovalStatus = 'PENDING';
-        }
+      } else if (idx === 0 && (remarksMeta?.st === 'PENDING' || localMeta?.st === 'PENDING')) {
+        finalApprovalStatus = 'PENDING';
       }
 
       const rawApprovedBy =
@@ -645,7 +639,9 @@ export function getCachedBaseRateApprovalState(): BaseRateApprovalState {
       isApproved: true,
       approvalStatus: 'APPROVED',
       currentBaseRate: null,
+      currentRate: 0,
       previousBaseRate: null,
+      previousRate: null,
       startDate: null,
       recordId: null,
       updatedBy: '',
@@ -662,12 +658,16 @@ export function getCachedBaseRateApprovalState(): BaseRateApprovalState {
 
   const status = latest.approval_status || 'APPROVED';
   const isApproved = status === 'APPROVED';
+  const currentNum = Number(latest.base_rate) || 0;
+  const prevNum = latest.previous_rate !== undefined && latest.previous_rate !== null ? Number(latest.previous_rate) : null;
 
   return {
     isApproved,
     approvalStatus: status,
-    currentBaseRate: Number(latest.base_rate),
-    previousBaseRate: latest.previous_rate ?? null,
+    currentBaseRate: currentNum,
+    currentRate: currentNum,
+    previousBaseRate: prevNum,
+    previousRate: prevNum,
     startDate: latest.start_date,
     recordId: String(latest.id),
     updatedBy: latest.updated_by || '',

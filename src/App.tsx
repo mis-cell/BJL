@@ -451,22 +451,36 @@ export default function App() {
       const todayLocalStr = `${localYear}-${localMonth}-${localDay}`;
       const todayUtcStr = now.toISOString().split("T")[0];
 
+      // Today - 1 (Yesterday): e.g. if Today is 26-10-2026 and Satta Base Rate is updated till 25-10-2026, app works
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const yestLocalStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+      const yestUtcStr = yesterday.toISOString().split("T")[0];
+      const minValidDateStr = yestLocalStr < yestUtcStr ? yestLocalStr : yestUtcStr;
+
       if (supabase) {
-        // Fallback: check Supabase directly if any Satta chart was uploaded/updated today by any user
+        // Check Supabase directly if any Satta chart was uploaded/updated up to Today - 1 (Yesterday) or Today
         try {
-          const isSameDay = (dateStr?: string) => {
+          const isValidRecentDay = (dateStr?: string) => {
             if (!dateStr) return false;
             const d = new Date(dateStr);
             if (isNaN(d.getTime())) return false;
             const dLocalStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             const dUtcStr = d.toISOString().split("T")[0];
-            return dLocalStr === todayLocalStr || dLocalStr === todayUtcStr || dUtcStr === todayLocalStr || dUtcStr === todayUtcStr;
+            return (
+              dLocalStr >= minValidDateStr ||
+              dUtcStr >= minValidDateStr ||
+              dLocalStr === todayLocalStr ||
+              dLocalStr === todayUtcStr ||
+              dLocalStr === yestLocalStr ||
+              dLocalStr === yestUtcStr
+            );
           };
 
             // Check satta_base_rates
             const { data: baseRates } = await supabase
               .from('satta_base_rates')
               .select('id, created_at, start_date')
+              .order('start_date', { ascending: false })
               .order('created_at', { ascending: false })
               .limit(1);
 
@@ -488,21 +502,35 @@ export default function App() {
 
             if (baseRates && baseRates.length > 0) {
               const r = baseRates[0];
-              if (isSameDay(r.created_at) || r.start_date === todayLocalStr || r.start_date === todayUtcStr) {
+              if (
+                isValidRecentDay(r.created_at) ||
+                (r.start_date && r.start_date >= minValidDateStr) ||
+                r.start_date === todayLocalStr ||
+                r.start_date === todayUtcStr ||
+                r.start_date === yestLocalStr ||
+                r.start_date === yestUtcStr
+              ) {
                 isUploadedToday = true;
               }
             }
 
             if (!isUploadedToday && auditLogs && auditLogs.length > 0) {
               const a = auditLogs[0];
-              if (isSameDay(a.created_at) || a.changed_date === todayLocalStr || a.changed_date === todayUtcStr) {
+              if (
+                isValidRecentDay(a.created_at) ||
+                (a.changed_date && a.changed_date >= minValidDateStr) ||
+                a.changed_date === todayLocalStr ||
+                a.changed_date === todayUtcStr ||
+                a.changed_date === yestLocalStr ||
+                a.changed_date === yestUtcStr
+              ) {
                 isUploadedToday = true;
               }
             }
 
             if (!isUploadedToday && diffLogs && diffLogs.length > 0) {
               const df = diffLogs[0];
-              if (isSameDay(df.created_at)) {
+              if (isValidRecentDay(df.created_at)) {
                 isUploadedToday = true;
               }
             }
@@ -1674,7 +1702,7 @@ export default function App() {
                 Please Update Satta Chart to enable portal modules
               </p>
               <p className="text-[10px] text-slate-500 font-medium">
-                The Satta Rate Chart matrix must be logged for today before accessing modules.
+                The Satta Base Rate must be updated up to Yesterday (Today - 1) before accessing modules.
               </p>
             </div>
 

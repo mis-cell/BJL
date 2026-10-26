@@ -87,15 +87,17 @@ export async function fetchCentralBaseRateInfo(): Promise<BaseRateInfo> {
     : formatBaseRateDate(startDate);
 
   const hoursElapsed = calculateHoursElapsed(createdAt, startDate);
-  const isUpdatedToday = startDate === todayStr;
-  const isOverdue = hoursElapsed >= 24 || !isUpdatedToday;
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const isUpdatedToday = startDate >= yesterdayStr || startDate === todayStr;
+  const isOverdue = !isUpdatedToday && hoursElapsed >= 48;
 
   const adminName = latestRecord?.updated_by || latestRecord?.admin_identity || 'Administrator (Central Mill Authority)';
   const remarks = latestRecord?.remarks || 'Daily Satta Base Rate Schedule';
 
   let overdueMessage = '';
   if (isOverdue) {
-    overdueMessage = `Daily Base Rate update is overdue (${hoursElapsed}h elapsed since last update on ${dateFormatted} at ${timeFormatted}). The Admin must publish a fresh Base Rate at least once every 24 hours.`;
+    overdueMessage = `Daily Base Rate update is overdue (${hoursElapsed}h elapsed since last update on ${dateFormatted} at ${timeFormatted}). The Satta Base Rate must be updated at least up to Today - 1 (${formatBaseRateDate(yesterdayStr)}).`;
   }
 
   return {
