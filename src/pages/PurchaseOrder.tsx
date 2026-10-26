@@ -1,8 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Lock } from 'lucide-react';
 import LegacyLayout from '../components/LegacyLayout';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { canEditOrDelete } from '../lib/permissions';
 import { checkIsAdvancePaymentDone, checkIsSettlementDone } from '../services/purchaseOrderAuthService';
+import {
+  BASE_RATE_APPROVAL_REQUIRED_MSG,
+  getBaseRateApprovalState,
+  getCachedBaseRateApprovalState,
+  fetchSattaBaseRates
+} from '../services/sattaRateService';
 import ExcessShortSettlementModal from '../components/ExcessShortSettlementModal';
 import { PurchaseOrderRegisterView } from '../components/purchase-order/PurchaseOrderRegisterView';
 import { PurchaseOrderFormView } from '../components/purchase-order/PurchaseOrderFormView';
@@ -41,6 +48,29 @@ export default function PurchaseOrder({
 }: PurchaseOrderProps) {
   const [viewMode, setViewMode] = useState<'register' | 'form'>('register');
   const poFormRef = useRef<HTMLDivElement | null>(null);
+  const [baseRateApprovalState, setBaseRateApprovalState] = useState(() => getCachedBaseRateApprovalState());
+
+  useEffect(() => {
+    let mounted = true;
+    const syncBaseRateApproval = async () => {
+      try {
+        await fetchSattaBaseRates();
+        const st = await getBaseRateApprovalState();
+        if (mounted) setBaseRateApprovalState(st);
+      } catch (_e) {}
+    };
+    syncBaseRateApproval();
+    const onRateChange = () => {
+      syncBaseRateApproval();
+    };
+    window.addEventListener('satta-base-rate-updated', onRateChange);
+    window.addEventListener('app-data-updated', onRateChange);
+    return () => {
+      mounted = false;
+      window.removeEventListener('satta-base-rate-updated', onRateChange);
+      window.removeEventListener('app-data-updated', onRateChange);
+    };
+  }, []);
 
   // 1. Data Loading & Synchronization Hook
   const {
@@ -287,6 +317,30 @@ export default function PurchaseOrder({
 
   return (
     <div className="w-full h-full flex flex-col text-[11px] text-slate-900 font-sans">
+      {!baseRateApprovalState.isApproved && (
+        <div className="bg-amber-50 border-b-2 border-amber-400 px-4 py-2.5 flex items-center justify-between gap-3 shrink-0 z-20">
+          <div className="flex items-center gap-2.5">
+            <div className="bg-amber-500 text-white p-1.5 rounded-lg shrink-0">
+              <Lock className="h-3.5 w-3.5" />
+            </div>
+            <div>
+              <p className="text-[11px] font-black text-amber-950 uppercase tracking-wide">
+                {BASE_RATE_APPROVAL_REQUIRED_MSG}
+              </p>
+              <p className="text-[10px] font-semibold text-amber-800">
+                Latest Base Rate: <span className="font-black">₹{baseRateApprovalState.currentRate.toLocaleString('en-IN')}</span>
+                {baseRateApprovalState.previousRate ? ` (Prev: ₹${baseRateApprovalState.previousRate.toLocaleString('en-IN')})` : ''}
+                {' • '}Updated By: <span className="font-black">{baseRateApprovalState.updatedByDisplay}</span>
+                {' • '}Status: <span className="font-black text-amber-900">Pending Approval (User 010)</span>
+              </p>
+            </div>
+          </div>
+          <span className="px-2 py-0.5 rounded bg-amber-200/80 border border-amber-400 text-[9px] font-black text-amber-950 uppercase tracking-wider shrink-0">
+            Sauda Check Point Locked
+          </span>
+        </div>
+      )}
+
       {/* 1. Register Table View */}
       {viewMode === 'register' && (
         <LegacyLayout 

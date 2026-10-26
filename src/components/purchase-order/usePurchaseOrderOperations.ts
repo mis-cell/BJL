@@ -8,6 +8,7 @@ import { generatePoPdf, downloadPoPdfFile } from '../../utils/purchaseOrderPdfGe
 import { generatePoHtmlEmail } from './PoPrintSlipHelper';
 import { EmailPreviewState } from './PoEmailPreviewModal';
 import { verifyAdminOrSuperPassword, checkIsAdvancePaymentDone, checkIsSettlementDone } from '../../services/purchaseOrderAuthService';
+import { BASE_RATE_APPROVAL_REQUIRED_MSG, getBaseRateApprovalState } from '../../services/sattaRateService';
 
 interface UsePurchaseOrderOperationsProps {
   isTempPo: boolean;
@@ -833,6 +834,12 @@ export function usePurchaseOrderOperations({
   };
 
   const handlePassToFinal = async (item: any) => {
+    const brState = await getBaseRateApprovalState();
+    if (!brState.isApproved) {
+      alert(BASE_RATE_APPROVAL_REQUIRED_MSG);
+      return;
+    }
+
     const isResolved = isPoMismatchResolved(item);
     if (!isResolved && (item.workflow_stage === 'mismatch' || item.stage === 'mismatch' || item.pass_status === 'mismatch' || (item.mismatch_fields && item.mismatch_fields.length > 0))) {
       setEmailNotification({

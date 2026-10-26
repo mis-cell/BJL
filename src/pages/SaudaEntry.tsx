@@ -8,7 +8,14 @@ import { enforceEditOrDeletePermission, getCurrentUserContext, isUserId10, isUse
 import { resolveDisplayName } from '../lib/userResolver';
 import { logChange } from '../services/auditLogService';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
-import { resolveSattaRate } from '../services/sattaRateService';
+import {
+  resolveSattaRate,
+  fetchSattaBaseRates,
+  getCachedBaseRateApprovalState,
+  getBaseRateApprovalState,
+  BASE_RATE_APPROVAL_REQUIRED_MSG,
+  BaseRateApprovalState,
+} from '../services/sattaRateService';
 import { cleanSaudaNo } from '../lib/utils';
 import { screenDraftService } from '../services/screenDraftService';
 import { getAgenciesForArea, validateAreaAgencyCombination } from '../services/areaLogicService';
@@ -95,6 +102,9 @@ export default function SaudaEntry({
   const [markas, setMarkas] = useState<any[]>([]);
   const [baseRatesList, setBaseRatesList] = useState<any[]>([]);
   const [dbDiffsList, setDbDiffsList] = useState<any[]>([]);
+  const [baseRateApprovalState, setBaseRateApprovalState] = useState<BaseRateApprovalState>(
+    getCachedBaseRateApprovalState()
+  );
 
   // User 010 Detection logic
   const userCtx = getCurrentUserContext();
@@ -246,9 +256,11 @@ export default function SaudaEntry({
           dbModule.fetchAll('grade_master'),
           dbModule.fetchAll('marka_master').catch(() => []),
           dbModule.fetchAll('sauda_master').catch(() => []),
-          supabase ? supabase.from('satta_base_rates').select('*').order('start_date', { ascending: false }).then(r => r.data || []) : Promise.resolve([]),
+          fetchSattaBaseRates().catch(() => []),
           supabase ? supabase.from('satta_differentials').select('*').then(r => r.data || []) : Promise.resolve([])
         ]);
+
+        setBaseRateApprovalState(getCachedBaseRateApprovalState());
 
         if (brokData) setBrokers(brokData.map((b: any) => b.brok_name || b.name || '').filter(Boolean));
         if (suppData) setSuppliers(suppData.map((s: any) => s.supp_name || s.name || '').filter(Boolean));
@@ -694,6 +706,13 @@ export default function SaudaEntry({
   };
 
   const handleSave = async (targetMode: 'DRAFT' | 'SUBMIT' = 'SUBMIT') => {
+    const freshApproval = await getBaseRateApprovalState(true);
+    setBaseRateApprovalState(freshApproval);
+    if (!freshApproval.isApproved) {
+      alert(BASE_RATE_APPROVAL_REQUIRED_MSG);
+      return;
+    }
+
     if (isContractApproved) {
       alert("🔒 Permission Denied: This Sauda contract is approved and permanently locked against all edits.");
       return;
@@ -1176,11 +1195,17 @@ export default function SaudaEntry({
         </div>
 
         {/* Satta Chart Verification Badge */}
-        <div className="bg-emerald-50 border border-emerald-300 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
+        <div className={`border rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs ${
+          baseRateApprovalState.isApproved
+            ? "bg-emerald-50 border-emerald-300"
+            : "bg-amber-50 border-amber-400"
+        }`}>
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
-            <span className="font-extrabold text-emerald-950 uppercase tracking-wide">
-              Step 1: Satta Chart Active (Source Rate: ₹{formData.b_rate ? Number(formData.b_rate).toLocaleString() : '17,500'})
+            <span className={`w-2.5 h-2.5 rounded-full animate-pulse ${
+              baseRateApprovalState.isApproved ? "bg-emerald-600" : "bg-amber-600"
+            }`} />
+            <span className="font-extrabold text-slate-900 uppercase tracking-wide">
+              Step 1: Satta Chart Active (Source Rate: ₹{formData.b_rate ? Number(formData.b_rate).toLocaleString() : '17,500'}) • Status: {baseRateApprovalState.isApproved ? "Approved" : "Pending Approval (User 010)"}
             </span>
           </div>
           <button
@@ -1191,6 +1216,38 @@ export default function SaudaEntry({
             Review / Update Satta Chart →
           </button>
         </div>
+
+        {/* Mandatory User 010 Base Rate Approval Lock Banner */}
+        {!baseRateApprovalState.isApproved && (
+          <div className="bg-rose-50 border-2 border-rose-400 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-rose-100 rounded-xl border border-rose-300 text-rose-700 shrink-0">
+                <ShieldAlert className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="bg-rose-700 text-white font-black text-[11px] px-2.5 py-0.5 rounded uppercase tracking-wider">
+                    PENDING BASE RATE APPROVAL
+                  </span>
+                  <span className="font-black text-rose-950 text-sm">
+                    {BASE_RATE_APPROVAL_REQUIRED_MSG}
+                  </span>
+                </div>
+                <p className="text-xs text-rose-800 font-semibold mt-1">
+                  Current Base Rate ₹{Number(baseRateApprovalState.currentBaseRate || 0).toLocaleString('en-IN')} was updated by{' '}
+                  <strong>{baseRateApprovalState.updatedByDisplay || 'User'}</strong>. Creating, editing, updating, or saving Sauda transactions is locked until User 010 approves the Base Rate.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onNavigate ? onNavigate('satta_chart') : (window.location.hash = '#satta_chart')}
+              className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-xs font-black uppercase tracking-wider cursor-pointer shrink-0 shadow-xs"
+            >
+              Open Satta Section →
+            </button>
+          </div>
+        )}
 
         {/* 1. Permanently Locked Contract Banner (Approved by User 010 - Locked for ALL users) */}
         {isContractApproved && (

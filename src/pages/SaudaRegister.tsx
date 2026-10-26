@@ -48,6 +48,12 @@ import { initUserMap, resolveDisplayName } from '../lib/userResolver';
 import { logChange } from '../services/auditLogService';
 import { PaginationControls } from '../components/PaginationControls';
 import { generateSaudaPdfBase64 } from '../lib/saudaPdf';
+import {
+  BASE_RATE_APPROVAL_REQUIRED_MSG,
+  getBaseRateApprovalState,
+  getCachedBaseRateApprovalState,
+  fetchSattaBaseRates
+} from '../services/sattaRateService';
 
 const compareQualities = (aStr: string, bStr: string): number => {
   const clean = (val: string) => {
@@ -313,9 +319,39 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   const [isRejectingLoading, setIsRejectingLoading] = useState(false);
 
   const [viewingDetailsSauda, setViewingDetailsSauda] = useState<Sauda | null>(null);
+  const [baseRateApprovalState, setBaseRateApprovalState] = useState(() => getCachedBaseRateApprovalState());
+
+  useEffect(() => {
+    let mounted = true;
+    const syncBaseRateApproval = async () => {
+      try {
+        await fetchSattaBaseRates();
+        const st = await getBaseRateApprovalState();
+        if (mounted) setBaseRateApprovalState(st);
+      } catch (_e) {}
+    };
+    syncBaseRateApproval();
+    const onRateChange = () => {
+      syncBaseRateApproval();
+    };
+    window.addEventListener('satta-base-rate-updated', onRateChange);
+    window.addEventListener('app-data-updated', onRateChange);
+    return () => {
+      mounted = false;
+      window.removeEventListener('satta-base-rate-updated', onRateChange);
+      window.removeEventListener('app-data-updated', onRateChange);
+    };
+  }, []);
 
   // User 010 (Checker) Final Approval Handler
-  const handleMarkCheck = (entry: Sauda) => {
+  const handleMarkCheck = async (entry: Sauda) => {
+    const brState = await getBaseRateApprovalState();
+    setBaseRateApprovalState(brState);
+    if (!brState.isApproved) {
+      alert(BASE_RATE_APPROVAL_REQUIRED_MSG);
+      return;
+    }
+
     const userCtx = getCurrentUserContext();
     const canCheck = isUserAdmin() || isUserId10() || isL5OrAdmin() || userCtx.userRole === 'ADMIN';
 
@@ -688,6 +724,13 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
       return;
     }
 
+    const brState = await getBaseRateApprovalState();
+    setBaseRateApprovalState(brState);
+    if (!brState.isApproved) {
+      alert(BASE_RATE_APPROVAL_REQUIRED_MSG);
+      return;
+    }
+
     setIsImporting(true);
     setImportStatusMessage("Parsing CSV data...");
 
@@ -961,6 +1004,13 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   };
 
   const handleEdit = async (sauda: Sauda) => {
+    const brState = await getBaseRateApprovalState();
+    setBaseRateApprovalState(brState);
+    if (!brState.isApproved) {
+      alert(BASE_RATE_APPROVAL_REQUIRED_MSG);
+      return;
+    }
+
     // Once approved by User 010, permanently locked against editing by all users!
     if (isApprovedSauda(sauda)) {
       alert(`🔒 Permission Denied: Sauda #${sauda.sauda_no} is approved by User 010 (Checker).\n\nPer company policy, once approved, this contract is PERMANENTLY LOCKED against editing by ALL users.`);
@@ -1426,6 +1476,30 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
   return (
     <LegacyLayout title="Sauda Desk" subtitle="Bally Jute Company Limited ERP Console" onClose={onClose}>
       <div className="space-y-4 relative pb-10 font-sans">
+        {!baseRateApprovalState.isApproved && (
+          <div className="bg-amber-50 border-2 border-amber-400 rounded-xl px-4 py-3 flex items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="bg-amber-500 text-white p-2 rounded-lg shrink-0">
+                <Lock className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-xs font-black text-amber-950 uppercase tracking-wide">
+                  {BASE_RATE_APPROVAL_REQUIRED_MSG}
+                </p>
+                <p className="text-[11px] font-semibold text-amber-800 mt-0.5">
+                  Latest Base Rate: <span className="font-black">₹{baseRateApprovalState.currentRate.toLocaleString('en-IN')}</span>
+                  {baseRateApprovalState.previousRate ? ` (Prev: ₹${baseRateApprovalState.previousRate.toLocaleString('en-IN')})` : ''}
+                  {' • '}Updated By: <span className="font-black">{baseRateApprovalState.updatedByDisplay}</span>
+                  {' • '}Status: <span className="font-black text-amber-900">Pending Approval (User 010)</span>
+                </p>
+              </div>
+            </div>
+            <span className="px-2.5 py-1 rounded-md bg-amber-200/80 border border-amber-400 text-[10px] font-black text-amber-950 uppercase tracking-wider shrink-0">
+              Sauda Operations Locked
+            </span>
+          </div>
+        )}
+
         {/* 1. Maker-Checker Dedicated Summary KPI Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
           {/* Card 1: Total Sauda Entries */}
@@ -1677,7 +1751,15 @@ export default function SaudaRegister({ onClose, onNew, isActive = true }: { onC
           <div className="flex items-center gap-2 flex-wrap shrink-0">
             {!isUser10 && (
               <button
-                onClick={onNew}
+                onClick={async () => {
+                  const brState = await getBaseRateApprovalState();
+                  setBaseRateApprovalState(brState);
+                  if (!brState.isApproved) {
+                    alert(BASE_RATE_APPROVAL_REQUIRED_MSG);
+                    return;
+                  }
+                  if (onNew) onNew();
+                }}
                 className="bg-[#F7AFA8] hover:bg-[#D94B5A] text-white px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 border border-[#FBCFCB]"
               >
                 <Plus className="h-4 w-4 text-[#FDE7E6]" />

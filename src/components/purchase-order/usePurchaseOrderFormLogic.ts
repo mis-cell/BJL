@@ -8,6 +8,7 @@ import { getCurrentUserContext, isUserAdmin, isL5OrAdmin, canAccess, canEditOrDe
 import { formatPoNumber, compareQualities, resolveSattaRate } from '../../utils/purchaseOrderCalculations';
 import { validateAreaAgencyCombination, getAgenciesForArea } from '../../services/areaLogicService';
 import { PoFormData, PoCalcData, PoItemRow } from '../../types/purchaseOrder';
+import { BASE_RATE_APPROVAL_REQUIRED_MSG, getBaseRateApprovalState } from '../../services/sattaRateService';
 
 interface UsePurchaseOrderFormLogicProps {
   isTempPo: boolean;
@@ -658,7 +659,15 @@ export function usePurchaseOrderFormLogic({
     return `BJCL/${finYear}/${String(nextNum).padStart(4, '0')}(PTF)`;
   };
 
-  const handleGlobalAdd = () => {
+  const handleGlobalAdd = async () => {
+    if (isTempPo) {
+      const brState = await getBaseRateApprovalState();
+      if (!brState.isApproved) {
+        alert(BASE_RATE_APPROVAL_REQUIRED_MSG);
+        return;
+      }
+    }
+
     const defaultSDate = todayStr;
     const defaultBRate = lookupSattaBaseRate(defaultSDate, sattaBaseRates);
 
@@ -726,6 +735,14 @@ export function usePurchaseOrderFormLogic({
   };
 
   const handleLoadSelectedPo = async (poHeader: any) => {
+    if (isTempPo) {
+      const brState = await getBaseRateApprovalState();
+      if (!brState.isApproved) {
+        alert(BASE_RATE_APPROVAL_REQUIRED_MSG);
+        return;
+      }
+    }
+
     const userCtx = getCurrentUserContext();
     const isUser002Only = isUserId2(userCtx) && !isLevel4OrAbove(userCtx);
     if (isUser002Only && isTempPo) {
@@ -1004,7 +1021,15 @@ export function usePurchaseOrderFormLogic({
     }
   };
 
-  const handleGlobalAmend = () => {
+  const handleGlobalAmend = async () => {
+    if (isTempPo) {
+      const brState = await getBaseRateApprovalState();
+      if (!brState.isApproved) {
+        alert(BASE_RATE_APPROVAL_REQUIRED_MSG);
+        return;
+      }
+    }
+
     const activePoNo = formData.is_ptf ? formData.ptf_no : formData.no;
     if (!activePoNo) {
       alert("No active PO loaded to amend.");
@@ -1074,6 +1099,12 @@ export function usePurchaseOrderFormLogic({
   };
 
   const handleSave = async () => {
+    const brState = await getBaseRateApprovalState();
+    if (!brState.isApproved) {
+      alert(BASE_RATE_APPROVAL_REQUIRED_MSG);
+      return;
+    }
+
     const userCtx = getCurrentUserContext();
     const isUser002Only = isUserId2(userCtx) && !isLevel4OrAbove(userCtx);
     const isEditingExistingSavedPo = (poList || []).some((p: any) => p.po_no === formData.no || p.po_no === formData.ptf_no);

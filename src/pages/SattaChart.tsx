@@ -38,10 +38,23 @@ import {
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { cn, sanitizeCsvData } from '../lib/utils';
-import { enforceEditOrDeletePermission, getCurrentUserContext } from '../lib/permissions';
+import { enforceEditOrDeletePermission, getCurrentUserContext, isUserId10 } from '../lib/permissions';
+import { getAuthenticatedUser, resolveUserIdentity } from '../lib/userResolver';
 import LegacyLayout, { LegacyButton } from '../components/LegacyLayout';
 import { supabase } from '../lib/supabase';
-import { refreshSattaCache } from '../services/sattaRateService';
+import {
+  refreshSattaCache,
+  fetchSattaBaseRates,
+  getCachedBaseRateHistory,
+  getCachedBaseRateApprovalState,
+  approveBaseRateByUser010,
+  encodeBaseRateRemarks,
+  parseBaseRateRemarks,
+  savePendingBaseRateMeta,
+  BASE_RATE_APPROVAL_REQUIRED_MSG,
+  BaseRateApprovalState,
+  SattaBaseRateHistoryItem,
+} from '../services/sattaRateService';
 import { logChange } from '../services/auditLogService';
 import { UniversalAuditLogModal } from '../components/UniversalAuditLogModal';
 
@@ -120,10 +133,16 @@ export default function SattaChart({
   const [dbDiffUsers, setDbDiffUsers] = useState<Record<string, Record<string, { user: string; time?: string }>>>({});
   const [rateHistory, setRateHistory] = useState<any[]>([]);
   const [latestRateRecord, setLatestRateRecord] = useState<any | null>(null);
+  const [approvalState, setApprovalState] = useState<BaseRateApprovalState>(getCachedBaseRateApprovalState());
+  const [baseRateChangeHistory, setBaseRateChangeHistory] = useState<SattaBaseRateHistoryItem[]>(getCachedBaseRateHistory());
+  const [isApprovingRate, setIsApprovingRate] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [saveStatus, setSaveStatus] = useState<{message: string, success: boolean} | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string>(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
   const [showUniversalAuditModal, setShowUniversalAuditModal] = useState<boolean>(false);
+
+  const userIs010 = isUserId10();
+  const currentAuthUser = getAuthenticatedUser();
 
   // Differential History Audit State
   const [diffHistoryLogs, setDiffHistoryLogs] = useState<any[]>([]);
@@ -243,24 +262,16 @@ export default function SattaChart({
     setIsLoading(true);
     try {
       if (!supabase) return;
-      
-      // Fetch latest base rate (strictly read-only; no inline DDL or rate mutation on load)
-      const { data: baseRates, error: brErr } = await supabase
-        .from('satta_base_rates')
-        .select('*')
-        .order('start_date', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(1);
 
-      if (brErr) {
-        throw brErr;
-      }
-
-      if (baseRates && baseRates.length > 0) {
-        setLatestRateRecord(baseRates[0]);
-        setBaseRate(Number(baseRates[0].base_rate));
-        setStartDate(baseRates[0].start_date);
-        setRemarks(baseRates[0].remarks || '');
+      const enrichedRates = await fetchSattaBaseRates();
+      if (enrichedRates && enrichedRates.length > 0) {
+        setLatestRateRecord(enrichedRates[0]);
+        setBaseRate(Number(enrichedRates[0].base_rate));
+        setStartDate(enrichedRates[0].start_date);
+        setRemarks(enrichedRates[0].clean_remarks || parseBaseRateRemarks(enrichedRates[0].remarks).cleanRemarks || '');
+        setRateHistory(enrichedRates);
+        setApprovalState(getCachedBaseRateApprovalState());
+        setBaseRateChangeHistory(getCachedBaseRateHistory());
       }
 
       // Fetch differentials without mutating or deleting database rows during read
@@ -293,8 +304,9 @@ export default function SattaChart({
           if (!userMap[area]) userMap[area] = {};
           const val = Number(item.differential);
           cache[area][item.grade] = val;
+          const resolvedIdentity = resolveUserIdentity(item.updated_by, item.updated_by_id);
           userMap[area][item.grade] = {
-            user: item.updated_by || 'ADMIN',
+            user: resolvedIdentity.displayLabel || item.updated_by || '',
             time: item.updated_at || item.created_at
           };
         });
@@ -316,22 +328,42 @@ export default function SattaChart({
   const fetchRateHistory = async () => {
     try {
       if (!supabase) return;
-      const { data, error } = await supabase
-        .from('satta_base_rates')
-        .select('*')
-        .order('start_date', { ascending: false })
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
+      const data = await fetchSattaBaseRates();
       setRateHistory(data || []);
-      if (data && data.length > 0 && !selectedHistoryRun) {
-        handleViewHistoryDetails(data[0]);
+      setApprovalState(getCachedBaseRateApprovalState());
+      setBaseRateChangeHistory(getCachedBaseRateHistory());
+      if (data && data.length > 0) {
+        setLatestRateRecord(data[0]);
+        if (!selectedHistoryRun) {
+          handleViewHistoryDetails(data[0]);
+        }
       }
     } catch (err) {
       console.error("Error fetching rate logs:", err);
+    }
+  };
+
+  const handleUser010ApproveBaseRate = async (recordId?: string) => {
+    if (!isUserId10()) {
+      alert("Access Denied: Only User ID 010 is authorized to approve Base Rate changes.");
+      return;
+    }
+    setIsApprovingRate(true);
+    try {
+      const updatedState = await approveBaseRateByUser010(recordId);
+      setApprovalState(updatedState);
+      const refreshed = await fetchSattaBaseRates();
+      setRateHistory(refreshed);
+      setBaseRateChangeHistory(getCachedBaseRateHistory());
+      if (refreshed.length > 0) setLatestRateRecord(refreshed[0]);
+      setSaveStatus({
+        message: `Base Rate ₹${(updatedState.currentBaseRate || baseRate).toLocaleString('en-IN')} approved by ${updatedState.approvedByDisplay || 'User 010'}. Sauda Entry & Sauda Check Point operations are now unlocked for today!`,
+        success: true,
+      });
+    } catch (err: any) {
+      alert(err.message || "Failed to approve Base Rate.");
+    } finally {
+      setIsApprovingRate(false);
     }
   };
 
@@ -360,8 +392,8 @@ export default function SattaChart({
       : null;
     const diffChange = oldDiff !== null ? numericDiff - oldDiff : null;
     const changedDate = new Date().toISOString().split('T')[0];
-    const userCtx = getCurrentUserContext();
-    const changedBy = userCtx?.username || userCtx?.userName || userCtx?.userId || 'ADMIN';
+    const authUser = getAuthenticatedUser();
+    const changedBy = authUser.displayLabel || authUser.username;
     const nowIso = new Date().toISOString();
 
     try {
@@ -558,21 +590,44 @@ export default function SattaChart({
     setIsLoading(true);
     setSaveStatus(null);
 
-    const userCtx = getCurrentUserContext();
-    const currentUserName = userCtx?.username || userCtx?.userName || userCtx?.userId || 'ADMIN';
+    const authUser = getAuthenticatedUser();
+    const currentUserName = authUser.username;
+    const currentUserId = authUser.userId;
+    const currentUserDisplay = authUser.displayLabel;
     const nowIso = new Date().toISOString();
 
     try {
       // Do NOT delete previous base rate records on the same date!
       // Multiple intraday updates are preserved in satta_base_rates and history.
       const oldRateValue = latestRateRecord ? Number(latestRateRecord.base_rate) : null;
+      const cleanRemarksText =
+        parseBaseRateRemarks(remarks).cleanRemarks ||
+        `Base rate changed to ₹${baseRate.toLocaleString('en-IN')} by ${currentUserDisplay}`;
+
+      const encodedRemarks = encodeBaseRateRemarks(cleanRemarksText, {
+        prev: oldRateValue,
+        by: currentUserName,
+        byId: currentUserId,
+        at: nowIso,
+        st: 'PENDING',
+        appBy: null,
+        appById: null,
+        appAt: null,
+      });
 
       let rRecord: any = null;
       const basePayload: any = {
         base_rate: baseRate,
+        previous_rate: oldRateValue,
         start_date: startDate,
         updated_by: currentUserName,
-        remarks: remarks || `Base rate changed to ₹${baseRate.toLocaleString('en-IN')}`,
+        updated_by_id: currentUserId,
+        updated_at: nowIso,
+        approval_status: 'PENDING',
+        approved_by: null,
+        approved_by_id: null,
+        approved_at: null,
+        remarks: encodedRemarks,
         created_at: nowIso
       };
 
@@ -583,10 +638,15 @@ export default function SattaChart({
         .single();
 
       if (e1) {
-        delete basePayload.updated_by;
+        const fallbackPayload = {
+          base_rate: baseRate,
+          start_date: startDate,
+          remarks: encodedRemarks,
+          created_at: nowIso,
+        };
         const { data: d2, error: e2 } = await supabase
           .from('satta_base_rates')
-          .insert(basePayload)
+          .insert(fallbackPayload)
           .select()
           .single();
 
@@ -607,7 +667,7 @@ export default function SattaChart({
               id: 'local-' + Date.now(),
               base_rate: baseRate,
               start_date: startDate,
-              remarks: remarks || `Base rate changed to ₹${baseRate.toLocaleString('en-IN')}`,
+              remarks: encodedRemarks,
               created_at: nowIso
             };
           } else {
@@ -620,6 +680,17 @@ export default function SattaChart({
         rRecord = d1;
       }
 
+      // Persist pending approval metadata & invalidate once-per-day approval cache
+      savePendingBaseRateMeta(
+        String(rRecord?.id || ''),
+        startDate,
+        baseRate,
+        oldRateValue,
+        currentUserName,
+        currentUserId,
+        nowIso
+      );
+
       // Save to local storage for offline / immediate availability
       try {
         localStorage.setItem('satta_latest_base_rate', String(baseRate));
@@ -628,16 +699,33 @@ export default function SattaChart({
 
       // Insert Audit Log safely
       try {
-        await supabase
+        const auditPayload: any = {
+          base_rate_id: String(rRecord?.id || ''),
+          old_rate: oldRateValue,
+          new_rate: baseRate,
+          changed_date: startDate,
+          changed_by: currentUserName,
+          updated_by_id: currentUserId,
+          approval_status: 'PENDING',
+          remarks: `${cleanRemarksText} (Updated by ${currentUserDisplay})`,
+          created_at: nowIso
+        };
+        const { error: audErr } = await supabase
           .from('satta_base_rate_audit_logs')
-          .insert({
-            old_rate: oldRateValue,
-            new_rate: baseRate,
-            changed_date: startDate,
-            changed_by: currentUserName,
-            remarks: remarks || `Base rate changed from ₹${oldRateValue?.toLocaleString('en-IN') || '0'} to ₹${baseRate.toLocaleString('en-IN')} by ${currentUserName}`,
-            created_at: nowIso
-          });
+          .insert(auditPayload);
+
+        if (audErr) {
+          await supabase
+            .from('satta_base_rate_audit_logs')
+            .insert({
+              old_rate: oldRateValue,
+              new_rate: baseRate,
+              changed_date: startDate,
+              changed_by: currentUserDisplay,
+              remarks: `${cleanRemarksText} [Status: PENDING USER 010 APPROVAL]`,
+              created_at: nowIso
+            });
+        }
       } catch (auditErr) {
         console.warn('satta_base_rate_audit_logs write skipped:', auditErr);
       }
@@ -653,8 +741,8 @@ export default function SattaChart({
           field_label: 'Satta Base Rate (₹/Qtl)',
           old_value: oldRateValue !== null ? `₹${oldRateValue.toLocaleString('en-IN')}` : 'None',
           new_value: `₹${baseRate.toLocaleString('en-IN')}`,
-          user_name: currentUserName,
-          remarks: remarks || `Base rate updated to ₹${baseRate.toLocaleString('en-IN')}`
+          user_name: currentUserDisplay,
+          remarks: `${cleanRemarksText} | Updated by ${currentUserDisplay} | Pending Approval from User 010`
         });
       } catch (logErr) {
         console.warn('Universal log write skipped:', logErr);
@@ -675,7 +763,7 @@ export default function SattaChart({
             grade: grade,
             differential: diffVal,
             final_rate: baseRate + diffVal,
-            updated_by: currentUserName,
+            updated_by: currentUserDisplay,
             created_at: nowIso
           });
         });
@@ -705,13 +793,18 @@ export default function SattaChart({
         }
       }
 
+      await loadChartConfig();
+      await fetchRateHistory();
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('base-rate-approval-changed', { detail: getCachedBaseRateApprovalState() }));
+        window.dispatchEvent(new CustomEvent('base-rate-updated'));
+      }
+
       setSaveStatus({
-        message: `Base Rate ₹${baseRate.toLocaleString()} published successfully by ${currentUserName}. ${calcRows.length} area-grade items calculated for ${startDate}!`,
+        message: `Base Rate ₹${baseRate.toLocaleString('en-IN')} updated by ${currentUserDisplay} at ${formatDateTime(nowIso)}. Status: Pending Approval from User 010.`,
         success: true
       });
-
-      loadChartConfig();
-      fetchRateHistory();
     } catch (err: any) {
       setSaveStatus({
         message: "Failed to record Satta Base Rate: " + err.message,
@@ -1311,6 +1404,98 @@ export default function SattaChart({
         </div>
       )}
 
+      {/* MANDATORY BASE RATE USER TRACKING & USER 010 APPROVAL STATUS BAR */}
+      {latestRateRecord && (
+        <div className={cn(
+          "rounded-2xl border-2 p-4 shadow-sm transition-all",
+          approvalState.isApproved
+            ? "bg-emerald-50/90 border-emerald-300"
+            : "bg-amber-50 border-amber-400"
+        )}>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className={cn(
+                "px-3 py-1.5 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-2 border shadow-2xs",
+                approvalState.isApproved
+                  ? "bg-emerald-600 text-white border-emerald-700"
+                  : "bg-amber-500 text-slate-950 border-amber-600 animate-pulse"
+              )}>
+                <ShieldCheck className="h-4 w-4" />
+                <span>{approvalState.isApproved ? "Approved" : "Pending Approval"}</span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
+                <div>
+                  <span className="text-slate-500 font-bold uppercase text-[10px] mr-1.5">Previous Rate:</span>
+                  <strong className="font-mono text-slate-700 font-black">
+                    {approvalState.previousBaseRate !== null && approvalState.previousBaseRate !== undefined
+                      ? `₹${Number(approvalState.previousBaseRate).toLocaleString('en-IN')}`
+                      : '—'}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold uppercase text-[10px] mr-1.5">Current Base Rate:</span>
+                  <strong className="font-mono text-[#D94B5A] text-sm font-black">
+                    ₹{Number(latestRateRecord.base_rate).toLocaleString('en-IN')}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold uppercase text-[10px] mr-1.5">Updated By:</span>
+                  <strong className="text-slate-900 font-black">
+                    {latestRateRecord.updated_by_display || latestRateRecord.updated_by || 'Historical Record'}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold uppercase text-[10px] mr-1.5">Last Updated Date & Time:</span>
+                  <strong className="font-mono text-slate-800 font-bold">
+                    {formatDateTime(latestRateRecord.updated_at || latestRateRecord.created_at) || formatDateDMY(latestRateRecord.start_date)}
+                  </strong>
+                </div>
+                {approvalState.isApproved && approvalState.approvedByDisplay && (
+                  <div>
+                    <span className="text-emerald-700 font-bold uppercase text-[10px] mr-1.5">Approved By (User 010):</span>
+                    <strong className="text-emerald-950 font-black">
+                      {approvalState.approvedByDisplay}
+                    </strong>
+                    {approvalState.approvedAt && (
+                      <span className="font-mono text-[11px] text-emerald-800 ml-1.5">
+                        ({formatDateTime(approvalState.approvedAt)})
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {!approvalState.isApproved ? (
+                userIs010 ? (
+                  <button
+                    type="button"
+                    onClick={() => handleUser010ApproveBaseRate(latestRateRecord?.id)}
+                    disabled={isApprovingRate}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="h-4 w-4 text-amber-200" />
+                    <span>{isApprovingRate ? "Approving..." : "Approve Base Rate (User 010)"}</span>
+                  </button>
+                ) : (
+                  <div className="bg-rose-100 border border-rose-300 text-rose-900 px-3.5 py-2 rounded-xl text-[11px] font-black flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+                    <span>{BASE_RATE_APPROVAL_REQUIRED_MSG} (Logged in as: {currentAuthUser.displayLabel})</span>
+                  </div>
+                )
+              ) : (
+                <div className="bg-emerald-100 border border-emerald-300 text-emerald-900 px-3.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>Daily Base Rate Approved • Sauda Entry & Sauda Check Point Unlocked</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MAIN CONTENT AREA BY TAB */}
 
       {/* TAB 0: SATTA CHART BASE RATE (SIMPLIFIED FULL-YEAR & DAILY MATRIX VIEW) */}
@@ -1377,6 +1562,10 @@ export default function SattaChart({
               <button
                 type="button"
                 onClick={() => {
+                  if (!approvalState.isApproved) {
+                    alert(BASE_RATE_APPROVAL_REQUIRED_MSG);
+                    return;
+                  }
                   try {
                     if (typeof window !== 'undefined' && window.localStorage) {
                       window.localStorage.setItem('satta_chart_uploaded', 'true');
@@ -1390,7 +1579,12 @@ export default function SattaChart({
                     window.location.hash = '#sauda_entry';
                   }
                 }}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer active:scale-95"
+                className={cn(
+                  "font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md cursor-pointer active:scale-95",
+                  approvalState.isApproved
+                    ? "bg-emerald-700 hover:bg-emerald-800 text-white"
+                    : "bg-amber-600 hover:bg-amber-700 text-white"
+                )}
               >
                 <span>Proceed to NEW SAUDA CONTRACT ENTRY</span>
                 <ArrowRight className="h-4 w-4 text-amber-300" />
@@ -1444,34 +1638,74 @@ export default function SattaChart({
 
                           const dayUpdates = hasDay ? intradayUpdatesMap.get(dateKey) || [] : [];
                           const hasMultiple = dayUpdates.length > 1;
-                          const latestUser = dayUpdates[0]?.updated_by;
-                          const tooltipText = dayUpdates.map((u, i) => 
-                            `#${dayUpdates.length - i}: ₹${Number(u.base_rate).toLocaleString('en-IN')} by ${u.updated_by || 'Admin'} (${u.created_at ? new Date(u.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Logged'})`
-                          ).join('\n');
+                          const latestUpdate = dayUpdates[0];
+                          const latestUserDisplay =
+                            latestUpdate?.updated_by_display || latestUpdate?.updated_by || '';
+                          const latestTimeStr =
+                            latestUpdate?.updated_at || latestUpdate?.created_at
+                              ? formatDateTime(latestUpdate.updated_at || latestUpdate.created_at)
+                              : '';
+                          const isCellPending = latestUpdate?.approval_status === 'PENDING';
+
+                          const tooltipText = dayUpdates
+                            .map((u, i) => {
+                              const who = u.updated_by_display || u.updated_by || '';
+                              const when =
+                                u.updated_at || u.created_at
+                                  ? formatDateTime(u.updated_at || u.created_at)
+                                  : formatDateDMY(u.start_date);
+                              const stLabel =
+                                u.approval_status === 'PENDING'
+                                  ? ' [Pending Approval - User 010]'
+                                  : u.approved_by_display
+                                  ? ` [Approved by ${u.approved_by_display}]`
+                                  : '';
+                              return `#${dayUpdates.length - i}: ₹${Number(u.base_rate).toLocaleString('en-IN')}${who ? ` by ${who}` : ''} (${when})${stLabel}`;
+                            })
+                            .join('\n');
 
                           return (
                             <td key={m.name} className="py-1.5 px-1 border-r border-slate-100 text-slate-800">
                               {rateVal && rateVal > 0 ? (
                                 <div className="flex flex-col items-center justify-center gap-0.5">
                                   <span 
-                                    title={tooltipText || `Base Rate: ₹${rateVal.toLocaleString('en-IN')} (Updated by ${latestUser || 'Admin'})`}
-                                    className="font-bold text-[#D94B5A] bg-emerald-50 text-emerald-950 px-1.5 py-0.5 rounded border border-emerald-200 inline-block min-w-[56px] text-center"
+                                    title={
+                                      tooltipText ||
+                                      `Base Rate: ₹${rateVal.toLocaleString('en-IN')}${
+                                        latestUserDisplay ? ` (Updated by ${latestUserDisplay})` : ''
+                                      }`
+                                    }
+                                    className={cn(
+                                      "font-bold px-1.5 py-0.5 rounded border inline-block min-w-[56px] text-center",
+                                      isCellPending
+                                        ? "bg-amber-50 text-amber-950 border-amber-400"
+                                        : "bg-emerald-50 text-emerald-950 border-emerald-200"
+                                    )}
                                   >
                                     {rateVal.toLocaleString('en-IN')}
                                   </span>
-                                  {hasMultiple ? (
+                                  {isCellPending && (
+                                    <span
+                                      title="Pending Approval from User 010"
+                                      className="text-[7px] bg-rose-100 text-rose-800 border border-rose-300 font-black px-1 rounded uppercase"
+                                    >
+                                      Pending 010
+                                    </span>
+                                  )}
+                                  {hasMultiple && (
                                     <span 
                                       title={tooltipText}
                                       className="text-[7.5px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-1 rounded cursor-help shadow-2xs"
                                     >
                                       {dayUpdates.length} updates
                                     </span>
-                                  ) : latestUser ? (
+                                  )}
+                                  {latestUserDisplay ? (
                                     <span 
-                                      className="text-[7.5px] text-slate-500 font-sans truncate max-w-[55px] font-semibold"
-                                      title={`Updated by: ${latestUser}`}
+                                      className="text-[7.5px] text-slate-600 font-sans truncate max-w-[68px] font-bold"
+                                      title={`Updated by: ${latestUserDisplay}${latestTimeStr ? ` on ${latestTimeStr}` : ''}`}
                                     >
-                                      {latestUser}
+                                      {latestUserDisplay}
                                     </span>
                                   ) : null}
                                 </div>
@@ -1573,6 +1807,109 @@ export default function SattaChart({
               </table>
             </div>
           </div>
+
+          {/* COMPLETE BASE RATE CHANGE & USER 010 APPROVAL HISTORY TABLE */}
+          <div className="bg-white rounded-2xl border border-[#FBCFCB] shadow-sm overflow-hidden mt-4">
+            <div className="bg-[#D94B5A] text-white px-5 py-3 flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#FDE7E6]">
+              <div className="flex items-center gap-2">
+                <History className="h-5 w-5 text-[#FDE7E6]" />
+                <span className="text-sm font-black uppercase tracking-wider">
+                  Base Rate Change & User 010 Approval History
+                </span>
+              </div>
+              <div className="text-xs text-[#FDE7E6] font-semibold">
+                <span>Authorized Approver: <strong className="text-white font-mono">User ID 010 Only</strong></span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto max-h-[360px]">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-[#FDE7E6] border-b border-slate-300 text-[11px] font-black text-[#D94B5A] uppercase tracking-wider">
+                    <th className="py-2.5 px-3 border-r border-slate-200">Effective Date</th>
+                    <th className="py-2.5 px-3 border-r border-slate-200 text-right">Previous Base Rate</th>
+                    <th className="py-2.5 px-3 border-r border-slate-200 text-right">Updated Base Rate</th>
+                    <th className="py-2.5 px-3 border-r border-slate-200">Changed By (Username & ID)</th>
+                    <th className="py-2.5 px-3 border-r border-slate-200">Changed Date & Time</th>
+                    <th className="py-2.5 px-3 border-r border-slate-200 text-center">Approval Status</th>
+                    <th className="py-2.5 px-3 border-r border-slate-200">Approved By (User 010)</th>
+                    <th className="py-2.5 px-3 border-r border-slate-200">Approval Date & Time</th>
+                    <th className="py-2.5 px-3 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {baseRateChangeHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-6 text-center text-slate-400 font-semibold">
+                        No Base Rate change history records found.
+                      </td>
+                    </tr>
+                  ) : (
+                    baseRateChangeHistory.slice(0, 50).map((item, idx) => {
+                      const isPending = item.approval_status === 'PENDING';
+                      return (
+                        <tr key={item.id || idx} className="hover:bg-amber-50/50 transition-colors">
+                          <td className="py-2 px-3 font-mono font-bold text-slate-800 border-r border-slate-100">
+                            {formatDateDMY(item.start_date)}
+                          </td>
+                          <td className="py-2 px-3 font-mono font-bold text-slate-600 text-right border-r border-slate-100">
+                            {item.previous_rate !== null && item.previous_rate !== undefined
+                              ? `₹${Number(item.previous_rate).toLocaleString('en-IN')}`
+                              : '—'}
+                          </td>
+                          <td className="py-2 px-3 font-mono font-black text-[#D94B5A] text-right border-r border-slate-100">
+                            ₹{Number(item.new_rate).toLocaleString('en-IN')}
+                          </td>
+                          <td className="py-2 px-3 font-bold text-slate-900 border-r border-slate-100">
+                            {item.changed_by_display}
+                          </td>
+                          <td className="py-2 px-3 font-mono text-slate-700 border-r border-slate-100">
+                            {formatDateTime(item.changed_at) || formatDateDMY(item.start_date)}
+                          </td>
+                          <td className="py-2 px-3 text-center border-r border-slate-100">
+                            <span
+                              className={cn(
+                                "px-2 py-0.5 rounded-full text-[10px] font-black uppercase border inline-block",
+                                isPending
+                                  ? "bg-amber-100 text-amber-900 border-amber-400"
+                                  : "bg-emerald-100 text-emerald-900 border-emerald-300"
+                              )}
+                            >
+                              {isPending ? "Pending Approval" : "Approved"}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 font-bold text-slate-800 border-r border-slate-100">
+                            {item.approved_by_display || (isPending ? 'Awaiting User 010' : '—')}
+                          </td>
+                          <td className="py-2 px-3 font-mono text-slate-700 border-r border-slate-100">
+                            {item.approved_at ? formatDateTime(item.approved_at) : '—'}
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            {isPending ? (
+                              userIs010 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleUser010ApproveBaseRate(item.id)}
+                                  disabled={isApprovingRate}
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-2.5 py-1 rounded-lg text-[10px] uppercase tracking-wider cursor-pointer shadow-2xs disabled:opacity-50"
+                                >
+                                  Approve (010)
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-rose-700 font-bold">User 010 Only</span>
+                              )
+                            ) : (
+                              <span className="text-[10px] text-emerald-700 font-bold">Verified</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
       
@@ -1591,12 +1928,19 @@ export default function SattaChart({
                   <h3 className="text-xs font-black uppercase tracking-wider">Configure Base Rate</h3>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {latestRateRecord?.updated_by && (
-                    <span className="text-[9px] bg-[#F7AFA8] text-amber-300 border border-[#F06D6C] px-2 py-0.5 rounded-full font-bold">
-                      By: {latestRateRecord.updated_by}
+                  {(latestRateRecord?.updated_by_display || latestRateRecord?.updated_by) && (
+                    <span className="text-[9px] bg-[#F7AFA8] text-slate-950 border border-[#F06D6C] px-2 py-0.5 rounded-full font-bold">
+                      By: {latestRateRecord.updated_by_display || latestRateRecord.updated_by}
                     </span>
                   )}
-                  <span className="text-[9px] bg-[#FDE7E6] text-[#D94B5A] px-2 py-0.5 rounded-full font-bold">Active Schedule</span>
+                  <span className={cn(
+                    "text-[9px] px-2 py-0.5 rounded-full font-black uppercase",
+                    approvalState.isApproved
+                      ? "bg-emerald-100 text-emerald-900"
+                      : "bg-amber-200 text-amber-950"
+                  )}>
+                    {approvalState.isApproved ? "Approved" : "Pending Approval"}
+                  </span>
                 </div>
               </div>
 
@@ -1606,9 +1950,9 @@ export default function SattaChart({
                     <label htmlFor="current_base_rate_1323" className="block text-[10px] font-black text-slate-700 uppercase tracking-wider">
                       Current Base Rate (₹)
                     </label>
-                    {latestRateRecord?.updated_by && (
+                    {(latestRateRecord?.updated_by_display || latestRateRecord?.updated_by) && (
                       <span className="text-[9.5px] font-bold text-emerald-800">
-                        Updated By: <strong className="text-[#D94B5A] underline">{latestRateRecord.updated_by}</strong>
+                        Updated By: <strong className="text-[#D94B5A] underline">{latestRateRecord.updated_by_display || latestRateRecord.updated_by}</strong>
                       </span>
                     )}
                   </div>
@@ -1623,11 +1967,19 @@ export default function SattaChart({
                     />
                   </div>
                   {latestRateRecord && (
-                    <div className="text-[9.5px] text-slate-500 font-medium flex items-center justify-between mt-1 px-0.5">
-                      <span>Database Rate: <strong className="font-mono text-slate-800 font-bold">₹{Number(latestRateRecord.base_rate).toLocaleString('en-IN')}</strong></span>
-                      <span className="text-[9px] font-bold text-slate-600">
-                        {latestRateRecord.created_at ? new Date(latestRateRecord.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
-                      </span>
+                    <div className="text-[9.5px] text-slate-600 font-medium flex flex-col gap-0.5 mt-1.5 px-0.5">
+                      <div className="flex items-center justify-between">
+                        <span>Database Rate: <strong className="font-mono text-slate-800 font-bold">₹{Number(latestRateRecord.base_rate).toLocaleString('en-IN')}</strong></span>
+                        <span className="text-[9px] font-bold text-slate-700 font-mono">
+                          {formatDateTime(latestRateRecord.updated_at || latestRateRecord.created_at)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Status: <strong className={approvalState.isApproved ? "text-emerald-700" : "text-amber-700"}>{approvalState.isApproved ? "Approved" : "Pending Approval (User 010)"}</strong></span>
+                        {approvalState.approvedByDisplay && (
+                          <span className="text-[9px] text-emerald-800 font-bold">By {approvalState.approvedByDisplay}</span>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1670,6 +2022,18 @@ export default function SattaChart({
                   <Save className="h-4 w-4 text-[#FDE7E6]" />
                   <span>{isLoading ? "Saving Rates..." : "Apply & Publish Base Rate"}</span>
                 </button>
+
+                {!approvalState.isApproved && userIs010 && (
+                  <button
+                    type="button"
+                    onClick={() => handleUser010ApproveBaseRate(latestRateRecord?.id)}
+                    disabled={isApprovingRate}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 px-4 rounded-xl text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="h-4 w-4 text-amber-200" />
+                    <span>{isApprovingRate ? "Approving..." : "Approve Base Rate (User 010)"}</span>
+                  </button>
+                )}
               </div>
             </div>
 

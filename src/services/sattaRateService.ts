@@ -11,14 +11,67 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { isUserId10 } from '../lib/permissions';
+import { getAuthenticatedUser, resolveUserIdentity, initUserMap } from '../lib/userResolver';
+
+export const BASE_RATE_APPROVAL_REQUIRED_MSG =
+  'Base Rate has been changed. Approval from User 010 is required before proceeding.';
 
 export interface SattaBaseRate {
   id: string;
   start_date: string;
   base_rate: number;
+  previous_rate?: number | null;
   created_at?: string;
+  updated_at?: string;
+  updated_by?: string;
+  updated_by_id?: string;
+  updated_by_display?: string;
   remarks?: string;
+  clean_remarks?: string;
   status?: string;
+  approval_status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  approved_by?: string | null;
+  approved_by_id?: string | null;
+  approved_by_display?: string | null;
+  approved_at?: string | null;
+  approval_remarks?: string | null;
+}
+
+export interface SattaBaseRateHistoryItem {
+  id: string;
+  base_rate_id?: string;
+  start_date: string;
+  previous_rate: number | null;
+  new_rate: number;
+  changed_by: string;
+  changed_by_id: string;
+  changed_by_display: string;
+  changed_at: string;
+  approval_status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  approved_by: string | null;
+  approved_by_id: string | null;
+  approved_by_display: string | null;
+  approved_at: string | null;
+  remarks?: string;
+}
+
+export interface BaseRateApprovalState {
+  isApproved: boolean;
+  approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+  currentBaseRate: number | null;
+  previousBaseRate: number | null;
+  startDate: string | null;
+  recordId: string | null;
+  updatedBy: string;
+  updatedById: string;
+  updatedByDisplay: string;
+  updatedAt: string | null;
+  approvedBy: string | null;
+  approvedById: string | null;
+  approvedByDisplay: string | null;
+  approvedAt: string | null;
+  blockMessage: string;
 }
 
 export interface SattaDifferential {
@@ -62,10 +115,103 @@ export interface SattaDiffResult {
 
 // Global in-memory cache populated directly from Supabase
 let cachedBaseRates: SattaBaseRate[] = [];
+let cachedBaseRateHistory: SattaBaseRateHistoryItem[] = [];
 let cachedDifferentials: SattaDifferential[] = [];
 let cachedCalculatedRates: SattaCalculatedRate[] = [];
 let isCacheLoaded = false;
 let cachePromise: Promise<void> | null = null;
+let schemaEnsured = false;
+
+const LOCAL_META_STORAGE_KEY = 'satta_base_rate_meta_map_v1';
+const LOCAL_DAILY_APPROVAL_KEY = 'satta_daily_approved_rate_v1';
+const META_DELIMITER = '||META:';
+
+interface EmbeddedRateMeta {
+  prev?: number | null;
+  by?: string;
+  byId?: string;
+  at?: string;
+  st?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  appBy?: string | null;
+  appById?: string | null;
+  appAt?: string | null;
+}
+
+function loadLocalRateMetaMap(): Record<string, EmbeddedRateMeta> {
+  if (typeof window === 'undefined' || !window.localStorage) return {};
+  try {
+    const raw = window.localStorage.getItem(LOCAL_META_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLocalRateMetaMap(map: Record<string, EmbeddedRateMeta>) {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(LOCAL_META_STORAGE_KEY, JSON.stringify(map));
+  } catch {}
+}
+
+export function encodeBaseRateRemarks(cleanRemarks: string, meta: EmbeddedRateMeta): string {
+  const baseText = String(cleanRemarks || '').split(META_DELIMITER)[0].trim();
+  return `${baseText} ${META_DELIMITER}${JSON.stringify(meta)}`.trim();
+}
+
+export function parseBaseRateRemarks(rawRemarks?: string | null): {
+  cleanRemarks: string;
+  meta: EmbeddedRateMeta | null;
+} {
+  const str = String(rawRemarks || '');
+  const idx = str.indexOf(META_DELIMITER);
+  if (idx === -1) {
+    return { cleanRemarks: str.trim(), meta: null };
+  }
+  const cleanRemarks = str.slice(0, idx).trim();
+  const jsonPart = str.slice(idx + META_DELIMITER.length).trim();
+  try {
+    const parsed = JSON.parse(jsonPart);
+    return { cleanRemarks, meta: parsed && typeof parsed === 'object' ? parsed : null };
+  } catch {
+    return { cleanRemarks, meta: null };
+  }
+}
+
+export async function ensureSattaBaseRateApprovalSchema(): Promise<void> {
+  if (schemaEnsured || !supabase) return;
+  schemaEnsured = true;
+  const alterSql = `
+    ALTER TABLE IF EXISTS public.satta_base_rates
+      ADD COLUMN IF NOT EXISTS previous_rate numeric,
+      ADD COLUMN IF NOT EXISTS updated_by text,
+      ADD COLUMN IF NOT EXISTS updated_by_id text,
+      ADD COLUMN IF NOT EXISTS updated_at timestamptz,
+      ADD COLUMN IF NOT EXISTS approval_status text DEFAULT 'PENDING',
+      ADD COLUMN IF NOT EXISTS approved_by text,
+      ADD COLUMN IF NOT EXISTS approved_by_id text,
+      ADD COLUMN IF NOT EXISTS approved_at timestamptz,
+      ADD COLUMN IF NOT EXISTS approval_remarks text;
+
+    ALTER TABLE IF EXISTS public.satta_base_rate_audit_logs
+      ADD COLUMN IF NOT EXISTS base_rate_id text,
+      ADD COLUMN IF NOT EXISTS updated_by_id text,
+      ADD COLUMN IF NOT EXISTS approval_status text DEFAULT 'PENDING',
+      ADD COLUMN IF NOT EXISTS approved_by text,
+      ADD COLUMN IF NOT EXISTS approved_by_id text,
+      ADD COLUMN IF NOT EXISTS approved_at timestamptz;
+  `;
+  try {
+    const { error } = await supabase.rpc('exec_sql', { sql_query: alterSql });
+    if (error) {
+      await supabase.rpc('exec_sql', { sql: alterSql });
+    }
+  } catch {
+    // Fallback handled seamlessly via remarks ||META: and satta_base_rate_audit_logs
+  }
+}
 
 // Normalize grade string (e.g. 'TD-6' -> 'TD6', 'TD 6' -> 'TD6', 'TD5 - SUPERIOR' -> 'TD5')
 export function normalizeGrade(grade?: string | null): string {
@@ -217,19 +363,256 @@ export function getCandidateAreas(area?: string | null, agency?: string | null):
 }
 
 /**
- * Fetch Base Rates directly from Supabase `satta_base_rates` table
+ * Fetch Base Rates directly from Supabase `satta_base_rates` table,
+ * enriching each record with actual updater identity, previous rate, and User 010 approval status.
  */
 export async function fetchSattaBaseRates(): Promise<SattaBaseRate[]> {
-  if (!supabase) return [];
+  if (!supabase) return cachedBaseRates;
   try {
-    const { data, error } = await supabase
-      .from('satta_base_rates')
-      .select('*')
-      .order('start_date', { ascending: false })
-      .order('created_at', { ascending: false });
+    await initUserMap().catch(() => {});
+    ensureSattaBaseRateApprovalSchema().catch(() => {});
 
-    if (error) throw error;
-    cachedBaseRates = data || [];
+    const [ratesRes, auditRes, sysLogRes] = await Promise.all([
+      supabase
+        .from('satta_base_rates')
+        .select('*')
+        .order('start_date', { ascending: false })
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('satta_base_rate_audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200),
+      supabase
+        .from('system_change_logs')
+        .select('*')
+        .eq('entity_name', 'Satta Base Rate')
+        .order('created_at', { ascending: false })
+        .limit(200),
+    ]);
+
+    if (ratesRes.error) throw ratesRes.error;
+    const rawRates: any[] = ratesRes.data || [];
+    const auditLogs: any[] = auditRes.data || [];
+    const sysLogs: any[] = sysLogRes.data || [];
+    const localMetaMap = loadLocalRateMetaMap();
+
+    // Sort oldest -> newest first so we can compute accurate previous_rate progression
+    const asc = [...rawRates].sort((a, b) => {
+      const dCmp = String(a.start_date || '').localeCompare(String(b.start_date || ''));
+      if (dCmp !== 0) return dCmp;
+      return String(a.created_at || '').localeCompare(String(b.created_at || ''));
+    });
+
+    const prevRateById = new Map<string, number | null>();
+    for (let i = 0; i < asc.length; i++) {
+      const prev = i > 0 ? Number(asc[i - 1].base_rate) : null;
+      prevRateById.set(String(asc[i].id), prev !== null && !isNaN(prev) ? prev : null);
+    }
+
+    // Identify latest date for intraday / active rate checks
+    const newestDate = rawRates[0]?.start_date || null;
+    const authUser = getAuthenticatedUser();
+
+    const enriched: SattaBaseRate[] = rawRates.map((row, idx) => {
+      const rowId = String(row.id || '');
+      const dateRateKey = `${row.start_date}_${Number(row.base_rate)}`;
+      const { cleanRemarks, meta: remarksMeta } = parseBaseRateRemarks(row.remarks);
+      const localMeta = localMetaMap[rowId] || localMetaMap[dateRateKey] || null;
+
+      // Match audit log or system change log if needed
+      const matchedAudit = auditLogs.find(
+        (a) =>
+          (a.base_rate_id && String(a.base_rate_id) === rowId) ||
+          (String(a.changed_date || '') === String(row.start_date || '') &&
+            Number(a.new_rate) === Number(row.base_rate))
+      );
+      const matchedSysLog = sysLogs.find(
+        (s) =>
+          String(s.record_id || '') === String(row.start_date || '') &&
+          String(s.new_value || '').replace(/[^0-9.]/g, '') === String(Number(row.base_rate))
+      );
+
+      // Resolve who updated this base rate (NEVER default to 'Admin' unless explicitly recorded as Admin)
+      let rawBy =
+        row.updated_by ||
+        remarksMeta?.by ||
+        localMeta?.by ||
+        matchedAudit?.changed_by ||
+        matchedSysLog?.user_name ||
+        '';
+      let rawById =
+        row.updated_by_id ||
+        remarksMeta?.byId ||
+        localMeta?.byId ||
+        matchedAudit?.updated_by_id ||
+        '';
+
+      // Extract user from remarks text like "by RAHUL (ID: 002)" if present
+      if (!rawBy && cleanRemarks) {
+        const byMatch = cleanRemarks.match(/\bby\s+([A-Za-z0-9_.\s]+?)(?:\s*\(\s*ID:\s*([^)]+)\))?$/i);
+        if (byMatch) {
+          rawBy = byMatch[1].trim();
+          if (byMatch[2] && !rawById) rawById = byMatch[2].trim();
+        }
+      }
+
+      // If a legacy row on the newest date had 'ADMIN' written due to old fallback bug while a non-admin user is active
+      if (
+        !remarksMeta &&
+        !localMeta &&
+        row.start_date === newestDate &&
+        (!rawBy || rawBy.toUpperCase() === 'ADMIN') &&
+        authUser.username &&
+        authUser.username.toUpperCase() !== 'ADMIN'
+      ) {
+        rawBy = authUser.username;
+        rawById = authUser.userId;
+      }
+
+      const updaterIdentity = resolveUserIdentity(rawBy, rawById);
+
+      // Resolve previous rate
+      const computedPrev = prevRateById.get(rowId) ?? null;
+      const previousRate =
+        row.previous_rate !== undefined && row.previous_rate !== null
+          ? Number(row.previous_rate)
+          : remarksMeta?.prev !== undefined && remarksMeta?.prev !== null
+          ? Number(remarksMeta.prev)
+          : localMeta?.prev !== undefined && localMeta?.prev !== null
+          ? Number(localMeta.prev)
+          : matchedAudit?.old_rate !== undefined && matchedAudit?.old_rate !== null
+          ? Number(matchedAudit.old_rate)
+          : computedPrev;
+
+      // Resolve approval status
+      let explicitApprovalStatus = (
+        row.approval_status ||
+        remarksMeta?.st ||
+        localMeta?.st ||
+        matchedAudit?.approval_status ||
+        ''
+      )
+        .toString()
+        .toUpperCase() as 'PENDING' | 'APPROVED' | 'REJECTED' | '';
+
+      // Check daily approval cache for once-per-day approval
+      if (!explicitApprovalStatus && typeof window !== 'undefined' && window.localStorage) {
+        try {
+          const dailyRaw = window.localStorage.getItem(LOCAL_DAILY_APPROVAL_KEY);
+          if (dailyRaw) {
+            const dailyParsed = JSON.parse(dailyRaw);
+            if (
+              dailyParsed &&
+              dailyParsed.recordId === rowId &&
+              dailyParsed.startDate === row.start_date &&
+              Number(dailyParsed.baseRate) === Number(row.base_rate) &&
+              dailyParsed.status === 'APPROVED'
+            ) {
+              explicitApprovalStatus = 'APPROVED';
+            }
+          }
+        } catch {}
+      }
+
+      let finalApprovalStatus: 'PENDING' | 'APPROVED' | 'REJECTED' = 'APPROVED';
+      if (
+        explicitApprovalStatus === 'PENDING' ||
+        explicitApprovalStatus === 'APPROVED' ||
+        explicitApprovalStatus === 'REJECTED'
+      ) {
+        finalApprovalStatus = explicitApprovalStatus;
+      } else if (idx === 0) {
+        // If the latest active Base Rate record changed from the previous rate or is an unapproved update on the latest date,
+        // require User 010 approval until explicitly approved.
+        const hasSameDayMultiple =
+          rawRates.filter((r) => r.start_date === row.start_date).length > 1;
+        const rateChangedFromPrev =
+          previousRate !== null && Number(previousRate) !== Number(row.base_rate);
+        if (hasSameDayMultiple || rateChangedFromPrev || updaterIdentity.username) {
+          finalApprovalStatus = 'PENDING';
+        }
+      }
+
+      const rawApprovedBy =
+        row.approved_by ||
+        remarksMeta?.appBy ||
+        localMeta?.appBy ||
+        matchedAudit?.approved_by ||
+        null;
+      const rawApprovedById =
+        row.approved_by_id ||
+        remarksMeta?.appById ||
+        localMeta?.appById ||
+        matchedAudit?.approved_by_id ||
+        null;
+      const approverIdentity = rawApprovedBy
+        ? resolveUserIdentity(rawApprovedBy, rawApprovedById)
+        : null;
+
+      const approvedAt =
+        row.approved_at ||
+        remarksMeta?.appAt ||
+        localMeta?.appAt ||
+        matchedAudit?.approved_at ||
+        null;
+
+      const updatedAt =
+        row.updated_at ||
+        remarksMeta?.at ||
+        localMeta?.at ||
+        row.created_at ||
+        matchedAudit?.created_at ||
+        undefined;
+
+      return {
+        ...row,
+        base_rate: Number(row.base_rate),
+        previous_rate: previousRate,
+        updated_by: updaterIdentity.username || '',
+        updated_by_id: updaterIdentity.userId || '',
+        updated_by_display: updaterIdentity.displayLabel || '',
+        updated_at: updatedAt,
+        clean_remarks: cleanRemarks,
+        approval_status: finalApprovalStatus,
+        approved_by: approverIdentity?.username || rawApprovedBy || null,
+        approved_by_id: approverIdentity?.userId || rawApprovedById || null,
+        approved_by_display: approverIdentity?.displayLabel || rawApprovedBy || null,
+        approved_at: approvedAt,
+      };
+    });
+
+    cachedBaseRates = enriched;
+
+    // Build complete Base Rate change history from enriched records & audit logs
+    cachedBaseRateHistory = enriched
+      .filter((r, idx) => {
+        // Show all user-tracked updates, intraday changes, and rate transitions
+        const hasUser = Boolean(r.updated_by);
+        const rateChanged =
+          r.previous_rate !== null &&
+          r.previous_rate !== undefined &&
+          Number(r.previous_rate) !== Number(r.base_rate);
+        return idx === 0 || hasUser || rateChanged || r.approval_status === 'PENDING';
+      })
+      .map((r) => ({
+        id: String(r.id),
+        base_rate_id: String(r.id),
+        start_date: r.start_date,
+        previous_rate: r.previous_rate ?? null,
+        new_rate: Number(r.base_rate),
+        changed_by: r.updated_by || 'System Seed',
+        changed_by_id: r.updated_by_id || '—',
+        changed_by_display: r.updated_by_display || (r.updated_by ? r.updated_by : 'Historical Record'),
+        changed_at: r.updated_at || r.created_at || r.start_date,
+        approval_status: r.approval_status || 'APPROVED',
+        approved_by: r.approved_by || null,
+        approved_by_id: r.approved_by_id || null,
+        approved_by_display: r.approved_by_display || null,
+        approved_at: r.approved_at || null,
+        remarks: r.clean_remarks || r.remarks || '',
+      }));
+
     return cachedBaseRates;
   } catch (err) {
     console.error('Failed to fetch satta_base_rates from Supabase:', err);
@@ -241,21 +624,206 @@ export async function fetchSattaBaseRates(): Promise<SattaBaseRate[]> {
  * Fetch latest single Base Rate from Supabase `satta_base_rates` table
  */
 export async function fetchLatestSattaBaseRate(): Promise<SattaBaseRate | null> {
-  if (!supabase) return null;
-  try {
-    const { data, error } = await supabase
-      .from('satta_base_rates')
-      .select('*')
-      .order('start_date', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(1);
+  const rates = await fetchSattaBaseRates();
+  return rates.length > 0 ? rates[0] : null;
+}
 
-    if (error) throw error;
-    return (data && data.length > 0) ? data[0] : null;
-  } catch (err) {
-    console.error('Failed to fetch latest satta_base_rate from Supabase:', err);
-    return null;
+/**
+ * Returns the cached Base Rate change history list
+ */
+export function getCachedBaseRateHistory(): SattaBaseRateHistoryItem[] {
+  return cachedBaseRateHistory;
+}
+
+/**
+ * Returns the synchronous Base Rate Approval State from cache
+ */
+export function getCachedBaseRateApprovalState(): BaseRateApprovalState {
+  const latest = cachedBaseRates[0] || null;
+  if (!latest) {
+    return {
+      isApproved: true,
+      approvalStatus: 'APPROVED',
+      currentBaseRate: null,
+      previousBaseRate: null,
+      startDate: null,
+      recordId: null,
+      updatedBy: '',
+      updatedById: '',
+      updatedByDisplay: '',
+      updatedAt: null,
+      approvedBy: null,
+      approvedById: null,
+      approvedByDisplay: null,
+      approvedAt: null,
+      blockMessage: BASE_RATE_APPROVAL_REQUIRED_MSG,
+    };
   }
+
+  const status = latest.approval_status || 'APPROVED';
+  const isApproved = status === 'APPROVED';
+
+  return {
+    isApproved,
+    approvalStatus: status,
+    currentBaseRate: Number(latest.base_rate),
+    previousBaseRate: latest.previous_rate ?? null,
+    startDate: latest.start_date,
+    recordId: String(latest.id),
+    updatedBy: latest.updated_by || '',
+    updatedById: latest.updated_by_id || '',
+    updatedByDisplay: latest.updated_by_display || latest.updated_by || '',
+    updatedAt: latest.updated_at || latest.created_at || null,
+    approvedBy: latest.approved_by || null,
+    approvedById: latest.approved_by_id || null,
+    approvedByDisplay: latest.approved_by_display || null,
+    approvedAt: latest.approved_at || null,
+    blockMessage: BASE_RATE_APPROVAL_REQUIRED_MSG,
+  };
+}
+
+/**
+ * Fetches fresh Base Rate state from Supabase and returns the current Base Rate Approval State.
+ * Implements Once-Per-Day approval: if approved once for the active rate & date, remains approved
+ * unless a new Base Rate change is recorded.
+ */
+export async function getBaseRateApprovalState(forceRefresh = false): Promise<BaseRateApprovalState> {
+  if (forceRefresh || cachedBaseRates.length === 0) {
+    await fetchSattaBaseRates();
+  }
+  return getCachedBaseRateApprovalState();
+}
+
+/**
+ * Backend/Service-level guard: Throws an error with the mandatory message if the current Base Rate
+ * has been changed and is not yet approved by User 010.
+ */
+export async function assertBaseRateApproved(forceRefresh = false): Promise<void> {
+  const state = await getBaseRateApprovalState(forceRefresh);
+  if (!state.isApproved) {
+    throw new Error(BASE_RATE_APPROVAL_REQUIRED_MSG);
+  }
+}
+
+/**
+ * Approves a Base Rate change. STRICTLY restricted to authenticated User ID 010.
+ * Never allows Admin or any other user to approve.
+ */
+export async function approveBaseRateByUser010(
+  targetRecordId?: string,
+  approvalRemarks?: string
+): Promise<BaseRateApprovalState> {
+  if (!isUserId10()) {
+    throw new Error('Access Denied: Only User 010 is authorized to approve Base Rate changes.');
+  }
+
+  const authUser = getAuthenticatedUser();
+  const approverName = authUser.username || 'SHYAMLAHOTI';
+  const approverId = '010';
+  const approverDisplay = `${approverName} (ID: ${approverId})`;
+  const nowIso = new Date().toISOString();
+
+  if (cachedBaseRates.length === 0) {
+    await fetchSattaBaseRates();
+  }
+
+  const target =
+    (targetRecordId
+      ? cachedBaseRates.find((r) => String(r.id) === String(targetRecordId))
+      : cachedBaseRates[0]) || cachedBaseRates[0];
+
+  if (!target) {
+    throw new Error('No Base Rate record found to approve.');
+  }
+
+  const rowId = String(target.id);
+  const dateRateKey = `${target.start_date}_${Number(target.base_rate)}`;
+
+  const updatedMeta: EmbeddedRateMeta = {
+    prev: target.previous_rate ?? null,
+    by: target.updated_by || authUser.username,
+    byId: target.updated_by_id || authUser.userId,
+    at: target.updated_at || target.created_at || nowIso,
+    st: 'APPROVED',
+    appBy: approverName,
+    appById: approverId,
+    appAt: nowIso,
+  };
+
+  // Persist to localStorage map & once-per-day approval cache
+  const localMap = loadLocalRateMetaMap();
+  localMap[rowId] = updatedMeta;
+  localMap[dateRateKey] = updatedMeta;
+  saveLocalRateMetaMap(localMap);
+
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      window.localStorage.setItem(
+        LOCAL_DAILY_APPROVAL_KEY,
+        JSON.stringify({
+          recordId: rowId,
+          startDate: target.start_date,
+          baseRate: Number(target.base_rate),
+          status: 'APPROVED',
+          approvedBy: approverDisplay,
+          approvedAt: nowIso,
+        })
+      );
+    } catch {}
+  }
+
+  const cleanRem =
+    target.clean_remarks ||
+    parseBaseRateRemarks(target.remarks).cleanRemarks ||
+    `Base rate ₹${Number(target.base_rate).toLocaleString('en-IN')}`;
+  const encodedRemarks = encodeBaseRateRemarks(cleanRem, updatedMeta);
+
+  // Persist to Supabase satta_base_rates (both columns and fallback remarks)
+  if (supabase) {
+    try {
+      const { error: e1 } = await supabase
+        .from('satta_base_rates')
+        .update({
+          approval_status: 'APPROVED',
+          approved_by: approverName,
+          approved_by_id: approverId,
+          approved_at: nowIso,
+          approval_remarks: approvalRemarks || 'Approved by User 010',
+          remarks: encodedRemarks,
+        })
+        .eq('id', rowId);
+
+      if (e1) {
+        await supabase
+          .from('satta_base_rates')
+          .update({ remarks: encodedRemarks })
+          .eq('id', rowId);
+      }
+    } catch (err) {
+      console.warn('Supabase satta_base_rates approval update fallback used:', err);
+    }
+
+    try {
+      await supabase
+        .from('satta_base_rate_audit_logs')
+        .update({
+          approval_status: 'APPROVED',
+          approved_by: approverName,
+          approved_by_id: approverId,
+          approved_at: nowIso,
+        })
+        .eq('changed_date', target.start_date)
+        .eq('new_rate', Number(target.base_rate));
+    } catch {}
+  }
+
+  await fetchSattaBaseRates();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('base-rate-approval-changed', { detail: getCachedBaseRateApprovalState() }));
+    window.dispatchEvent(new CustomEvent('base-rate-updated'));
+  }
+
+  return getCachedBaseRateApprovalState();
 }
 
 /**
@@ -322,7 +890,7 @@ export async function refreshSattaCache(): Promise<void> {
 }
 
 export function ensureSattaCacheLoaded(): Promise<void> {
-  if (isCacheLoaded && cachedDifferentials.length > 0) {
+  if (isCacheLoaded && cachedDifferentials.length > 0 && cachedBaseRates.length > 0) {
     return Promise.resolve();
   }
   if (!cachePromise) {
@@ -352,6 +920,38 @@ export function getCachedSattaBaseRates(): SattaBaseRate[] {
 export function setCachedSattaBaseRates(bases: SattaBaseRate[]) {
   if (Array.isArray(bases)) {
     cachedBaseRates = bases;
+  }
+}
+
+export function savePendingBaseRateMeta(
+  recordId: string,
+  startDate: string,
+  newRate: number,
+  previousRate: number | null,
+  updatedBy: string,
+  updatedById: string,
+  updatedAt: string
+) {
+  const meta: EmbeddedRateMeta = {
+    prev: previousRate,
+    by: updatedBy,
+    byId: updatedById,
+    at: updatedAt,
+    st: 'PENDING',
+    appBy: null,
+    appById: null,
+    appAt: null,
+  };
+  const map = loadLocalRateMetaMap();
+  if (recordId) map[String(recordId)] = meta;
+  map[`${startDate}_${Number(newRate)}`] = meta;
+  saveLocalRateMetaMap(map);
+
+  // Invalidate once-per-day approval cache whenever Base Rate is changed
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      window.localStorage.removeItem(LOCAL_DAILY_APPROVAL_KEY);
+    } catch {}
   }
 }
 

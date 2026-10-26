@@ -27,6 +27,36 @@ const userDisplayMap: Record<string, string> = {
   '14': 'ANKANA',
 };
 
+const userIdByUsernameMap: Record<string, string> = {
+  'admin': '001',
+  '001': '001',
+  '1': '001',
+  'rahul': '002',
+  '002': '002',
+  '02': '002',
+  '2': '002',
+  'ashish kankaria': '006',
+  '006': '006',
+  '6': '006',
+  'shyamlahoti': '010',
+  'shyam lahoti': '010',
+  'checker': '010',
+  '010': '010',
+  '10': '010',
+  'account': '011',
+  '011': '011',
+  '11': '011',
+  'mbajaj': '012',
+  '012': '012',
+  '12': '012',
+  'simul': '013',
+  '013': '013',
+  '13': '013',
+  'ankana': '014',
+  '014': '014',
+  '14': '014',
+};
+
 let isLoaded = false;
 
 /**
@@ -50,13 +80,19 @@ export async function initUserMap(): Promise<Record<string, string>> {
         const uid = String(u.user_id || u.id || '').trim();
         const uname = String(u.username || u.name || u.user_name || '').trim();
         if (uid && uname) {
+          const pad3 = /^\d+$/.test(uid) ? uid.padStart(3, '0') : uid;
           userDisplayMap[uid] = uname;
           userDisplayMap[uid.toLowerCase()] = uname;
           userDisplayMap[uname.toLowerCase()] = uname;
           const numOnly = uid.replace(/^0+/, '');
-          if (numOnly) userDisplayMap[numOnly] = uname;
-          const pad3 = uid.padStart(3, '0');
+          if (numOnly) {
+            userDisplayMap[numOnly] = uname;
+            userIdByUsernameMap[numOnly] = pad3;
+          }
           userDisplayMap[pad3] = uname;
+          userIdByUsernameMap[uid.toLowerCase()] = pad3;
+          userIdByUsernameMap[pad3.toLowerCase()] = pad3;
+          userIdByUsernameMap[uname.toLowerCase()] = pad3;
         }
       });
       if (userDisplayMap['010']) {
@@ -80,14 +116,20 @@ export function resolveDisplayName(identifier?: string | null, fallback = 'Unkno
   if (!identifier) {
     const ctx = getCurrentUserContext();
     const active = ctx.userName || ctx.username || ctx.userId;
-    if (active && active.toLowerCase() !== 'user 2' && active.toLowerCase() !== 'user') {
+    if (active && active.toLowerCase() !== 'user 2' && active.toLowerCase() !== 'user' && active.toLowerCase() !== 'operator' && active.toLowerCase() !== 'default_operator') {
       return resolveDisplayName(active, fallback);
     }
     return fallback;
   }
 
-  const clean = String(identifier).trim();
+  let clean = String(identifier).trim();
   if (!clean) return fallback;
+
+  // Strip embedded "(ID: XXX)" if present
+  const idMatch = clean.match(/^(.+?)\s*\(\s*ID:\s*([^)]+)\)$/i);
+  if (idMatch) {
+    clean = idMatch[1].trim();
+  }
 
   // Handle historic "User 2" or "User 002" references
   if (clean.toLowerCase() === 'user 2' || clean.toLowerCase() === 'user 002' || clean.toLowerCase() === 'user2') {
@@ -110,45 +152,135 @@ export function resolveDisplayName(identifier?: string | null, fallback = 'Unkno
   if (numClean && userDisplayMap[numClean]) return userDisplayMap[numClean];
 
   // If it's a valid custom username, return it
-  if (lower !== 'user' && lower !== 'null' && lower !== 'undefined') {
+  if (lower !== 'user' && lower !== 'null' && lower !== 'undefined' && lower !== 'default_operator' && lower !== 'operator') {
     return clean;
-  }
-
-  // Active context fallback
-  const ctx = getCurrentUserContext();
-  const active = ctx.userName || ctx.username || ctx.userId;
-  if (active && active.toLowerCase() !== 'user 2' && active.toLowerCase() !== 'user') {
-    return resolveDisplayName(active, fallback);
   }
 
   return fallback;
 }
 
 /**
- * Returns the authenticated user's ID and username with guaranteed resolution
+ * Resolves both Username and User ID for any stored user identifier, without defaulting to "Admin".
  */
-export function getAuthenticatedUser(): { userId: string; username: string } {
-  const userCtx = getCurrentUserContext();
-  const rawUserId = String(userCtx.userId || '').trim();
-  const rawUsername = String(userCtx.userName || userCtx.username || '').trim();
+export function resolveUserIdentity(
+  rawIdentifier?: string | null,
+  rawUserId?: string | null
+): { username: string; userId: string; displayLabel: string } {
+  let cleanIdent = String(rawIdentifier || '').trim();
+  let cleanId = String(rawUserId || '').trim();
 
-  let resolvedUsername = '';
-  if (rawUsername && rawUsername.toLowerCase() !== 'user' && rawUsername.toLowerCase() !== 'user 2' && rawUsername.toLowerCase() !== 'user 10') {
-    resolvedUsername = resolveDisplayName(rawUsername);
-  } else if (rawUserId) {
-    resolvedUsername = resolveDisplayName(rawUserId);
-  }
-
-  if (!resolvedUsername || resolvedUsername === 'Unknown User') {
-    if (userCtx.userRole === 'ADMIN' || userCtx.userLevel === 'L5') {
-      resolvedUsername = 'ADMIN';
-    } else {
-      resolvedUsername = rawUsername || rawUserId || 'ADMIN';
+  // Extract from "USERNAME (ID: 002)" or "USERNAME [002]" if formatted
+  const embeddedMatch = cleanIdent.match(/^(.+?)\s*(?:\(\s*(?:ID:\s*)?([^)]+)\)|\[\s*(?:ID:\s*)?([^\]]+)\])$/i);
+  if (embeddedMatch) {
+    cleanIdent = embeddedMatch[1].trim();
+    if (!cleanId) {
+      cleanId = String(embeddedMatch[2] || embeddedMatch[3] || '').trim();
     }
   }
 
+  if (cleanId === 'op_1' || cleanId === 'default_operator') {
+    cleanId = '';
+  }
+  if (cleanIdent === 'op_1' || cleanIdent === 'default_operator' || cleanIdent === 'Operator') {
+    cleanIdent = '';
+  }
+
+  if (!cleanIdent && !cleanId) {
+    return { username: '', userId: '', displayLabel: '' };
+  }
+
+  const resolvedUsername = resolveDisplayName(cleanIdent || cleanId, '');
+  const lowerName = (resolvedUsername || cleanIdent).toLowerCase();
+  const lowerId = cleanId.toLowerCase();
+
+  let resolvedId =
+    (lowerId && userIdByUsernameMap[lowerId]) ||
+    (lowerName && userIdByUsernameMap[lowerName]) ||
+    (cleanIdent && userIdByUsernameMap[cleanIdent.toLowerCase()]) ||
+    cleanId ||
+    '';
+
+  if (resolvedId && /^\d+$/.test(resolvedId)) {
+    resolvedId = resolvedId.padStart(3, '0');
+  }
+
+  if (!resolvedId && /^\d+$/.test(cleanIdent)) {
+    resolvedId = cleanIdent.padStart(3, '0');
+  }
+
+  const finalUsername = resolvedUsername || cleanIdent || resolvedId;
+  if (!finalUsername) {
+    return { username: '', userId: '', displayLabel: '' };
+  }
+
+  const displayLabel = resolvedId
+    ? `${finalUsername} (ID: ${resolvedId})`
+    : finalUsername;
+
   return {
-    userId: rawUserId || (resolvedUsername === 'SHYAMLAHOTI' ? '010' : resolvedUsername === 'RAHUL' ? '002' : '001'),
-    username: resolvedUsername
+    username: finalUsername,
+    userId: resolvedId,
+    displayLabel,
+  };
+}
+
+/**
+ * Returns the authenticated user's ID, username, and formatted display label with guaranteed resolution.
+ * Never defaults to ADMIN unless the active authenticated user is actually Admin (001).
+ */
+export function getAuthenticatedUser(): { userId: string; username: string; displayLabel: string } {
+  const userCtx = getCurrentUserContext();
+  let rawUserId = String(userCtx.userId || '').trim();
+  let rawUsername = String(userCtx.userName || userCtx.username || '').trim();
+
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const savedSess = window.localStorage.getItem('bally_auth_session');
+      if (savedSess) {
+        const parsed = JSON.parse(savedSess);
+        if (parsed && typeof parsed === 'object') {
+          if (parsed.userId || parsed.user_id) {
+            rawUserId = String(parsed.userId || parsed.user_id).trim();
+          }
+          if (parsed.username || parsed.userName) {
+            rawUsername = String(parsed.username || parsed.userName).trim();
+          }
+        }
+      }
+    }
+  } catch {}
+
+  if (rawUserId === 'op_1' || rawUserId === 'default_operator') {
+    rawUserId = '';
+  }
+  if (rawUsername === 'Operator' || rawUsername === 'default_operator') {
+    rawUsername = '';
+  }
+
+  const identity = resolveUserIdentity(rawUsername, rawUserId);
+  if (identity.username) {
+    const finalUserId = identity.userId || rawUserId || (identity.username.toUpperCase() === 'ADMIN' ? '001' : '');
+    const finalDisplay = finalUserId ? `${identity.username} (ID: ${finalUserId})` : identity.username;
+    return {
+      userId: finalUserId,
+      username: identity.username,
+      displayLabel: finalDisplay,
+    };
+  }
+
+  // Fallback only if truly Admin role
+  if (userCtx.userRole === 'ADMIN' || userCtx.userLevel === 'ADMIN') {
+    return {
+      userId: '001',
+      username: 'ADMIN',
+      displayLabel: 'ADMIN (ID: 001)',
+    };
+  }
+
+  const fallbackName = rawUsername || rawUserId || 'Unknown User';
+  return {
+    userId: rawUserId,
+    username: fallbackName,
+    displayLabel: rawUserId ? `${fallbackName} (ID: ${rawUserId})` : fallbackName,
   };
 }

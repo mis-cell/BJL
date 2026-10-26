@@ -677,12 +677,12 @@ export function getCurrentUserContext(): UserContext {
         if (parsed && typeof parsed === 'object') {
           const nameVal = parsed.userName || parsed.username || parsed.name || parsed.userId || parsed.user_id;
           if (nameVal) {
-            merged.userName = merged.userName || nameVal;
-            merged.username = merged.username || nameVal;
+            merged.userName = nameVal;
+            merged.username = nameVal;
           }
-          if (parsed.role) merged.userRole = merged.userRole || parsed.role;
-          if (parsed.level) merged.userLevel = merged.userLevel || parsed.level;
-          if (parsed.userId) merged.userId = merged.userId || parsed.userId;
+          if (parsed.role || parsed.userRole) merged.userRole = parsed.role || parsed.userRole;
+          if (parsed.level || parsed.userLevel) merged.userLevel = parsed.level || parsed.userLevel;
+          if (parsed.userId || parsed.user_id) merged.userId = parsed.userId || parsed.user_id;
         }
       }
 
@@ -798,7 +798,7 @@ export function isUserId10(roleOrContext?: any): boolean {
     }
   } catch {}
 
-  const targets = ['010', '10', 'user010', 'user 010', 'user10', 'user 10'];
+  const targets = ['010', '10', 'user010', 'user 010', 'user10', 'user 10', 'shyamlahoti', 'shyam lahoti'];
   return (
     targets.includes(uid) ||
     targets.includes(uname) ||

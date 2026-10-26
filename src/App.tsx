@@ -211,6 +211,9 @@ export default function App() {
               } catch (_verifyErr) {}
             }
 
+            let verifiedUserId = String(sess.userId || sess.user_id || "").trim();
+            let verifiedUsername = String(sess.username || sess.userName || "").trim();
+
             if (supabase && sess.username && sess.username.toUpperCase() !== "ADMIN") {
               const { data: dbUser } = await supabase
                 .from("user_master")
@@ -225,6 +228,8 @@ export default function App() {
                   if (isMounted) setSessionStatus("ready");
                   return;
                 }
+                verifiedUserId = String(dbUser.user_id || verifiedUserId).trim();
+                verifiedUsername = String(dbUser.username || verifiedUsername).trim();
                 verifiedRole = String(dbUser.role || verifiedRole).toUpperCase();
                 verifiedLevel = String(dbUser.level || verifiedLevel).toUpperCase();
                 rawMods = dbUser.allowed_modules ?? rawMods;
@@ -250,9 +255,9 @@ export default function App() {
             const finalMods = mods.length === 0 ? ["*"] : mods;
 
             setCurrentUserContext({
-              userId: sess.userId || "op_1",
-              username: sess.username,
-              userName: sess.username,
+              userId: verifiedUserId || (verifiedUsername.toUpperCase() === "ADMIN" ? "001" : verifiedUsername),
+              username: verifiedUsername,
+              userName: verifiedUsername,
               userRole: verifiedRole,
               userLevel: verifiedLevel,
               allowedModules: finalMods,

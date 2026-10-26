@@ -1,7 +1,22 @@
 import { supabase } from "../lib/supabase";
 import { logChange } from "./auditLogService";
+import { assertBaseRateApproved } from "./sattaRateService";
 
 export const APP_DATA_UPDATED_EVENT = "app-data-updated";
+
+const SAUDA_APPROVAL_GUARDED_TABLES = new Set([
+  "sauda_master",
+  "sauda_quality_details",
+  "sauda_check_point",
+  "sauda_check_point_details",
+]);
+
+async function assertSaudaBaseRateApprovedForTable(table: string) {
+  const clean = String(table || "").trim().toLowerCase();
+  if (SAUDA_APPROVAL_GUARDED_TABLES.has(clean)) {
+    await assertBaseRateApproved(false);
+  }
+}
 
 const MODULE_LABELS: Record<string, string> = {
   sauda_master: "Sauda Entry Desk",
@@ -378,6 +393,7 @@ export const dbModule = {
 
   async insert(table: string, data: any): Promise<any> {
     assertOnlineAndConnected("insert", table);
+    await assertSaudaBaseRateApprovedForTable(table);
     const payload = sanitizePayload(data);
 
     const { data: insertedRows, error } = await executeWithSchemaRetry(
@@ -433,6 +449,7 @@ export const dbModule = {
    */
   async upsert(table: string, data: any, onConflictColumn?: string): Promise<any> {
     assertOnlineAndConnected("upsert", table);
+    await assertSaudaBaseRateApprovedForTable(table);
     const payload = sanitizePayload(data);
 
     const options = onConflictColumn ? { onConflict: onConflictColumn } : undefined;
@@ -493,6 +510,7 @@ export const dbModule = {
     data: any
   ): Promise<any> {
     assertOnlineAndConnected("update", table);
+    await assertSaudaBaseRateApprovedForTable(table);
     if (idValue === undefined || idValue === null || String(idValue).trim() === "") {
       throw new Error(
         `Update on "${table}" rejected: missing key value for "${idColumn}".`
