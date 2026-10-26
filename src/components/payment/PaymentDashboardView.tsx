@@ -301,33 +301,9 @@ export function PaymentDashboardView({
 
       const cleanMr = normalizeKey(p.mr_no || (p as any).arrival_no);
       const cleanVoucher = normalizeKey(p.voucher_no);
-      const cleanPo = normalizeKey(p.po_no);
       const mrPremSummary = (cleanMr ? aggregatedPremiums.byMrMap.get(cleanMr) : undefined)
-        || (cleanVoucher ? aggregatedPremiums.byVoucherMap.get(cleanVoucher) : undefined)
-        || (cleanPo ? aggregatedPremiums.byPoMap.get(cleanPo)?.[0] : undefined);
-      let rowPremium = mrPremSummary ? mrPremSummary.totalPremiumAmount : 0;
-      if (!rowPremium || rowPremium === 0) {
-        rowPremium = Number(p.val_premium_amt || p.summary_premium_amount || (p as any).premium_amount || (p as any).premium || 0);
-      }
-      if (!rowPremium && (p as any).details && Array.isArray((p as any).details)) {
-        rowPremium = (p as any).details.reduce((sum: number, d: any) => {
-          const dPrem = Number(d.premium || d.premium_amount || 0);
-          const dQtl = Number(d.quantity_qtl || (Number(d.arr_qty_wt || 0) * 10) || 0);
-          return sum + (dPrem > 0 && dQtl > 0 ? (dPrem * dQtl) : 0);
-        }, 0);
-      }
-      if (!rowPremium && (p.po_no || p.mr_no)) {
-        const matchedScp = (saudaCheckPoints || []).find(s => normalizeKey(s.po_no) === cleanPo || normalizeKey(s.sauda_no) === cleanPo);
-        const matchedPo = (purchaseOrders || []).find(po => normalizeKey(po.po_no) === cleanPo);
-        const scpPremRate = Number(matchedScp?.premium || matchedScp?.premium_rate || matchedPo?.premium || 0);
-        if (scpPremRate > 0) {
-          const pWeightMt = Number(p.electronic_scale_net || p.challan_weight || (p as any).weight_mt || 0);
-          const pQtl = pWeightMt > 0 ? (pWeightMt <= 50 ? pWeightMt * 10 : pWeightMt) : 0;
-          if (pQtl > 0) {
-            rowPremium = Number((scpPremRate * pQtl).toFixed(2));
-          }
-        }
-      }
+        || (cleanVoucher ? aggregatedPremiums.byVoucherMap.get(cleanVoucher) : undefined);
+      const rowPremium = mrPremSummary ? mrPremSummary.totalPremiumAmount : 0;
 
       let statusText = 'Pending';
       if (payable > 0 && paid >= payable - 0.01) {
@@ -633,34 +609,9 @@ export function PaymentDashboardView({
 
                   const cleanMr = normalizeKey(p.mr_no || (p as any).arrival_no);
                   const cleanVoucher = normalizeKey(p.voucher_no);
-                  const cleanPo = normalizeKey(p.po_no);
                   const mrPremSummary = (cleanMr ? aggregatedPremiums.byMrMap.get(cleanMr) : undefined)
-                    || (cleanVoucher ? aggregatedPremiums.byVoucherMap.get(cleanVoucher) : undefined)
-                    || (cleanPo ? aggregatedPremiums.byPoMap.get(cleanPo)?.[0] : undefined);
-
-                  let rowPremium = mrPremSummary ? mrPremSummary.totalPremiumAmount : 0;
-                  if (!rowPremium || rowPremium === 0) {
-                    rowPremium = Number(p.val_premium_amt || p.summary_premium_amount || (p as any).premium_amount || (p as any).premium || 0);
-                  }
-                  if (!rowPremium && (p as any).details && Array.isArray((p as any).details)) {
-                    rowPremium = (p as any).details.reduce((sum: number, d: any) => {
-                      const dPrem = Number(d.premium || d.premium_amount || 0);
-                      const dQtl = Number(d.quantity_qtl || (Number(d.arr_qty_wt || 0) * 10) || 0);
-                      return sum + (dPrem > 0 && dQtl > 0 ? (dPrem * dQtl) : 0);
-                    }, 0);
-                  }
-                  if (!rowPremium && (p.po_no || p.mr_no)) {
-                    const matchedScp = (saudaCheckPoints || []).find(s => normalizeKey(s.po_no) === cleanPo || normalizeKey(s.sauda_no) === cleanPo);
-                    const matchedPo = (purchaseOrders || []).find(po => normalizeKey(po.po_no) === cleanPo);
-                    const scpPremRate = Number(matchedScp?.premium || matchedScp?.premium_rate || matchedPo?.premium || 0);
-                    if (scpPremRate > 0) {
-                      const pWeightMt = Number(p.electronic_scale_net || p.challan_weight || (p as any).weight_mt || 0);
-                      const pQtl = pWeightMt > 0 ? (pWeightMt <= 50 ? pWeightMt * 10 : pWeightMt) : 0;
-                      if (pQtl > 0) {
-                        rowPremium = Number((scpPremRate * pQtl).toFixed(2));
-                      }
-                    }
-                  }
+                    || (cleanVoucher ? aggregatedPremiums.byVoucherMap.get(cleanVoucher) : undefined);
+                  const rowPremium = mrPremSummary ? mrPremSummary.totalPremiumAmount : 0;
 
                   return (
                     <tr 
@@ -711,7 +662,7 @@ export function PaymentDashboardView({
                       <td className="p-2.5 text-right font-bold">
                         {rowPremium > 0 ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-300 font-mono shadow-2xs">
-                            +₹{rowPremium.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            +₹{rowPremium.toLocaleString()}
                           </span>
                         ) : (
                           <span className="text-slate-400 font-mono">—</span>

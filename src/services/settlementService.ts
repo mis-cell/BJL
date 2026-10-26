@@ -190,32 +190,10 @@ export const buildSettlementCol = (
     }
   }
 
-  // Helper to extract clean numeric premium rate from various column or master aliases
-  const parsePremValue = (raw: any): number => {
-    if (raw === undefined || raw === null) return 0;
-    if (typeof raw === 'number') return isNaN(raw) ? 0 : raw;
-    const str = String(raw).trim();
-    if (!str || str === '-' || /^(no|false)$/i.test(str)) return 0;
-    const num = parseFloat(str.replace(/[^0-9.]/g, ''));
-    return isNaN(num) ? 0 : num;
-  };
-
-  const linePremium =
-    parsePremValue(payDetailItem?.premium) ||
-    parsePremValue(inspItem?.premium) ||
-    parsePremValue(inspItem?.premium_rate) ||
-    parsePremValue(item?.premium) ||
-    parsePremValue(pDet?.premium) ||
-    parsePremValue(pDet?.premium_amount) ||
-    parsePremValue(pDet?.prem) ||
-    parsePremValue(inspMaster?.summary_premium_amount) ||
-    parsePremValue(inspMaster?.premium) ||
-    parsePremValue(faMaster?.premium) ||
-    parsePremValue(poData?.premium) ||
-    parsePremValue(poData?.summary_premium_amount) ||
-    0;
-
-  col.premium = linePremium;
+  col.premium = Number(
+    (payDetailItem?.premium && Number(payDetailItem.premium) > 0 ? Number(payDetailItem.premium) : 0) ||
+    pDet?.premium || pDet?.premium_amount || pDet?.prem || poData?.premium || 0
+  );
 
   col.unit = String(inspItem?.unit || item?.unit || faMaster?.unit_name || pDet?.unit || 'BALES').trim().toUpperCase();
 
@@ -397,31 +375,18 @@ export const buildAlignedSettlementColumns = (
       const pd = meta.payDetail;
       const pDet = meta.pDet;
       const inspItem = meta.inspItem;
-      const origRate = colsWithOrigRates[i].rate_value;
-      const parsePrem = (raw: any): number => {
-        if (raw === undefined || raw === null) return 0;
-        if (typeof raw === 'number') return isNaN(raw) ? 0 : raw;
-        const str = String(raw).trim();
-        if (!str || str === '-' || /^(no|false)$/i.test(str)) return 0;
-        const num = parseFloat(str.replace(/[^0-9.]/g, ''));
-        return isNaN(num) ? 0 : num;
-      };
+      const item = meta.faItem || meta.inspItem;
 
-      const premium =
-        parsePrem(pd?.premium) ||
-        parsePrem(inspItem?.premium) ||
-        parsePrem(inspItem?.premium_rate) ||
-        parsePrem(item?.premium) ||
-        parsePrem(pDet?.premium) ||
-        parsePrem(pDet?.premium_amount) ||
-        parsePrem(pDet?.prem) ||
-        parsePrem(inspMaster?.summary_premium_amount) ||
-        parsePrem(inspMaster?.premium) ||
-        parsePrem(faMaster?.premium) ||
-        parsePrem(poData?.premium) ||
-        parsePrem(poData?.summary_premium_amount) ||
-        parsePrem(col.premium) ||
-        0;
+      const origRate = colsWithOrigRates[i].rate_value;
+      const premium = Number(
+        (pd?.premium && Number(pd.premium) > 0 ? Number(pd.premium) : 0) ||
+        pDet?.premium ||
+        pDet?.premium_amount ||
+        pDet?.prem ||
+        poData?.premium ||
+        col.premium ||
+        0
+      );
 
       // Extract Grade Down Claim / Sett % using the exact same fields as Payment Operations (mapItemsToDetailCols)
       const payGdClaim = Number(

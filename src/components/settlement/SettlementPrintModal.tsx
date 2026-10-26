@@ -441,14 +441,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                   const unitDisplay = col.unit || "BALES";
 
                   const poRate = Number(col.rate_value) || 0;
-                  const premVal =
-                    Number(col.premium) > 0
-                      ? Number(col.premium)
-                      : Number(master.summary_premium_amount) > 0
-                      ? Number(master.summary_premium_amount)
-                      : Number(master.val_premium_amt) > 0 && wtMt > 0
-                      ? Number((Number(master.val_premium_amt) / (wtMt * 10)).toFixed(2))
-                      : 0;
+                  const premVal = Number(col.premium) || 0;
                   const gdClaim = Number(col.gd_claim) || 0;
                   const gdSett =
                     col.sett_pct !== undefined && col.sett_pct !== null
