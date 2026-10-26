@@ -155,21 +155,90 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
   const syncPaymentModuleData = async (mrNo: string, poNo: string): Promise<{ totalPaid: number; payDetails: any[] }> => {
     try {
-      let payRecords: any[] = [];
-      let payDetails: any[] = [];
+      const cleanMr = (mrNo || '').replace(/#/g, '').trim();
+      const cleanPo = (poNo || '').replace(/#/g, '').trim();
 
-      if (supabase) {
+      // 1. Direct targeted queries for this specific MR number to ensure instant, complete matching even with pagination
+      let targetedDetails: any[] = [];
+      let targetedPayments: any[] = [];
+
+      if (supabase && cleanMr) {
         try {
-          const res = await supabase.from('payment_master').select('*');
-          if (res.data) payRecords = res.data;
+          const { data: dData } = await supabase
+            .from('payment_details')
+            .select('*')
+            .or(`mr_no.eq.${cleanMr},mr_no.ilike.${cleanMr}`);
+          if (dData && dData.length > 0) targetedDetails.push(...dData);
         } catch (e) {}
+
         try {
-          const resDet = await supabase.from('payment_details').select('*');
-          if (resDet.data) payDetails = resDet.data;
+          const { data: pData } = await supabase
+            .from('payment_master')
+            .select('*')
+            .or(`mr_no.eq.${cleanMr},arrival_no.eq.${cleanMr},payable_bill_no.eq.${cleanMr},reference_no.eq.${cleanMr}`);
+          if (pData && pData.length > 0) {
+            targetedPayments.push(...pData);
+            const vNos = Array.from(new Set(pData.map(p => p.voucher_no).filter(Boolean)));
+            if (vNos.length > 0) {
+              const { data: vDet } = await supabase
+                .from('payment_details')
+                .select('*')
+                .in('voucher_no', vNos);
+              if (vDet && vDet.length > 0) targetedDetails.push(...vDet);
+            }
+          }
         } catch (e) {}
       }
-      const payments = payRecords && payRecords.length > 0 ? payRecords : await dbModule.fetchAll('payment_master').catch(() => []);
-      const details = payDetails && payDetails.length > 0 ? payDetails : await dbModule.fetchAll('payment_details').catch(() => []);
+
+      // Also search by cleanPo if provided
+      if (supabase && cleanPo && targetedPayments.length === 0) {
+        try {
+          const { data: poPayData } = await supabase
+            .from('payment_master')
+            .select('*')
+            .or(`po_no.eq.${cleanPo},po_no.ilike.${cleanPo}`);
+          if (poPayData && poPayData.length > 0) {
+            targetedPayments.push(...poPayData);
+            const vNos = Array.from(new Set(poPayData.map(p => p.voucher_no).filter(Boolean)));
+            if (vNos.length > 0) {
+              const { data: vDet } = await supabase
+                .from('payment_details')
+                .select('*')
+                .in('voucher_no', vNos);
+              if (vDet && vDet.length > 0) targetedDetails.push(...vDet);
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 2. Fetch full lists with multi-page support via dbModule.fetchAll (so >1000 rows are not truncated)
+      const allPayments = await dbModule.fetchAll('payment_master').catch(() => []);
+      const allDetails = await dbModule.fetchAll('payment_details').catch(() => []);
+
+      // Merge targeted details into allDetails
+      const detailsMap = new Map<string, any>();
+      allDetails.forEach((d: any) => {
+        const key = d.detail_id || `${d.voucher_no || ''}_${d.col_index || ''}_${d.mr_no || ''}`;
+        detailsMap.set(key, d);
+      });
+      targetedDetails.forEach((d: any) => {
+        const key = d.detail_id || `${d.voucher_no || ''}_${d.col_index || ''}_${d.mr_no || ''}`;
+        detailsMap.set(key, d);
+      });
+      const details = Array.from(detailsMap.values());
+
+      // Merge targeted payments into allPayments
+      const paymentsMap = new Map<string, any>();
+      allPayments.forEach((p: any) => {
+        const key = p.payment_id || p.voucher_no || `${p.mr_no}_${p.po_no}`;
+        paymentsMap.set(key, p);
+      });
+      targetedPayments.forEach((p: any) => {
+        const key = p.payment_id || p.voucher_no || `${p.mr_no}_${p.po_no}`;
+        paymentsMap.set(key, p);
+      });
+      const payments = Array.from(paymentsMap.values());
+
       setPaymentList(payments);
 
       const cleanStr = (s: string) => (s || '').replace(/#/g, '').replace(/[\s\-\/]/g, '').trim().toLowerCase();
@@ -1657,9 +1726,31 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           }
         });
       }
-      const calculatedPremWtQtl = Number((totalPremMt * 10).toFixed(2));
-      const calculatedPremRatePerQtl = calculatedPremWtQtl > 0 ? Number((calculatedPremTotalAmt / calculatedPremWtQtl).toFixed(2)) : 0;
+      let calculatedPremWtQtl = Number((totalPremMt * 10).toFixed(2));
+      let calculatedPremRatePerQtl = calculatedPremWtQtl > 0 ? Number((calculatedPremTotalAmt / calculatedPremWtQtl).toFixed(2)) : 0;
       calculatedPremTotalAmt = Number(calculatedPremTotalAmt.toFixed(2));
+
+      // Fallback: If inspection details had no premium, extract premium weight, rate and amount from matched payment_details
+      if (calculatedPremTotalAmt === 0 && matchedPayDetails && matchedPayDetails.length > 0) {
+        let payPremTotalAmt = 0;
+        let payPremTotalQtl = 0;
+        matchedPayDetails.forEach((pd: any) => {
+          const pdPrem = Number(pd.premium) || 0;
+          if (pdPrem > 0) {
+            const wtMt = Number(pd.arr_qty_wt) > 0 ? Number(pd.arr_qty_wt) : 0;
+            const qtl = Number(pd.quantity_qtl) > 0 ? Number(pd.quantity_qtl) : (wtMt > 0 ? wtMt * 10 : 0);
+            if (qtl > 0) {
+              payPremTotalQtl += qtl;
+              payPremTotalAmt += (qtl * pdPrem);
+            }
+          }
+        });
+        if (payPremTotalAmt > 0) {
+          calculatedPremTotalAmt = Number(payPremTotalAmt.toFixed(2));
+          calculatedPremWtQtl = Number(payPremTotalQtl.toFixed(2));
+          calculatedPremRatePerQtl = calculatedPremWtQtl > 0 ? Number((calculatedPremTotalAmt / calculatedPremWtQtl).toFixed(2)) : 0;
+        }
+      }
 
       // Extract comprehensive deduction details and summarized deduction types from mill_inspection_deduction table / Inspection Master
       let inspDeductionType = inspMaster?.deduction_type || '';

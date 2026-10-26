@@ -376,17 +376,8 @@ export async function fetchAndComputeUnifiedPremiums(): Promise<UnifiedPremiumAg
   let details: any[] = [];
 
   try {
-    if (supabase) {
-      const [mRes, dRes] = await Promise.all([
-        supabase.from('payment_master').select('*'),
-        supabase.from('payment_details').select('*')
-      ]);
-      if (mRes.data) masters = mRes.data;
-      if (dRes.data) details = dRes.data;
-    } else {
-      masters = await dbModule.fetchAll('payment_master').catch(() => []);
-      details = await dbModule.fetchAll('payment_details').catch(() => []);
-    }
+    masters = await dbModule.fetchAll('payment_master').catch(() => []);
+    details = await dbModule.fetchAll('payment_details').catch(() => []);
   } catch (err) {
     console.warn("fetchAndComputeUnifiedPremiums error:", err);
   }
