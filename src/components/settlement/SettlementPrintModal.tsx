@@ -318,8 +318,9 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
       getColWtMt(c) > 0
   );
 
-  // Dynamic user name and print count
-  const todaySlash = formatDateDdMmYySlash(new Date().toISOString());
+  // Dynamic user name and print count using client's live local date (DD/MM/YY)
+  const printNow = new Date();
+  const todaySlash = `${String(printNow.getDate()).padStart(2, "0")}/${String(printNow.getMonth() + 1).padStart(2, "0")}/${String(printNow.getFullYear()).slice(-2)}`;
   const printedByDisplay = resolveLoggedInPrintUserName();
 
   // Print tracking: Target print number for this print request
