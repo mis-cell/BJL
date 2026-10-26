@@ -37,6 +37,17 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
   detailCols,
   calculateWeightedRatePerMT,
 }) => {
+  const [focusedWtField, setFocusedWtField] = React.useState<string | null>(null);
+  const [rawWtInput, setRawWtInput] = React.useState<string>("");
+
+  const getFormattedWtValue = (field: "challan_weight" | "supplier_net_wt" | "electronic_scale_net") => {
+    if (focusedWtField === field) {
+      return rawWtInput;
+    }
+    const num = Number(masterData[field]);
+    return num > 0 ? num.toFixed(3) : "";
+  };
+
   return (
     <div className="space-y-3 font-sans">
       {/* Control Center Toolbar */}
@@ -344,7 +355,7 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-50 w-72 bg-slate-900 text-white p-2.5 text-[8.5px] rounded border border-slate-700 shadow-xl leading-normal font-normal normal-case">
                 <p className="text-yellow-300 font-bold">Actual APMC Fees (1%) Formula</p>
                 <p className="mt-0.5 text-slate-200 font-mono text-[8px]">1% × (Material Value − Delivery Claim − Deduction Amount − Ded Claim Total − Excess/Short)</p>
-                <p className="mt-1 text-slate-400 text-[8px]">Calculated as 1% of the adjusted Material Value after all applicable claims, quality deductions, and weight adjustments.</p>
+                <p className="mt-1 text-slate-400 text-[8px]">Calculated as 1% of the adjusted Material Value after all applicable claims, quality deductions, and weight adjustments (Rounded).</p>
               </div>
             </div>
             <input
@@ -352,9 +363,10 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               name="actual_apmc_fees"
               aria-label="Actual APMC Fees (1%)"
               type="number"
+              step="1"
               className="bg-white border border-gray-400 p-1 text-right font-mono"
-              value={masterData.actual_apmc_fees !== undefined && masterData.actual_apmc_fees !== null ? masterData.actual_apmc_fees : ""}
-              onChange={(e) => handleMasterChange("actual_apmc_fees", parseFloat(e.target.value) || 0)}
+              value={masterData.actual_apmc_fees !== undefined && masterData.actual_apmc_fees !== null ? Math.round(Number(masterData.actual_apmc_fees)) : ""}
+              onChange={(e) => handleMasterChange("actual_apmc_fees", Math.round(parseFloat(e.target.value) || 0))}
             />
           </div>
 
@@ -410,12 +422,21 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               id="challan_weight_header_card"
               name="challan_weight"
               aria-label="Challan Weight"
-              type="number"
-              step="0.001"
+              type="text"
+              inputMode="decimal"
               placeholder="0.000"
               className="bg-blue-50 border border-blue-300 p-1 font-mono font-bold text-right text-blue-900"
-              value={masterData.challan_weight || ""}
-              onChange={(e) => handleMasterChange("challan_weight", parseFloat(e.target.value) || 0)}
+              value={getFormattedWtValue("challan_weight")}
+              onFocus={() => {
+                setFocusedWtField("challan_weight");
+                const num = Number(masterData.challan_weight);
+                setRawWtInput(num > 0 ? num.toFixed(3) : "");
+              }}
+              onBlur={() => setFocusedWtField(null)}
+              onChange={(e) => {
+                setRawWtInput(e.target.value);
+                handleMasterChange("challan_weight", parseFloat(e.target.value) || 0);
+              }}
             />
           </div>
 
@@ -425,12 +446,21 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               id="supplier_net_wt_header_card"
               name="supplier_net_wt"
               aria-label="Supplier Net Wt"
-              type="number"
-              step="0.001"
+              type="text"
+              inputMode="decimal"
               placeholder="0.000"
               className="bg-teal-50 border border-teal-300 p-1 font-mono font-bold text-right text-teal-950"
-              value={masterData.supplier_net_wt || ""}
-              onChange={(e) => handleMasterChange("supplier_net_wt", parseFloat(e.target.value) || 0)}
+              value={getFormattedWtValue("supplier_net_wt")}
+              onFocus={() => {
+                setFocusedWtField("supplier_net_wt");
+                const num = Number(masterData.supplier_net_wt);
+                setRawWtInput(num > 0 ? num.toFixed(3) : "");
+              }}
+              onBlur={() => setFocusedWtField(null)}
+              onChange={(e) => {
+                setRawWtInput(e.target.value);
+                handleMasterChange("supplier_net_wt", parseFloat(e.target.value) || 0);
+              }}
             />
           </div>
 
@@ -440,12 +470,21 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               id="electronic_scale_net_header_card"
               name="electronic_scale_net"
               aria-label="Electronic Scale Net"
-              type="number"
-              step="0.001"
+              type="text"
+              inputMode="decimal"
               placeholder="0.000"
               className="bg-purple-50 border border-purple-300 p-1 font-mono font-bold text-right text-purple-950"
-              value={masterData.electronic_scale_net || ""}
-              onChange={(e) => handleMasterChange("electronic_scale_net", parseFloat(e.target.value) || 0)}
+              value={getFormattedWtValue("electronic_scale_net")}
+              onFocus={() => {
+                setFocusedWtField("electronic_scale_net");
+                const num = Number(masterData.electronic_scale_net);
+                setRawWtInput(num > 0 ? num.toFixed(3) : "");
+              }}
+              onBlur={() => setFocusedWtField(null)}
+              onChange={(e) => {
+                setRawWtInput(e.target.value);
+                handleMasterChange("electronic_scale_net", parseFloat(e.target.value) || 0);
+              }}
             />
           </div>
 

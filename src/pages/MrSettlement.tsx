@@ -1659,6 +1659,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             val_less_amt: Number(existingMaster.val_less_amt || 0),
             summary_delivery_claim: (existingMaster.summary_delivery_claim === 5550) ? 0 : (Number(existingMaster.summary_delivery_claim) || 0),
             arival_apmc_fees: (Number(existingMaster.arival_apmc_fees) > 0) ? existingMaster.arival_apmc_fees : resolvedArrivalApmcFees,
+            actual_apmc_fees: Math.round(Number(existingMaster.actual_apmc_fees) || 0),
             final_on_ac_adv: (existingMaster.final_on_ac_adv && Number(existingMaster.final_on_ac_adv) > 0) ? Number(existingMaster.final_on_ac_adv) : syncedPaidAmount
           };
           setMasterData(mergedMaster);
@@ -2094,7 +2095,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       - deductionClaimTotal 
       - finalExShort
     );
-    const calculatedApmcFees = isExemptArea ? 0 : Number((adjustedMaterialValue * 0.01).toFixed(2));
+    const calculatedApmcFees = isExemptArea ? 0 : Math.round(adjustedMaterialValue * 0.01);
     const arrivalApmcFees = Number(masterData.arival_apmc_fees) || 0;
     const actualApmcFees = calculatedApmcFees;
     //const finalApmcFees = Number((arrivalApmcFees - actualApmcFees).toFixed(2));
@@ -2445,7 +2446,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         arrival_no: masterData.arrival_no,
         arrival_date: masterData.arrival_date || null,
         arival_apmc_fees: Number(masterData.arival_apmc_fees) || 0,
-        actual_apmc_fees: Number(masterData.actual_apmc_fees) || 0,
+        actual_apmc_fees: Math.round(Number(masterData.actual_apmc_fees) || 0),
         remarks: masterData.remarks,
         summary_rate_qtel: Number(masterData.summary_rate_qtel) || 0,
         summary_rate_aff_cd_cl: Number(masterData.summary_rate_aff_cd_cl) || 0,
