@@ -1130,7 +1130,14 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
             {filteredPos.length === 0 && (
               <tr>
                 <td colSpan={14} className="py-12 text-center text-slate-500 uppercase font-bold italic text-xs">
-                  No Purchase Orders found matching the current filters.
+                  {loading ? (
+                    <div className="inline-flex items-center gap-2 text-[#D94B5A] not-italic font-extrabold">
+                      <RefreshCcw className="w-4 h-4 animate-spin" />
+                      <span>Loading Sauda Check Point records...</span>
+                    </div>
+                  ) : (
+                    'No Purchase Orders found matching the current filters.'
+                  )}
                 </td>
               </tr>
             )}

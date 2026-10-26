@@ -266,9 +266,9 @@ export function usePurchaseOrderData({
         safeFetch('final_arrival', 'created_at', false),
         safeFetch('mill_inspection_master', 'created_at', false),
         safeFetch('material_inspection', 'created_at', false),
-        safeSupabaseSelect('satta_base_rates', 'start_date', false),
-        safeSupabaseSelect('satta_calculated_rates'),
-        safeSupabaseSelect('satta_differentials'),
+        safeFetch('satta_base_rates', 'start_date', false),
+        safeFetch('satta_calculated_rates'),
+        safeFetch('satta_differentials'),
         safeFetch('material_mismatch'),
         safeFetch('satta_mismatch'),
         safeFetch('sauda_check_point_deductions'),
@@ -285,9 +285,11 @@ export function usePurchaseOrderData({
 
       setDbMaterialMismatches(combinedMatMismatches);
       setDbSattaMismatches(combinedSatMismatches);
-      const sBasesList = (sattaBasesRes as any)?.data || sattaBasesRes || [];
+      const sBasesList = Array.isArray(sattaBasesRes) ? sattaBasesRes : ((sattaBasesRes as any)?.data || []);
+      const sCalculatedList = Array.isArray(sattaCalculatedRes) ? sattaCalculatedRes : ((sattaCalculatedRes as any)?.data || []);
+      const sDiffsList = Array.isArray(sattaDiffsRes) ? sattaDiffsRes : ((sattaDiffsRes as any)?.data || []);
       setSattaBases(sBasesList);
-      setSattaCalcs((sattaCalculatedRes as any)?.data || sattaCalculatedRes || []);
+      setSattaCalcs(sCalculatedList);
       setAllPayments(payments || []);
       setAllSettlements(combinedSettlements);
       setAllScpDetails(scpDetailsList);
@@ -881,12 +883,9 @@ export function usePurchaseOrderData({
       });
       setAgencyList(validAgencies);
 
-      const sBases = sattaBasesRes && 'data' in sattaBasesRes ? (sattaBasesRes as any).data || [] : [];
-      const sCalculated = sattaCalculatedRes && 'data' in sattaCalculatedRes ? (sattaCalculatedRes as any).data || [] : [];
-      const sDiffs = sattaDiffsRes && 'data' in sattaDiffsRes ? (sattaDiffsRes as any).data || [] : [];
-      setSattaBaseRates(sBases);
-      setSattaCalculatedRates(sCalculated);
-      setSattaDifferentials(sDiffs);
+      setSattaBaseRates(sBasesList);
+      setSattaCalculatedRates(sCalculatedList);
+      setSattaDifferentials(sDiffsList);
     } catch (err) {
       console.error('Failed to load masters data:', err);
     } finally {

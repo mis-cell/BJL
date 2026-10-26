@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { dbModule } from '../../services/dbModule';
 import { supabase } from '../../lib/supabase';
 import { poService } from '../../services/poService';
@@ -1387,79 +1387,94 @@ export function usePurchaseOrderFormLogic({
     return withoutYear.replace(/^0+/, '');
   };
 
-  const displaySaudas = saudaList.filter(s => {
-    const st = String(s.status || '').toLowerCase().trim();
-    const appSt = String(s.approval_status || '').toLowerCase().trim();
+  const usedPoLookup = useMemo(() => {
+    const usedSaudaIds = new Set<string>();
+    const usedContractRefs = new Set<string>();
+    const usedContractDigits = new Set<string>();
 
-    // Rejected contracts must NEVER appear in Sauda Check Point P.O Contract dropdown
-    if (st === 'rejected' || appSt === 'rejected') {
-      return false;
-    }
-
-    const saudaPoDisplayNo = (formatPoNumber(s) || '').trim().toUpperCase();
-    const saudaNo = String(s.sauda_no || '').trim().toUpperCase();
-    const saudaSession = String(s.session || '').trim().toUpperCase();
-    const sDigits = getCleanSaudaDigits(saudaNo) || getCleanSaudaDigits(saudaPoDisplayNo) || getCleanSaudaDigits(saudaSession);
-
-    const currentFormNo = (formData.no || formData.contract_po_no || '').trim().toUpperCase();
-    const currentFormDigits = getCleanSaudaDigits(currentFormNo);
-    const isCurrentlySelectedInForm = currentFormNo && (
-      currentFormNo === saudaPoDisplayNo ||
-      currentFormNo === saudaSession ||
-      currentFormNo === saudaNo ||
-      (sDigits && currentFormDigits === sDigits)
-    );
-
-    if (isCurrentlySelectedInForm) {
-      return true;
-    }
-
-    // Only Checked Sauda contracts proceed to Sauda Check Point
-    const isChecked = s.is_checked === true || st === 'checked' || appSt === 'checked' || st === 'approved' || appSt === 'approved' || Boolean(s.checked_by) || Boolean(s.approved_by);
-    if (!isChecked) {
-      return false;
-    }
-
-    const isPending = !s.status || String(s.status).trim().toLowerCase() !== 'completed';
-
-    const isAlreadyUsed = poList.some(p => {
-      const sId = String(s.sauda_id || s.id || '').trim().toUpperCase();
+    for (let i = 0; i < poList.length; i++) {
+      const p = poList[i];
+      if (!p) continue;
       const pSaudaId = String(p.sauda_id || p.sauda_id_ref || '').trim().toUpperCase();
-      if (sId && pSaudaId && sId === pSaudaId) {
-        return true;
-      }
+      if (pSaudaId) usedSaudaIds.add(pSaudaId);
 
       const pPo = String(p.po_no || '').trim().toUpperCase();
       const pContract = String(p.contract_po_no || '').trim().toUpperCase();
       const pSaudaNo = String(p.sauda_no || p.po_contract || p.contract_no || '').trim().toUpperCase();
       const pPtf = String(p.ptf_no || '').trim().toUpperCase();
 
-      const pContractRefs = [pContract, pSaudaNo, pPo, pPtf].filter(Boolean);
-      if (pContractRefs.some(ref => 
-        ref === saudaPoDisplayNo || 
-        ref === saudaSession || 
-        ref === saudaNo ||
-        (s.sauda_no && ref === String(s.sauda_no).trim().toUpperCase())
-      )) {
+      if (pPo) usedContractRefs.add(pPo);
+      if (pContract) {
+        usedContractRefs.add(pContract);
+        const d = getCleanSaudaDigits(pContract);
+        if (d) usedContractDigits.add(d);
+      }
+      if (pSaudaNo) {
+        usedContractRefs.add(pSaudaNo);
+        const d = getCleanSaudaDigits(pSaudaNo);
+        if (d) usedContractDigits.add(d);
+      }
+      if (pPtf) usedContractRefs.add(pPtf);
+    }
+
+    return { usedSaudaIds, usedContractRefs, usedContractDigits };
+  }, [poList]);
+
+  const displaySaudas = useMemo(() => {
+    const currentFormNo = (formData.no || formData.contract_po_no || '').trim().toUpperCase();
+    const currentFormDigits = getCleanSaudaDigits(currentFormNo);
+    const { usedSaudaIds, usedContractRefs, usedContractDigits } = usedPoLookup;
+
+    return saudaList
+      .filter(s => {
+        const st = String(s.status || '').toLowerCase().trim();
+        const appSt = String(s.approval_status || '').toLowerCase().trim();
+
+        // Rejected contracts must NEVER appear in Sauda Check Point P.O Contract dropdown
+        if (st === 'rejected' || appSt === 'rejected') {
+          return false;
+        }
+
+        const saudaPoDisplayNo = (formatPoNumber(s) || '').trim().toUpperCase();
+        const saudaNo = String(s.sauda_no || '').trim().toUpperCase();
+        const saudaSession = String(s.session || '').trim().toUpperCase();
+        const sDigits = getCleanSaudaDigits(saudaNo) || getCleanSaudaDigits(saudaPoDisplayNo) || getCleanSaudaDigits(saudaSession);
+
+        const isCurrentlySelectedInForm = currentFormNo && (
+          currentFormNo === saudaPoDisplayNo ||
+          currentFormNo === saudaSession ||
+          currentFormNo === saudaNo ||
+          (sDigits && currentFormDigits === sDigits)
+        );
+
+        if (isCurrentlySelectedInForm) {
+          return true;
+        }
+
+        // Only Checked Sauda contracts proceed to Sauda Check Point
+        const isChecked = s.is_checked === true || st === 'checked' || appSt === 'checked' || st === 'approved' || appSt === 'approved' || Boolean(s.checked_by) || Boolean(s.approved_by);
+        if (!isChecked) {
+          return false;
+        }
+
+        const isPending = !s.status || String(s.status).trim().toLowerCase() !== 'completed';
+        const meetsPending = formData.pending === 'Yes' ? isPending : !isPending;
+        if (!meetsPending) return false;
+
+        const sId = String(s.sauda_id || s.id || '').trim().toUpperCase();
+        if (sId && usedSaudaIds.has(sId)) return false;
+        if (saudaPoDisplayNo && usedContractRefs.has(saudaPoDisplayNo)) return false;
+        if (saudaSession && usedContractRefs.has(saudaSession)) return false;
+        if (saudaNo && usedContractRefs.has(saudaNo)) return false;
+        if (sDigits && usedContractDigits.has(sDigits)) return false;
+
         return true;
-      }
-
-      if (sDigits) {
-        const pContractDigits = getCleanSaudaDigits(pContract);
-        const pSaudaDigits = getCleanSaudaDigits(pSaudaNo);
-        if (pContractDigits && pContractDigits === sDigits) return true;
-        if (pSaudaDigits && pSaudaDigits === sDigits) return true;
-      }
-
-      return false;
-    });
-
-    const meetsPending = formData.pending === 'Yes' ? isPending : !isPending;
-    return meetsPending && !isAlreadyUsed;
-  }).map(s => ({
-    ...s,
-    po_display_no: formatPoNumber(s)
-  }));
+      })
+      .map(s => ({
+        ...s,
+        po_display_no: formatPoNumber(s)
+      }));
+  }, [saudaList, usedPoLookup, formData.no, formData.contract_po_no, formData.pending]);
 
   return {
     todayStr,
