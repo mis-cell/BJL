@@ -634,7 +634,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                 <col style={{ width: "15.0%" }} />
               </colgroup>
               <thead>
-                <tr className="border border-black font-bold bg-[#fde8e4] text-black text-[9.5px]">
+                <tr className="border border-black font-bold bg-white text-black text-[9.5px]">
                   <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap">Grade</th>
                   <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap">Marka</th>
                   <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Quantity</th>
