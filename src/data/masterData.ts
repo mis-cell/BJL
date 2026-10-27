@@ -650,6 +650,7 @@ export const MASTER_MOKAMS: string[] = [
 
 export const MASTER_MARKAS: string[] = [
   "NO MARK",
+  "DAKALIA",
   "SH",
   "CHANGE",
   "MJ",
