@@ -46,9 +46,6 @@ export type ReportNavSection =
   | 'deduction_claim'
   | 'sauda_checkpoints'
   | 'all_po'
-  | 'outstanding_po'
-  | 'mr_advance_eligible'
-  | 'mr_apmc_details'
   | 'mr_delivery_claim'
   | 'performance_ranking'
   | 'exception_abnormal'
@@ -328,13 +325,10 @@ export default function Reports({ onClose }: ReportsProps) {
                 { id: 'deduction_claim' as const, label: '4. Deduction & Claim', icon: Scissors, badge: 'P3' },
                 { id: 'sauda_checkpoints' as const, label: '5. Checkpoints Pipeline', icon: Truck, badge: 'P3' },
                 { id: 'all_po' as const, label: '6. ALL PO', icon: Layers, badge: `${allPoSummary.totalCount || 0}` },
-                { id: 'outstanding_po' as const, label: '7. Outstanding P.O', icon: FileSpreadsheet, badge: 'NEW' },
-                { id: 'mr_advance_eligible' as const, label: '8. MR Advance Eligible', icon: Award, badge: 'NEW' },
-                { id: 'mr_apmc_details' as const, label: '9. MR APMC Details', icon: TrendingUp, badge: 'NEW' },
-                { id: 'mr_delivery_claim' as const, label: '10. MR Delivery Claim', icon: AlertTriangle, badge: 'NEW' },
-                { id: 'performance_ranking' as const, label: '11. Performance Ranking', icon: Award, badge: 'P2' },
-                { id: 'exception_abnormal' as const, label: '12. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
-                { id: 'business_contribution' as const, label: '13. Contribution & Pareto', icon: PieChart, badge: 'P9' },
+                { id: 'mr_delivery_claim' as const, label: '7. MR Delivery Claim', icon: AlertTriangle, badge: 'NEW' },
+                { id: 'performance_ranking' as const, label: '8. Performance Ranking', icon: Award, badge: 'P2' },
+                { id: 'exception_abnormal' as const, label: '9. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
+                { id: 'business_contribution' as const, label: '10. Contribution & Pareto', icon: PieChart, badge: 'P9' },
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeSection === tab.id;
@@ -399,21 +393,6 @@ export default function Reports({ onClose }: ReportsProps) {
             {/* ALL PO Master Report (sauda_master, sauda_check_point, purchase_master) */}
             {activeSection === 'all_po' && (
               <AllPoReportView dataset={dataset} onDrillDown={handleOpenDrillDown} />
-            )}
-
-            {/* Outstanding PO List Report */}
-            {activeSection === 'outstanding_po' && (
-              <NewCustomReportsView initialTab="outstanding_po" />
-            )}
-
-            {/* MR Eligible for Advance Report */}
-            {activeSection === 'mr_advance_eligible' && (
-              <NewCustomReportsView initialTab="mr_advance_eligible" />
-            )}
-
-            {/* MR Wise APMC Details Report */}
-            {activeSection === 'mr_apmc_details' && (
-              <NewCustomReportsView initialTab="mr_apmc_details" />
             )}
 
             {/* MR Wise Delivery Claim Report */}

@@ -29,7 +29,7 @@ interface NewCustomReportsViewProps {
   initialTab?: NewReportTab;
 }
 
-export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ initialTab = 'outstanding_po' }) => {
+export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ initialTab = 'mr_delivery_claim' }) => {
   const [activeSubReport, setActiveSubReport] = useState<NewReportTab>(initialTab);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -360,73 +360,16 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
   return (
     <div className="space-y-4 font-sans text-slate-800">
       
-      {/* ================= SUB-REPORT NAVIGATION TABS ================= */}
+      {/* ================= REPORT HEADER BAR ================= */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-3 rounded-2xl shadow-lg border border-slate-700 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setActiveSubReport('outstanding_po')}
-            className={`px-3 py-2 text-xs font-black rounded-xl transition cursor-pointer flex items-center gap-2 ${
-              activeSubReport === 'outstanding_po'
-                ? 'bg-gradient-to-r from-[#D94B5A] to-[#E85A5A] text-white shadow-md border border-[#F06D6C]'
-                : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-            }`}
-          >
-            <Briefcase className="w-3.5 h-3.5" />
-            <span>1. Outstanding P.O List</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubReport('mr_advance_eligible')}
-            className={`px-3 py-2 text-xs font-black rounded-xl transition cursor-pointer flex items-center gap-2 ${
-              activeSubReport === 'mr_advance_eligible'
-                ? 'bg-gradient-to-r from-[#D94B5A] to-[#E85A5A] text-white shadow-md border border-[#F06D6C]'
-                : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-            }`}
-          >
-            <UserCheck className="w-3.5 h-3.5" />
-            <span>2. MR Eligible for Advance</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubReport('mr_apmc_details')}
-            className={`px-3 py-2 text-xs font-black rounded-xl transition cursor-pointer flex items-center gap-2 ${
-              activeSubReport === 'mr_apmc_details'
-                ? 'bg-gradient-to-r from-[#D94B5A] to-[#E85A5A] text-white shadow-md border border-[#F06D6C]'
-                : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-            }`}
-          >
-            <DollarSign className="w-3.5 h-3.5" />
-            <span>3. MR Wise APMC Details</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubReport('mr_delivery_claim')}
-            className={`px-3 py-2 text-xs font-black rounded-xl transition cursor-pointer flex items-center gap-2 ${
-              activeSubReport === 'mr_delivery_claim'
-                ? 'bg-gradient-to-r from-[#D94B5A] to-[#E85A5A] text-white shadow-md border border-[#F06D6C]'
-                : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            <span>4. MR Wise Delivery Claim</span>
-          </button>
+        <div className="flex items-center gap-2">
+          <Clock className="w-5 h-5 text-[#E85A5A]" />
+          <h3 className="text-sm font-black uppercase tracking-wider text-white">
+            MR Wise Delivery Claim Report
+          </h3>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowSchemaInfo(!showSchemaInfo)}
-            className="px-2.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer"
-            title="View Database Table Source Mapping"
-          >
-            <Database className="w-3.5 h-3.5" />
-            <span>{showSchemaInfo ? 'Hide Schema Mapping' : 'View DB Tables Source'}</span>
-          </button>
-
           <button
             type="button"
             onClick={handleExportCSV}
@@ -437,57 +380,6 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
           </button>
         </div>
       </div>
-
-      {/* ================= DATABASE TABLE SOURCE SCHEMA MAPPING BANNER ================= */}
-      {showSchemaInfo && (
-        <div className="bg-slate-900 text-slate-200 border border-amber-500/40 p-4 rounded-2xl shadow-xl text-xs space-y-3 font-mono">
-          <div className="flex items-center justify-between border-b border-slate-700 pb-2">
-            <div className="flex items-center gap-2 font-black text-amber-400 text-sm">
-              <Database className="w-4 h-4 text-amber-400" />
-              <span>DATABASE TABLE SOURCE MAPPING GUIDE FOR THESE 4 REPORTS</span>
-            </div>
-            <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold uppercase">
-              Database Schema Guide
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] leading-relaxed">
-            <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700 space-y-1">
-              <span className="font-bold text-rose-400">1. Outstanding P.O List Report</span>
-              <p className="text-slate-300 font-sans text-[11px]">
-                • <strong className="text-amber-200 font-mono">purchase_master</strong> (or <strong className="text-amber-200 font-mono">sauda_check_point</strong>): Holds Contracted POs (<code className="text-emerald-300">po_no, po_date, supplier, broker, area, agency, total_qty_mt, rate_qntl</code>).<br />
-                • <strong className="text-amber-200 font-mono">final_arrival</strong>: Sum of received material (<code className="text-emerald-300">supplier_net_weight, electronic_net_weight, challan_material_weight</code>) per <code className="text-emerald-300">po_no</code>.<br />
-                • <strong className="text-amber-200 font-mono">Calculated Fields</strong>: <code className="text-sky-300">Pending Qty = Total PO Qty - Received Qty</code>; Status = Pending / Partial.
-              </p>
-            </div>
-
-            <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700 space-y-1">
-              <span className="font-bold text-rose-400">2. List of MR Eligible for Advance</span>
-              <p className="text-slate-300 font-sans text-[11px]">
-                • <strong className="text-amber-200 font-mono">final_arrival</strong>: Stores Arrival & MR Details (<code className="text-emerald-300">mr_no, date, po_no, supplier, broker, lorry_number, supplier_net_weight</code>).<br />
-                • <strong className="text-amber-200 font-mono">mr_settlement_master / payment_master</strong>: Stores Advance Paid (<code className="text-emerald-300">final_on_ac_adv, on_account_Effect, paid_amount</code>).<br />
-                • <strong className="text-amber-200 font-mono">Calculated Fields</strong>: <code className="text-sky-300">Eligible Adv (90% of Material Val) - Paid Advance = Pending Advance Payable</code>.
-              </p>
-            </div>
-
-            <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700 space-y-1">
-              <span className="font-bold text-rose-400">3. MR Wise APMC Details Report</span>
-              <p className="text-slate-300 font-sans text-[11px]">
-                • <strong className="text-amber-200 font-mono">mr_settlement_master</strong>: Contains APMC Cess records (<code className="text-emerald-300">mr_no, sett_date, po_no, supplier, broker, val_material_value</code>).<br />
-                • <strong className="text-amber-200 font-mono">APMC Columns</strong>: <code className="text-emerald-300">arival_apmc_fees</code> (Challan APMC), <code className="text-emerald-300">actual_apmc_fees</code> (1% Actual), <code className="text-emerald-300">final_apmc_fees</code> (APMC Settlement Deduction).
-              </p>
-            </div>
-
-            <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700 space-y-1">
-              <span className="font-bold text-rose-400">4. MR Wise Delivery Claim Report</span>
-              <p className="text-slate-300 font-sans text-[11px]">
-                • <strong className="text-amber-200 font-mono">mr_settlement_master</strong> (or <strong className="text-amber-200 font-mono">mill_inspection_master</strong>): Holds delivery penalty records.<br />
-                • <strong className="text-amber-200 font-mono">Claim Columns</strong>: <code className="text-emerald-300">summary_delivery_claim</code> (Delivery Claim Rs), <code className="text-emerald-300">detention_days</code> (Late Delay Days), <code className="text-emerald-300">arrival_date, po_date</code>.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ================= SEARCH & CONTROLS BAR ================= */}
       <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
