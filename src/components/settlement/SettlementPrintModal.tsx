@@ -513,7 +513,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
           {/* Top Header Line */}
           <div className="flex justify-between items-baseline pb-1.5 text-[9.5px] w-full">
             <div className="text-left font-normal text-gray-800 whitespace-nowrap">
-              Powered by KatEye
+              
             </div>
             <div className="text-center font-bold text-[13.5px] tracking-widest uppercase">
               {master.unit_name || "BALLY"}
@@ -633,28 +633,28 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                 <col style={{ width: "9.5%" }} />
                 <col style={{ width: "15.0%" }} />
               </colgroup>
-              <thead>
-                <tr className="border border-black font-bold bg-white text-black text-[9.5px]">
-                  <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap">Grade</th>
-                  <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap">Marka</th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Quantity</th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Unit</th>
-                  <th className="py-0.5 px-0.5 text-center align-middle border-r border-black leading-tight whitespace-nowrap">
+              <thead className="bg-white">
+                <tr className="border border-black font-bold bg-white text-black text-[9px] leading-none">
+                  <th className="py-0.5 px-1 text-left align-middle border border-black whitespace-nowrap bg-white">Grade</th>
+                  <th className="py-0.5 px-1 text-left align-middle border border-black whitespace-nowrap bg-white">Marka</th>
+                  <th className="py-0.5 px-1 text-center align-middle border border-black whitespace-nowrap bg-white">Quantity</th>
+                  <th className="py-0.5 px-1 text-center align-middle border border-black whitespace-nowrap bg-white">Unit</th>
+                  <th className="py-0 px-0.5 text-center align-middle border border-black leading-none whitespace-nowrap bg-white">
                     <div>P.O</div>
                     <div>Rate</div>
                   </th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Type</th>
-                  <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap">Claim</th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Sett.</th>
-                  <th className="py-0.5 px-0.5 text-center align-middle border-r border-black leading-tight whitespace-nowrap">
+                  <th className="py-0.5 px-1 text-center align-middle border border-black whitespace-nowrap bg-white">Type</th>
+                  <th className="py-0.5 px-1 text-left align-middle border border-black whitespace-nowrap bg-white">Claim</th>
+                  <th className="py-0.5 px-1 text-center align-middle border border-black whitespace-nowrap bg-white">Sett.</th>
+                  <th className="py-0 px-0.5 text-center align-middle border border-black leading-none whitespace-nowrap bg-white">
                     <div>Rate</div>
                     <div>(+/-)</div>
                   </th>
-                  <th className="py-0.5 px-0.5 text-center align-middle border-r border-black leading-tight whitespace-nowrap">
+                  <th className="py-0 px-0.5 text-center align-middle border border-black leading-none whitespace-nowrap bg-white">
                     <div>Sett.</div>
                     <div>Rate</div>
                   </th>
-                  <th className="py-1 px-1 text-center align-middle whitespace-nowrap">Value</th>
+                  <th className="py-0.5 px-1 text-center align-middle border border-black whitespace-nowrap bg-white">Value</th>
                 </tr>
               </thead>
               <tbody>
