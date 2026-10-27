@@ -153,13 +153,15 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
     setLoading(true);
     try {
       if (supabase) {
-        // Fetch POs & Arrivals for Outstanding PO Report & Advance Report
-        const [poRes, faRes, mrSettRes, payMasterRes, saudaCpRes] = await Promise.all([
+        // Fetch POs, Sauda Check Points, Temporary Arrivals, Final Arrivals, Inspections, Settlements & Payments
+        const [poRes, faRes, mrSettRes, payMasterRes, saudaCpRes, tempArrRes, matInspRes] = await Promise.all([
           supabase.from('purchase_master').select('*').order('created_at', { ascending: false }),
           supabase.from('final_arrival').select('*').order('date', { ascending: false }),
           supabase.from('mr_settlement_master').select('*').order('created_at', { ascending: false }),
           supabase.from('payment_master').select('*').order('created_at', { ascending: false }),
-          supabase.from('sauda_check_point').select('*').order('created_at', { ascending: false })
+          supabase.from('sauda_check_point').select('*').order('created_at', { ascending: false }),
+          supabase.from('temporary_material_received').select('*').order('date', { ascending: false }),
+          supabase.from('material_inspection').select('*').order('created_at', { ascending: false })
         ]);
 
         const rawPos = poRes.data || [];
@@ -167,6 +169,8 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
         const rawSettlements = mrSettRes.data || [];
         const rawPayments = payMasterRes.data || [];
         const rawCheckpoints = saudaCpRes.data || [];
+        const rawTempArrivals = tempArrRes.data || [];
+        const rawMatInsp = matInspRes.data || [];
 
         // Build Arrival & Settlement Weight Aggregates per PO
         const poReceivedMap: Record<string, number> = {};
@@ -313,52 +317,294 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
         });
         setApmcList(apmcRecords);
 
-        // Process MR Wise Delivery Claim
-        const deliveryClaimRecords: any[] = [];
-        const seenDeliveryMr = new Set<string>();
+        // =========================================================================
+        // 4. Process MR Wise Delivery Claim (Sauda Check Point -> Temporary Arrival)
+        // =========================================================================
+        const cleanPoKey = (s: any) => String(s || '').trim().replace(/^#/, '').toUpperCase();
+        const cleanLorryKey = (s: any) => String(s || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const extractCoreDigits = (s: any) => {
+          const raw = String(s || '').trim().toUpperCase();
+          const withoutPrefix = raw.replace(/^(MR|AR|AMAD|TEMP|FA|BJCL)[-\/\s]*/i, '').replace(/^20\d{2}-20\d{2}\//, '');
+          return withoutPrefix.replace(/[^0-9]/g, '').replace(/^0+/, '');
+        };
 
-        rawSettlements.forEach((s: any) => {
-          const mrNo = s.mr_no;
-          if (!mrNo) return;
-          const claimAmt = Number(s.summary_delivery_claim) || Number(s.val_ex_short) || 0;
-          const detentionDays = Number(s.detention_days) || 0;
+        // Step A: Build Sauda Check Point (and Purchase Master) lookup for Delivery Due Date & Delivery Penalty Rate
+        const poDeliveryMap = new Map<string, {
+          poNo: string;
+          poDate: string;
+          deliveryFrom: string;
+          deliveryTo: string;
+          graceDays: number;
+          deliveryPenaltyRate: number;
+          supplier: string;
+          broker: string;
+        }>();
 
-          seenDeliveryMr.add(mrNo.toUpperCase());
-
-          deliveryClaimRecords.push({
-            mrNo,
-            mrDate: s.mr_date || s.sett_date || s.created_at || '',
-            poNo: s.po_no || '-',
-            poDate: s.po_date || '',
-            arrivalDate: s.arrival_date || s.mr_date || '',
-            supplier: (s.supplier || 'UNKNOWN').toUpperCase().trim(),
-            broker: (s.broker || 'DIRECT').toUpperCase().trim(),
-            detentionDays,
-            claimAmt,
-            remarks: s.remarks || (claimAmt > 0 ? 'Late Arrival Delivery Penalty' : 'On-Time Arrival')
+        rawPos.forEach((po: any) => {
+          const key = cleanPoKey(po.po_no || po.po_number);
+          if (!key) return;
+          poDeliveryMap.set(key, {
+            poNo: String(po.po_no || po.po_number || key).trim(),
+            poDate: String(po.po_date || po.date || po.s_date || '').split('T')[0],
+            deliveryFrom: String(po.delivery_from || po.delivery_gt_from || '').split('T')[0],
+            deliveryTo: String(po.delivery_to || po.delivery_gt_to || po.shipment_date || po.delivery_to_date || '').split('T')[0],
+            graceDays: Number(po.grace_days || 0),
+            deliveryPenaltyRate: Number(po.delivery_penalty || po.shipment_penalty || 0),
+            supplier: String(po.supplier || po.supplier_name || '').toUpperCase().trim(),
+            broker: String(po.broker || po.broker_name || '').toUpperCase().trim()
           });
         });
 
-        rawFa.forEach((fa: any) => {
-          const mrNo = fa.mr_no || fa.final_arrival_no || fa.arrival_no;
-          if (!mrNo || seenDeliveryMr.has(mrNo.toUpperCase())) return;
-          const claimAmt = Number(fa.summary_delivery_claim) || Number(fa.delivery_claim) || Number(fa.penalty_amount) || 0;
-          const detentionDays = Number(fa.detention_days) || Number(fa.delay_days) || 0;
-          if (claimAmt > 0 || detentionDays > 0) {
-            seenDeliveryMr.add(mrNo.toUpperCase());
+        rawCheckpoints.forEach((cp: any) => {
+          const keys = [cp.po_no, cp.ptf_no, cp.sauda_no, cp.contract_po_no].map(cleanPoKey).filter(Boolean);
+          if (keys.length === 0) return;
+          const primaryKey = keys[0];
+          const existing = poDeliveryMap.get(primaryKey);
+
+          const entry = {
+            poNo: String(cp.po_no || existing?.poNo || primaryKey).trim(),
+            poDate: String(cp.po_date || cp.date || cp.s_date || existing?.poDate || '').split('T')[0],
+            deliveryFrom: String(cp.delivery_from || cp.delivery_gt_from || existing?.deliveryFrom || '').split('T')[0],
+            deliveryTo: String(cp.delivery_to || cp.delivery_gt_to || cp.shipment_date || cp.delivery_to_date || existing?.deliveryTo || '').split('T')[0],
+            graceDays: Number(cp.grace_days ?? existing?.graceDays ?? 0),
+            deliveryPenaltyRate: Number(cp.delivery_penalty || cp.shipment_penalty || existing?.deliveryPenaltyRate || 0),
+            supplier: String(cp.supplier || cp.supplier_name || existing?.supplier || '').toUpperCase().trim(),
+            broker: String(cp.broker || cp.broker_name || existing?.broker || '').toUpperCase().trim()
+          };
+
+          keys.forEach(k => poDeliveryMap.set(k, entry));
+        });
+
+        // Step B: Helper to calculate Delay Days (Temporary Arrival Date - Sauda Check Point Delivery To Date)
+        const calcDelayDays = (deliveryToStr?: string, arrivalDateStr?: string): number => {
+          if (!deliveryToStr || !arrivalDateStr) return 0;
+          const due = parseDateObj(deliveryToStr);
+          const arr = parseDateObj(arrivalDateStr);
+          if (!due || !arr) return 0;
+          due.setHours(0, 0, 0, 0);
+          arr.setHours(0, 0, 0, 0);
+          const diffMs = arr.getTime() - due.getTime();
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          return diffDays > 0 ? diffDays : 0;
+        };
+
+        // Step C: Helper to extract Arrival Weight in Quintals (Qtl)
+        const getArrivalWeightQtl = (...records: any[]): number => {
+          for (const rec of records) {
+            if (!rec) continue;
+            const qtl = Number(rec.weight_qtl || 0);
+            if (qtl > 0) return Number(qtl.toFixed(2));
+            const rawWt = Number(
+              rec.electronic_net_weight ||
+              rec.supplier_net_weight ||
+              rec.challan_material_weight ||
+              rec.electronic_scale_net ||
+              rec.challan_weight ||
+              rec.supplier_net_wt ||
+              ((Number(rec.actual_gross_weight) || 0) - (Number(rec.actual_tare_weight) || 0)) ||
+              0
+            );
+            if (rawWt > 0) {
+              if (rawWt > 500) return Number((rawWt / 100).toFixed(2));
+              if (rawWt <= 50) return Number((rawWt * 10).toFixed(2));
+              return Number(rawWt.toFixed(2));
+            }
+          }
+          return 0;
+        };
+
+        // Step D: Build cross-reference maps between Temporary Arrival, Final Arrival, Mill Inspection, and Settlement
+        const deliveryClaimRecords: any[] = [];
+        const seenDeliveryKeys = new Set<string>();
+
+        const registerDeliveryClaimCandidate = (params: {
+          tmr?: any;
+          fa?: any;
+          mi?: any;
+          sett?: any;
+        }) => {
+          const { tmr, fa, mi, sett } = params;
+          const isMrSeries = (v: any) => Boolean(v && String(v).trim().toUpperCase().startsWith('MR'));
+
+          const rawMrCandidates = [mi?.mr_no, sett?.mr_no, fa?.mr_no, tmr?.mr_no];
+          const mrSeriesMatch = rawMrCandidates.find(isMrSeries);
+          const tempArrivalNo = String(
+            tmr?.temporary_arrival_no ||
+            tmr?.amad_no ||
+            tmr?.arrival_no ||
+            fa?.temporary_arrival_no ||
+            fa?.arrival_no ||
+            fa?.final_arrival_no ||
+            mi?.arrival_no ||
+            sett?.arrival_no ||
+            ''
+          ).trim();
+
+          let resolvedMrNo = String(mrSeriesMatch || mi?.mr_no || sett?.mr_no || fa?.mr_no || tempArrivalNo || '').trim();
+          if (!resolvedMrNo) return;
+
+          // If resolvedMrNo is AR00893, check if an MR00893 exists in inspections/settlements
+          const coreDigits = extractCoreDigits(resolvedMrNo);
+          if (!isMrSeries(resolvedMrNo) && coreDigits) {
+            const matchedInsp = rawMatInsp.find((m: any) => isMrSeries(m.mr_no) && extractCoreDigits(m.mr_no) === coreDigits);
+            const matchedSett = rawSettlements.find((s: any) => isMrSeries(s.mr_no) && extractCoreDigits(s.mr_no) === coreDigits);
+            if (matchedInsp?.mr_no) resolvedMrNo = matchedInsp.mr_no;
+            else if (matchedSett?.mr_no) resolvedMrNo = matchedSett.mr_no;
+          }
+
+          const dedupKey = coreDigits ? `CORE_${coreDigits}` : resolvedMrNo.toUpperCase();
+          if (seenDeliveryKeys.has(dedupKey)) return;
+
+          const rawPoNo = String(
+            tmr?.po_no ||
+            fa?.po_no ||
+            mi?.po_no ||
+            sett?.po_no ||
+            ''
+          ).trim();
+          const poKey = cleanPoKey(rawPoNo);
+          const poInfo = poKey ? poDeliveryMap.get(poKey) : undefined;
+
+          // Temporary Arrival Date is the primary arrival date for Delivery Claim calculation
+          const tempArrivalDate = String(
+            tmr?.date ||
+            tmr?.arrival_date ||
+            fa?.date ||
+            fa?.arrival_date ||
+            mi?.arrival_date ||
+            sett?.arrival_date ||
+            sett?.mr_date ||
+            ''
+          ).split('T')[0];
+
+          const deliveryToDate = String(
+            poInfo?.deliveryTo ||
+            fa?.delivery_to ||
+            mi?.delivery_to ||
+            ''
+          ).split('T')[0];
+
+          const poDate = String(
+            poInfo?.poDate ||
+            fa?.po_date ||
+            mi?.po_date ||
+            sett?.po_date ||
+            ''
+          ).split('T')[0];
+
+          const penaltyRate = Number(poInfo?.deliveryPenaltyRate || 0);
+          const weightQtl = getArrivalWeightQtl(tmr, fa, mi, sett);
+
+          // Calculate Delay Days from Sauda Check Point (delivery_to) to Temporary Arrival (date)
+          let detentionDays = calcDelayDays(deliveryToDate, tempArrivalDate);
+          if (detentionDays === 0 && !deliveryToDate) {
+            detentionDays = Number(sett?.detention_days || fa?.detention_days || mi?.detention_days || 0);
+          }
+
+          // Calculate Delivery Claim (₹) = Weight (Qtl) * Delay Days * Delivery Penalty Rate
+          const calculatedClaimAmt = (detentionDays > 0 && penaltyRate > 0 && weightQtl > 0)
+            ? Math.round(weightQtl * penaltyRate * detentionDays)
+            : 0;
+
+          const explicitSavedClaim = (
+            sett?.summary_delivery_claim &&
+            Number(sett.summary_delivery_claim) > 0 &&
+            Number(sett.summary_delivery_claim) !== 5550
+          ) ? Number(sett.summary_delivery_claim) : 0;
+
+          // Only assign a delivery claim when there is a valid late arrival delay from Sauda Check Point to Temporary Arrival
+          const claimAmt = calculatedClaimAmt > 0
+            ? calculatedClaimAmt
+            : (detentionDays > 0 ? explicitSavedClaim : 0);
+
+          if (claimAmt > 0 && detentionDays > 0) {
+            seenDeliveryKeys.add(dedupKey);
+            const supplierName = String(
+              poInfo?.supplier ||
+              tmr?.supplier ||
+              tmr?.challan_supplier ||
+              fa?.supplier ||
+              mi?.supplier_name ||
+              sett?.supplier ||
+              'UNKNOWN'
+            ).toUpperCase().trim();
+
+            const brokerName = String(
+              poInfo?.broker ||
+              tmr?.broker ||
+              fa?.broker ||
+              mi?.broker_name ||
+              sett?.broker ||
+              'DIRECT'
+            ).toUpperCase().trim();
+
+            const calcBreakdown = (weightQtl > 0 && penaltyRate > 0)
+              ? `Due: ${deliveryToDate || '-'} → Temp Arr: ${tempArrivalDate || '-'} (${weightQtl} Qtl × ${detentionDays}d × ₹${penaltyRate})`
+              : `Due: ${deliveryToDate || '-'} → Temp Arr: ${tempArrivalDate || '-'}`;
+
             deliveryClaimRecords.push({
-              mrNo,
-              mrDate: fa.date || fa.arrival_date || fa.created_at || '',
-              poNo: fa.po_no || '-',
-              poDate: fa.po_date || '',
-              arrivalDate: fa.arrival_date || fa.date || '',
-              supplier: (fa.supplier || 'UNKNOWN').toUpperCase().trim(),
-              broker: (fa.broker || 'DIRECT').toUpperCase().trim(),
+              mrNo: resolvedMrNo,
+              tempArrivalNo: tempArrivalNo || resolvedMrNo,
+              mrDate: tempArrivalDate,
+              poNo: poInfo?.poNo || rawPoNo || '-',
+              poDate: poDate,
+              deliveryToDate: deliveryToDate,
+              arrivalDate: tempArrivalDate,
+              supplier: supplierName,
+              broker: brokerName,
+              weightQtl,
+              penaltyRate,
               detentionDays,
               claimAmt,
-              remarks: fa.remarks || 'Late Arrival Delivery Penalty'
+              remarks: calcBreakdown
             });
           }
+        };
+
+        // 1. Primary Pass: Iterate Temporary Arrivals (Sauda Check Point -> Temporary Arrival)
+        rawTempArrivals.forEach((tmr: any) => {
+          const tempNo = String(tmr.temporary_arrival_no || tmr.amad_no || tmr.arrival_no || '').trim();
+          const tmrDigits = extractCoreDigits(tempNo || tmr.mr_no);
+          const tmrPo = cleanPoKey(tmr.po_no);
+          const tmrLorry = cleanLorryKey(tmr.lorry_number || tmr.lorry_no || tmr.vehicle_no);
+
+          const matchedFa = rawFa.find((f: any) => {
+            const fTemp = String(f.temporary_arrival_no || f.arrival_no || f.final_arrival_no || '').trim();
+            if (tempNo && fTemp.toUpperCase() === tempNo.toUpperCase()) return true;
+            if (tmrDigits && extractCoreDigits(f.mr_no || fTemp) === tmrDigits) return true;
+            if (tmrPo && tmrLorry.length >= 4 && cleanPoKey(f.po_no) === tmrPo && cleanLorryKey(f.lorry_number || f.lorry_no) === tmrLorry) return true;
+            return false;
+          });
+
+          const matchedMi = rawMatInsp.find((m: any) => {
+            const mArr = String(m.arrival_no || m.ref_arrival_no || '').trim();
+            if (tempNo && mArr.toUpperCase() === tempNo.toUpperCase()) return true;
+            if (tmrDigits && extractCoreDigits(m.mr_no || mArr) === tmrDigits) return true;
+            if (tmrPo && tmrLorry.length >= 4 && cleanPoKey(m.po_no) === tmrPo && cleanLorryKey(m.lorry_number || m.lorry_no) === tmrLorry) return true;
+            return false;
+          });
+
+          const matchedSett = rawSettlements.find((s: any) => {
+            const sArr = String(s.arrival_no || '').trim();
+            if (tempNo && sArr.toUpperCase() === tempNo.toUpperCase()) return true;
+            if (tmrDigits && extractCoreDigits(s.mr_no || sArr) === tmrDigits) return true;
+            if (tmrPo && tmrLorry.length >= 4 && cleanPoKey(s.po_no) === tmrPo && cleanLorryKey(s.lorry_number) === tmrLorry) return true;
+            return false;
+          });
+
+          registerDeliveryClaimCandidate({ tmr, fa: matchedFa, mi: matchedMi, sett: matchedSett });
+        });
+
+        // 2. Secondary Pass: Check Final Arrivals & Settlements not yet processed in Temporary Arrival pass
+        rawFa.forEach((fa: any) => {
+          const faDigits = extractCoreDigits(fa.mr_no || fa.final_arrival_no || fa.arrival_no);
+          const matchedMi = rawMatInsp.find((m: any) => faDigits && extractCoreDigits(m.mr_no || m.arrival_no) === faDigits);
+          const matchedSett = rawSettlements.find((s: any) => faDigits && extractCoreDigits(s.mr_no || s.arrival_no) === faDigits);
+          registerDeliveryClaimCandidate({ fa, mi: matchedMi, sett: matchedSett });
+        });
+
+        rawSettlements.forEach((sett: any) => {
+          registerDeliveryClaimCandidate({ sett });
         });
 
         setDeliveryClaimList(deliveryClaimRecords);
@@ -415,11 +661,11 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
     });
   }, [apmcList, searchQuery, filters]);
 
-  // Filter Delivery Claim List (Only show records with claimAmt > 0 as requested)
+  // Filter Delivery Claim List (Only show records with claimAmt > 0 and detentionDays > 0)
   const filteredDeliveryClaimList = useMemo(() => {
     return deliveryClaimList.filter(item => {
-      if (!(item.claimAmt > 0)) return false;
-      return matchesFilters(item.mrDate || item.arrivalDate || item.poDate, item.supplier, item.broker, undefined, undefined, item.poNo, item.mrNo, filters, searchQuery);
+      if (!(item.claimAmt > 0 && item.detentionDays > 0)) return false;
+      return matchesFilters(item.arrivalDate || item.mrDate || item.poDate, item.supplier, item.broker, undefined, undefined, item.poNo, item.mrNo, filters, searchQuery);
     });
   }, [deliveryClaimList, searchQuery, filters]);
 
@@ -438,8 +684,8 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
       const rows = filteredApmcList.map(r => [r.mrNo, r.settDate, r.poNo, r.supplier, r.broker, r.materialValue.toFixed(2), r.challanApmc.toFixed(2), r.actualApmc.toFixed(2), r.apmcDiff.toFixed(2)]);
       exportToCSV('MR_Wise_APMC_Details_Report.csv', headers, rows);
     } else if (activeSubReport === 'mr_delivery_claim') {
-      const headers = ['MR No', 'MR Date', 'PO No', 'PO Date', 'Arrival Date', 'Supplier', 'Broker', 'Detention/Delay Days', 'Delivery Claim Amount (Rs)', 'Remarks'];
-      const rows = filteredDeliveryClaimList.map(r => [r.mrNo, r.mrDate, r.poNo, r.poDate, r.arrivalDate, r.supplier, r.broker, r.detentionDays, r.claimAmt.toFixed(2), r.remarks]);
+      const headers = ['MR No', 'Temp Arrival Date', 'PO No', 'PO Date', 'Delivery Due Date', 'Supplier', 'Broker', 'Weight (Qtl)', 'Penalty Rate (Rs/Qtl/Day)', 'Detention/Delay Days', 'Delivery Claim Amount (Rs)', 'Remarks'];
+      const rows = filteredDeliveryClaimList.map(r => [r.mrNo, r.arrivalDate, r.poNo, r.poDate, r.deliveryToDate || '-', r.supplier, r.broker, (r.weightQtl || 0).toFixed(2), r.penaltyRate || 0, r.detentionDays, r.claimAmt.toFixed(2), r.remarks]);
       exportToCSV('MR_Wise_Delivery_Claim_Report.csv', headers, rows);
     }
   };
@@ -960,7 +1206,7 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
                 <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
                   <h3 className="text-xs font-black uppercase text-slate-800 flex items-center gap-2">
                     <Clock className="w-4 h-4 text-[#D94B5A]" />
-                    <span>MR WISE DELIVERY CLAIM REPORT</span>
+                    <span>MR WISE DELIVERY CLAIM REPORT (SAUDA CHECK POINT TO TEMPORARY ARRIVAL)</span>
                   </h3>
                   <span className="text-[10px] bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded-md">
                     Late Delivery Penalties & Claims
@@ -971,8 +1217,9 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
                   <table className="w-full text-[11px] text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-800 text-white font-bold uppercase text-[10px]">
-                        <th className="p-2.5">MR No & Date</th>
-                        <th className="p-2.5">PO No & Date</th>
+                        <th className="p-2.5">MR No & Temp Arrival Date</th>
+                        <th className="p-2.5">PO No & PO Date</th>
+                        <th className="p-2.5">Delivery Due Date</th>
                         <th className="p-2.5">Supplier</th>
                         <th className="p-2.5">Broker</th>
                         <th className="p-2.5 text-center">Delay / Detention Days</th>
@@ -981,27 +1228,41 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {filteredDeliveryClaimList.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 transition">
-                          <td className="p-2.5 font-bold font-mono text-[#D94B5A]">
-                            <div>{row.mrNo}</div>
-                            <div className="text-[9.5px] font-normal text-slate-500">{row.mrDate}</div>
+                      {filteredDeliveryClaimList.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="p-8 text-center text-slate-500 font-bold">
+                            No Delayed Delivery Claims (&gt; ₹0) found for the selected filter criteria.
                           </td>
-                          <td className="p-2.5 font-mono text-slate-700">
-                            <div className="font-bold">{row.poNo}</div>
-                            <div className="text-[9.5px] font-normal text-slate-500">{row.poDate || '-'}</div>
-                          </td>
-                          <td className="p-2.5 font-bold">{row.supplier}</td>
-                          <td className="p-2.5 text-slate-600">{row.broker}</td>
-                          <td className="p-2.5 text-center font-mono font-bold text-amber-700">
-                            {row.detentionDays} Days
-                          </td>
-                          <td className="p-2.5 text-right font-mono font-bold text-rose-600">
-                            ₹{row.claimAmt.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                          </td>
-                          <td className="p-2.5 text-slate-600 text-[10.5px]">{row.remarks}</td>
                         </tr>
-                      ))}
+                      ) : (
+                        filteredDeliveryClaimList.map((row, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50 transition">
+                            <td className="p-2.5 font-bold font-mono text-[#D94B5A]">
+                              <div>{row.mrNo}</div>
+                              <div className="text-[9.5px] font-normal text-slate-500">Temp Arr: {row.arrivalDate || row.mrDate}</div>
+                            </td>
+                            <td className="p-2.5 font-mono text-slate-700">
+                              <div className="font-bold">{row.poNo}</div>
+                              <div className="text-[9.5px] font-normal text-slate-500">{row.poDate || '-'}</div>
+                            </td>
+                            <td className="p-2.5 font-mono font-bold text-slate-700">
+                              <div>{row.deliveryToDate || '-'}</div>
+                              {row.penaltyRate ? (
+                                <div className="text-[9.5px] font-normal text-slate-500">Penalty: ₹{row.penaltyRate}/Qtl/Day</div>
+                              ) : null}
+                            </td>
+                            <td className="p-2.5 font-bold">{row.supplier}</td>
+                            <td className="p-2.5 text-slate-600">{row.broker}</td>
+                            <td className="p-2.5 text-center font-mono font-bold text-amber-700">
+                              {row.detentionDays} Days
+                            </td>
+                            <td className="p-2.5 text-right font-mono font-bold text-rose-600">
+                              ₹{row.claimAmt.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                            </td>
+                            <td className="p-2.5 text-slate-600 text-[10.5px]">{row.remarks}</td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
