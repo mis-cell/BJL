@@ -23,13 +23,110 @@ import { supabase } from '../../lib/supabase';
 import { dbModule } from '../../services/dbModule';
 import { exportToCSV } from '../../utils/exportHelpers';
 
+import { ReportFilterCriteria } from '../../services/systemReportEngine';
+
 export type NewReportTab = 'outstanding_po' | 'mr_advance_eligible' | 'mr_apmc_details' | 'mr_delivery_claim';
 
 interface NewCustomReportsViewProps {
   initialTab?: NewReportTab;
+  filters?: ReportFilterCriteria;
 }
 
-export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ initialTab = 'mr_delivery_claim' }) => {
+const parseDateObj = (dateVal: any): Date | null => {
+  if (!dateVal) return null;
+  const str = String(dateVal).trim();
+  if (!str) return null;
+
+  if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(str)) {
+    const parts = str.split(/[-/]/);
+    return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  }
+  if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(str)) {
+    const parts = str.split(/[-/]/);
+    return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+  }
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+const matchesFilters = (
+  dateStr: string | undefined,
+  supplier: string | undefined,
+  broker: string | undefined,
+  area: string | undefined,
+  agency: string | undefined,
+  poNo: string | undefined,
+  mrNo: string | undefined,
+  filters?: ReportFilterCriteria,
+  localQuery?: string
+): boolean => {
+  // 1. Text Search
+  const q = (localQuery || filters?.searchQuery || '').trim().toLowerCase();
+  if (q) {
+    const combined = [poNo, mrNo, supplier, broker, area, agency].filter(Boolean).join(' ').toLowerCase();
+    if (!combined.includes(q)) return false;
+  }
+
+  if (!filters) return true;
+
+  // 2. Filter dropdowns
+  if (filters.supplier && supplier && !supplier.toLowerCase().includes(filters.supplier.toLowerCase())) return false;
+  if (filters.broker && broker && !broker.toLowerCase().includes(filters.broker.toLowerCase())) return false;
+  if (filters.area && area && !area.toLowerCase().includes(filters.area.toLowerCase())) return false;
+  if (filters.agency && agency && !agency.toLowerCase().includes(filters.agency.toLowerCase())) return false;
+  if (filters.po && poNo && !poNo.toLowerCase().includes(filters.po.toLowerCase())) return false;
+
+  // 3. Date / Month / Financial Year
+  if (!dateStr) return true;
+  const recordDate = parseDateObj(dateStr);
+  if (!recordDate) return true;
+
+  // Month Filter (e.g. "2026-08" or "08" or "8")
+  if (filters.month) {
+    const fMonth = filters.month.trim();
+    const yr = recordDate.getFullYear();
+    const mo = String(recordDate.getMonth() + 1).padStart(2, '0');
+    const yyyyMm = `${yr}-${mo}`;
+    if (fMonth.includes('-')) {
+      if (yyyyMm !== fMonth) return false;
+    } else {
+      if (mo !== fMonth.padStart(2, '0')) return false;
+    }
+  }
+
+  // Financial Year Filter
+  if (filters.financialYear) {
+    const fyStr = filters.financialYear.trim();
+    const month = recordDate.getMonth() + 1;
+    const year = recordDate.getFullYear();
+    const startFy = month >= 4 ? year : year - 1;
+    if (!fyStr.includes(String(startFy))) return false;
+  }
+
+  // Date From Filter
+  if (filters.dateFrom) {
+    const fromDate = parseDateObj(filters.dateFrom);
+    if (fromDate) {
+      fromDate.setHours(0, 0, 0, 0);
+      const d = new Date(recordDate);
+      d.setHours(0, 0, 0, 0);
+      if (d < fromDate) return false;
+    }
+  }
+
+  // Date To Filter
+  if (filters.dateTo) {
+    const toDate = parseDateObj(filters.dateTo);
+    if (toDate) {
+      toDate.setHours(23, 59, 59, 999);
+      if (recordDate > toDate) return false;
+    }
+  }
+
+  return true;
+};
+
+export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ initialTab = 'mr_delivery_claim', filters }) => {
   const [activeSubReport, setActiveSubReport] = useState<NewReportTab>(initialTab);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -218,11 +315,15 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
 
         // Process MR Wise Delivery Claim
         const deliveryClaimRecords: any[] = [];
+        const seenDeliveryMr = new Set<string>();
+
         rawSettlements.forEach((s: any) => {
           const mrNo = s.mr_no;
           if (!mrNo) return;
           const claimAmt = Number(s.summary_delivery_claim) || Number(s.val_ex_short) || 0;
           const detentionDays = Number(s.detention_days) || 0;
+
+          seenDeliveryMr.add(mrNo.toUpperCase());
 
           deliveryClaimRecords.push({
             mrNo,
@@ -237,6 +338,29 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
             remarks: s.remarks || (claimAmt > 0 ? 'Late Arrival Delivery Penalty' : 'On-Time Arrival')
           });
         });
+
+        rawFa.forEach((fa: any) => {
+          const mrNo = fa.mr_no || fa.final_arrival_no || fa.arrival_no;
+          if (!mrNo || seenDeliveryMr.has(mrNo.toUpperCase())) return;
+          const claimAmt = Number(fa.summary_delivery_claim) || Number(fa.delivery_claim) || Number(fa.penalty_amount) || 0;
+          const detentionDays = Number(fa.detention_days) || Number(fa.delay_days) || 0;
+          if (claimAmt > 0 || detentionDays > 0) {
+            seenDeliveryMr.add(mrNo.toUpperCase());
+            deliveryClaimRecords.push({
+              mrNo,
+              mrDate: fa.date || fa.arrival_date || fa.created_at || '',
+              poNo: fa.po_no || '-',
+              poDate: fa.po_date || '',
+              arrivalDate: fa.arrival_date || fa.date || '',
+              supplier: (fa.supplier || 'UNKNOWN').toUpperCase().trim(),
+              broker: (fa.broker || 'DIRECT').toUpperCase().trim(),
+              detentionDays,
+              claimAmt,
+              remarks: fa.remarks || 'Late Arrival Delivery Penalty'
+            });
+          }
+        });
+
         setDeliveryClaimList(deliveryClaimRecords);
       }
     } catch (err) {
@@ -254,19 +378,9 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
   const filteredPoList = useMemo(() => {
     return poList.filter(po => {
       if (poStatusFilter !== 'ALL' && po.status !== poStatusFilter) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        return (
-          po.poNo.toLowerCase().includes(q) ||
-          po.supplier.toLowerCase().includes(q) ||
-          po.broker.toLowerCase().includes(q) ||
-          po.area.toLowerCase().includes(q) ||
-          po.agency.toLowerCase().includes(q)
-        );
-      }
-      return true;
+      return matchesFilters(po.poDate, po.supplier, po.broker, po.area, po.agency, po.poNo, undefined, filters, searchQuery);
     });
-  }, [poList, poStatusFilter, searchQuery]);
+  }, [poList, poStatusFilter, searchQuery, filters]);
 
   // Grouped Outstanding POs (Broker / Party / Area Wise)
   const groupedPoSummary = useMemo(() => {
@@ -290,51 +404,24 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
   // Filter Advance Eligible MR List
   const filteredAdvanceMrList = useMemo(() => {
     return advanceMrList.filter(item => {
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        return (
-          item.mrNo.toLowerCase().includes(q) ||
-          item.poNo.toLowerCase().includes(q) ||
-          item.supplier.toLowerCase().includes(q) ||
-          item.broker.toLowerCase().includes(q) ||
-          item.lorryNumber.toLowerCase().includes(q)
-        );
-      }
-      return true;
+      return matchesFilters(item.arrivalDate, item.supplier, item.broker, undefined, undefined, item.poNo, item.mrNo, filters, searchQuery);
     });
-  }, [advanceMrList, searchQuery]);
+  }, [advanceMrList, searchQuery, filters]);
 
   // Filter APMC Details List
   const filteredApmcList = useMemo(() => {
     return apmcList.filter(item => {
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        return (
-          item.mrNo.toLowerCase().includes(q) ||
-          item.poNo.toLowerCase().includes(q) ||
-          item.supplier.toLowerCase().includes(q) ||
-          item.broker.toLowerCase().includes(q)
-        );
-      }
-      return true;
+      return matchesFilters(item.settDate, item.supplier, item.broker, undefined, undefined, item.poNo, item.mrNo, filters, searchQuery);
     });
-  }, [apmcList, searchQuery]);
+  }, [apmcList, searchQuery, filters]);
 
-  // Filter Delivery Claim List
+  // Filter Delivery Claim List (Only show records with claimAmt > 0 as requested)
   const filteredDeliveryClaimList = useMemo(() => {
     return deliveryClaimList.filter(item => {
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        return (
-          item.mrNo.toLowerCase().includes(q) ||
-          item.poNo.toLowerCase().includes(q) ||
-          item.supplier.toLowerCase().includes(q) ||
-          item.broker.toLowerCase().includes(q)
-        );
-      }
-      return true;
+      if (!(item.claimAmt > 0)) return false;
+      return matchesFilters(item.mrDate || item.arrivalDate || item.poDate, item.supplier, item.broker, undefined, undefined, item.poNo, item.mrNo, filters, searchQuery);
     });
-  }, [deliveryClaimList, searchQuery]);
+  }, [deliveryClaimList, searchQuery, filters]);
 
   // CSV Export for active sub-report
   const handleExportCSV = () => {

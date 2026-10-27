@@ -397,7 +397,7 @@ export default function Reports({ onClose }: ReportsProps) {
 
             {/* Custom Reports View (Outstanding PO, MR Advance Eligible, MR APMC Details, MR Delivery Claim) */}
             {activeSection === 'custom_reports' && (
-              <NewCustomReportsView />
+              <NewCustomReportsView filters={filters} />
             )}
 
             {/* 7. Performance Ranking (Priority 2) */}
