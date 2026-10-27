@@ -46,7 +46,7 @@ export type ReportNavSection =
   | 'deduction_claim'
   | 'sauda_checkpoints'
   | 'all_po'
-  | 'mr_delivery_claim'
+  | 'custom_reports'
   | 'performance_ranking'
   | 'exception_abnormal'
   | 'business_contribution';
@@ -325,7 +325,7 @@ export default function Reports({ onClose }: ReportsProps) {
                 { id: 'deduction_claim' as const, label: '4. Deduction & Claim', icon: Scissors, badge: 'P3' },
                 { id: 'sauda_checkpoints' as const, label: '5. Checkpoints Pipeline', icon: Truck, badge: 'P3' },
                 { id: 'all_po' as const, label: '6. ALL PO', icon: Layers, badge: `${allPoSummary.totalCount || 0}` },
-                { id: 'mr_delivery_claim' as const, label: '7. MR Delivery Claim', icon: AlertTriangle, badge: 'NEW' },
+                { id: 'custom_reports' as const, label: '7. Custom Reports', icon: FileSpreadsheet, badge: '4 Reports' },
                 { id: 'performance_ranking' as const, label: '8. Performance Ranking', icon: Award, badge: 'P2' },
                 { id: 'exception_abnormal' as const, label: '9. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
                 { id: 'business_contribution' as const, label: '10. Contribution & Pareto', icon: PieChart, badge: 'P9' },
@@ -395,9 +395,9 @@ export default function Reports({ onClose }: ReportsProps) {
               <AllPoReportView dataset={dataset} onDrillDown={handleOpenDrillDown} />
             )}
 
-            {/* MR Wise Delivery Claim Report */}
-            {activeSection === 'mr_delivery_claim' && (
-              <NewCustomReportsView initialTab="mr_delivery_claim" />
+            {/* Custom Reports View (Outstanding PO, MR Advance Eligible, MR APMC Details, MR Delivery Claim) */}
+            {activeSection === 'custom_reports' && (
+              <NewCustomReportsView />
             )}
 
             {/* 7. Performance Ranking (Priority 2) */}

@@ -360,13 +360,60 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
   return (
     <div className="space-y-4 font-sans text-slate-800">
       
-      {/* ================= REPORT HEADER BAR ================= */}
+      {/* ================= SUB-REPORT NAVIGATION TABS ================= */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-3 rounded-2xl shadow-lg border border-slate-700 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Clock className="w-5 h-5 text-[#E85A5A]" />
-          <h3 className="text-sm font-black uppercase tracking-wider text-white">
-            MR Wise Delivery Claim Report
-          </h3>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setActiveSubReport('outstanding_po')}
+            className={`px-3 py-2 text-xs font-black rounded-xl transition cursor-pointer flex items-center gap-2 ${
+              activeSubReport === 'outstanding_po'
+                ? 'bg-gradient-to-r from-[#D94B5A] to-[#E85A5A] text-white shadow-md border border-[#F06D6C]'
+                : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+            }`}
+          >
+            <Briefcase className="w-3.5 h-3.5" />
+            <span>1. Outstanding P.O List</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSubReport('mr_advance_eligible')}
+            className={`px-3 py-2 text-xs font-black rounded-xl transition cursor-pointer flex items-center gap-2 ${
+              activeSubReport === 'mr_advance_eligible'
+                ? 'bg-gradient-to-r from-[#D94B5A] to-[#E85A5A] text-white shadow-md border border-[#F06D6C]'
+                : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+            }`}
+          >
+            <UserCheck className="w-3.5 h-3.5" />
+            <span>2. MR Eligible for Advance</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSubReport('mr_apmc_details')}
+            className={`px-3 py-2 text-xs font-black rounded-xl transition cursor-pointer flex items-center gap-2 ${
+              activeSubReport === 'mr_apmc_details'
+                ? 'bg-gradient-to-r from-[#D94B5A] to-[#E85A5A] text-white shadow-md border border-[#F06D6C]'
+                : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+            }`}
+          >
+            <DollarSign className="w-3.5 h-3.5" />
+            <span>3. MR Wise APMC Details</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSubReport('mr_delivery_claim')}
+            className={`px-3 py-2 text-xs font-black rounded-xl transition cursor-pointer flex items-center gap-2 ${
+              activeSubReport === 'mr_delivery_claim'
+                ? 'bg-gradient-to-r from-[#D94B5A] to-[#E85A5A] text-white shadow-md border border-[#F06D6C]'
+                : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>4. MR Wise Delivery Claim</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
