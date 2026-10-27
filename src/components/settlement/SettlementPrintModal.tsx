@@ -765,39 +765,41 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
 
           {/* Miscellaneous Charges Section */}
           <div className="mt-3 mb-3">
-            <div className="text-center font-bold text-[11.5px] mb-2 uppercase">
-              Miscellaneous Charges
-            </div>
+            <div className="border border-black text-[11px]">
+              <div className="text-center font-bold text-[12px] mb-2 uppercase">
+                <b>Miscellaneous Charges</b>
+              </div>
 
-            <div className="space-y-1 text-[11px]">
-              {inspectionDedItems.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-baseline px-1">
-                  <div className="w-[45%] uppercase">{item.type}</div>
-                  <div className="w-[15%] text-right">{item.qtyKgs} Kgs.</div>
-                  <div className="w-[15%] text-center">@Rs.{item.rate}</div>
-                  <div className="w-[15%] text-left">Less per Quintal</div>
-                  <div className="w-[10%] text-right font-medium">-{item.amount.toFixed(2)}</div>
-                </div>
-              ))}
-
-              {settlementApmcDiff > 0 && (
-                <div className="flex justify-between items-baseline px-1">
-                  <div className="w-[90%]">
-                    Miscellaneous Deduction M.R. value (Total-{actualApmc},Challan-
-                    {challanApmc},Settlement-{settlementApmcDiff})
+              <div className="space-y-1 text-[11px]">
+                {inspectionDedItems.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-baseline px-1">
+                    <div className="w-[45%] uppercase">{item.type}</div>
+                    <div className="w-[15%] text-right">{item.qtyKgs} Kgs.</div>
+                    <div className="w-[15%] text-center">@Rs.{item.rate}</div>
+                    <div className="w-[15%] text-left">Less per Quintal</div>
+                    <div className="w-[10%] text-right font-medium">-{item.amount.toFixed(2)}</div>
                   </div>
-                  <div className="w-[10%] text-right font-medium">
-                    -{settlementApmcDiff.toFixed(2)}
-                  </div>
-                </div>
-              )}
+                ))}
 
-              {miscAdd > 0 && (
-                <div className="flex justify-between items-baseline px-1">
-                  <div className="w-[90%]">Miscellaneous Addition (+)</div>
-                  <div className="w-[10%] text-right font-medium">+{miscAdd.toFixed(2)}</div>
-                </div>
-              )}
+                {settlementApmcDiff > 0 && (
+                  <div className="flex justify-between items-baseline px-1">
+                    <div className="w-[90%]">
+                      Miscellaneous Deduction M.R. value (Total-{actualApmc},Challan-
+                      {challanApmc},Settlement-{settlementApmcDiff})
+                    </div>
+                    <div className="w-[10%] text-right font-medium">
+                      -{settlementApmcDiff.toFixed(2)}
+                    </div>
+                  </div>
+                )}
+
+                {miscAdd > 0 && (
+                  <div className="flex justify-between items-baseline px-1">
+                    <div className="w-[90%]">Miscellaneous Addition (+)</div>
+                    <div className="w-[10%] text-right font-medium">+{miscAdd.toFixed(2)}</div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
