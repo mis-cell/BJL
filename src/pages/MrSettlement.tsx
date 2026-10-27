@@ -1870,9 +1870,17 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             }
             return 0;
           };
+          const isMrSeriesStr = (s: any) => Boolean(s && String(s).trim().toUpperCase().startsWith('MR'));
+          let masterMrNoToUse = existingMaster.mr_no || targetMrNo;
+          if (!isMrSeriesStr(masterMrNoToUse) && isMrSeriesStr(targetMrNo)) {
+            masterMrNoToUse = targetMrNo;
+          } else if (!isMrSeriesStr(masterMrNoToUse) && isMrSeriesStr(inspMaster?.mr_no)) {
+            masterMrNoToUse = inspMaster.mr_no;
+          }
 
           const mergedMaster = {
             ...existingMaster,
+            mr_no: masterMrNoToUse,
             challan_weight: toMtWeight(existingMaster.challan_weight || faMaster?.challan_material_weight || inspMaster?.challan_material_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
             supplier_net_wt: toMtWeight(existingMaster.supplier_net_wt || faMaster?.supplier_net_weight || inspMaster?.supplier_net_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
             electronic_scale_net: toMtWeight(existingMaster.electronic_scale_net || faMaster?.electronic_net_weight || inspMaster?.electronic_net_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
@@ -2037,7 +2045,17 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       // 2. Build new settlement from final_arrival / mill_inspection_master
       if (faMaster || inspMaster) {
         setIsEdit(false);
-        const resolvedMrNo = faMaster?.mr_no || faMaster?.final_arrival_no || inspMaster?.mr_no || inspMaster?.arrival_no || targetMrNo;
+        const isMrSeriesStr = (s: any) => Boolean(s && String(s).trim().toUpperCase().startsWith('MR'));
+        let resolvedMrNo = targetMrNo;
+        if (isMrSeriesStr(targetMrNo)) {
+          resolvedMrNo = targetMrNo;
+        } else if (isMrSeriesStr(inspMaster?.mr_no)) {
+          resolvedMrNo = inspMaster.mr_no;
+        } else if (isMrSeriesStr(faMaster?.mr_no)) {
+          resolvedMrNo = faMaster.mr_no;
+        } else {
+          resolvedMrNo = inspMaster?.mr_no || targetMrNo || faMaster?.mr_no || faMaster?.final_arrival_no || faMaster?.arrival_no || '';
+        }
 
         const challanMt = toMtWeightNew(
           faMaster?.challan_material_weight || inspMaster?.challan_material_weight,
