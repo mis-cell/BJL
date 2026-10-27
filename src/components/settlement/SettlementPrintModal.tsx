@@ -61,9 +61,33 @@ function formatDateDdMmYySlash(dateStr?: string): string {
   return trimmed;
 }
 
+function formatDateDdMmmYy(dateStr?: string): string {
+  if (!dateStr) return "";
+  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  const trimmed = String(dateStr).trim();
+  let dt: Date | null = null;
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    const [y, m, d] = trimmed.split("T")[0].split("-").map(Number);
+    dt = new Date(y, m - 1, d);
+  } else if (/^\d{2}-\d{2}-\d{4}$/.test(trimmed)) {
+    const [d, m, y] = trimmed.split("-").map(Number);
+    dt = new Date(y, m - 1, d);
+  } else {
+    const parsed = new Date(trimmed);
+    if (!isNaN(parsed.getTime())) dt = parsed;
+  }
+  if (dt && !isNaN(dt.getTime())) {
+    const d = String(dt.getDate()).padStart(2, "0");
+    const m = months[dt.getMonth()];
+    const y = String(dt.getFullYear()).slice(-2);
+    return `${d}-${m}-${y}`;
+  }
+  return trimmed.toUpperCase();
+}
+
 function formatIndAmount(val: number): string {
   const num = Number(val) || 0;
-  if (Math.abs(num) < 0.005) return "";
+  if (Math.abs(num) < 0.005) return ".00";
   return num.toLocaleString("en-IN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -243,6 +267,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
   const [persistedPrintCount, setPersistedPrintCount] = useState<number>(0);
   const isPrintingRef = useRef(false);
 
+  // Sync print count from master or database when modal opens
   useEffect(() => {
     if (!isOpen || !viewModalData?.master?.mr_no) return;
     let isMounted = true;
@@ -293,13 +318,17 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
       getColWtMt(c) > 0
   );
 
+  // Dynamic user name and print count using client's live local date (DD/MM/YY)
   const printNow = new Date();
   const todaySlash = `${String(printNow.getDate()).padStart(2, "0")}/${String(printNow.getMonth() + 1).padStart(2, "0")}/${String(printNow.getFullYear()).slice(-2)}`;
   const printedByDisplay = resolveLoggedInPrintUserName();
 
+  // Print tracking: Target print number for this print request
+  // (persistedPrintCount = 0 -> 1st print request = "ONE"; persistedPrintCount = 1 -> 2nd print request = "TWO")
   const targetPrintNum = persistedPrintCount + 1;
   const printCountWord = countToEnglishWord(targetPrintNum);
 
+  // User-initiated print action callback: executes ONLY when SEND TO PRINTER is clicked
   const handleInitiatePrint = async () => {
     if (isPrintingRef.current) return;
     isPrintingRef.current = true;
@@ -315,6 +344,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
     } catch {}
 
     try {
+      // 1. Update Supabase mr_settlement_master
       if (supabase && mrNo) {
         await supabase
           .from("mr_settlement_master")
@@ -325,6 +355,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
           })
           .eq("mr_no", mrNo);
 
+        // 2. Insert audit log into settlement_print_history
         await supabase
           .from("settlement_print_history")
           .insert({
@@ -336,6 +367,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
           });
       }
 
+      // 3. Update local dbModule cache
       try {
         await dbModule.update("mr_settlement_master", "mr_no", mrNo, {
           print_count: nextCount,
@@ -344,10 +376,12 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
         });
       } catch {}
 
+      // 4. Update memory object
       master.print_count = nextCount;
       master.last_printed_at = nowIso;
       master.last_printed_by_name = userName;
 
+      // 5. Update local component state
       setPersistedPrintCount(nextCount);
     } catch (err) {
       console.error("Failed to record settlement print tracking:", err);
@@ -358,6 +392,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
     }
   };
 
+  // Header fields
   const mrDateDisplay = formatDateDdMmYyyyHyphen(master.mr_date || master.sett_date);
   const poDateDisplay = formatDateDdMmYyyyHyphen(master.po_date || master.mr_date);
   const partyBillDateDisplay = formatDateDdMmYySlash(
@@ -372,6 +407,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
       ? `${areaPart} / ${agencyPart}`
       : areaPart || agencyPart || "-";
 
+  // Consign No. comes from Final Arrival field "Challan No & Date." (challan_rr_no)
   const consignNoDisplay = (
     master.consign_no ||
     master.challan_rr_no ||
@@ -380,6 +416,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
     ""
   ).trim();
 
+  // Deductions & Miscellaneous Charges calculation
   const validInspectionDeductions = Array.isArray(master.deductions)
     ? master.deductions.filter(
         (d: any) =>
@@ -409,12 +446,14 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
 
   const inspectionDedSum = inspectionDedItems.reduce((acc, item) => acc + item.amount, 0);
 
+  // Material Value from active columns
   const computedMaterialValue = activeDetails.reduce((acc, col) => acc + getColAmount(col), 0);
   const materialValue =
     computedMaterialValue > 0
       ? computedMaterialValue
       : Number(master.val_material_value || master.summary_material_value || 0);
 
+  // APMC / M.R. value deduction
   const actualApmc = Math.round(
     Number(master.actual_apmc_fees) > 0
       ? Number(master.actual_apmc_fees)
@@ -476,14 +515,14 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
 
         <div>
           {/* Top Header Line */}
-          <div className="flex justify-between items-baseline pb-1.5 text-[10px] w-full">
-            <div className="text-left font-normal italic whitespace-nowrap">
-              Powered by
+          <div className="flex justify-between items-baseline pb-1.5 text-[9.5px] w-full">
+            <div className="text-left font-normal text-gray-800 whitespace-nowrap">
+              
             </div>
-            <div className="text-center font-bold text-[14px] tracking-widest uppercase">
+            <div className="text-center font-bold text-[13.5px] tracking-widest uppercase">
               {master.unit_name || "BALLY"}
             </div>
-            <div className="text-right whitespace-nowrap text-[10px]">
+            <div className="text-right whitespace-nowrap text-[9.5px] tracking-tight">
               Printed On : {todaySlash} by {printedByDisplay}, No of Times Printed - {printCountWord}
             </div>
           </div>
@@ -491,74 +530,89 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
           {/* Framed Master Header Box */}
           <div className="border border-black grid grid-cols-12 text-[11px]">
             {/* Left Details (9 cols) */}
-            <div className="col-span-9 p-2 space-y-0.5">
+            <div className="col-span-9 p-2 space-y-1">
               {/* MR No & Date */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">MR No.</div>
-                <div className="col-span-4 font-bold">: {master.mr_no || "-"}</div>
-                <div className="col-span-5 text-right pr-6">
+                <div className="col-span-2 font-normal">MR No.</div>
+                <div className="col-span-5 font-bold text-[12.5px]">
+                  : {master.mr_no || "-"}
+                </div>
+                <div className="col-span-5">
                   <span className="mr-2">Date :</span>
-                  <span className="font-bold">{mrDateDisplay}</span>
+                  <span className="font-bold text-[12px]">{mrDateDisplay}</span>
                 </div>
               </div>
 
               {/* Supplier & Address */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">Supplier</div>
-                <div className="col-span-9 uppercase">: {(master.supplier || "-").toUpperCase()}</div>
+                <div className="col-span-2">Supplier</div>
+                <div className="col-span-10">
+                  <div>: {(master.supplier || "-").toUpperCase()}</div>
+                  {master.supplier_address && (
+                    <div className="pl-2 uppercase text-[10.5px]">
+                      {master.supplier_address}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Broker */}
-              <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">Broker</div>
-                <div className="col-span-9 uppercase">: {master.broker || master.supplier || "-"}</div>
+              <div className="grid grid-cols-12 items-baseline pt-0.5">
+                <div className="col-span-2">Broker</div>
+                <div className="col-span-10 uppercase">
+                  : {master.broker || master.supplier || "-"}
+                </div>
               </div>
 
               {/* Order No & Date */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">Order No</div>
-                <div className="col-span-4 font-bold">: {master.po_no || "-"}</div>
-                <div className="col-span-5 text-right pr-6">
+                <div className="col-span-2">Order No</div>
+                <div className="col-span-5 font-bold text-[12px]">
+                  : {master.po_no || "-"}
+                </div>
+                <div className="col-span-5">
                   <span className="mr-2">Date :</span>
-                  <span className="font-bold">{poDateDisplay}</span>
+                  <span className="font-bold text-[12px]">{poDateDisplay}</span>
                 </div>
               </div>
 
               {/* Area/Agency */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">Area/Agency</div>
-                <div className="col-span-9 uppercase">: {areaAgencyDisplay}</div>
+                <div className="col-span-2">Area/Agency:</div>
+                <div className="col-span-10 uppercase pl-2">{areaAgencyDisplay}</div>
               </div>
 
               {/* Consign No */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">Consign No.</div>
-                <div className="col-span-9">: {consignNoDisplay || "-"}</div>
+                <div className="col-span-2">Consign No.:</div>
+                <div className="col-span-10 pl-2">
+                  <span>{consignNoDisplay || "-"}</span>
+                </div>
               </div>
 
               {/* Way Bill */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">Way Bill</div>
-                <div className="col-span-9">: {master.way_bill || ""}</div>
+                <div className="col-span-2">Way Bill</div>
+                <div className="col-span-10">: {master.way_bill || ""}</div>
               </div>
 
               {/* Pan No */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">Pan No.</div>
-                <div className="col-span-9">: {master.pan_no || ""}</div>
+                <div className="col-span-2">Pan No.</div>
+                <div className="col-span-10">: {master.pan_no || ""}</div>
               </div>
             </div>
 
             {/* Right Split Box (3 cols): Party Bill No & Party Bill Date */}
-            <div className="col-span-3 border-l border-black flex flex-col justify-between">
+            <div className="col-span-3 border-l border-black flex flex-col">
               <div className="flex-1 border-b border-black p-2 flex flex-col justify-between items-center text-center">
-                <div className="font-normal text-[11px]">Party Bill No</div>
+                <div className="font-bold text-[11px]">Party Bill No</div>
                 <div className="font-bold text-[12px] pb-1">
                   {master.payable_bill_no || ""}
                 </div>
               </div>
               <div className="flex-1 p-2 flex flex-col justify-between items-center text-center">
-                <div className="font-normal text-[11px]">Party Bill Date</div>
+                <div className="font-bold text-[11px]">Party Bill Date</div>
                 <div className="text-[11.5px] pb-1">
                   {partyBillDateDisplay}
                 </div>
@@ -568,7 +622,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
 
           {/* Material Details Table */}
           <div className="mt-1">
-            <table className="w-full border-collapse text-[11px] table-fixed border border-black" style={{ boxSizing: "border-box" }}>
+            <table className="w-full border-collapse text-[11px] table-fixed" style={{ boxSizing: "border-box" }}>
               <colgroup>
                 <col style={{ width: "7.5%" }} />
                 <col style={{ width: "6.5%" }} />
@@ -583,27 +637,27 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                 <col style={{ width: "15.0%" }} />
               </colgroup>
               <thead className="bg-white">
-                <tr className="border-b border-black font-normal bg-white text-black text-[10px] leading-tight">
-                  <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap bg-white">Grade</th>
-                  <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap bg-white">Marka</th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap bg-white">Quantity</th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap bg-white">Unit</th>
-                  <th className="py-1 px-0.5 text-center align-middle border-r border-black leading-none whitespace-nowrap bg-white">
+                <tr className="border border-black font-bold bg-white text-black text-[9px] leading-none">
+                  <th className="py-0.5 px-1 text-left align-middle border border-black whitespace-nowrap bg-white">Grade</th>
+                  <th className="py-0.5 px-1 text-left align-middle border border-black whitespace-nowrap bg-white">Marka</th>
+                  <th className="py-0.5 px-1 text-center align-middle border border-black whitespace-nowrap bg-white">Quantity</th>
+                  <th className="py-0.5 px-1 text-center align-middle border border-black whitespace-nowrap bg-white">Unit</th>
+                  <th className="py-0 px-0.5 text-center align-middle border border-black leading-none whitespace-nowrap bg-white">
                     <div>P.O</div>
                     <div>Rate</div>
                   </th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap bg-white">Type</th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap bg-white">Claim</th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap bg-white">Sett.</th>
-                  <th className="py-1 px-0.5 text-center align-middle border-r border-black leading-none whitespace-nowrap bg-white">
+                  <th className="py-0.5 px-1 text-center align-middle border border-black whitespace-nowrap bg-white">Type</th>
+                  <th className="py-0.5 px-1 text-left align-middle border border-black whitespace-nowrap bg-white">Claim</th>
+                  <th className="py-0.5 px-1 text-center align-middle border border-black whitespace-nowrap bg-white">Sett.</th>
+                  <th className="py-0 px-0.5 text-center align-middle border border-black leading-none whitespace-nowrap bg-white">
                     <div>Rate</div>
                     <div>(+/-)</div>
                   </th>
-                  <th className="py-1 px-0.5 text-center align-middle border-r border-black leading-none whitespace-nowrap bg-white">
+                  <th className="py-0 px-0.5 text-center align-middle border border-black leading-none whitespace-nowrap bg-white">
                     <div>Sett.</div>
                     <div>Rate</div>
                   </th>
-                  <th className="py-1 px-1 text-center align-middle whitespace-nowrap bg-white">Value</th>
+                  <th className="py-0.5 px-1 text-center align-middle border border-black whitespace-nowrap bg-white">Value</th>
                 </tr>
               </thead>
               <tbody>
@@ -640,6 +694,10 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                     col.moist_claim !== undefined && col.moist_claim !== null && !isNaN(Number(col.moist_claim))
                       ? Number(col.moist_claim)
                       : Number(master.summary_rate_wt_claim) || 0;
+                  const moistSett =
+                    col.moist_sett !== undefined && col.moist_sett !== null && !isNaN(Number(col.moist_sett))
+                      ? Number(col.moist_sett)
+                      : 0;
 
                   const netRateAdj = premVal - gdDedRate;
                   const settRate = getEffectiveColSettRate(col);
@@ -649,67 +707,52 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                     <React.Fragment key={idx}>
                       {/* Row 1: Grade, Marka, Quantity, Unit, P.O Rate, Grd.Down, Claim, Sett, Rate(-), Sett.Rate, Value */}
                       <tr className="align-top">
-                        <td className="pt-1 px-1 font-bold text-left border-r border-black">{gradeDisplay}</td>
-                        <td className="pt-1 px-1 uppercase text-left border-r border-black">{markaDisplay}</td>
-                        <td className="pt-1 px-1 text-right border-r border-black">{qtyBales}</td>
-                        <td className="pt-1 px-1 text-center uppercase border-r border-black">{unitDisplay}</td>
-                        <td className="pt-1 px-1 text-right border-r border-black">{poRate}</td>
-                        <td className="pt-1 px-1 text-right border-r border-black">Grd.Down:</td>
-                        <td className="pt-1 px-1 text-right border-r border-black">{gdClaim}</td>
-                        <td className="pt-1 px-1 text-right border-r border-black">{gdSett}</td>
-                        <td className="pt-1 px-1 text-right border-r border-black">{gdRateAdj}</td>
-                        <td className="pt-1 px-1 text-right border-r border-black">{settRate}</td>
-                        <td className="pt-1 px-1 text-right">{colValue.toFixed(2)}</td>
+                        <td className="pt-1.5 px-1 font-bold text-left">{gradeDisplay}</td>
+                        <td className="pt-1.5 px-1 uppercase text-left">{markaDisplay}</td>
+                        <td className="pt-1.5 px-1 text-right font-medium">{qtyBales}</td>
+                        <td className="pt-1.5 px-1 text-center uppercase">{unitDisplay}</td>
+                        <td className="pt-1.5 px-1 text-right font-medium">{poRate}</td>
+                        <td className="pt-1.5 px-1 text-right">Grd.Down:</td>
+                        <td className="pt-1.5 px-1 text-right">{gdClaim}</td>
+                        <td className="pt-1.5 px-1 text-right">{gdSett}</td>
+                        <td className="pt-1.5 px-1 text-right">{gdRateAdj}</td>
+                        <td className="pt-1.5 px-1 text-right font-medium">{settRate}</td>
+                        <td className="pt-1.5 px-1 text-right font-medium">{colValue.toFixed(2)}</td>
                       </tr>
 
                       {/* Row 2: Weight in Kgs & Moisture */}
                       <tr className="align-top">
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td colSpan={2} className="px-1 text-center whitespace-nowrap border-r border-black">
+                        <td colSpan={2}></td>
+                        <td colSpan={2} className="px-1 text-center whitespace-nowrap">
                           {wtKgs} Kgs
                         </td>
-                        <td className="border-r border-black"></td>
-                        <td className="px-1 text-right border-r border-black">Moisture:</td>
-                        <td className="px-1 text-right border-r border-black">{moistClaim}</td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
                         <td></td>
+                        <td className="px-1 text-right">Moisture:</td>
+                        <td className="px-1 text-right">{moistClaim}</td>
+                        <td className="px-1 text-right"></td>
+                        <td colSpan={3}></td>
                       </tr>
 
                       {/* Row 3: Premium */}
                       <tr className="align-top">
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="px-1 text-right border-r border-black">Premium:</td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="px-1 text-right border-r border-black">
-                          <span className="border-b border-black inline-block min-w-[45px] text-right pb-0.5">
+                        <td colSpan={5}></td>
+                        <td className="px-1 text-right">Premium:</td>
+                        <td colSpan={2}></td>
+                        <td className="px-1 text-right">
+                          <span className="border-b border-black inline-block min-w-[50px] text-right pb-0.5">
                             {premVal}
                           </span>
                         </td>
-                        <td className="border-r border-black"></td>
-                        <td></td>
+                        <td colSpan={2}></td>
                       </tr>
 
                       {/* Row 4: Total Rate (+/-) */}
                       <tr className="align-top">
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="px-1 text-right border-r border-black">Total:</td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="px-1 text-right border-r border-black">{netRateAdj}</td>
-                        <td className="border-r border-black"></td>
-                        <td></td>
+                        <td colSpan={5}></td>
+                        <td className="px-1 text-right">Total:</td>
+                        <td colSpan={2}></td>
+                        <td className="px-1 text-right font-medium">{netRateAdj}</td>
+                        <td colSpan={2}></td>
                       </tr>
 
                       {/* Horizontal separator line between grades */}
@@ -724,17 +767,17 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
           </div>
 
           {/* Miscellaneous Charges Section */}
-          <div className="mt-2 mb-2">
-            <div className="border border-black p-2 text-[11px]">
-              <div className="text-center font-bold text-[11.5px] mb-2 uppercase tracking-wide">
-                Miscellaneous Charges
+          <div className="mt-3 mb-3">
+            <div className="border border-black text-[11px]">
+              <div className="text-center font-bold text-[12px] mb-2 uppercase">
+                <b>Miscellaneous Charges</b>
               </div>
 
               <div className="space-y-1 text-[11px]">
                 {inspectionDedItems.map((item, idx) => (
                   <div key={idx} className="flex justify-between items-baseline px-1">
-                    <div className="w-[42%] uppercase">{item.type}</div>
-                    <div className="w-[18%] text-right">{item.qtyKgs} Kgs.</div>
+                    <div className="w-[45%] uppercase">{item.type}</div>
+                    <div className="w-[15%] text-right">{item.qtyKgs} Kgs.</div>
                     <div className="w-[15%] text-center">@Rs.{item.rate}</div>
                     <div className="w-[15%] text-left">Less per Quintal</div>
                     <div className="w-[10%] text-right font-medium">-{item.amount.toFixed(2)}</div>
@@ -765,7 +808,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
         </div>
 
         {/* Bottom Section: Framed Summary Box + Signature Footer */}
-        <div className="mt-auto pt-1">
+        <div className="mt-auto pt-2">
           <div className="border border-black text-[11px]">
             {/* Top Row: Remarks */}
             <div className="border-b border-black px-2 py-1">
@@ -778,40 +821,40 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
               <div className="col-span-6 border-r border-black flex flex-col justify-between">
                 <div>
                   <div className="border-b border-black p-2 space-y-1">
-                    <div className="underline font-bold">Note:</div>
-                    <div className="flex justify-between pr-4">
-                      <span>On A/c Total Advance</span>
-                      <span>: Rs. {onAcTotalAdv || ""}</span>
+                    <div>Note:</div>
+                    <div className="flex justify-between">
+                      <span>On A/c Total Advance :</span>
+                      <span>Rs. {onAcTotalAdv}</span>
                     </div>
-                    <div className="flex justify-between pr-4">
-                      <span>On A/c Total Adv. Adjusted</span>
-                      <span>: Rs. {onAcTotalAdvAdj || ""}</span>
+                    <div className="flex justify-between">
+                      <span>On A/c Total Adv. Adjusted :</span>
+                      <span>Rs. {onAcTotalAdvAdj}</span>
                     </div>
                   </div>
 
-                  <div className="border-b border-black px-2 py-1 flex justify-between pr-4">
-                    <span>Balance Amount</span>
-                    <span>: Rs. {onAcBalanceAmt > 0 ? onAcBalanceAmt : ""}</span>
+                  <div className="border-b border-black px-2 py-1 flex justify-between">
+                    <span>Balance Amount :</span>
+                    <span>Rs. {onAcBalanceAmt > 0 ? onAcBalanceAmt : ""}</span>
                   </div>
 
-                  <div className="border-b border-black px-2 py-1 text-center font-bold text-[10.5px]">
+                  <div className="border-b border-black px-2 py-1 text-center font-bold">
                     On A/c Adv. Adjustment Made Against This MR
                   </div>
 
-                  <div className="border-b border-black grid grid-cols-3 px-1 py-1 font-bold text-[10.5px] text-center">
-                    <div className="border-r border-black">Cheque No</div>
-                    <div className="border-r border-black">Date</div>
-                    <div>Adjusted Value</div>
+                  <div className="border-b border-black grid grid-cols-3 px-2 py-1 font-bold text-[10.5px]">
+                    <div>Cheque No</div>
+                    <div className="text-center">Date</div>
+                    <div className="text-right">Adjusted Value</div>
                   </div>
                 </div>
 
-                <div className="flex-1 min-h-[75px] p-1">
+                <div className="flex-1 min-h-[90px] p-2">
                   {Array.isArray(master.cheque_adjustments) &&
                     master.cheque_adjustments.map((chk, cIdx) => (
-                      <div key={cIdx} className="grid grid-cols-3 text-[10.5px] py-0.5 text-center">
-                        <div className="border-r border-black px-1 text-left">{chk.cheque_no}</div>
-                        <div className="border-r border-black px-1">{chk.date}</div>
-                        <div className="px-1 text-right">
+                      <div key={cIdx} className="grid grid-cols-3 text-[10.5px] py-0.5">
+                        <div>{chk.cheque_no}</div>
+                        <div className="text-center">{chk.date}</div>
+                        <div className="text-right">
                           {formatIndAmount(chk.adjusted_value)}
                         </div>
                       </div>
@@ -822,51 +865,51 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
               {/* Right Column: Financial Settlement Calculation Summary */}
               <div className="col-span-6 flex flex-col justify-between">
                 <div>
-                  <div className="border-b border-black p-1.5 space-y-1">
+                  <div className="border-b border-black p-2 space-y-1">
                     <div className="flex justify-between">
-                      <span>Material Value</span>
-                      <span>: {formatIndAmount(materialValue)}</span>
+                      <span>Material Value :</span>
+                      <span className="font-medium">{formatIndAmount(materialValue)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Material Misc(+)</span>
-                      <span>: {formatIndAmount(miscAdd)}</span>
+                      <span>Material Misc(+) :</span>
+                      <span>{formatIndAmount(miscAdd)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Material Misc(-)</span>
-                      <span>: {formatIndAmount(miscLessTotal)}</span>
+                      <span>Material Misc(-) :</span>
+                      <span>{formatIndAmount(miscLessTotal)}</span>
                     </div>
                   </div>
 
-                  <div className="border-b border-black p-1.5 space-y-1">
-                    <div className="flex justify-between font-bold">
-                      <span>Total MR Amount</span>
-                      <span>: {formatIndAmount(totalMrAmount)}</span>
+                  <div className="border-b border-black p-2 space-y-1">
+                    <div className="flex justify-between">
+                      <span>Total MR Amount :</span>
+                      <span className="font-medium">{formatIndAmount(totalMrAmount)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>MR Advance Amount</span>
-                      <span>: {formatIndAmount(mrAdvanceAmount)}</span>
+                      <span>MR Advance Amount :</span>
+                      <span>{formatIndAmount(mrAdvanceAmount)}</span>
                     </div>
                   </div>
 
-                  <div className="border-b border-black px-1.5 py-1 flex justify-between font-bold">
-                    <span>Balance Due (Rounded)</span>
-                    <span>: {formatIndAmount(balanceDueRounded)}</span>
+                  <div className="border-b border-black px-2 py-1 flex justify-between font-bold">
+                    <span>Balance Due (Rounded) :</span>
+                    <span>{formatIndAmount(balanceDueRounded)}</span>
                   </div>
 
-                  <div className="border-b border-black px-1.5 py-1 flex justify-between">
-                    <span>On A/c Adv. Adjusted Amount</span>
-                    <span>:Rs. {formatIndAmount(onAcAdvAdjusted)}</span>
+                  <div className="border-b border-black px-2 py-1 flex justify-between">
+                    <span>On A/c Adv. Adjusted Amount:Rs.</span>
+                    <span>{formatIndAmount(onAcAdvAdjusted)}</span>
                   </div>
                 </div>
 
-                <div className="p-1.5 flex-1 flex flex-col justify-between min-h-[75px]">
-                  <div className="flex justify-between font-bold text-[11px]">
-                    <span>Net Amount to be Paid</span>
-                    <span>:Rs. {formatIndAmount(netAmountToBePaid)}</span>
+                <div className="p-2 flex-1 flex flex-col justify-between min-h-[85px]">
+                  <div className="flex justify-between font-bold text-[11.5px]">
+                    <span>Net Amount to be Paid :Rs.</span>
+                    <span>{formatIndAmount(netAmountToBePaid)}</span>
                   </div>
 
-                  <div className="pt-2 text-[10px] leading-snug">
-                    <span className="mr-1 font-bold">Rs. :</span>
+                  <div className="pt-2 text-[10.5px] leading-relaxed">
+                    <span className="mr-2 font-bold">Rs. :</span>
                     <span className="font-bold">{numberToIndianWords(netAmountToBePaid)} ONLY</span>
                   </div>
                 </div>
@@ -877,13 +920,19 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
           {/* Signature Footer */}
           <div className="pt-8 pb-2 px-6 flex justify-between items-end text-[11px] font-bold">
             <div>
-              <u className="pb-0.5 inline-block">Prepared by</u>
+              <span className="border-b border-black pb-0.5 inline-block min-w-[120px] text-center">
+                Prepared by
+              </span>
             </div>
             <div>
-              <u className="pb-0.5 inline-block">Checked by</u>
+              <span className="border-b border-black pb-0.5 inline-block min-w-[120px] text-center">
+                Checked by
+              </span>
             </div>
             <div>
-              <u className="pb-0.5 inline-block">Authorised Signatory</u>
+              <span className="border-b border-black pb-0.5 inline-block min-w-[150px] text-center">
+                Authorised Signatory
+              </span>
             </div>
           </div>
         </div>
