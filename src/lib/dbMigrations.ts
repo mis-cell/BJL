@@ -74,7 +74,7 @@ export async function runDatabaseMigrations() {
           );
           ALTER TABLE IF EXISTS settlement_print_history DISABLE ROW LEVEL SECURITY;
 
-          -- Marka master setup and DAKALIA seed under BIHAR area
+          -- Marka master setup and DAKALIA / NR seed under BIHAR and DAISEE areas
           CREATE TABLE IF NOT EXISTS marka_master (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             marka_name TEXT UNIQUE NOT NULL,
@@ -84,7 +84,9 @@ export async function runDatabaseMigrations() {
           );
           ALTER TABLE IF EXISTS marka_master DISABLE ROW LEVEL SECURITY;
           INSERT INTO marka_master (marka_name, area_name)
-          VALUES ('DAKALIA', 'BIHAR')
+          VALUES 
+            ('DAKALIA', 'BIHAR'),
+            ('NR', 'DAISEE')
           ON CONFLICT (marka_name) DO NOTHING;
 
           ALTER TABLE IF EXISTS mill_inspection_master ADD COLUMN IF NOT EXISTS lorry_number TEXT;

@@ -7,6 +7,7 @@ import { calculateWeightTolerance } from '../../lib/weightTolerance';
 import { comparePoInspection, compareSaudaTempArrival, PoMatchResult } from '../../lib/poMatch';
 import { useLiveAutoRefresh } from '../../hooks/useLiveAutoRefresh';
 import { isInvalidAgency } from '../../services/systemReportEngine';
+import { MASTER_MARKAS } from '../../data/masterData';
 
 interface UsePurchaseOrderDataOptions {
   isTempPo: boolean;
@@ -876,7 +877,28 @@ export function usePurchaseOrderData({
         challan_supplier: (s.challan_supplier || '').toUpperCase()
       })));
       setGradeList(grades || []);
-      setMarkaList(markas || []);
+      const markaMap = new Map<string, any>();
+      MASTER_MARKAS.forEach((m, idx) => {
+        const u = m.toUpperCase();
+        markaMap.set(u, {
+          marka_name: m,
+          marka_code: u === 'DAKALIA' ? 'M201' : (u === 'NR' ? 'M202' : `M${idx + 1}`),
+          area_name: u === 'DAKALIA' ? 'BIHAR' : (u === 'NR' ? 'DAISEE' : '')
+        });
+      });
+      (markas || []).forEach((m: any) => {
+        const name = typeof m === 'string' ? m.trim() : String(m.marka_name || m.name || m.code || '').trim();
+        if (!name) return;
+        const u = name.toUpperCase();
+        const code = typeof m === 'object' ? (m.marka_code || m.code || u) : u;
+        const area = typeof m === 'object' ? (m.area_name || m.area || '') : '';
+        markaMap.set(u, {
+          marka_name: name,
+          marka_code: code,
+          area_name: area || (u === 'DAKALIA' ? 'BIHAR' : (u === 'NR' ? 'DAISEE' : ''))
+        });
+      });
+      setMarkaList(Array.from(markaMap.values()));
       const validAgencies = (agencies || []).filter((a: any) => {
         const name = String(a.agency_name || a.name || '').trim();
         return name && !isInvalidAgency(name);

@@ -407,6 +407,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                                 ? "No Agency Found for Selected Area"
                                 : "Select / search Agencies..."
                             }
+                            allowCustomInput={false}
                             disabled={!formDataArea || !formDataArea.trim() || agencyOptions.length === 0}
                             badgeTheme="emerald"
                           />
@@ -421,6 +422,7 @@ export const QualityDetailsTable: React.FC<QualityDetailsTableProps> = ({
                             onChange={(vals) => onQualityChange(i, 'markas', vals)}
                             options={markaOptions}
                             placeholder="Select / search Markas..."
+                            allowCustomInput={false}
                             badgeTheme="amber"
                           />
                         </td>

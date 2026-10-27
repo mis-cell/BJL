@@ -30,7 +30,7 @@ export const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
   onChange,
   options = [],
   placeholder = "Select or search...",
-  allowCustomInput = true,
+  allowCustomInput = false,
   disabled = false,
   isRequired = false,
   compact = false,
