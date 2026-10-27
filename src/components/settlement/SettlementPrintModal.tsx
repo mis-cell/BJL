@@ -635,8 +635,8 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
               </colgroup>
               <thead>
                 <tr className="border border-black font-bold bg-[#fde8e4] text-black text-[9.5px]">
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Grade</th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Marka</th>
+                  <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap">Grade</th>
+                  <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap">Marka</th>
                   <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Quantity</th>
                   <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Unit</th>
                   <th className="py-0.5 px-0.5 text-center align-middle border-r border-black leading-tight whitespace-nowrap">
@@ -644,7 +644,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                     <div>Rate</div>
                   </th>
                   <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Type</th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Claim</th>
+                  <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap">Claim</th>
                   <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap">Sett.</th>
                   <th className="py-0.5 px-0.5 text-center align-middle border-r border-black leading-tight whitespace-nowrap">
                     <div>Rate</div>
