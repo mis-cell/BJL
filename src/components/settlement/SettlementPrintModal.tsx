@@ -451,7 +451,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
       <div
         id="print-modal-children-canvas"
         className="bg-white text-black px-3 py-2 mx-auto w-full max-w-[190mm] min-h-[285mm] flex flex-col justify-between text-[11px] leading-tight select-text"
-        style={{ fontFamily: "'Courier New', Courier, monospace", boxSizing: "border-box" }}
+        style={{ fontFamily: "'font-sans', font-sans, font-sans", boxSizing: "border-box" }}
       >
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
@@ -474,92 +474,92 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
           }
         `}} />
 
-        <div>
-          {/* Top Header Line */}
-          <div className="flex justify-between items-baseline pb-1.5 text-[10px] w-full">
-            <div className="text-left font-normal italic whitespace-nowrap">
-              Powered by
-            </div>
-            <div className="text-center font-bold text-[14px] tracking-widest uppercase">
-              {master.unit_name || "BALLY"}
-            </div>
-            <div className="text-right whitespace-nowrap text-[10px]">
-              Printed On : {todaySlash} by {printedByDisplay}, No of Times Printed - {printCountWord}
-            </div>
+        
+        {/* Top Header Line */}
+        <div className="flex justify-between items-baseline pb-1.5 text-[10px] w-full">
+          <div className="text-left whitespace-nowrap text-[10px] font-extrabold font-sans">
+            Powered by KatEye
           </div>
-
+          <div className="text-center font-bold text-[13px] font-extrabold tracking-widest uppercase">
+            {master.unit_name || "BALLY JUTE COMPANY LIMITED"}
+          </div>
+          <div className="text-right whitespace-nowrap text-[11px] font-extrabold font-sans">
+            Printed On : {todaySlash} by {printedByDisplay}, No of Times Printed - {printCountWord}
+          </div>
+        </div>
+        <div className="border-2 border-black">
           {/* Framed Master Header Box */}
           <div className="border border-black grid grid-cols-12 text-[11px]">
             {/* Left Details (9 cols) */}
             <div className="col-span-9 p-2 space-y-0.5">
               {/* MR No & Date */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">MR No.</div>
-                <div className="col-span-4 font-bold">: {master.mr_no || "-"}</div>
+                <div className="col-span-3 text-[13px] font-extrabold">MR No.</div>
+                <div className="col-span-4 text-[13px] font-extrabold">: {master.mr_no || "-"}</div>
                 <div className="col-span-5 text-right pr-6">
-                  <span className="mr-2">Date :</span>
-                  <span className="font-bold">{mrDateDisplay}</span>
+                  <span className="mr-2 text-[12px] font-extrabold">Date :</span>
+                  <span className=" text-[12px] font-extrabold">{mrDateDisplay}</span>
                 </div>
               </div>
 
               {/* Supplier & Address */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">Supplier</div>
-                <div className="col-span-9 uppercase">: {(master.supplier || "-").toUpperCase()}</div>
+                <div className="col-span-3 text-[12px] font-extrabold">Supplier</div>
+                <div className="col-span-9 uppercase text-[12px] font-extrabold">: {(master.supplier || "-").toUpperCase()}</div>
               </div>
 
               {/* Broker */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">Broker</div>
-                <div className="col-span-9 uppercase">: {master.broker || master.supplier || "-"}</div>
+                <div className="col-span-3 text-[12px] font-extrabold">Broker</div>
+                <div className="col-span-9 uppercase text-[12px] font-extrabold">: {master.broker || master.supplier || "-"}</div>
               </div>
 
               {/* Order No & Date */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">Order No</div>
-                <div className="col-span-4 font-bold">: {master.po_no || "-"}</div>
+                <div className="col-span-3 text-[12px] font-extrabold">Order No</div>
+                <div className="col-span-4 font-bold text-[12px] font-extrabold">: {master.po_no || "-"}</div>
                 <div className="col-span-5 text-right pr-6">
-                  <span className="mr-2">Date :</span>
-                  <span className="font-bold">{poDateDisplay}</span>
+                  <span className="mr-2 text-[12px] font-extrabold">Date :</span>
+                  <span className="text-[12px] font-extrabold">{poDateDisplay}</span>
                 </div>
               </div>
 
               {/* Area/Agency */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">Area/Agency</div>
-                <div className="col-span-9 uppercase">: {areaAgencyDisplay}</div>
+                <div className="col-span-3 text-[12px] font-extrabold">Area/Agency</div>
+                <div className="col-span-9 uppercase text-[12px] font-extrabold">: {areaAgencyDisplay}</div>
               </div>
 
               {/* Consign No */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">Consign No.</div>
-                <div className="col-span-9">: {consignNoDisplay || "-"}</div>
+                <div className="col-span-3 text-[12px] font-extrabold">Consign No.</div>
+                <div className="col-span-9 text-[12px] font-extrabold">: {consignNoDisplay || "-"}</div>
               </div>
 
               {/* Way Bill */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">Way Bill</div>
-                <div className="col-span-9">: {master.way_bill || ""}</div>
+                <div className="col-span-3 text-[12px] font-extrabold">Way Bill</div>
+                <div className="col-span-9 text-[12px] font-extrabold">: {master.way_bill || ""}</div>
               </div>
 
               {/* Pan No */}
               <div className="grid grid-cols-12 items-baseline">
-                <div className="col-span-3">Pan No.</div>
-                <div className="col-span-9">: {master.pan_no || ""}</div>
+                <div className="col-span-3 text-[12px] font-extrabold">Pan No.</div>
+                <div className="col-span-9 text-[12px] font-extrabold">: {master.pan_no || ""}</div>
               </div>
             </div>
 
             {/* Right Split Box (3 cols): Party Bill No & Party Bill Date */}
             <div className="col-span-3 border-l border-black flex flex-col justify-between">
               <div className="flex-1 border-b border-black p-2 flex flex-col justify-between items-center text-center">
-                <div className="font-normal text-[11px]">Party Bill No</div>
-                <div className="font-bold text-[12px] pb-1">
+                <div className="text-[12px] font-extrabold">Party Bill No</div>
+                <div className="text-[12px] font-extrabold pb-1">
                   {master.payable_bill_no || ""}
                 </div>
               </div>
               <div className="flex-1 p-2 flex flex-col justify-between items-center text-center">
-                <div className="font-normal text-[11px]">Party Bill Date</div>
-                <div className="text-[11.5px] pb-1">
+                <div className="text-[12px] font-extrabold">Party Bill Date</div>
+                <div className="text-[12px] font-extrabold pb-1">
                   {partyBillDateDisplay}
                 </div>
               </div>
@@ -568,7 +568,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
 
           {/* Material Details Table */}
           <div className="mt-1">
-            <table className="w-full border-collapse text-[11px] table-fixed border border-black" style={{ boxSizing: "border-box" }}>
+            <table className="w-full border-collapse text-[9px] table-fixed border border-black font-extrabold">
               <colgroup>
                 <col style={{ width: "7.5%" }} />
                 <col style={{ width: "6.5%" }} />
@@ -583,150 +583,155 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                 <col style={{ width: "15.0%" }} />
               </colgroup>
               <thead className="bg-white">
-                <tr className="border-b border-black font-normal bg-white text-black text-[10px] leading-tight">
-                  <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap bg-white">Grade</th>
-                  <th className="py-1 px-1 text-left align-middle border-r border-black whitespace-nowrap bg-white">Marka</th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap bg-white">Quantity</th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap bg-white">Unit</th>
-                  <th className="py-1 px-0.5 text-center align-middle border-r border-black leading-none whitespace-nowrap bg-white">
+                <tr className=" font-normal bg-white text-black text-[9px] leading-tight">
+                  <th className="py-1 px-1 text-left align-middle whitespace-nowrap bg-white">Grade</th>
+                  <th className="py-1 px-1 text-left align-middle whitespace-nowrap bg-white">Marka</th>
+                  <th className="py-1 px-1 text-center align-middle whitespace-nowrap bg-white">Quantity</th>
+                  <th className="py-1 px-1 text-center align-middle whitespace-nowrap bg-white">Unit</th>
+                  <th className="py-1 px-0.5 text-center align-middle leading-none whitespace-nowrap bg-white">
                     <div>P.O</div>
                     <div>Rate</div>
                   </th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap bg-white">Type</th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap bg-white">Claim</th>
-                  <th className="py-1 px-1 text-center align-middle border-r border-black whitespace-nowrap bg-white">Sett.</th>
-                  <th className="py-1 px-0.5 text-center align-middle border-r border-black leading-none whitespace-nowrap bg-white">
+                  <th className="py-1 px-1 text-center align-middle whitespace-nowrap bg-white">Type</th>
+                  <th className="py-1 px-1 text-center align-middle whitespace-nowrap bg-white">Claim</th>
+                  <th className="py-1 px-1 text-center align-middle whitespace-nowrap bg-white">Sett.</th>
+                  <th className="py-1 px-0.5 text-center align-middle leading-none whitespace-nowrap bg-white">
                     <div>Rate</div>
                     <div>(+/-)</div>
                   </th>
-                  <th className="py-1 px-0.5 text-center align-middle border-r border-black leading-none whitespace-nowrap bg-white">
+                  <th className="py-1 px-0.5 text-center align-middle leading-none whitespace-nowrap bg-white">
                     <div>Sett.</div>
                     <div>Rate</div>
                   </th>
                   <th className="py-1 px-1 text-center align-middle whitespace-nowrap bg-white">Value</th>
                 </tr>
               </thead>
-              <tbody>
-                {activeDetails.map((col, idx) => {
-                  const rawGrade = resolveGradeName(col.grade || "").trim();
-                  const gradeDisplay =
-                    rawGrade && !rawGrade.endsWith(".") ? `${rawGrade}.` : rawGrade || "-";
-                  const markaDisplay = (col.marka_crop || "").split("/")[0].trim();
-                  const qtyBales = Number(col.quantity) || 0;
-                  const wtMt = getColWtMt(col);
-                  const wtKgs = Math.round(wtMt * 1000);
-                  const unitDisplay = col.unit || "BALES";
+              <tbody className="text-[9px] leading-[9px]">
+  {activeDetails.map((col, idx) => {
+    const rawGrade = resolveGradeName(col.grade || "").trim();
+    const gradeDisplay =
+      rawGrade && !rawGrade.endsWith(".")
+        ? `${rawGrade}.`
+        : rawGrade || "-";
 
-                  const poRate = Number(col.rate_value) || 0;
-                  const premVal =
-                    Number(col.premium) > 0
-                      ? Number(col.premium)
-                      : Number(master.summary_premium_amount) > 0
-                      ? Number(master.summary_premium_amount)
-                      : Number(master.val_premium_amt) > 0 && wtMt > 0
-                      ? Number((Number(master.val_premium_amt) / (wtMt * 10)).toFixed(2))
-                      : 0;
-                  const gdClaim = Number(col.gd_claim) || 0;
-                  const gdSett =
-                    col.sett_pct !== undefined && col.sett_pct !== null
-                      ? Number(col.sett_pct)
-                      : Number(col.gd_sett) > 0
-                      ? Number(col.gd_sett)
-                      : gdClaim;
-                  const gdDedRate = Number(col.deduction_rate) || 0;
-                  const gdRateAdj = gdDedRate > 0 ? -gdDedRate : 0;
+    const markaDisplay = (col.marka_crop || "").split("/")[0].trim();
+    const qtyBales = Number(col.quantity) || 0;
+    const wtMt = getColWtMt(col);
+    const wtKgs = Math.round(wtMt * 1000);
+    const unitDisplay = col.unit || "BALES";
 
-                  const moistClaim =
-                    col.moist_claim !== undefined && col.moist_claim !== null && !isNaN(Number(col.moist_claim))
-                      ? Number(col.moist_claim)
-                      : Number(master.summary_rate_wt_claim) || 0;
+    const poRate = Number(col.rate_value) || 0;
+    const premVal =
+      Number(col.premium) > 0
+        ? Number(col.premium)
+        : Number(master.summary_premium_amount) > 0
+        ? Number(master.summary_premium_amount)
+        : Number(master.val_premium_amt) > 0 && wtMt > 0
+        ? Number(
+            (Number(master.val_premium_amt) / (wtMt * 10)).toFixed(2)
+          )
+        : 0;
 
-                  const netRateAdj = premVal - gdDedRate;
-                  const settRate = getEffectiveColSettRate(col);
-                  const colValue = getColAmount(col);
+    const gdClaim = Number(col.gd_claim) || 0;
+    const gdSett =
+      col.sett_pct !== undefined && col.sett_pct !== null
+        ? Number(col.sett_pct)
+        : Number(col.gd_sett) > 0
+        ? Number(col.gd_sett)
+        : gdClaim;
 
-                  return (
-                    <React.Fragment key={idx}>
-                      {/* Row 1: Grade, Marka, Quantity, Unit, P.O Rate, Grd.Down, Claim, Sett, Rate(-), Sett.Rate, Value */}
-                      <tr className="align-top">
-                        <td className="pt-1 px-1 font-bold text-left border-r border-black">{gradeDisplay}</td>
-                        <td className="pt-1 px-1 uppercase text-left border-r border-black">{markaDisplay}</td>
-                        <td className="pt-1 px-1 text-right border-r border-black">{qtyBales}</td>
-                        <td className="pt-1 px-1 text-center uppercase border-r border-black">{unitDisplay}</td>
-                        <td className="pt-1 px-1 text-right border-r border-black">{poRate}</td>
-                        <td className="pt-1 px-1 text-right border-r border-black">Grd.Down:</td>
-                        <td className="pt-1 px-1 text-right border-r border-black">{gdClaim}</td>
-                        <td className="pt-1 px-1 text-right border-r border-black">{gdSett}</td>
-                        <td className="pt-1 px-1 text-right border-r border-black">{gdRateAdj}</td>
-                        <td className="pt-1 px-1 text-right border-r border-black">{settRate}</td>
-                        <td className="pt-1 px-1 text-right">{colValue.toFixed(2)}</td>
-                      </tr>
+    const gdDedRate = Number(col.deduction_rate) || 0;
+    const gdRateAdj = gdDedRate > 0 ? -gdDedRate : 0;
 
-                      {/* Row 2: Weight in Kgs & Moisture */}
-                      <tr className="align-top">
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td colSpan={2} className="px-1 text-center whitespace-nowrap border-r border-black">
-                          {wtKgs} Kgs
-                        </td>
-                        <td className="border-r border-black"></td>
-                        <td className="px-1 text-right border-r border-black">Moisture:</td>
-                        <td className="px-1 text-right border-r border-black">{moistClaim}</td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td></td>
-                      </tr>
+    const moistClaim =
+      col.moist_claim !== undefined &&
+      col.moist_claim !== null &&
+      !isNaN(Number(col.moist_claim))
+        ? Number(col.moist_claim)
+        : Number(master.summary_rate_wt_claim) || 0;
 
-                      {/* Row 3: Premium */}
-                      <tr className="align-top">
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="px-1 text-right border-r border-black">Premium:</td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="px-1 text-right border-r border-black">
-                          <span className="border-b border-black inline-block min-w-[45px] text-right pb-0.5">
-                            {premVal}
-                          </span>
-                        </td>
-                        <td className="border-r border-black"></td>
-                        <td></td>
-                      </tr>
+    const netRateAdj = premVal - gdDedRate;
+    const settRate = getEffectiveColSettRate(col);
+    const colValue = getColAmount(col);
 
-                      {/* Row 4: Total Rate (+/-) */}
-                      <tr className="align-top">
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="px-1 text-right border-r border-black">Total:</td>
-                        <td className="border-r border-black"></td>
-                        <td className="border-r border-black"></td>
-                        <td className="px-1 text-right border-r border-black">{netRateAdj}</td>
-                        <td className="border-r border-black"></td>
-                        <td></td>
-                      </tr>
+    const cell = "p-0 border-0 align-top leading-[9px]";
 
-                      {/* Horizontal separator line between grades */}
-                      <tr className="border-b border-black">
-                        <td colSpan={11} className="h-1"></td>
-                      </tr>
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
+    return (
+      <React.Fragment key={idx}>
+        {/* Row 1: Main details */}
+        <tr className="border-0">
+          <td className={`${cell} font-bold text-left`}>{gradeDisplay}</td>
+          <td className={`${cell} uppercase text-left`}>{markaDisplay}</td>
+          <td className={`${cell} text-center`}>{qtyBales}</td>
+          <td className={`${cell} text-center uppercase`}>{unitDisplay}</td>
+          <td className={`${cell} text-center`}>{poRate}</td>
+          <td className={`${cell} text-center`}>Grd.Down:</td>
+          <td className={`${cell} text-center`}>{gdClaim}</td>
+          <td className={`${cell} text-center`}>{gdSett}</td>
+          <td className={`${cell} text-center`}>{gdRateAdj}</td>
+          <td className={`${cell} text-center`}>{settRate}</td>
+          <td className={`${cell} text-center`}>{colValue.toFixed(2)}</td>
+        </tr>
+
+        {/* Row 2: Weight and Moisture */}
+        <tr className="border-0">
+          <td className={cell}></td>
+          <td className={cell}></td>
+          <td className={`${cell} text-center`}>{wtKgs} Kgs</td>
+          <td className={cell}></td>
+          <td className={cell}></td>
+          <td className={`${cell} text-center`}>Moisture:</td>
+          <td className={`${cell} text-center`}>{moistClaim}</td>
+          <td className={cell}></td>
+          <td className={cell}></td>
+          <td className={cell}></td>
+          <td className={cell}></td>
+        </tr>
+
+        {/* Row 3: Premium */}
+        <tr className="border-0">
+          <td className={cell}></td>
+          <td className={cell}></td>
+          <td className={cell}></td>
+          <td className={cell}></td>
+          <td className={cell}></td>
+          <td className={`${cell} text-center`}>Premium:</td>
+          <td className={cell}></td>
+          <td className={cell}></td>
+          <td className={`${cell} text-center`}>
+            <span className="inline-block min-w-[45px] text-center">
+              {premVal}
+            </span>
+          </td>
+          <td className={cell}></td>
+          <td className={cell}></td>
+        </tr>
+
+        {/* Row 4: Total Rate */}
+        {/* <tr className="border-0">
+          <td className={cell}></td>
+          <td className={cell}></td>
+          <td className={cell}></td>
+          <td className={cell}></td>
+          <td className={cell}></td>
+          <td className={`${cell} text-center`}>Total:</td>
+          <td className={cell}></td>
+          <td className={cell}></td>
+          <td className={`${cell} text-center`}>{netRateAdj}</td>
+          <td className={cell}></td>
+          <td className={cell}></td>
+        </tr> */}
+      </React.Fragment>
+    );
+  })}
+</tbody>
             </table>
           </div>
 
           {/* Miscellaneous Charges Section */}
           <div className="mt-2 mb-2">
             <div className="border border-black p-2 text-[11px]">
-              <div className="text-center font-bold text-[11.5px] mb-2 uppercase tracking-wide">
+              <div className="text-center font-bold text-[12px] font-extrabold font-sans mb-2 uppercase tracking-wide">
                 Miscellaneous Charges
               </div>
 
@@ -762,128 +767,128 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
               </div>
             </div>
           </div>
-        </div>
+        
+          {/* Bottom Section: Framed Summary Box + Signature Footer */}
+          <div className="mt-auto pt-1">
+            <div className="border border-black text-[11px]">
+              {/* Top Row: Remarks */}
+              <div className="border-b border-black px-2 py-1 text-[12px] font-sans">
+                Remarks :- {master.remarks || ""}
+              </div>
 
-        {/* Bottom Section: Framed Summary Box + Signature Footer */}
-        <div className="mt-auto pt-1">
-          <div className="border border-black text-[11px]">
-            {/* Top Row: Remarks */}
-            <div className="border-b border-black px-2 py-1">
-              Remarks :- {master.remarks || ""}
-            </div>
-
-            {/* Split Left & Right Columns */}
-            <div className="grid grid-cols-12">
-              {/* Left Column: On A/c Advance & Cheque Adjustments */}
-              <div className="col-span-6 border-r border-black flex flex-col justify-between">
-                <div>
-                  <div className="border-b border-black p-2 space-y-1">
-                    <div className="underline font-bold">Note:</div>
-                    <div className="flex justify-between pr-4">
-                      <span>On A/c Total Advance</span>
-                      <span>: Rs. {onAcTotalAdv || ""}</span>
-                    </div>
-                    <div className="flex justify-between pr-4">
-                      <span>On A/c Total Adv. Adjusted</span>
-                      <span>: Rs. {onAcTotalAdvAdj || ""}</span>
-                    </div>
-                  </div>
-
-                  <div className="border-b border-black px-2 py-1 flex justify-between pr-4">
-                    <span>Balance Amount</span>
-                    <span>: Rs. {onAcBalanceAmt > 0 ? onAcBalanceAmt : ""}</span>
-                  </div>
-
-                  <div className="border-b border-black px-2 py-1 text-center font-bold text-[10.5px]">
-                    On A/c Adv. Adjustment Made Against This MR
-                  </div>
-
-                  <div className="border-b border-black grid grid-cols-3 px-1 py-1 font-bold text-[10.5px] text-center">
-                    <div className="border-r border-black">Cheque No</div>
-                    <div className="border-r border-black">Date</div>
-                    <div>Adjusted Value</div>
-                  </div>
-                </div>
-
-                <div className="flex-1 min-h-[75px] p-1">
-                  {Array.isArray(master.cheque_adjustments) &&
-                    master.cheque_adjustments.map((chk, cIdx) => (
-                      <div key={cIdx} className="grid grid-cols-3 text-[10.5px] py-0.5 text-center">
-                        <div className="border-r border-black px-1 text-left">{chk.cheque_no}</div>
-                        <div className="border-r border-black px-1">{chk.date}</div>
-                        <div className="px-1 text-right">
-                          {formatIndAmount(chk.adjusted_value)}
-                        </div>
+              {/* Split Left & Right Columns */}
+              <div className="grid grid-cols-12">
+                {/* Left Column: On A/c Advance & Cheque Adjustments */}
+                <div className="col-span-6 border-r border-black flex flex-col justify-between">
+                  <div>
+                    <div className="border-b border-black p-2 space-y-1">
+                      <div className="underline text-[12px] font-extrabold font-sans">Note:</div>
+                      <div className="flex justify-between pr-4 text-[12px] font-extrabold font-sans">
+                        <span>On A/c Total Advance</span>
+                        <span>: Rs. {onAcTotalAdv || ""}</span>
                       </div>
-                    ))}
+                      <div className="flex justify-between pr-4 text-[12px] font-extrabold font-sans">
+                        <span>On A/c Total Adv. Adjusted</span>
+                        <span>: Rs. {onAcTotalAdvAdj || ""}</span>
+                      </div>
+                    </div>
+
+                    <div className="border-b border-black px-2 py-1 flex justify-between pr-4 text-[12px] font-extrabold font-sans">
+                      <span>Balance Amount</span>
+                      <span>: Rs. {onAcBalanceAmt > 0 ? onAcBalanceAmt : ""}</span>
+                    </div>
+
+                    <div className="border-b border-black px-2 py-1 text-center text-[12px] font-extrabold font-sans">
+                      On A/c Adv. Adjustment Made Against This MR
+                    </div>
+
+                    <div className="border-b border-black grid grid-cols-3 px-1 py-1 text-[12px] font-extrabold font-sans text-center">
+                      <div className="border-r border-black">Cheque No</div>
+                      <div className="border-r border-black">Date</div>
+                      <div>Adjusted Value</div>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-h-[75px] p-1">
+                    {Array.isArray(master.cheque_adjustments) &&
+                      master.cheque_adjustments.map((chk, cIdx) => (
+                        <div key={cIdx} className="grid grid-cols-3 text-[10.5px] py-0.5 text-center">
+                          <div className="border-r border-black px-1 text-left">{chk.cheque_no}</div>
+                          <div className="border-r border-black px-1">{chk.date}</div>
+                          <div className="px-1 text-right">
+                            {formatIndAmount(chk.adjusted_value)}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Right Column: Financial Settlement Calculation Summary */}
+                <div className="col-span-6 flex flex-col justify-between">
+                  <div>
+                    <div className="border-b border-black p-1.5 space-y-1">
+                      <div className="flex justify-between text-[12px] font-extrabold font-sans">
+                        <span>Material Value</span>
+                        <span>: {formatIndAmount(materialValue)}</span>
+                      </div>
+                      <div className="flex justify-between text-[12px] font-extrabold font-sans">
+                        <span>Material Misc(+)</span>
+                        <span>: {formatIndAmount(miscAdd)}</span>
+                      </div>
+                      <div className="flex justify-between text-[12px] font-extrabold font-sans">
+                        <span>Material Misc(-)</span>
+                        <span>: {formatIndAmount(miscLessTotal)}</span>
+                      </div>
+                    </div>
+
+                    <div className="border-b border-black p-1.5 space-y-1">
+                      <div className="flex justify-between text-[13px] font-extrabold font-sans">
+                        <span>Total MR Amount</span>
+                        <span>: {formatIndAmount(totalMrAmount)}</span>
+                      </div>
+                      <div className="flex justify-between text-[12px] font-extrabold font-sans">
+                        <span>MR Advance Amount</span>
+                        <span>: {formatIndAmount(mrAdvanceAmount)}</span>
+                      </div>
+                    </div>
+
+                    <div className="border-b border-black px-1.5 py-1 flex justify-between text-[13px] font-extrabold font-sans">
+                      <span>Balance Due (Rounded)</span>
+                      <span>: {formatIndAmount(balanceDueRounded)}</span>
+                    </div>
+
+                    <div className="border-b border-black px-1.5 py-1 flex justify-between text-[12px] font-extrabold font-sans">
+                      <span>On A/c Adv. Adjusted Amount</span>
+                      <span>:Rs. {formatIndAmount(onAcAdvAdjusted)}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-1.5 flex-1 flex flex-col justify-between min-h-[75px]">
+                    <div className="flex justify-between text-[12px] font-extrabold font-sans">
+                      <span>Net Amount to be Paid</span>
+                      <span>:Rs. {formatIndAmount(netAmountToBePaid)}</span>
+                    </div>
+
+                    <div className="pt-2 text-[10px] leading-snug">
+                      <span className="mr-1 text-[12px] font-extrabold font-sans">Rs. :</span>
+                      <span className="text-[12px] font-extrabold font-sans">{numberToIndianWords(netAmountToBePaid)} ONLY</span>
+                    </div>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* Right Column: Financial Settlement Calculation Summary */}
-              <div className="col-span-6 flex flex-col justify-between">
-                <div>
-                  <div className="border-b border-black p-1.5 space-y-1">
-                    <div className="flex justify-between">
-                      <span>Material Value</span>
-                      <span>: {formatIndAmount(materialValue)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Material Misc(+)</span>
-                      <span>: {formatIndAmount(miscAdd)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Material Misc(-)</span>
-                      <span>: {formatIndAmount(miscLessTotal)}</span>
-                    </div>
-                  </div>
-
-                  <div className="border-b border-black p-1.5 space-y-1">
-                    <div className="flex justify-between font-bold">
-                      <span>Total MR Amount</span>
-                      <span>: {formatIndAmount(totalMrAmount)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>MR Advance Amount</span>
-                      <span>: {formatIndAmount(mrAdvanceAmount)}</span>
-                    </div>
-                  </div>
-
-                  <div className="border-b border-black px-1.5 py-1 flex justify-between font-bold">
-                    <span>Balance Due (Rounded)</span>
-                    <span>: {formatIndAmount(balanceDueRounded)}</span>
-                  </div>
-
-                  <div className="border-b border-black px-1.5 py-1 flex justify-between">
-                    <span>On A/c Adv. Adjusted Amount</span>
-                    <span>:Rs. {formatIndAmount(onAcAdvAdjusted)}</span>
-                  </div>
-                </div>
-
-                <div className="p-1.5 flex-1 flex flex-col justify-between min-h-[75px]">
-                  <div className="flex justify-between font-bold text-[11px]">
-                    <span>Net Amount to be Paid</span>
-                    <span>:Rs. {formatIndAmount(netAmountToBePaid)}</span>
-                  </div>
-
-                  <div className="pt-2 text-[10px] leading-snug">
-                    <span className="mr-1 font-bold">Rs. :</span>
-                    <span className="font-bold">{numberToIndianWords(netAmountToBePaid)} ONLY</span>
-                  </div>
-                </div>
+            {/* Signature Footer */}
+            <div className="pt-8 pb-2 px-6 flex justify-between items-end text-[11px] font-bold">
+              <div>
+                <u className="pb-0.5 inline-block text-[12px] font-extrabold font-sans">Prepared by</u>
               </div>
-            </div>
-          </div>
-
-          {/* Signature Footer */}
-          <div className="pt-8 pb-2 px-6 flex justify-between items-end text-[11px] font-bold">
-            <div>
-              <u className="pb-0.5 inline-block">Prepared by</u>
-            </div>
-            <div>
-              <u className="pb-0.5 inline-block">Checked by</u>
-            </div>
-            <div>
-              <u className="pb-0.5 inline-block">Authorised Signatory</u>
+              <div>
+                <u className="pb-0.5 inline-block text-[12px] font-extrabold font-sans">Checked by</u>
+              </div>
+              <div>
+                <u className="pb-0.5 inline-block text-[12px] font-extrabold font-sans">Authorised Signatory</u>
+              </div>
             </div>
           </div>
         </div>
