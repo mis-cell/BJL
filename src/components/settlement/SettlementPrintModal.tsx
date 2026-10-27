@@ -407,10 +407,14 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
       ? `${areaPart} / ${agencyPart}`
       : areaPart || agencyPart || "-";
 
-  const consignNoDisplay = master.consign_no || master.challan_no || "";
-  const consignDateDisplay = formatDateDdMmmYy(
-    master.consign_date || master.po_date || master.mr_date
-  );
+  // Consign No. comes from Final Arrival field "Challan No & Date." (challan_rr_no)
+  const consignNoDisplay = (
+    master.consign_no ||
+    master.challan_rr_no ||
+    master.challan_railway_receipt_no ||
+    master.challan_no ||
+    ""
+  ).trim();
 
   // Deductions & Miscellaneous Charges calculation
   const validInspectionDeductions = Array.isArray(master.deductions)
@@ -582,8 +586,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
               <div className="grid grid-cols-12 items-baseline">
                 <div className="col-span-2">Consign No.:</div>
                 <div className="col-span-10 pl-2">
-                  <span className="inline-block min-w-[70px]">{consignNoDisplay}</span>
-                  <span>{consignDateDisplay}</span>
+                  <span>{consignNoDisplay || "-"}</span>
                 </div>
               </div>
 

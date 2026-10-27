@@ -127,6 +127,8 @@ export interface SettlementMaster {
   supplier_address?: string;
   consign_no?: string;
   consign_date?: string;
+  challan_rr_no?: string;
+  challan_railway_receipt_no?: string;
   way_bill?: string;
   pan_no?: string;
   unit_name?: string;
