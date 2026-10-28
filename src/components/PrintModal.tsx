@@ -43,9 +43,10 @@ interface PrintModalProps {
   copyType?: string | null;
   setCopyType?: (val: any) => void;
   onPrint?: () => void | Promise<void>;
+  extraActions?: React.ReactNode;
 }
 
-export default function PrintModal({ isOpen, onClose, title, children, showTip = true, copyType, setCopyType, onPrint }: PrintModalProps) {
+export default function PrintModal({ isOpen, onClose, title, children, showTip = true, copyType, setCopyType, onPrint, extraActions }: PrintModalProps) {
   const [emailRecipient, setEmailRecipient] = useState("");
   const [emailSubject, setEmailSubject] = useState(`[Bally Jute ERP] ${title}`);
   const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
@@ -210,6 +211,7 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
             <div></div>
           )}
           <div className="flex gap-1.5 ml-auto">
+            {extraActions}
             {setCopyType && (
               <select 
                 value={copyType || "1"} 
