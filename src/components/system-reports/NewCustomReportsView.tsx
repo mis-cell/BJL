@@ -357,18 +357,58 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
             return false;
           });
 
-          const rawPoNo = String(
-            insp.po_no ||
-            insp.mill_po_no ||
-            matchedFa?.po_no ||
-            matchedTmr?.po_no ||
-            ''
-          ).trim();
+          // Check mr_settlement_master early so we can also resolve PO number if linked there
+          const matchedSett = rawSettlements.find((s: any) => {
+            const sMr = String(s.mr_no || s.arrival_no || '').trim().toUpperCase();
+            if (!sMr) return false;
+            if (sMr === mrNo.toUpperCase()) return true;
+            if (mrDigits && extractCoreDigits(sMr) === mrDigits) return true;
+            return false;
+          });
+
+          const candidatePoValues = [
+            insp.po_no,
+            insp.mill_po_no,
+            insp.contract_po_no,
+            insp.sauda_no,
+            matchedFa?.po_no,
+            matchedFa?.sauda_no,
+            matchedTmr?.po_no,
+            matchedTmr?.sauda_no,
+            matchedSett?.po_no
+          ];
+
+          const isInvalidPoValue = (val: any): boolean => {
+            const s = String(val || '').trim().toUpperCase();
+            return (
+              !s ||
+              s === '-' ||
+              s === '--' ||
+              s === 'N/A' ||
+              s === 'NA' ||
+              s === 'NO' ||
+              s === 'NONE' ||
+              s === 'NULL' ||
+              s === 'UNDEFINED' ||
+              s === 'WITHOUT PO' ||
+              s === 'PENDING'
+            );
+          };
+
+          const validRawPo = candidatePoValues.find((v) => !isInvalidPoValue(v));
+          const rawPoNo = String(validRawPo || '').trim();
           const poKey = cleanPoKey(rawPoNo);
           const poSuffix = poKey.split('/').pop()?.trim() || '';
           const poRec =
             (poKey ? allPoLookup.get(poKey) : undefined) ||
             (poSuffix.length >= 3 ? allPoLookup.get(`SUFFIX_${poSuffix}`) : undefined);
+
+          const resolvedPoNo = String(rawPoNo || poRec?.po_no || poRec?.po_number || '').trim();
+
+          // Rule: If MR has NO PO Number, it is NOT eligible for Advance Payment
+          if (isInvalidPoValue(resolvedPoNo) || !poKey) {
+            return;
+          }
 
           // 1. Check Mismatch Status against this MR or PO
           const matchedMatMm = rawMatMismatches.filter((m: any) => {
@@ -448,15 +488,6 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
             return false;
           });
 
-          // Check mr_settlement_master
-          const matchedSett = rawSettlements.find((s: any) => {
-            const sMr = String(s.mr_no || s.arrival_no || '').trim().toUpperCase();
-            if (!sMr) return false;
-            if (sMr === mrNo.toUpperCase()) return true;
-            if (mrDigits && extractCoreDigits(sMr) === mrDigits) return true;
-            return false;
-          });
-
           const paidFromPayment = matchedPayment
             ? (Number(matchedPayment.paid_amount) || Number(matchedPayment.total_amount) || Number(matchedPayment.payable_amt) || 1)
             : 0;
@@ -515,7 +546,7 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
               insp.created_at ||
               ''
             ).split('T')[0],
-            poNo: rawPoNo || poRec?.po_no || '-',
+            poNo: resolvedPoNo,
             supplier: String(
               insp.supplier_name ||
               insp.supplier ||
