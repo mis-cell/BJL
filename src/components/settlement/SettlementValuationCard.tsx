@@ -71,9 +71,10 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               aria-label="Summary Rate per MT"
               type="number"
               step="0.01"
-              className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs cursor-not-allowed w-full"
               value={masterData.summary_rate_qtel || calculateWeightedRatePerMT(detailCols) || ""}
-              onChange={(e) => handleMasterChange("summary_rate_qtel", parseFloat(e.target.value) || 0)}
             />
           </div>
 
@@ -85,9 +86,10 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               aria-label="Rate aff. Cd. Cl"
               type="number"
               step="0.01"
-              className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs cursor-not-allowed w-full"
               value={masterData.summary_rate_aff_cd_cl || ""}
-              onChange={(e) => handleMasterChange("summary_rate_aff_cd_cl", parseFloat(e.target.value) || 0)}
             />
           </div>
 
@@ -119,9 +121,10 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               aria-label="Delivery Claim (-)"
               type="number"
               step="0.01"
-              className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-[#991b1b] shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-[#991b1b] shadow-2xs cursor-not-allowed w-full"
               value={masterData.summary_delivery_claim !== undefined && masterData.summary_delivery_claim !== null ? masterData.summary_delivery_claim : (autoDeliveryPenalty || "")}
-              onChange={(e) => handleMasterChange("summary_delivery_claim", parseFloat(e.target.value) || 0)}
             />
           </div>
 
@@ -140,9 +143,10 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               aria-label="Moisture %"
               type="number"
               step="0.01"
-              className="bg-amber-50/60 border border-amber-300 rounded-md px-2 py-1 h-7 text-right font-mono font-black text-xs text-blue-900 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+              readOnly
+              disabled
+              className="bg-amber-50/60 border border-amber-300 rounded-md px-2 py-1 h-7 text-right font-mono font-black text-xs text-blue-900 shadow-2xs cursor-not-allowed w-full"
               value={masterData.summary_rate_wt_claim || ""}
-              onChange={(e) => handleMasterChange("summary_rate_wt_claim", parseFloat(e.target.value) || 0)}
             />
           </div>
 
@@ -155,14 +159,15 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               aria-label="Instl Rate"
               type="number"
               step="0.01"
-              className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs cursor-not-allowed w-full"
               value={
                 masterData.summary_instl_rate &&
                 Number(masterData.summary_instl_rate) !== Number(masterData.summary_premium_wt)
                   ? masterData.summary_instl_rate
                   : ""
               }
-              onChange={(e) => handleMasterChange("summary_instl_rate", parseFloat(e.target.value) || 0)}
             />
           </div>
 
@@ -174,13 +179,10 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               aria-label="Premium WT"
               type="number"
               step="0.01"
-              className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs cursor-not-allowed w-full"
               value={masterData.summary_premium_wt ? masterData.summary_premium_wt : ""}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value) || 0;
-                handleMasterChange("summary_premium_wt", val);
-                handleMasterChange("summary_less_amount", val);
-              }}
             />
           </div>
 
@@ -200,9 +202,10 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               aria-label="Mat. Value"
               type="number"
               step="0.01"
-              className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs cursor-not-allowed w-full"
               value={masterData.summary_material_value || ""}
-              onChange={(e) => handleMasterChange("summary_material_value", parseFloat(e.target.value) || 0)}
             />
           </div>
 
@@ -244,9 +247,10 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               aria-label="Premium Rate"
               type="number"
               step="0.01"
-              className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs cursor-not-allowed w-full"
               value={masterData.summary_premium_amount || ""}
-              onChange={(e) => handleMasterChange("summary_premium_amount", parseFloat(e.target.value) || 0)}
             />
           </div>
 
@@ -257,9 +261,10 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               name="addtl_quality_claims"
               aria-label="Addtl Quality claims"
               type="number"
-              className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-[#991b1b] shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-[#991b1b] shadow-2xs cursor-not-allowed w-full"
               value={masterData.summary_less_amount || ""}
-              onChange={(e) => handleMasterChange("summary_less_amount", parseFloat(e.target.value) || 0)}
             />
           </div>
 
@@ -275,9 +280,10 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               aria-label="Deduction Amount (-)"
               type="number"
               step="0.01"
-              className="bg-[#fff1f2] border border-[#fecdd3] rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-[#991b1b] shadow-2xs focus:outline-none w-full"
+              readOnly
+              disabled
+              className="bg-[#fff1f2] border border-[#fecdd3] rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-[#991b1b] shadow-2xs cursor-not-allowed w-full"
               value={masterData.summary_deduction_amount || ""}
-              onChange={(e) => handleMasterChange("summary_deduction_amount", parseFloat(e.target.value) || 0)}
             />
           </div>
         </div>
@@ -297,8 +303,9 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               name="val_material_value"
               aria-label="Material Value"
               type="number"
+              readOnly
               disabled
-              className="bg-[#f1f5f9] border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-900 shadow-2xs w-full"
+              className="bg-[#f1f5f9] border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-900 shadow-2xs w-full cursor-not-allowed"
               value={Number(masterData.val_material_value || 0).toFixed(2)}
             />
           </div>
@@ -347,9 +354,10 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               aria-label="Premium Amt (+)"
               type="number"
               step="0.01"
-              className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs cursor-not-allowed w-full"
               value={masterData.val_premium_amt || ""}
-              onChange={(e) => handleMasterChange("val_premium_amt", parseFloat(e.target.value) || 0)}
             />
           </div>
 
@@ -361,9 +369,10 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               aria-label="Ded Claim Total (-)"
               type="number"
               step="0.01"
-              className="bg-[#fff1f2] border border-[#fecdd3] rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-[#991b1b] shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+              readOnly
+              disabled
+              className="bg-[#fff1f2] border border-[#fecdd3] rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-[#991b1b] shadow-2xs cursor-not-allowed w-full"
               value={masterData.val_qty_claim || ""}
-              onChange={(e) => handleMasterChange("val_qty_claim", parseFloat(e.target.value) || 0)}
             />
           </div>
 
@@ -375,9 +384,10 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               aria-label="Qty Claim"
               type="number"
               step="0.01"
-              className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs cursor-not-allowed w-full"
               value={masterData.val_qty_claim || ""}
-              onChange={(e) => handleMasterChange("val_qty_claim", parseFloat(e.target.value) || 0)}
             />
           </div>
 
@@ -424,12 +434,13 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               aria-label="Ex/Short (-)"
               type="number"
               step="0.01"
+              readOnly
+              disabled
               className={cn(
-                "border rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs shadow-2xs focus:border-indigo-500 focus:outline-none w-full",
-                Number(masterData.val_ex_short) > 0 ? "bg-[#fff1f2] border-[#fecdd3] text-[#991b1b]" : "bg-white border-slate-300 text-slate-800"
+                "border rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs shadow-2xs cursor-not-allowed w-full",
+                Number(masterData.val_ex_short) > 0 ? "bg-[#fff1f2] border-[#fecdd3] text-[#991b1b]" : "bg-slate-100 border-slate-300 text-slate-800"
               )}
               value={masterData.val_ex_short || ""}
-              onChange={(e) => handleMasterChange("val_ex_short", parseFloat(e.target.value) || 0)}
             />
           </div>
         </div>
@@ -462,9 +473,10 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               name="on_ac_adv"
               aria-label="On/Ac Adv"
               type="number"
-              className="bg-white border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs focus:border-indigo-500 focus:outline-none w-full"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs cursor-not-allowed w-full"
               value={masterData.final_on_ac_adv || ""}
-              onChange={(e) => handleMasterChange("final_on_ac_adv", parseFloat(e.target.value) || 0)}
             />
           </div>
 
@@ -475,9 +487,9 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               name="apmc_fees"
               aria-label="APMC Fees"
               type="number"
+              readOnly
               disabled
-              className="bg-[#f1f5f9] border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-900 shadow-2xs w-full"
-              //value={((Number(masterData.arival_apmc_fees) || 0) - (Number(masterData.actual_apmc_fees) || 0)).toFixed(2)}
+              className="bg-[#f1f5f9] border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-900 shadow-2xs w-full cursor-not-allowed"
               value={Math.min(
                 0,
                 (Number(masterData.arival_apmc_fees) || 0) -

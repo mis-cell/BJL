@@ -157,6 +157,19 @@
     transition: all 0.15s ease-in-out !important;
   }
 
+  /* Hide Up/Down Spinner Arrows on all Number Inputs globally */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+    display: none !important;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield !important;
+    appearance: textfield !important;
+  }
+
   input[type="text"]::placeholder,
   input[type="number"]::placeholder,
   input[type="email"]::placeholder,

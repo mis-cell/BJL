@@ -72,10 +72,10 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
             </div>
           </div>
 
-          {/* Inspection Searchable Dropdown - Filtered strictly by selected P.O */}
+          {/* MR Searchable Dropdown - Sourced from payment_master (mr_no & po_no) */}
           <div className="flex items-center gap-2 bg-white border border-gray-400 p-1 rounded-sm">
             <span className="font-extrabold text-slate-800 uppercase text-[10px] tracking-tight shrink-0">
-              Inspection:
+              MR:
             </span>
             <div className="w-[220px] sm:w-[280px]">
               <SearchableSelect
@@ -87,8 +87,7 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
                   handleProceedWithMrNo(mrVal);
                 }}
                 options={faOptionsForSelectedPo}
-                placeholder={selectedPoNo ? "-- CHOOSE INSPECTION --" : "-- SELECT P.O FIRST --"}
-                disabled={!selectedPoNo}
+                placeholder={selectedPoNo ? "-- CHOOSE MR --" : "-- SELECT MR --"}
                 compact={true}
                 inputClassName="font-mono text-xs font-bold text-rose-800 bg-white border-0 py-0.5"
               />
@@ -104,7 +103,7 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
             }}
             className="bg-[#FBCFCB] hover:bg-white text-[10px] uppercase font-black px-4 py-2 border border-gray-400 cursor-pointer shadow-xs active:translate-y-px rounded"
           >
-            Force Sync Inspection
+            Force Sync MR
           </button>
 
           <button
@@ -161,7 +160,7 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
 
           <div className="flex flex-col">
             <label htmlFor="m_r_no_header_card" className="text-gray-500 text-[8px] uppercase font-black text-rose-900">
-              Inspection No (From Mill Inspection)
+              MR No (From Payment)
             </label>
             <SearchableSelect
               id="m_r_no_header_card"
@@ -172,8 +171,7 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
                 handleProceedWithMrNo(mrVal);
               }}
               options={faOptionsForSelectedPo}
-              placeholder={selectedPoNo ? "-- Select Inspection --" : "-- Select P.O First --"}
-              disabled={!selectedPoNo}
+              placeholder={selectedPoNo ? "-- Select MR --" : "-- Select MR --"}
               compact={true}
               inputClassName="font-mono font-bold text-rose-800 text-[11px] py-1"
             />
@@ -203,10 +201,11 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               name="p_o_type"
               aria-label="P.O. Type"
               type="text"
-              className="bg-white border border-gray-400 p-1 font-sans"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-gray-400 p-1 font-sans cursor-not-allowed"
               placeholder="e.g. MILL_PO"
               value={masterData.po_type}
-              onChange={(e) => handleMasterChange("po_type", e.target.value)}
             />
           </div>
 
@@ -219,9 +218,10 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               name="broker_name"
               aria-label="Broker Name"
               type="text"
-              className="bg-white border border-gray-400 p-1 font-sans text-slate-800"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-gray-400 p-1 font-sans text-slate-800 cursor-not-allowed"
               value={masterData.broker}
-              onChange={(e) => handleMasterChange("broker", e.target.value)}
             />
           </div>
 
@@ -234,9 +234,10 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               name="suppler_name"
               aria-label="Supplier Name"
               type="text"
-              className="bg-white border border-gray-400 p-1 font-sans text-slate-800"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-gray-400 p-1 font-sans text-slate-800 cursor-not-allowed"
               value={masterData.supplier}
-              onChange={(e) => handleMasterChange("supplier", e.target.value)}
             />
           </div>
 
@@ -249,9 +250,10 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               name="chn_supplier"
               aria-label="Chn..Supplier"
               type="text"
-              className="bg-white border border-gray-400 p-1 font-sans"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-gray-400 p-1 font-sans cursor-not-allowed"
               value={masterData.chn_supplier}
-              onChange={(e) => handleMasterChange("chn_supplier", e.target.value)}
             />
           </div>
 
@@ -259,15 +261,16 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
             <label htmlFor="p_o_no_header_card" className="text-gray-500 text-[8px] uppercase font-black text-indigo-900">
               P.O. No. (From Final P.O)
             </label>
-            <SearchableSelect
+            <input
               id="p_o_no_header_card"
               name="p_o_no_from_final_p_o"
-              value={selectedPoNo || masterData.po_no}
-              onChange={(newPo) => handlePoNoSelection(newPo, false)}
-              options={poOptions}
+              aria-label="P.O. No. (From Final P.O)"
+              type="text"
+              readOnly
+              disabled
               placeholder="-- Select Final P.O --"
-              compact={true}
-              inputClassName="font-mono font-bold text-indigo-900 text-[11px] py-1"
+              className="bg-slate-100 border border-gray-400 p-1 font-mono font-bold text-indigo-900 text-[11px] cursor-not-allowed"
+              value={selectedPoNo || masterData.po_no || ""}
             />
           </div>
 
@@ -280,8 +283,9 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               name="p_o_date"
               aria-label="P.O Date"
               type="date"
+              readOnly
               disabled
-              className="bg-slate-150 border border-gray-400 p-1 font-mono text-center"
+              className="bg-slate-100 border border-gray-400 p-1 font-mono text-center cursor-not-allowed"
               value={masterData.po_date}
             />
           </div>
@@ -295,9 +299,10 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               name="lorry_number"
               aria-label="Lorry Number"
               type="text"
-              className="bg-white border border-gray-400 p-1 font-mono uppercase"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-gray-400 p-1 font-mono uppercase cursor-not-allowed"
               value={masterData.lorry_number}
-              onChange={(e) => handleMasterChange("lorry_number", e.target.value)}
             />
           </div>
 
@@ -310,9 +315,10 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               name="detention_days"
               aria-label="Detention Days"
               type="number"
-              className="bg-white border border-gray-400 p-1 font-mono text-center"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-gray-400 p-1 font-mono text-center cursor-not-allowed"
               value={masterData.detention_days}
-              onChange={(e) => handleMasterChange("detention_days", parseInt(e.target.value) || 0)}
             />
           </div>
 
@@ -325,9 +331,10 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               name="arrival_no"
               aria-label="Arrival No."
               type="text"
-              className="bg-white border border-gray-400 p-1 font-mono"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-gray-400 p-1 font-mono cursor-not-allowed"
               value={masterData.arrival_no}
-              onChange={(e) => handleMasterChange("arrival_no", e.target.value)}
             />
           </div>
 
@@ -340,9 +347,10 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               name="arrival_date"
               aria-label="Arrival Date"
               type="date"
-              className="bg-white border border-gray-400 p-1 font-mono text-center"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-gray-400 p-1 font-mono text-center cursor-not-allowed"
               value={masterData.arrival_date}
-              onChange={(e) => handleMasterChange("arrival_date", e.target.value)}
             />
           </div>
 
@@ -364,9 +372,10 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               aria-label="Actual APMC Fees (1%)"
               type="number"
               step="1"
-              className="bg-white border border-gray-400 p-1 text-right font-mono"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-gray-400 p-1 text-right font-mono cursor-not-allowed"
               value={masterData.actual_apmc_fees !== undefined && masterData.actual_apmc_fees !== null ? Math.round(Number(masterData.actual_apmc_fees)) : ""}
-              onChange={(e) => handleMasterChange("actual_apmc_fees", Math.round(parseFloat(e.target.value) || 0))}
             />
           </div>
 
@@ -379,9 +388,10 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               name="arival_apmc_fees"
               aria-label="Arival APMC Fees"
               type="number"
-              className="bg-white border border-gray-400 p-1 text-right font-mono"
+              readOnly
+              disabled
+              className="bg-slate-100 border border-gray-400 p-1 text-right font-mono cursor-not-allowed"
               value={masterData.arival_apmc_fees || ""}
-              onChange={(e) => handleMasterChange("arival_apmc_fees", parseFloat(e.target.value) || 0)}
             />
           </div>
 
@@ -415,7 +425,7 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
             </label>
           </div>
 
-          {/* 4 Custom Checklist Weight Fields */}
+          {/* 4 Custom Checklist Weight Fields (Read-Only from Arrival / Inspection) */}
           <div className="flex flex-col">
             <label className="text-blue-900 font-extrabold text-[8px] uppercase">Challan Weight (MT)</label>
             <input
@@ -423,20 +433,11 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               name="challan_weight"
               aria-label="Challan Weight"
               type="text"
-              inputMode="decimal"
+              readOnly
+              disabled
               placeholder="0.000"
-              className="bg-blue-50 border border-blue-300 p-1 font-mono font-bold text-right text-blue-900"
+              className="bg-blue-50 border border-blue-300 p-1 font-mono font-bold text-right text-blue-900 cursor-not-allowed"
               value={getFormattedWtValue("challan_weight")}
-              onFocus={() => {
-                setFocusedWtField("challan_weight");
-                const num = Number(masterData.challan_weight);
-                setRawWtInput(num > 0 ? num.toFixed(3) : "");
-              }}
-              onBlur={() => setFocusedWtField(null)}
-              onChange={(e) => {
-                setRawWtInput(e.target.value);
-                handleMasterChange("challan_weight", parseFloat(e.target.value) || 0);
-              }}
             />
           </div>
 
@@ -447,20 +448,11 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               name="supplier_net_wt"
               aria-label="Supplier Net Wt"
               type="text"
-              inputMode="decimal"
+              readOnly
+              disabled
               placeholder="0.000"
-              className="bg-teal-50 border border-teal-300 p-1 font-mono font-bold text-right text-teal-950"
+              className="bg-teal-50 border border-teal-300 p-1 font-mono font-bold text-right text-teal-950 cursor-not-allowed"
               value={getFormattedWtValue("supplier_net_wt")}
-              onFocus={() => {
-                setFocusedWtField("supplier_net_wt");
-                const num = Number(masterData.supplier_net_wt);
-                setRawWtInput(num > 0 ? num.toFixed(3) : "");
-              }}
-              onBlur={() => setFocusedWtField(null)}
-              onChange={(e) => {
-                setRawWtInput(e.target.value);
-                handleMasterChange("supplier_net_wt", parseFloat(e.target.value) || 0);
-              }}
             />
           </div>
 
@@ -471,20 +463,11 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               name="electronic_scale_net"
               aria-label="Electronic Scale Net"
               type="text"
-              inputMode="decimal"
+              readOnly
+              disabled
               placeholder="0.000"
-              className="bg-purple-50 border border-purple-300 p-1 font-mono font-bold text-right text-purple-950"
+              className="bg-purple-50 border border-purple-300 p-1 font-mono font-bold text-right text-purple-950 cursor-not-allowed"
               value={getFormattedWtValue("electronic_scale_net")}
-              onFocus={() => {
-                setFocusedWtField("electronic_scale_net");
-                const num = Number(masterData.electronic_scale_net);
-                setRawWtInput(num > 0 ? num.toFixed(3) : "");
-              }}
-              onBlur={() => setFocusedWtField(null)}
-              onChange={(e) => {
-                setRawWtInput(e.target.value);
-                handleMasterChange("electronic_scale_net", parseFloat(e.target.value) || 0);
-              }}
             />
           </div>
 
@@ -519,30 +502,33 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
             name="wt_ded_wt_1"
             aria-label="Wt Ded Wt 1"
             type="number"
+            readOnly
+            disabled
             placeholder="0.000"
-            className="w-16 bg-white border border-gray-400 text-right p-0.5 font-mono text-[10px]"
+            className="w-16 bg-slate-100 border border-gray-400 text-right p-0.5 font-mono text-[10px] cursor-not-allowed"
             value={masterData.wt_ded_wt_1 || ""}
-            onChange={(e) => handleMasterChange("wt_ded_wt_1", parseFloat(e.target.value) || 0)}
           />
           <input
             id="wt_ded_wt_2_header_card"
             name="wt_ded_wt_2"
             aria-label="Wt Ded Wt 2"
             type="number"
+            readOnly
+            disabled
             placeholder="0.000"
-            className="w-16 bg-white border border-gray-400 text-right p-0.5 font-mono text-[10px]"
+            className="w-16 bg-slate-100 border border-gray-400 text-right p-0.5 font-mono text-[10px] cursor-not-allowed"
             value={masterData.wt_ded_wt_2 || ""}
-            onChange={(e) => handleMasterChange("wt_ded_wt_2", parseFloat(e.target.value) || 0)}
           />
           <input
             id="wt_ded_wt_3_header_card"
             name="wt_ded_wt_3"
             aria-label="Wt Ded Wt 3"
             type="number"
+            readOnly
+            disabled
             placeholder="0.000"
-            className="w-16 bg-white border border-gray-400 text-right p-0.5 font-mono text-[10px]"
+            className="w-16 bg-slate-100 border border-gray-400 text-right p-0.5 font-mono text-[10px] cursor-not-allowed"
             value={masterData.wt_ded_wt_3 || ""}
-            onChange={(e) => handleMasterChange("wt_ded_wt_3", parseFloat(e.target.value) || 0)}
           />
         </div>
 
@@ -556,9 +542,10 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
             aria-label="Rate per MT"
             type="number"
             step="0.01"
-            className="w-20 bg-white border border-gray-400 text-right p-0.5 font-mono text-[10px] font-bold text-slate-900"
+            readOnly
+            disabled
+            className="w-20 bg-slate-100 border border-gray-400 text-right p-0.5 font-mono text-[10px] font-bold text-slate-900 cursor-not-allowed"
             value={masterData.rate_qntl || calculateWeightedRatePerMT(detailCols) || ""}
-            onChange={(e) => handleMasterChange("rate_qntl", parseFloat(e.target.value) || 0)}
           />
         </div>
       </div>

@@ -135,7 +135,8 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                       {gradeMasterList.length > 0 ? (
                         <select
                           aria-label={`Grade Col ${colIdx}`}
-                          className="w-full p-1 bg-transparent text-center font-black outline-none focus:bg-amber-50 cursor-pointer"
+                          disabled
+                          className="w-full p-1 bg-transparent text-center font-black outline-none cursor-not-allowed appearance-none"
                           value={col.grade || ""}
                           onChange={(e) => handleColChange(colIdx, "grade", e.target.value)}
                         >
@@ -156,7 +157,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                           name={`grade_name_col_${colIdx}`}
                           aria-label={`Grade Name Col ${colIdx}`}
                           type="text"
-                          className="w-full bg-transparent p-1 outline-none text-center font-black text-slate-800 focus:bg-amber-50"
+                          readOnly
+                          disabled
+                          className="w-full bg-transparent p-1 outline-none text-center font-black text-slate-800 cursor-not-allowed"
                           placeholder="Grade"
                           value={col.grade || ""}
                           onChange={(e) => handleColChange(colIdx, "grade", e.target.value)}
@@ -169,7 +172,8 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                       {areaMasterList.length > 0 ? (
                         <select
                           aria-label={`Area Col ${colIdx}`}
-                          className="w-full p-1 bg-transparent text-center outline-none focus:bg-amber-50 cursor-pointer"
+                          disabled
+                          className="w-full p-1 bg-transparent text-center outline-none cursor-not-allowed appearance-none"
                           value={col.area || ""}
                           onChange={(e) => handleColChange(colIdx, "area", e.target.value)}
                         >
@@ -189,7 +193,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                           name={`area_col_${colIdx}`}
                           aria-label={`Area Col ${colIdx}`}
                           type="text"
-                          className="w-full bg-transparent p-1 outline-none text-center focus:bg-amber-50"
+                          readOnly
+                          disabled
+                          className="w-full bg-transparent p-1 outline-none text-center cursor-not-allowed"
                           placeholder="Area"
                           value={col.area || ""}
                           onChange={(e) => handleColChange(colIdx, "area", e.target.value)}
@@ -202,7 +208,8 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                       {agencyMasterList.length > 0 ? (
                         <select
                           aria-label={`Agency Col ${colIdx}`}
-                          className="w-full p-1 bg-transparent text-center outline-none focus:bg-amber-50 cursor-pointer"
+                          disabled
+                          className="w-full p-1 bg-transparent text-center outline-none cursor-not-allowed appearance-none"
                           value={col.agency || ""}
                           onChange={(e) => handleColChange(colIdx, "agency", e.target.value)}
                         >
@@ -222,7 +229,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                           name={`agency_col_${colIdx}`}
                           aria-label={`Agency Col ${colIdx}`}
                           type="text"
-                          className="w-full bg-transparent p-1 outline-none text-center focus:bg-amber-50"
+                          readOnly
+                          disabled
+                          className="w-full bg-transparent p-1 outline-none text-center cursor-not-allowed"
                           placeholder="Agency"
                           value={col.agency || ""}
                           onChange={(e) => handleColChange(colIdx, "agency", e.target.value)}
@@ -237,7 +246,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                         name={`quantity_col_${colIdx}`}
                         aria-label={`Quantity Col ${colIdx}`}
                         type="number"
-                        className="w-full p-1 bg-transparent text-center font-mono outline-none focus:bg-amber-50"
+                        readOnly
+                        disabled
+                        className="w-full p-1 bg-transparent text-center font-mono outline-none cursor-not-allowed"
                         value={col.quantity || ""}
                         onChange={(e) =>
                           handleColChange(colIdx, "quantity", parseFloat(e.target.value) || 0)
@@ -254,7 +265,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                           aria-label={`Weight Col ${colIdx}`}
                           type="number"
                           step="0.001"
-                          className="w-full p-0.5 bg-transparent text-center font-mono font-black outline-none focus:bg-amber-50"
+                          readOnly
+                          disabled
+                          className="w-full p-0.5 bg-transparent text-center font-mono font-black outline-none cursor-not-allowed"
                           value={col.arr_qty_wt || ""}
                           onChange={(e) =>
                             handleColChange(colIdx, "arr_qty_wt", parseFloat(e.target.value) || 0)
@@ -275,7 +288,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                         name={`recon_rate_${colIdx}`}
                         aria-label={`Rate Col ${colIdx}`}
                         type="number"
-                        className="w-full p-1 bg-transparent text-center font-mono text-blue-900 font-black outline-none focus:bg-amber-50"
+                        readOnly
+                        disabled
+                        className="w-full p-1 bg-transparent text-center font-mono text-blue-900 font-black outline-none cursor-not-allowed"
                         value={col.rate_value || ""}
                         onChange={(e) =>
                           handleColChange(colIdx, "rate_value", parseFloat(e.target.value) || 0)
@@ -292,7 +307,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                         type="number"
                         step="0.01"
                         placeholder="0.00"
-                        className="w-full p-1 bg-transparent text-center font-mono text-amber-900 font-black outline-none focus:bg-amber-100/50"
+                        readOnly
+                        disabled
+                        className="w-full p-1 bg-transparent text-center font-mono text-amber-900 font-black outline-none cursor-not-allowed"
                         value={Number(col.premium) > 0 ? col.premium : ""}
                         onChange={(e) =>
                           handleColChange(colIdx, "premium", parseFloat(e.target.value) || 0)
@@ -310,7 +327,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                           type="number"
                           step="0.1"
                           placeholder="0%"
-                          className="w-full p-0.5 bg-transparent text-center font-mono text-blue-900 font-black outline-none focus:bg-blue-100/50"
+                          readOnly
+                          disabled
+                          className="w-full p-0.5 bg-transparent text-center font-mono text-blue-900 font-black outline-none cursor-not-allowed"
                           value={settPctVal || ""}
                           onChange={(e) =>
                             handleColChange(colIdx, "sett_pct", parseFloat(e.target.value) || 0)
@@ -338,7 +357,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                             type="number"
                             step="0.01"
                             placeholder="0.00"
-                            className="w-14 p-0.5 bg-white border border-rose-200 rounded text-center font-mono text-rose-700 font-black outline-none focus:border-rose-500 text-[10px]"
+                            readOnly
+                            disabled
+                            className="w-16 p-0.5 bg-slate-50 border border-rose-200 rounded text-center font-mono text-rose-700 font-black outline-none cursor-not-allowed text-[10px]"
                             value={dedVal || ""}
                             onChange={(e) =>
                               handleColChange(
@@ -348,20 +369,6 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                               )
                             }
                           />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedColIndex(expandedColIndex === colIdx ? null : colIdx)
-                            }
-                            className={`p-0.5 rounded border cursor-pointer transition-colors ${
-                              expandedColIndex === colIdx
-                                ? "bg-rose-600 text-white border-rose-700"
-                                : "bg-white text-gray-500 border-gray-300 hover:bg-gray-100"
-                            }`}
-                            title="Configure Lower Grade & Rate for Grade Down calculation"
-                          >
-                            <Settings2 className="h-3 w-3" />
-                          </button>
                         </div>
 
                         {settPctVal > 0 && calcObj.targetGradeName && (
@@ -583,7 +590,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                             aria-label={`detailcols ${idx} gd claim`}
                             type="number"
                             step="0.1"
-                            className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded"
+                            readOnly
+                            disabled
+                            className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 cursor-not-allowed rounded"
                             value={detailCols[idx - 1]?.gd_claim || ""}
                             onChange={(e) => handleColChange(idx, "gd_claim", parseFloat(e.target.value) || 0)}
                           />
@@ -595,7 +604,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                             aria-label={`detailcols ${idx} gd sett`}
                             type="number"
                             step="0.1"
-                            className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded"
+                            readOnly
+                            disabled
+                            className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 cursor-not-allowed rounded"
                             value={detailCols[idx - 1]?.gd_sett ?? 0}
                             onChange={(e) => handleColChange(idx, "gd_sett", parseFloat(e.target.value) || 0)}
                           />
@@ -627,7 +638,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                             aria-label={`detailcols ${idx} moist claim`}
                             type="number"
                             step="0.1"
-                            className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded"
+                            readOnly
+                            disabled
+                            className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 cursor-not-allowed rounded"
                             value={detailCols[idx - 1]?.moist_claim || ""}
                             onChange={(e) => handleColChange(idx, "moist_claim", parseFloat(e.target.value) || 0)}
                           />
@@ -639,7 +652,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                             aria-label={`detailcols ${idx} moist sett`}
                             type="number"
                             step="0.1"
-                            className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded"
+                            readOnly
+                            disabled
+                            className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 cursor-not-allowed rounded"
                             value={detailCols[idx - 1]?.moist_sett ?? 0}
                             onChange={(e) => handleColChange(idx, "moist_sett", parseFloat(e.target.value) || 0)}
                           />
@@ -671,7 +686,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                             aria-label={`detailcols ${idx} dust claim`}
                             type="number"
                             step="0.1"
-                            className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded"
+                            readOnly
+                            disabled
+                            className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 cursor-not-allowed rounded"
                             value={detailCols[idx - 1]?.dust_claim || ""}
                             onChange={(e) => handleColChange(idx, "dust_claim", parseFloat(e.target.value) || 0)}
                           />
@@ -683,7 +700,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                             aria-label={`detailcols ${idx} dust sett`}
                             type="number"
                             step="0.1"
-                            className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded"
+                            readOnly
+                            disabled
+                            className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 cursor-not-allowed rounded"
                             value={detailCols[idx - 1]?.dust_sett ?? 0}
                             onChange={(e) => handleColChange(idx, "dust_sett", parseFloat(e.target.value) || 0)}
                           />
@@ -715,7 +734,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                             aria-label={`detailcols ${idx} ncv claim`}
                             type="number"
                             step="0.1"
-                            className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded"
+                            readOnly
+                            disabled
+                            className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 cursor-not-allowed rounded"
                             value={detailCols[idx - 1]?.ncv_claim || ""}
                             onChange={(e) => handleColChange(idx, "ncv_claim", parseFloat(e.target.value) || 0)}
                           />
@@ -727,7 +748,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                             aria-label={`detailcols ${idx} ncv sett`}
                             type="number"
                             step="0.1"
-                            className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded"
+                            readOnly
+                            disabled
+                            className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 cursor-not-allowed rounded"
                             value={detailCols[idx - 1]?.ncv_sett ?? 0}
                             onChange={(e) => handleColChange(idx, "ncv_sett", parseFloat(e.target.value) || 0)}
                           />
@@ -759,7 +782,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                             aria-label={`detailcols ${idx} po grade claim`}
                             type="number"
                             step="0.1"
-                            className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 focus:bg-amber-50 rounded"
+                            readOnly
+                            disabled
+                            className="w-full text-center bg-transparent outline-none font-bold text-slate-900 text-[10.5px] p-0.5 cursor-not-allowed rounded"
                             value={detailCols[idx - 1]?.po_grade_claim || ""}
                             onChange={(e) => handleColChange(idx, "po_grade_claim", parseFloat(e.target.value) || 0)}
                           />
@@ -771,7 +796,9 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                             aria-label={`detailcols ${idx} po grade sett`}
                             type="number"
                             step="0.1"
-                            className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 focus:bg-blue-50 rounded"
+                            readOnly
+                            disabled
+                            className="w-full text-center bg-transparent outline-none font-bold text-blue-900 text-[10.5px] p-0.5 cursor-not-allowed rounded"
                             value={detailCols[idx - 1]?.po_grade_sett ?? 0}
                             onChange={(e) => handleColChange(idx, "po_grade_sett", parseFloat(e.target.value) || 0)}
                           />

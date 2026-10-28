@@ -15,6 +15,39 @@ window.addEventListener('vite:preloadError', (event) => {
   }
 });
 
+// Globally disable Up/Down arrow keys and mouse wheel stepping on all number inputs
+window.addEventListener(
+  'keydown',
+  (event) => {
+    const target = event.target as HTMLElement | null;
+    if (
+      target &&
+      target.tagName === 'INPUT' &&
+      (target as HTMLInputElement).type === 'number' &&
+      (event.key === 'ArrowUp' || event.key === 'ArrowDown')
+    ) {
+      event.preventDefault();
+    }
+  },
+  true
+);
+
+window.addEventListener(
+  'wheel',
+  (event) => {
+    const target = event.target as HTMLElement | null;
+    if (
+      target &&
+      target.tagName === 'INPUT' &&
+      (target as HTMLInputElement).type === 'number' &&
+      document.activeElement === target
+    ) {
+      (target as HTMLInputElement).blur();
+    }
+  },
+  { passive: true, capture: true }
+);
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
@@ -22,3 +55,4 @@ createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </StrictMode>,
 );
+
