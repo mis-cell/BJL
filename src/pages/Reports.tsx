@@ -10,7 +10,10 @@ import {
   Award,
   AlertTriangle,
   PieChart,
-  FileSpreadsheet,
+  Briefcase,
+  UserCheck,
+  DollarSign,
+  Clock,
   RefreshCcw,
   Download,
   Printer
@@ -46,10 +49,13 @@ export type ReportNavSection =
   | 'deduction_claim'
   | 'sauda_checkpoints'
   | 'all_po'
-  | 'custom_reports'
   | 'performance_ranking'
   | 'exception_abnormal'
-  | 'business_contribution';
+  | 'business_contribution'
+  | 'outstanding_po'
+  | 'mr_advance_eligible'
+  | 'mr_apmc_details'
+  | 'mr_delivery_claim';
 
 interface ReportsProps {
   onClose?: () => void;
@@ -325,10 +331,13 @@ export default function Reports({ onClose }: ReportsProps) {
                 { id: 'deduction_claim' as const, label: '4. Deduction & Claim', icon: Scissors, badge: 'P3' },
                 { id: 'sauda_checkpoints' as const, label: '5. Checkpoints Pipeline', icon: Truck, badge: 'P3' },
                 { id: 'all_po' as const, label: '6. ALL PO', icon: Layers, badge: `${allPoSummary.totalCount || 0}` },
-                { id: 'custom_reports' as const, label: '7. Custom Reports', icon: FileSpreadsheet, badge: '4 Reports' },
-                { id: 'performance_ranking' as const, label: '8. Performance Ranking', icon: Award, badge: 'P2' },
-                { id: 'exception_abnormal' as const, label: '9. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
-                { id: 'business_contribution' as const, label: '10. Contribution & Pareto', icon: PieChart, badge: 'P9' },
+                { id: 'performance_ranking' as const, label: '7. Performance Ranking', icon: Award, badge: 'P2' },
+                { id: 'exception_abnormal' as const, label: '8. Exception / Abnormal', icon: AlertTriangle, badge: `${metrics.abnormalCount}` },
+                { id: 'business_contribution' as const, label: '9. Contribution & Pareto', icon: PieChart, badge: 'P9' },
+                { id: 'outstanding_po' as const, label: '10. Outstanding P.O List', icon: Briefcase, badge: 'PO' },
+                { id: 'mr_advance_eligible' as const, label: '11. MR Eligible for Advance', icon: UserCheck, badge: 'Advance' },
+                { id: 'mr_apmc_details' as const, label: '12. MR Wise APMC Details', icon: DollarSign, badge: 'APMC' },
+                { id: 'mr_delivery_claim' as const, label: '13. MR Wise Delivery Claim', icon: Clock, badge: 'Claim' },
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = activeSection === tab.id;
@@ -395,11 +404,6 @@ export default function Reports({ onClose }: ReportsProps) {
               <AllPoReportView dataset={dataset} onDrillDown={handleOpenDrillDown} />
             )}
 
-            {/* Custom Reports View (Outstanding PO, MR Advance Eligible, MR APMC Details, MR Delivery Claim) */}
-            {activeSection === 'custom_reports' && (
-              <NewCustomReportsView filters={filters} />
-            )}
-
             {/* 7. Performance Ranking (Priority 2) */}
             {activeSection === 'performance_ranking' && (
               <Priority2Analysis dataset={dataset} onDrillDown={handleOpenDrillDown} defaultSubTab="ranking" />
@@ -413,6 +417,14 @@ export default function Reports({ onClose }: ReportsProps) {
             {/* 9. Business Contribution (Priority 9) */}
             {activeSection === 'business_contribution' && (
               <ContributionView dataset={dataset} onDrillDown={handleOpenDrillDown} />
+            )}
+
+            {/* 10-13. Main Report Sections (Outstanding PO, MR Advance Eligible, MR APMC Details, MR Delivery Claim) */}
+            {(activeSection === 'outstanding_po' ||
+              activeSection === 'mr_advance_eligible' ||
+              activeSection === 'mr_apmc_details' ||
+              activeSection === 'mr_delivery_claim') && (
+              <NewCustomReportsView initialTab={activeSection} filters={filters} />
             )}
 
           </div>

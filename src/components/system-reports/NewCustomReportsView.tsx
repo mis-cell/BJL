@@ -1,28 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  FileText,
   Search,
   Download,
-  Filter,
   DollarSign,
   Briefcase,
   UserCheck,
-  MapPin,
   Clock,
-  CheckCircle2,
-  AlertCircle,
-  Database,
-  Info,
-  Calendar,
-  Layers,
-  ChevronDown,
   RefreshCcw,
-  Truck
+  CheckCircle2,
+  ShieldCheck
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { dbModule } from '../../services/dbModule';
 import { exportToCSV } from '../../utils/exportHelpers';
-
 import { ReportFilterCriteria } from '../../services/systemReportEngine';
 
 export type NewReportTab = 'outstanding_po' | 'mr_advance_eligible' | 'mr_apmc_details' | 'mr_delivery_claim';
@@ -38,11 +27,11 @@ const parseDateObj = (dateVal: any): Date | null => {
   if (!str) return null;
 
   if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(str)) {
-    const parts = str.split(/[-/]/);
+    const parts = str.split('T')[0].split(/[-/]/);
     return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
   }
   if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(str)) {
-    const parts = str.split(/[-/]/);
+    const parts = str.split('T')[0].split(/[-/]/);
     return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
   }
   const d = new Date(str);
@@ -131,10 +120,9 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Report 1: Outstanding PO State
+  // Report 1: Outstanding PO State (Default: P.O Number Wise for POs not received in Temporary Arrival)
   const [poList, setPoList] = useState<any[]>([]);
-  const [poGroupBy, setPoGroupBy] = useState<'broker' | 'supplier' | 'area' | 'all'>('broker');
-  const [poStatusFilter, setPoStatusFilter] = useState<'ALL' | 'PENDING' | 'PARTIAL'>('ALL');
+  const [poGroupBy, setPoGroupBy] = useState<'all' | 'broker' | 'supplier' | 'area'>('all');
 
   // Report 2: MR Advance Eligible State
   const [advanceMrList, setAdvanceMrList] = useState<any[]>([]);
@@ -145,23 +133,41 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
   // Report 4: MR Delivery Claim State
   const [deliveryClaimList, setDeliveryClaimList] = useState<any[]>([]);
 
-  // Database Schema Help Drawer / Banner state
-  const [showSchemaInfo, setShowSchemaInfo] = useState<boolean>(true);
+  useEffect(() => {
+    if (initialTab) {
+      setActiveSubReport(initialTab);
+    }
+  }, [initialTab]);
 
   // Load report data from database
   const loadReportsData = async () => {
     setLoading(true);
     try {
       if (supabase) {
-        // Fetch POs, Sauda Check Points, Temporary Arrivals, Final Arrivals, Inspections, Settlements & Payments
-        const [poRes, faRes, mrSettRes, payMasterRes, saudaCpRes, tempArrRes, matInspRes] = await Promise.all([
+        const [
+          poRes,
+          faRes,
+          mrSettRes,
+          payMasterRes,
+          saudaCpRes,
+          tempArrRes,
+          matInspRes,
+          millInspRes,
+          millInspDetailRes,
+          matMismatchRes,
+          sattaMismatchRes
+        ] = await Promise.all([
           supabase.from('purchase_master').select('*').order('created_at', { ascending: false }),
           supabase.from('final_arrival').select('*').order('date', { ascending: false }),
           supabase.from('mr_settlement_master').select('*').order('created_at', { ascending: false }),
           supabase.from('payment_master').select('*').order('created_at', { ascending: false }),
           supabase.from('sauda_check_point').select('*').order('created_at', { ascending: false }),
           supabase.from('temporary_material_received').select('*').order('date', { ascending: false }),
-          supabase.from('material_inspection').select('*').order('created_at', { ascending: false })
+          supabase.from('material_inspection').select('*').order('created_at', { ascending: false }),
+          supabase.from('mill_inspection_master').select('*').order('created_at', { ascending: false }).then(r => r, () => ({ data: [] })),
+          supabase.from('mill_inspection_detail').select('*').then(r => r, () => ({ data: [] })),
+          supabase.from('material_mismatch').select('*').then(r => r, () => ({ data: [] })),
+          supabase.from('satta_mismatch').select('*').then(r => r, () => ({ data: [] }))
         ]);
 
         const rawPos = poRes.data || [];
@@ -170,133 +176,391 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
         const rawPayments = payMasterRes.data || [];
         const rawCheckpoints = saudaCpRes.data || [];
         const rawTempArrivals = tempArrRes.data || [];
-        const rawMatInsp = matInspRes.data || [];
+        const rawMatInsp = [...(matInspRes.data || []), ...((millInspRes as any)?.data || [])];
+        const rawMillInspDetails = (millInspDetailRes as any)?.data || [];
+        const rawMatMismatches = (matMismatchRes as any)?.data || [];
+        const rawSattaMismatches = (sattaMismatchRes as any)?.data || [];
 
-        // Build Arrival & Settlement Weight Aggregates per PO
-        const poReceivedMap: Record<string, number> = {};
-        rawFa.forEach((fa: any) => {
-          const po = (fa.po_no || '').trim().toUpperCase();
-          if (!po) return;
-          const wtMt = Number(fa.supplier_net_weight) || Number(fa.electronic_net_weight) || Number(fa.challan_material_weight) || (Number(fa.weight_qtl) ? Number(fa.weight_qtl) / 10 : 0);
-          poReceivedMap[po] = (poReceivedMap[po] || 0) + wtMt;
+        const cleanPoKey = (s: any) =>
+          String(s || '')
+            .trim()
+            .replace(/^#+/, '')
+            .replace(/\(PTF\)/gi, '')
+            .trim()
+            .toUpperCase();
+
+        const cleanLorryKey = (s: any) =>
+          String(s || '')
+            .trim()
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, '');
+
+        const extractCoreDigits = (s: any) => {
+          const raw = String(s || '').trim().toUpperCase();
+          const withoutPrefix = raw
+            .replace(/^(MR|AR|AMAD|TEMP|FA|BJCL)[-\/\s]*/i, '')
+            .replace(/^20\d{2}-20\d{2}\//, '');
+          return withoutPrefix.replace(/[^0-9]/g, '').replace(/^0+/, '');
+        };
+
+        const toMillInspectionMrNo = (rawVal: any): string => {
+          const s = String(rawVal || '').trim();
+          if (!s) return '';
+          if (/^AR[-\/\s0-9]/i.test(s)) {
+            return s.replace(/^AR/i, 'MR');
+          }
+          return s;
+        };
+
+        // =========================================================================
+        // 1. Process Outstanding P.O List (P.Os NOT Received in Temporary Arrival)
+        // =========================================================================
+        const tempArrPoSet = new Set<string>();
+        rawTempArrivals.forEach((tmr: any) => {
+          const candidates = [tmr.po_no, tmr.mill_po_no, tmr.sauda_no, tmr.contract_po_no]
+            .map(cleanPoKey)
+            .filter(k => k && k !== 'N/A' && k !== 'NO' && k !== 'NONE');
+          candidates.forEach(poKey => {
+            tempArrPoSet.add(poKey);
+            const suffix = poKey.split('/').pop()?.trim() || '';
+            if (suffix.length >= 3) {
+              tempArrPoSet.add(`SUFFIX_${suffix}`);
+            }
+          });
         });
 
-        // Map Outstanding POs
+        const isPoReceivedInTempArrival = (poNoStr: string): boolean => {
+          const key = cleanPoKey(poNoStr);
+          if (!key) return false;
+          if (tempArrPoSet.has(key)) return true;
+          const suffix = key.split('/').pop()?.trim() || '';
+          if (suffix.length >= 3 && tempArrPoSet.has(`SUFFIX_${suffix}`)) return true;
+          return false;
+        };
+
         const combinedPoList: any[] = [];
+        const seenPoKeys = new Set<string>();
 
-        // Process purchase_master records
-        rawPos.forEach((po: any) => {
-          const poNo = (po.po_no || po.po_number || '').trim().toUpperCase();
-          if (!poNo) return;
-          const totalQty = Number(po.total_qty_mt) || Number(po.qty_mt) || Number(po.quantity) || 0;
-          const rcvdQty = poReceivedMap[poNo] || Number(po.received_qty_mt) || 0;
-          const pendingQty = Math.max(0, totalQty - rcvdQty);
-          const rate = Number(po.rate_qntl) || Number(po.rate_mt) || Number(po.b_rate) || Number(po.rate) || 0;
-          const pendingValue = pendingQty * (rate > 2000 ? rate * 10 : rate); // Rate in Rs/MT or Rs/Qtl
+        const registerUnreceivedPo = (rec: any, isCheckpoint = false) => {
+          const statusLower = String(rec.status || '').toLowerCase().trim();
+          if (statusLower === 'cancelled' || statusLower === 'rejected') return;
 
-          let status: 'PENDING' | 'PARTIAL' | 'COMPLETED' = 'PENDING';
-          if (rcvdQty >= totalQty && totalQty > 0) status = 'COMPLETED';
-          else if (rcvdQty > 0 && rcvdQty < totalQty) status = 'PARTIAL';
+          const rawPoNo = String(rec.po_no || rec.po_number || (isCheckpoint ? rec.session : '') || '').trim();
+          const poKey = cleanPoKey(rawPoNo);
+          if (!poKey || poKey === 'N/A' || seenPoKeys.has(poKey)) return;
 
-          if (pendingQty > 0.01 || status !== 'COMPLETED') {
-            combinedPoList.push({
-              poNo,
-              poDate: po.po_date || po.date || po.created_at || '',
-              supplier: (po.supplier || po.supplier_name || 'UNKNOWN SUPPLIER').toUpperCase().trim(),
-              broker: (po.broker || po.broker_name || 'DIRECT').toUpperCase().trim(),
-              area: (po.area || po.agency || 'MAIN AREA').toUpperCase().trim(),
-              agency: (po.agency || '-').toUpperCase().trim(),
-              totalQty,
-              rcvdQty,
-              pendingQty,
-              rate,
-              pendingValue,
-              status
-            });
-          }
-        });
+          // Exclude if already received in Temporary Arrival
+          if (isPoReceivedInTempArrival(rawPoNo)) return;
 
-        // Also process sauda_check_point records if missing in purchase_master
-        rawCheckpoints.forEach((cp: any) => {
-          const poNo = (cp.po_no || cp.session || '').trim().toUpperCase();
-          if (!poNo || combinedPoList.some(p => p.poNo === poNo)) return;
-          const totalQty = Number(cp.quantity_mt) || Number(cp.quantity) || 0;
-          const rcvdQty = poReceivedMap[poNo] || 0;
-          const pendingQty = Math.max(0, totalQty - rcvdQty);
-          const rate = Number(cp.b_rate) || Number(cp.rate) || 0;
-          const pendingValue = pendingQty * (rate > 2000 ? rate * 10 : rate);
+          seenPoKeys.add(poKey);
+          const totalQty =
+            Number(rec.total_qty_mt) ||
+            Number(rec.quantity_mt) ||
+            Number(rec.qty_mt) ||
+            Number(rec.total_wt_in_ton) ||
+            Number(rec.quantity) ||
+            0;
+          const rate =
+            Number(rec.rate_qntl) ||
+            Number(rec.b_rate) ||
+            Number(rec.rate_mt) ||
+            Number(rec.rate) ||
+            0;
+          const pendingValue = totalQty * (rate > 2000 ? rate * 10 : rate);
 
-          let status: 'PENDING' | 'PARTIAL' | 'COMPLETED' = 'PENDING';
-          if (rcvdQty >= totalQty && totalQty > 0) status = 'COMPLETED';
-          else if (rcvdQty > 0 && rcvdQty < totalQty) status = 'PARTIAL';
+          combinedPoList.push({
+            poNo: rawPoNo.toUpperCase(),
+            poDate: String(rec.po_date || rec.date || rec.s_date || rec.created_at || '').split('T')[0],
+            supplier: String(rec.supplier || rec.supplier_name || 'UNKNOWN SUPPLIER').toUpperCase().trim(),
+            broker: String(rec.broker || rec.broker_name || 'DIRECT').toUpperCase().trim(),
+            area: String(rec.area || rec.agency || 'MAIN AREA').toUpperCase().trim(),
+            agency: String(rec.agency || '-').toUpperCase().trim(),
+            totalQty,
+            rcvdQty: 0,
+            pendingQty: totalQty,
+            rate,
+            pendingValue,
+            status: 'NOT RECEIVED IN TEMP ARRIVAL'
+          });
+        };
 
-          if (pendingQty > 0.01 || status !== 'COMPLETED') {
-            combinedPoList.push({
-              poNo,
-              poDate: cp.date || cp.created_at || '',
-              supplier: (cp.supplier || cp.supplier_name || 'UNKNOWN SUPPLIER').toUpperCase().trim(),
-              broker: (cp.broker || cp.broker_name || 'DIRECT').toUpperCase().trim(),
-              area: (cp.area || cp.agency || 'MAIN AREA').toUpperCase().trim(),
-              agency: (cp.agency || '-').toUpperCase().trim(),
-              totalQty,
-              rcvdQty,
-              pendingQty,
-              rate,
-              pendingValue,
-              status
-            });
-          }
-        });
+        rawPos.forEach((po: any) => registerUnreceivedPo(po, false));
+        rawCheckpoints.forEach((cp: any) => registerUnreceivedPo(cp, true));
 
         setPoList(combinedPoList);
 
-        // Process MR Eligible for Advance
-        // Match final_arrival entries with payments / settlements
+        // =========================================================================
+        // 2. Process MR Eligible for Advance (From Mill Inspection Section)
+        //    - Source: Inspection Section (material_inspection / mill_inspection_master)
+        //    - Mismatch Condition: Either NO Mismatch against that MR/PO, OR Mismatch Cleared by Level 4 User
+        //    - Advance Condition: Advance NOT Paid yet
+        // =========================================================================
+        // Build lookup map of POs from purchase_master and sauda_check_point
+        const allPoLookup = new Map<string, any>();
+        [...rawPos, ...rawCheckpoints].forEach((p: any) => {
+          const k = cleanPoKey(p.po_no || p.po_number || p.contract_po_no || p.sauda_no);
+          if (k) {
+            const existing = allPoLookup.get(k) || {};
+            allPoLookup.set(k, { ...existing, ...p });
+            const suffix = k.split('/').pop()?.trim() || '';
+            if (suffix.length >= 3 && !allPoLookup.has(`SUFFIX_${suffix}`)) {
+              allPoLookup.set(`SUFFIX_${suffix}`, { ...existing, ...p });
+            }
+          }
+        });
+
+        // Build detail weight sum per MR from mill_inspection_detail
+        const inspDetailWtByMr = new Map<string, number>();
+        rawMillInspDetails.forEach((d: any) => {
+          const mrKey = String(d.mr_no || '').trim().toUpperCase();
+          if (!mrKey) return;
+          const wtRaw = Number(d.receipt_gross_wt || d.challan_gross_wt || d.weight_mt || 0);
+          if (wtRaw > 0) {
+            const wtMt = wtRaw > 500 ? wtRaw / 1000 : wtRaw > 50 ? wtRaw / 10 : wtRaw;
+            inspDetailWtByMr.set(mrKey, (inspDetailWtByMr.get(mrKey) || 0) + wtMt);
+          }
+        });
+
+        // Deduplicate Mill Inspections by MR No
+        const uniqueInspMap = new Map<string, any>();
+        rawMatInsp.forEach((insp: any) => {
+          const rawMr = String(insp.mr_no || insp.arrival_no || '').trim();
+          if (!rawMr) return;
+          const mrFormatted = toMillInspectionMrNo(rawMr);
+          const core = extractCoreDigits(mrFormatted);
+          const mapKey = core ? `CORE_${core}` : mrFormatted.toUpperCase();
+          const existing = uniqueInspMap.get(mapKey);
+          if (!existing || String(insp.mr_no || '').toUpperCase().startsWith('MR')) {
+            uniqueInspMap.set(mapKey, { ...existing, ...insp, resolvedMrNo: mrFormatted });
+          }
+        });
+
         const advanceMrRecords: any[] = [];
-        rawFa.forEach((fa: any) => {
-          const mrNo = fa.mr_no || fa.final_arrival_no || fa.arrival_no;
+
+        uniqueInspMap.forEach((insp: any) => {
+          const mrNo = String(insp.resolvedMrNo || insp.mr_no || '').trim();
           if (!mrNo) return;
+          const mrDigits = extractCoreDigits(mrNo);
 
-          // Find settlement or payment record
-          const sett = rawSettlements.find((s: any) => s.mr_no === mrNo) || {};
-          const pay = rawPayments.find((p: any) => p.mr_no === mrNo) || {};
+          // Match Final Arrival & Temporary Arrival for supplementary fields (PO No, Weight, Rate)
+          const matchedFa = rawFa.find((f: any) => {
+            if (String(f.mr_no || '').trim().toUpperCase() === mrNo.toUpperCase()) return true;
+            if (insp.arrival_no && String(f.final_arrival_no || f.arrival_no || f.temporary_arrival_no || '').trim().toUpperCase() === String(insp.arrival_no).trim().toUpperCase()) return true;
+            if (mrDigits && extractCoreDigits(f.mr_no || f.final_arrival_no || f.arrival_no) === mrDigits) return true;
+            return false;
+          });
 
-          const arrWtMt = Number(fa.supplier_net_weight) || Number(fa.electronic_net_weight) || Number(fa.challan_material_weight) || (Number(fa.weight_qtl) ? Number(fa.weight_qtl) / 10 : 0);
+          const matchedTmr = rawTempArrivals.find((t: any) => {
+            const tNo = String(t.temporary_arrival_no || t.amad_no || t.arrival_no || '').trim();
+            if (insp.arrival_no && tNo.toUpperCase() === String(insp.arrival_no).trim().toUpperCase()) return true;
+            if (mrDigits && extractCoreDigits(tNo || t.mr_no) === mrDigits) return true;
+            return false;
+          });
+
+          const rawPoNo = String(
+            insp.po_no ||
+            insp.mill_po_no ||
+            matchedFa?.po_no ||
+            matchedTmr?.po_no ||
+            ''
+          ).trim();
+          const poKey = cleanPoKey(rawPoNo);
+          const poSuffix = poKey.split('/').pop()?.trim() || '';
+          const poRec =
+            (poKey ? allPoLookup.get(poKey) : undefined) ||
+            (poSuffix.length >= 3 ? allPoLookup.get(`SUFFIX_${poSuffix}`) : undefined);
+
+          // 1. Check Mismatch Status against this MR or PO
+          const matchedMatMm = rawMatMismatches.filter((m: any) => {
+            const mPo = cleanPoKey(m.po_no);
+            const mInsp = String(m.inspection_no || m.mr_no || m.arrival_no || '').trim().toUpperCase();
+            if (poKey && mPo && (mPo === poKey || (poSuffix.length >= 3 && mPo.endsWith(poSuffix)))) return true;
+            if (mInsp && (mInsp === mrNo.toUpperCase() || (mrDigits && extractCoreDigits(mInsp) === mrDigits))) return true;
+            return false;
+          });
+
+          const matchedSattaMm = rawSattaMismatches.filter((sm: any) => {
+            const smPo = cleanPoKey(sm.po_no || sm.sauda_no);
+            if (poKey && smPo && (smPo === poKey || (poSuffix.length >= 3 && smPo.endsWith(poSuffix)))) return true;
+            return false;
+          });
+
+          const isRowCleared = (m: any) => {
+            const st = String(m.status || m.resolution_status || '').toLowerCase().trim();
+            return (
+              st === 'resolved' ||
+              st === 'approved' ||
+              st === 'cleared' ||
+              Boolean(m.approved_by) ||
+              String(m.remarks || '').toLowerCase().includes('approved') ||
+              String(m.remarks || '').toLowerCase().includes('resolved')
+            );
+          };
+
+          const poExplicitCleared = Boolean(
+            poRec?.mismatch_cleared === true ||
+            String(poRec?.mismatch_cleared) === 'true' ||
+            poRec?.satta_dispute_approved === true ||
+            String(poRec?.satta_dispute_approved) === 'true' ||
+            (poKey && typeof window !== 'undefined' && (
+              localStorage.getItem(`material_resolved_${poKey}`) ||
+              localStorage.getItem(`mismatch_cleared_${poKey}`) ||
+              localStorage.getItem(`satta_resolved_${poKey}`) ||
+              (poSuffix && localStorage.getItem(`material_resolved_${poSuffix}`)) ||
+              (poSuffix && localStorage.getItem(`mismatch_cleared_${poSuffix}`))
+            ))
+          );
+
+          const hasAnyMismatchRecord =
+            matchedMatMm.length > 0 ||
+            matchedSattaMm.length > 0 ||
+            String(poRec?.pass_status || poRec?.pass_mismatch || '').toLowerCase() === 'mismatch' ||
+            String(poRec?.status || '').toLowerCase() === 'mismatch';
+
+          const hasUnresolvedMatMm = matchedMatMm.some((m: any) => !isRowCleared(m) && !poExplicitCleared);
+          const hasUnresolvedSattaMm = matchedSattaMm.some((sm: any) => !isRowCleared(sm) && !poExplicitCleared);
+          const hasUnresolvedPoFlag =
+            !poExplicitCleared &&
+            matchedMatMm.length === 0 &&
+            matchedSattaMm.length === 0 &&
+            (String(poRec?.pass_status || poRec?.pass_mismatch || '').toLowerCase() === 'mismatch' ||
+              String(poRec?.status || '').toLowerCase() === 'mismatch');
+
+          // If there is an unresolved mismatch, this MR is NOT eligible for advance
+          if (hasUnresolvedMatMm || hasUnresolvedSattaMm || hasUnresolvedPoFlag) {
+            return;
+          }
+
+          const mismatchStatusLabel = hasAnyMismatchRecord
+            ? 'Mismatch Cleared (Level 4)'
+            : 'No Mismatch';
+
+          // 2. Check Advance Not Paid Condition
+          // Check payment_master
+          const matchedPayment = rawPayments.find((p: any) => {
+            const pStatus = String(p.status || '').toLowerCase().trim();
+            if (pStatus === 'cancelled' || pStatus === 'rejected') return false;
+            const pMr = String(p.mr_no || p.arrival_no || '').trim().toUpperCase();
+            if (!pMr) return false;
+            if (pMr === mrNo.toUpperCase()) return true;
+            if (insp.arrival_no && pMr === String(insp.arrival_no).trim().toUpperCase()) return true;
+            if (mrDigits && extractCoreDigits(pMr) === mrDigits) return true;
+            return false;
+          });
+
+          // Check mr_settlement_master
+          const matchedSett = rawSettlements.find((s: any) => {
+            const sMr = String(s.mr_no || s.arrival_no || '').trim().toUpperCase();
+            if (!sMr) return false;
+            if (sMr === mrNo.toUpperCase()) return true;
+            if (mrDigits && extractCoreDigits(sMr) === mrDigits) return true;
+            return false;
+          });
+
+          const paidFromPayment = matchedPayment
+            ? (Number(matchedPayment.paid_amount) || Number(matchedPayment.total_amount) || Number(matchedPayment.payable_amt) || 1)
+            : 0;
+          const paidFromSett = matchedSett
+            ? (Number(matchedSett.final_on_ac_adv) || Number(matchedSett.less_advance_amount) || 0)
+            : 0;
+          const paidFromInsp = Number(insp.advance_amount) || Number(insp.on_account_advance_amount) || 0;
+
+          const totalAlreadyPaid = paidFromPayment + paidFromSett + paidFromInsp;
+
+          // Only include MRs where Advance is NOT Paid yet
+          if (totalAlreadyPaid > 0) {
+            return;
+          }
+
+          // 3. Calculate Inspected / Arrival Weight & Eligible Advance
+          let arrWtMt =
+            inspDetailWtByMr.get(mrNo.toUpperCase()) ||
+            Number(matchedFa?.supplier_net_weight) ||
+            Number(matchedFa?.electronic_net_weight) ||
+            Number(matchedFa?.challan_material_weight) ||
+            (Number(matchedFa?.weight_qtl) ? Number(matchedFa.weight_qtl) / 10 : 0) ||
+            Number(matchedTmr?.supplier_net_weight) ||
+            Number(matchedTmr?.electronic_net_weight) ||
+            Number(matchedTmr?.challan_material_weight) ||
+            (Number(matchedTmr?.weight_qtl) ? Number(matchedTmr.weight_qtl) / 10 : 0) ||
+            0;
+
+          if (arrWtMt > 500) arrWtMt = Number((arrWtMt / 1000).toFixed(2));
+          else if (arrWtMt > 50) arrWtMt = Number((arrWtMt / 10).toFixed(2));
+
           const arrWtQtl = arrWtMt * 10;
-          const rateQtl = Number(sett.rate_qntl) || Number(fa.rate_value) || Number(pay.rate) || 12000;
-          const materialValue = Number(sett.val_material_value || sett.summary_material_value) || (arrWtQtl * rateQtl);
+          const rawRate =
+            Number(poRec?.b_rate) ||
+            Number(poRec?.rate_qntl) ||
+            Number(poRec?.rate) ||
+            Number(matchedFa?.rate_value) ||
+            12000;
+          const rateQtl = rawRate > 50000 ? rawRate / 10 : rawRate;
+          const materialValue =
+            Number(insp.settlement_amount) > 0
+              ? Number(insp.settlement_amount)
+              : Math.round(arrWtQtl * rateQtl);
 
-          // Standard Advance eligibility: 80% or 90% of Material Value
           const eligibleAdvancePct = 90;
-          const eligibleAdvanceAmt = (materialValue * eligibleAdvancePct) / 100;
-          const paidAdvanceAmt = Number(sett.final_on_ac_adv) || Number(pay.paid_amount) || Number(pay.total_advance) || Number(sett.less_advance_amount) || 0;
-          const pendingAdvancePayable = Math.max(0, eligibleAdvanceAmt - paidAdvanceAmt);
+          const eligibleAdvanceAmt = Math.round((materialValue * eligibleAdvancePct) / 100);
 
           advanceMrRecords.push({
             mrNo,
-            arrivalDate: fa.date || fa.arrival_date || fa.created_at || '',
-            poNo: fa.po_no || '-',
-            supplier: (fa.supplier || fa.challan_supplier || sett.supplier || 'UNKNOWN SUPPLIER').toUpperCase().trim(),
-            broker: (fa.broker || sett.broker || 'DIRECT').toUpperCase().trim(),
-            lorryNumber: fa.lorry_number || fa.vehicle_no || '-',
+            arrivalDate: String(
+              insp.mr_date ||
+              insp.arrival_date ||
+              insp.unloading_date ||
+              matchedFa?.date ||
+              matchedTmr?.date ||
+              insp.created_at ||
+              ''
+            ).split('T')[0],
+            poNo: rawPoNo || poRec?.po_no || '-',
+            supplier: String(
+              insp.supplier_name ||
+              insp.supplier ||
+              matchedFa?.supplier ||
+              matchedTmr?.supplier ||
+              poRec?.supplier ||
+              'UNKNOWN SUPPLIER'
+            ).toUpperCase().trim(),
+            broker: String(
+              insp.broker_name ||
+              insp.broker ||
+              matchedFa?.broker ||
+              matchedTmr?.broker ||
+              poRec?.broker ||
+              'DIRECT'
+            ).toUpperCase().trim(),
+            lorryNumber: String(
+              insp.lorry_number ||
+              insp.lorry_no ||
+              matchedFa?.lorry_number ||
+              matchedTmr?.lorry_number ||
+              '-'
+            ).toUpperCase().trim(),
             arrWtMt,
             arrWtQtl,
             materialValue,
             eligibleAdvancePct,
             eligibleAdvanceAmt,
-            paidAdvanceAmt,
-            pendingAdvancePayable,
-            advanceStatus: pendingAdvancePayable > 0 ? 'ELIGIBLE_PENDING' : 'FULLY_ADVANCED'
+            paidAdvanceAmt: 0,
+            pendingAdvancePayable: eligibleAdvanceAmt,
+            mismatchStatus: mismatchStatusLabel,
+            advanceStatus: 'ELIGIBLE (ADVANCE UNPAID)'
           });
         });
+
         setAdvanceMrList(advanceMrRecords);
 
-        // Process MR Wise APMC Details
+        // =========================================================================
+        // 3. Process MR Wise APMC Details
+        // =========================================================================
         const apmcRecords: any[] = [];
         rawSettlements.forEach((s: any) => {
-          const mrNo = s.mr_no;
+          const mrNo = toMillInspectionMrNo(s.mr_no);
           if (!mrNo) return;
-          const fa = rawFa.find((f: any) => f.mr_no === mrNo || f.final_arrival_no === mrNo) || {};
+          const fa = rawFa.find((f: any) => f.mr_no === s.mr_no || f.final_arrival_no === s.mr_no) || {};
 
           const matVal = Number(s.val_material_value || s.summary_material_value) || 0;
           const challanApmc = Number(s.arival_apmc_fees) || Number(fa.arival_apmc_fees) || Number(fa.apmc_fees) || 0;
@@ -305,10 +569,10 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
 
           apmcRecords.push({
             mrNo,
-            settDate: s.sett_date || s.mr_date || s.created_at || '',
+            settDate: String(s.sett_date || s.mr_date || s.created_at || '').split('T')[0],
             poNo: s.po_no || fa.po_no || '-',
-            supplier: (s.supplier || fa.supplier || 'UNKNOWN').toUpperCase().trim(),
-            broker: (s.broker || fa.broker || 'DIRECT').toUpperCase().trim(),
+            supplier: String(s.supplier || fa.supplier || 'UNKNOWN').toUpperCase().trim(),
+            broker: String(s.broker || fa.broker || 'DIRECT').toUpperCase().trim(),
             materialValue: matVal,
             challanApmc,
             actualApmc,
@@ -320,15 +584,6 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
         // =========================================================================
         // 4. Process MR Wise Delivery Claim (Sauda Check Point -> Temporary Arrival)
         // =========================================================================
-        const cleanPoKey = (s: any) => String(s || '').trim().replace(/^#/, '').toUpperCase();
-        const cleanLorryKey = (s: any) => String(s || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const extractCoreDigits = (s: any) => {
-          const raw = String(s || '').trim().toUpperCase();
-          const withoutPrefix = raw.replace(/^(MR|AR|AMAD|TEMP|FA|BJCL)[-\/\s]*/i, '').replace(/^20\d{2}-20\d{2}\//, '');
-          return withoutPrefix.replace(/[^0-9]/g, '').replace(/^0+/, '');
-        };
-
-        // Step A: Build Sauda Check Point (and Purchase Master) lookup for Delivery Due Date & Delivery Penalty Rate
         const poDeliveryMap = new Map<string, {
           poNo: string;
           poDate: string;
@@ -375,7 +630,6 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
           keys.forEach(k => poDeliveryMap.set(k, entry));
         });
 
-        // Step B: Helper to calculate Delay Days (Temporary Arrival Date - Sauda Check Point Delivery To Date)
         const calcDelayDays = (deliveryToStr?: string, arrivalDateStr?: string): number => {
           if (!deliveryToStr || !arrivalDateStr) return 0;
           const due = parseDateObj(deliveryToStr);
@@ -388,7 +642,6 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
           return diffDays > 0 ? diffDays : 0;
         };
 
-        // Step C: Helper to extract Arrival Weight in Quintals (Qtl)
         const getArrivalWeightQtl = (...records: any[]): number => {
           for (const rec of records) {
             if (!rec) continue;
@@ -413,7 +666,6 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
           return 0;
         };
 
-        // Step D: Build cross-reference maps between Temporary Arrival, Final Arrival, Mill Inspection, and Settlement
         const deliveryClaimRecords: any[] = [];
         const seenDeliveryKeys = new Set<string>();
 
@@ -443,7 +695,7 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
           let resolvedMrNo = String(mrSeriesMatch || mi?.mr_no || sett?.mr_no || fa?.mr_no || tempArrivalNo || '').trim();
           if (!resolvedMrNo) return;
 
-          // If resolvedMrNo is AR00893, check if an MR00893 exists in inspections/settlements
+          // Match against Mill Inspection / Settlement by core digits if not already MR series
           const coreDigits = extractCoreDigits(resolvedMrNo);
           if (!isMrSeries(resolvedMrNo) && coreDigits) {
             const matchedInsp = rawMatInsp.find((m: any) => isMrSeries(m.mr_no) && extractCoreDigits(m.mr_no) === coreDigits);
@@ -451,6 +703,9 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
             if (matchedInsp?.mr_no) resolvedMrNo = matchedInsp.mr_no;
             else if (matchedSett?.mr_no) resolvedMrNo = matchedSett.mr_no;
           }
+
+          // Convert any remaining AR prefix to Mill Inspection Number (MR prefix)
+          resolvedMrNo = toMillInspectionMrNo(resolvedMrNo);
 
           const dedupKey = coreDigits ? `CORE_${coreDigits}` : resolvedMrNo.toUpperCase();
           if (seenDeliveryKeys.has(dedupKey)) return;
@@ -465,7 +720,6 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
           const poKey = cleanPoKey(rawPoNo);
           const poInfo = poKey ? poDeliveryMap.get(poKey) : undefined;
 
-          // Temporary Arrival Date is the primary arrival date for Delivery Claim calculation
           const tempArrivalDate = String(
             tmr?.date ||
             tmr?.arrival_date ||
@@ -495,13 +749,11 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
           const penaltyRate = Number(poInfo?.deliveryPenaltyRate || 0);
           const weightQtl = getArrivalWeightQtl(tmr, fa, mi, sett);
 
-          // Calculate Delay Days from Sauda Check Point (delivery_to) to Temporary Arrival (date)
           let detentionDays = calcDelayDays(deliveryToDate, tempArrivalDate);
           if (detentionDays === 0 && !deliveryToDate) {
             detentionDays = Number(sett?.detention_days || fa?.detention_days || mi?.detention_days || 0);
           }
 
-          // Calculate Delivery Claim (₹) = Weight (Qtl) * Delay Days * Delivery Penalty Rate
           const calculatedClaimAmt = (detentionDays > 0 && penaltyRate > 0 && weightQtl > 0)
             ? Math.round(weightQtl * penaltyRate * detentionDays)
             : 0;
@@ -512,7 +764,6 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
             Number(sett.summary_delivery_claim) !== 5550
           ) ? Number(sett.summary_delivery_claim) : 0;
 
-          // Only assign a delivery claim when there is a valid late arrival delay from Sauda Check Point to Temporary Arrival
           const claimAmt = calculatedClaimAmt > 0
             ? calculatedClaimAmt
             : (detentionDays > 0 ? explicitSavedClaim : 0);
@@ -561,7 +812,6 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
           }
         };
 
-        // 1. Primary Pass: Iterate Temporary Arrivals (Sauda Check Point -> Temporary Arrival)
         rawTempArrivals.forEach((tmr: any) => {
           const tempNo = String(tmr.temporary_arrival_no || tmr.amad_no || tmr.arrival_no || '').trim();
           const tmrDigits = extractCoreDigits(tempNo || tmr.mr_no);
@@ -595,7 +845,6 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
           registerDeliveryClaimCandidate({ tmr, fa: matchedFa, mi: matchedMi, sett: matchedSett });
         });
 
-        // 2. Secondary Pass: Check Final Arrivals & Settlements not yet processed in Temporary Arrival pass
         rawFa.forEach((fa: any) => {
           const faDigits = extractCoreDigits(fa.mr_no || fa.final_arrival_no || fa.arrival_no);
           const matchedMi = rawMatInsp.find((m: any) => faDigits && extractCoreDigits(m.mr_no || m.arrival_no) === faDigits);
@@ -620,28 +869,36 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
     loadReportsData();
   }, []);
 
-  // Filter Outstanding PO Records
+  // Filter Outstanding PO Records (POs Not Received in Temporary Arrival)
   const filteredPoList = useMemo(() => {
     return poList.filter(po => {
-      if (poStatusFilter !== 'ALL' && po.status !== poStatusFilter) return false;
       return matchesFilters(po.poDate, po.supplier, po.broker, po.area, po.agency, po.poNo, undefined, filters, searchQuery);
     });
-  }, [poList, poStatusFilter, searchQuery, filters]);
+  }, [poList, searchQuery, filters]);
 
   // Grouped Outstanding POs (Broker / Party / Area Wise)
   const groupedPoSummary = useMemo(() => {
-    const map: Record<string, { key: string; totalPoCount: number; totalQty: number; rcvdQty: number; pendingQty: number; pendingValue: number }> = {};
+    const map: Record<string, {
+      key: string;
+      totalPoCount: number;
+      totalQty: number;
+      pendingQty: number;
+      pendingValue: number;
+      poNumbers: string[];
+    }> = {};
 
     filteredPoList.forEach(item => {
       const keyVal = poGroupBy === 'broker' ? item.broker : poGroupBy === 'supplier' ? item.supplier : poGroupBy === 'area' ? item.area : item.poNo;
       if (!map[keyVal]) {
-        map[keyVal] = { key: keyVal, totalPoCount: 0, totalQty: 0, rcvdQty: 0, pendingQty: 0, pendingValue: 0 };
+        map[keyVal] = { key: keyVal, totalPoCount: 0, totalQty: 0, pendingQty: 0, pendingValue: 0, poNumbers: [] };
       }
       map[keyVal].totalPoCount += 1;
       map[keyVal].totalQty += item.totalQty;
-      map[keyVal].rcvdQty += item.rcvdQty;
       map[keyVal].pendingQty += item.pendingQty;
       map[keyVal].pendingValue += item.pendingValue;
+      if (item.poNo && !map[keyVal].poNumbers.includes(item.poNo)) {
+        map[keyVal].poNumbers.push(item.poNo);
+      }
     });
 
     return Object.values(map).sort((a, b) => b.pendingQty - a.pendingQty);
@@ -669,98 +926,43 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
     });
   }, [deliveryClaimList, searchQuery, filters]);
 
-  // CSV Export for active sub-report
+  // Average Detention / Delay Days for Delivery Claim Report
+  const avgDetentionDays = useMemo(() => {
+    if (filteredDeliveryClaimList.length === 0) return '0';
+    const totalDays = filteredDeliveryClaimList.reduce((acc, cur) => acc + cur.detentionDays, 0);
+    const avg = totalDays / filteredDeliveryClaimList.length;
+    return Number.isInteger(avg) ? String(avg) : avg.toFixed(1);
+  }, [filteredDeliveryClaimList]);
+
+  // CSV Export for active report
   const handleExportCSV = () => {
     if (activeSubReport === 'outstanding_po') {
-      const headers = ['Group Key / PO', 'Total POs', 'Total Qty (MT)', 'Received Qty (MT)', 'Pending Qty (MT)', 'Pending Value (Rs)'];
-      const rows = groupedPoSummary.map(g => [g.key, g.totalPoCount, g.totalQty.toFixed(2), g.rcvdQty.toFixed(2), g.pendingQty.toFixed(2), g.pendingValue.toFixed(2)]);
-      exportToCSV(`Outstanding_PO_List_${poGroupBy}_wise.csv`, headers, rows);
+      if (poGroupBy === 'all') {
+        const headers = ['PO No', 'PO Date', 'Supplier / Party', 'Broker', 'Area', 'Agency', 'Contract Qty (MT)', 'Rate (Rs)', 'Est. Pending Value (Rs)', 'Status'];
+        const rows = filteredPoList.map(po => [po.poNo, po.poDate, po.supplier, po.broker, po.area, po.agency, po.totalQty.toFixed(2), po.rate, po.pendingValue.toFixed(2), po.status]);
+        exportToCSV('Outstanding_PO_Not_Received_In_Temp_Arrival.csv', headers, rows);
+      } else {
+        const headers = ['Group Key', 'Total POs', 'PO Numbers (Not Received in Temp Arrival)', 'Total Qty (MT)', 'Pending Value (Rs)'];
+        const rows = groupedPoSummary.map(g => [g.key, g.totalPoCount, g.poNumbers.join(' | '), g.totalQty.toFixed(2), g.pendingValue.toFixed(2)]);
+        exportToCSV(`Outstanding_PO_List_${poGroupBy}_wise.csv`, headers, rows);
+      }
     } else if (activeSubReport === 'mr_advance_eligible') {
-      const headers = ['MR No', 'Arrival Date', 'PO No', 'Supplier', 'Broker', 'Lorry No', 'Arr Wt (MT)', 'Est. Material Value (Rs)', 'Eligible Adv (Rs)', 'Paid Adv (Rs)', 'Pending Adv Payable (Rs)', 'Status'];
-      const rows = filteredAdvanceMrList.map(r => [r.mrNo, r.arrivalDate, r.poNo, r.supplier, r.broker, r.lorryNumber, r.arrWtMt.toFixed(2), r.materialValue.toFixed(2), r.eligibleAdvanceAmt.toFixed(2), r.paidAdvanceAmt.toFixed(2), r.pendingAdvancePayable.toFixed(2), r.advanceStatus]);
+      const headers = ['Mill Inspection No (MR)', 'Inspection Date', 'PO No', 'Supplier', 'Broker', 'Lorry No', 'Mismatch Status', 'Inspected Wt (MT)', 'Est. Material Value (Rs)', 'Eligible Adv (Rs)', 'Status'];
+      const rows = filteredAdvanceMrList.map(r => [r.mrNo, r.arrivalDate, r.poNo, r.supplier, r.broker, r.lorryNumber, r.mismatchStatus, r.arrWtMt.toFixed(2), r.materialValue.toFixed(2), r.eligibleAdvanceAmt.toFixed(2), r.advanceStatus]);
       exportToCSV('MR_Eligible_For_Advance_Report.csv', headers, rows);
     } else if (activeSubReport === 'mr_apmc_details') {
       const headers = ['MR No', 'Settlement Date', 'PO No', 'Supplier', 'Broker', 'Material Value (Rs)', 'Challan APMC (Rs)', 'Actual APMC 1% (Rs)', 'APMC Deduction Diff (Rs)'];
       const rows = filteredApmcList.map(r => [r.mrNo, r.settDate, r.poNo, r.supplier, r.broker, r.materialValue.toFixed(2), r.challanApmc.toFixed(2), r.actualApmc.toFixed(2), r.apmcDiff.toFixed(2)]);
       exportToCSV('MR_Wise_APMC_Details_Report.csv', headers, rows);
     } else if (activeSubReport === 'mr_delivery_claim') {
-      const headers = ['MR No', 'Temp Arrival Date', 'PO No', 'PO Date', 'Delivery Due Date', 'Supplier', 'Broker', 'Weight (Qtl)', 'Penalty Rate (Rs/Qtl/Day)', 'Detention/Delay Days', 'Delivery Claim Amount (Rs)', 'Remarks'];
-      const rows = filteredDeliveryClaimList.map(r => [r.mrNo, r.arrivalDate, r.poNo, r.poDate, r.deliveryToDate || '-', r.supplier, r.broker, (r.weightQtl || 0).toFixed(2), r.penaltyRate || 0, r.detentionDays, r.claimAmt.toFixed(2), r.remarks]);
+      const headers = ['Mill Inspection No', 'PO No', 'PO Date', 'Delivery Due Date', 'Supplier', 'Broker', 'Weight (Qtl)', 'Penalty Rate (Rs/Qtl/Day)', 'Detention/Delay Days', 'Delivery Claim Amount (Rs)', 'Remarks'];
+      const rows = filteredDeliveryClaimList.map(r => [r.mrNo, r.poNo, r.poDate, r.deliveryToDate || '-', r.supplier, r.broker, (r.weightQtl || 0).toFixed(2), r.penaltyRate || 0, r.detentionDays, r.claimAmt.toFixed(2), r.remarks]);
       exportToCSV('MR_Wise_Delivery_Claim_Report.csv', headers, rows);
     }
   };
 
   return (
     <div className="space-y-4 font-sans text-slate-800">
-      
-      {/* ================= SUB-REPORT NAVIGATION TABS ================= */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-3 rounded-2xl shadow-lg border border-slate-700 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setActiveSubReport('outstanding_po')}
-            className={`px-3 py-2 text-xs font-black rounded-xl transition cursor-pointer flex items-center gap-2 ${
-              activeSubReport === 'outstanding_po'
-                ? 'bg-gradient-to-r from-[#D94B5A] to-[#E85A5A] text-white shadow-md border border-[#F06D6C]'
-                : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-            }`}
-          >
-            <Briefcase className="w-3.5 h-3.5" />
-            <span>1. Outstanding P.O List</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubReport('mr_advance_eligible')}
-            className={`px-3 py-2 text-xs font-black rounded-xl transition cursor-pointer flex items-center gap-2 ${
-              activeSubReport === 'mr_advance_eligible'
-                ? 'bg-gradient-to-r from-[#D94B5A] to-[#E85A5A] text-white shadow-md border border-[#F06D6C]'
-                : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-            }`}
-          >
-            <UserCheck className="w-3.5 h-3.5" />
-            <span>2. MR Eligible for Advance</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubReport('mr_apmc_details')}
-            className={`px-3 py-2 text-xs font-black rounded-xl transition cursor-pointer flex items-center gap-2 ${
-              activeSubReport === 'mr_apmc_details'
-                ? 'bg-gradient-to-r from-[#D94B5A] to-[#E85A5A] text-white shadow-md border border-[#F06D6C]'
-                : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-            }`}
-          >
-            <DollarSign className="w-3.5 h-3.5" />
-            <span>3. MR Wise APMC Details</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubReport('mr_delivery_claim')}
-            className={`px-3 py-2 text-xs font-black rounded-xl transition cursor-pointer flex items-center gap-2 ${
-              activeSubReport === 'mr_delivery_claim'
-                ? 'bg-gradient-to-r from-[#D94B5A] to-[#E85A5A] text-white shadow-md border border-[#F06D6C]'
-                : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            <span>4. MR Wise Delivery Claim</span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 shadow cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
-          </button>
-        </div>
-      </div>
-
       {/* ================= SEARCH & CONTROLS BAR ================= */}
       <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
         <div className="relative flex-1 w-full">
@@ -769,15 +971,24 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Keyword, PO No, MR No, Supplier, Broker, Area..."
+            placeholder="Search Keyword, PO No, Mill Inspection No, Supplier, Broker, Area..."
             className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 outline-none focus:border-[#D94B5A] focus:bg-white transition"
           />
         </div>
 
-        {activeSubReport === 'outstanding_po' && (
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+          {activeSubReport === 'outstanding_po' && (
             <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
-              <span className="text-slate-500 pl-1 text-[11px]">Group By:</span>
+              <span className="text-slate-500 pl-1 text-[11px]">View By:</span>
+              <button
+                type="button"
+                onClick={() => setPoGroupBy('all')}
+                className={`px-2.5 py-1 rounded-lg transition cursor-pointer text-xs ${
+                  poGroupBy === 'all' ? 'bg-[#D94B5A] text-white shadow' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                P.O Number Wise
+              </button>
               <button
                 type="button"
                 onClick={() => setPoGroupBy('broker')}
@@ -805,28 +1016,18 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
               >
                 Area Wise
               </button>
-              <button
-                type="button"
-                onClick={() => setPoGroupBy('all')}
-                className={`px-2.5 py-1 rounded-lg transition cursor-pointer text-xs ${
-                  poGroupBy === 'all' ? 'bg-[#D94B5A] text-white shadow' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                All PO List
-              </button>
             </div>
+          )}
 
-            <select
-              value={poStatusFilter}
-              onChange={(e) => setPoStatusFilter(e.target.value as any)}
-              className="bg-slate-50 border border-slate-300 text-xs font-bold rounded-xl px-2.5 py-1.5 outline-none focus:border-[#D94B5A]"
-            >
-              <option value="ALL">All Status (Pending & Partial)</option>
-              <option value="PENDING">Pending Only (0% Rcvd)</option>
-              <option value="PARTIAL">Partial Only (&gt;0% Rcvd)</option>
-            </select>
-          </div>
-        )}
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
+          </button>
+        </div>
       </div>
 
       {/* ================= REPORT CONTENT VIEWS ================= */}
@@ -837,41 +1038,31 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
         </div>
       ) : (
         <>
-          {/* 1. OUTSTANDING P.O LIST REPORT */}
+          {/* 1. OUTSTANDING P.O LIST REPORT (NOT RECEIVED IN TEMPORARY ARRIVAL) */}
           {activeSubReport === 'outstanding_po' && (
             <div className="space-y-4">
               {/* Summary Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-3.5 rounded-2xl border border-slate-700 shadow-md space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Total Outstanding POs</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Total Unreceived POs</span>
                   <div className="text-xl font-black text-white">{filteredPoList.length} POs</div>
-                  <span className="text-[10px] text-slate-300">Pending & Partial Deliveries</span>
+                  <span className="text-[10px] text-slate-300">Not Received in Temporary Arrival</span>
                 </div>
 
                 <div className="bg-gradient-to-br from-amber-500 to-amber-600 text-white p-3.5 rounded-2xl shadow-md space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-amber-100">Total Contracted Qty</span>
+                  <span className="text-[10px] uppercase font-bold text-amber-100">Total Pending Contract Qty</span>
                   <div className="text-xl font-black text-white">
                     {filteredPoList.reduce((a, c) => a + c.totalQty, 0).toFixed(2)} MT
                   </div>
-                  <span className="text-[10px] text-amber-100">Contracted Volume</span>
-                </div>
-
-                <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white p-3.5 rounded-2xl shadow-md space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-emerald-100">Total Received Qty</span>
-                  <div className="text-xl font-black text-white">
-                    {filteredPoList.reduce((a, c) => a + c.rcvdQty, 0).toFixed(2)} MT
-                  </div>
-                  <span className="text-[10px] text-emerald-100">Delivered Material</span>
+                  <span className="text-[10px] text-amber-100">Awaiting Temporary Arrival</span>
                 </div>
 
                 <div className="bg-gradient-to-br from-rose-600 to-rose-700 text-white p-3.5 rounded-2xl shadow-md space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-rose-100">Pending Balance Qty</span>
+                  <span className="text-[10px] uppercase font-bold text-rose-100">Est. Outstanding Value</span>
                   <div className="text-xl font-black text-white">
-                    {filteredPoList.reduce((a, c) => a + c.pendingQty, 0).toFixed(2)} MT
+                    ₹{filteredPoList.reduce((a, c) => a + c.pendingValue, 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                   </div>
-                  <span className="text-[10px] text-rose-100">
-                    Est. Value: ₹{filteredPoList.reduce((a, c) => a + c.pendingValue, 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                  </span>
+                  <span className="text-[10px] text-rose-100">Pending P.O Value</span>
                 </div>
               </div>
 
@@ -881,72 +1072,72 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
                   <h3 className="text-xs font-black uppercase text-slate-800 flex items-center gap-2">
                     <Briefcase className="w-4 h-4 text-[#D94B5A]" />
                     <span>
-                      OUTSTANDING P.O REPORT ({poGroupBy.toUpperCase()} WISE) — {groupedPoSummary.length} GROUPS
+                      OUTSTANDING P.O LIST (NOT RECEIVED IN TEMPORARY ARRIVAL) — {poGroupBy === 'all' ? `${filteredPoList.length} POs` : `${groupedPoSummary.length} GROUPS`}
                     </span>
                   </h3>
                   <span className="text-[10px] bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded-md">
-                    Showing Pending & Partial Deliveries
+                    P.O Numbers Not Received in Temporary Arrival
                   </span>
                 </div>
 
                 {poGroupBy === 'all' ? (
-                  // Detailed PO List View
                   <div className="overflow-x-auto">
                     <table className="w-full text-[11px] text-left border-collapse">
                       <thead>
                         <tr className="bg-slate-800 text-white font-bold uppercase text-[10px]">
-                          <th className="p-2.5">PO No & Date</th>
+                          <th className="p-2.5">P.O Number</th>
+                          <th className="p-2.5">P.O Date</th>
                           <th className="p-2.5">Supplier / Party</th>
                           <th className="p-2.5">Broker</th>
                           <th className="p-2.5">Area / Agency</th>
-                          <th className="p-2.5 text-right">Contract MT</th>
-                          <th className="p-2.5 text-right">Rcvd MT</th>
-                          <th className="p-2.5 text-right text-amber-300">Pending MT</th>
-                          <th className="p-2.5 text-right">Est. Pending Val (₹)</th>
-                          <th className="p-2.5 text-center">Status</th>
+                          <th className="p-2.5 text-right">Contract Qty (MT)</th>
+                          <th className="p-2.5 text-right">Rate (₹)</th>
+                          <th className="p-2.5 text-right">Est. Value (₹)</th>
+                          <th className="p-2.5 text-center">Temporary Arrival Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200">
-                        {filteredPoList.map((po, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50 transition">
-                            <td className="p-2.5 font-bold font-mono text-[#D94B5A]">
-                              <div>{po.poNo}</div>
-                              <div className="text-[9.5px] font-normal text-slate-500">{po.poDate}</div>
-                            </td>
-                            <td className="p-2.5 font-bold">{po.supplier}</td>
-                            <td className="p-2.5 text-slate-700">{po.broker}</td>
-                            <td className="p-2.5 text-slate-600">{po.area} / {po.agency}</td>
-                            <td className="p-2.5 text-right font-mono font-bold">{po.totalQty.toFixed(2)}</td>
-                            <td className="p-2.5 text-right font-mono text-emerald-700 font-bold">{po.rcvdQty.toFixed(2)}</td>
-                            <td className="p-2.5 text-right font-mono font-bold text-rose-600">{po.pendingQty.toFixed(2)}</td>
-                            <td className="p-2.5 text-right font-mono font-bold">
-                              ₹{po.pendingValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                            </td>
-                            <td className="p-2.5 text-center">
-                              <span className={`px-2 py-0.5 text-[9px] font-black rounded-full uppercase ${
-                                po.status === 'PENDING'
-                                  ? 'bg-rose-100 text-rose-800'
-                                  : 'bg-amber-100 text-amber-800'
-                              }`}>
-                                {po.status}
-                              </span>
+                        {filteredPoList.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="p-8 text-center text-slate-500 font-bold">
+                              No Outstanding P.Os found matching the selected filters.
                             </td>
                           </tr>
-                        ))}
+                        ) : (
+                          filteredPoList.map((po, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50 transition">
+                              <td className="p-2.5 font-bold font-mono text-[#D94B5A]">{po.poNo}</td>
+                              <td className="p-2.5 font-mono text-slate-600">{po.poDate || '-'}</td>
+                              <td className="p-2.5 font-bold">{po.supplier}</td>
+                              <td className="p-2.5 text-slate-700">{po.broker}</td>
+                              <td className="p-2.5 text-slate-600">{po.area} / {po.agency}</td>
+                              <td className="p-2.5 text-right font-mono font-bold text-rose-600">{po.totalQty.toFixed(2)} MT</td>
+                              <td className="p-2.5 text-right font-mono text-slate-700">
+                                {po.rate > 0 ? `₹${po.rate.toLocaleString('en-IN')}` : '-'}
+                              </td>
+                              <td className="p-2.5 text-right font-mono font-bold">
+                                ₹{po.pendingValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                              </td>
+                              <td className="p-2.5 text-center">
+                                <span className="px-2 py-0.5 text-[9px] font-black rounded-full uppercase bg-rose-100 text-rose-800">
+                                  Not Received in Temp Arrival
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
                 ) : (
-                  // Grouped Summary View (Broker Wise / Party Wise / Area Wise)
                   <div className="overflow-x-auto">
                     <table className="w-full text-[11px] text-left border-collapse">
                       <thead>
                         <tr className="bg-slate-800 text-white font-bold uppercase text-[10px]">
                           <th className="p-2.5">{poGroupBy.toUpperCase()} NAME</th>
                           <th className="p-2.5 text-center">PO COUNT</th>
-                          <th className="p-2.5 text-right">TOTAL CONTRACT (MT)</th>
-                          <th className="p-2.5 text-right text-emerald-300">RECEIVED (MT)</th>
-                          <th className="p-2.5 text-right text-amber-300">PENDING BALANCE (MT)</th>
+                          <th className="p-2.5">P.O NUMBERS (NOT RECEIVED IN TEMP ARRIVAL)</th>
+                          <th className="p-2.5 text-right text-amber-300">PENDING QTY (MT)</th>
                           <th className="p-2.5 text-right">EST. PENDING VALUE (₹)</th>
                         </tr>
                       </thead>
@@ -955,8 +1146,15 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
                           <tr key={idx} className="hover:bg-slate-50 transition">
                             <td className="p-2.5 font-bold uppercase text-slate-900">{group.key}</td>
                             <td className="p-2.5 text-center font-mono font-bold">{group.totalPoCount}</td>
-                            <td className="p-2.5 text-right font-mono font-bold">{group.totalQty.toFixed(2)}</td>
-                            <td className="p-2.5 text-right font-mono font-bold text-emerald-700">{group.rcvdQty.toFixed(2)}</td>
+                            <td className="p-2.5 font-mono text-[10px] text-[#D94B5A] font-bold">
+                              <div className="flex flex-wrap gap-1">
+                                {group.poNumbers.map((pNo, i) => (
+                                  <span key={i} className="px-1.5 py-0.5 bg-rose-50 border border-rose-200 rounded text-[#D94B5A]">
+                                    {pNo}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
                             <td className="p-2.5 text-right font-mono font-bold text-rose-600">{group.pendingQty.toFixed(2)}</td>
                             <td className="p-2.5 text-right font-mono font-bold text-slate-900">
                               ₹{group.pendingValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
@@ -970,11 +1168,8 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
                           <td className="p-2.5 text-center font-mono">
                             {groupedPoSummary.reduce((a, c) => a + c.totalPoCount, 0)}
                           </td>
-                          <td className="p-2.5 text-right font-mono">
-                            {groupedPoSummary.reduce((a, c) => a + c.totalQty, 0).toFixed(2)}
-                          </td>
-                          <td className="p-2.5 text-right font-mono text-emerald-300">
-                            {groupedPoSummary.reduce((a, c) => a + c.rcvdQty, 0).toFixed(2)}
+                          <td className="p-2.5 text-slate-400 text-[10px]">
+                            All Unreceived P.Os
                           </td>
                           <td className="p-2.5 text-right font-mono text-amber-300">
                             {groupedPoSummary.reduce((a, c) => a + c.pendingQty, 0).toFixed(2)}
@@ -991,15 +1186,15 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
             </div>
           )}
 
-          {/* 2. MR ELIGIBLE FOR ADVANCE REPORT */}
+          {/* 2. MR ELIGIBLE FOR ADVANCE REPORT (FROM MILL INSPECTION SECTION) */}
           {activeSubReport === 'mr_advance_eligible' && (
             <div className="space-y-4">
               {/* Summary Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 <div className="bg-gradient-to-br from-indigo-900 to-indigo-800 text-white p-3.5 rounded-2xl border border-indigo-700 shadow-md space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-indigo-300">Total MR Records</span>
+                  <span className="text-[10px] uppercase font-bold text-indigo-300">Eligible Mill Inspections (MR)</span>
                   <div className="text-xl font-black text-white">{filteredAdvanceMrList.length} MRs</div>
-                  <span className="text-[10px] text-indigo-200">Goods Arrival Receipts</span>
+                  <span className="text-[10px] text-indigo-200">No Mismatch / L4 Cleared &amp; Advance Unpaid</span>
                 </div>
 
                 <div className="bg-gradient-to-br from-emerald-700 to-emerald-800 text-white p-3.5 rounded-2xl shadow-md space-y-1">
@@ -1007,23 +1202,15 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
                   <div className="text-xl font-black text-white">
                     ₹{filteredAdvanceMrList.reduce((a, c) => a + c.materialValue, 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                   </div>
-                  <span className="text-[10px] text-emerald-200">Gross Material Value</span>
-                </div>
-
-                <div className="bg-gradient-to-br from-amber-600 to-amber-700 text-white p-3.5 rounded-2xl shadow-md space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-amber-100">Advance Paid To Date</span>
-                  <div className="text-xl font-black text-white">
-                    ₹{filteredAdvanceMrList.reduce((a, c) => a + c.paidAdvanceAmt, 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                  </div>
-                  <span className="text-[10px] text-amber-100">Disbursed On A/c Advance</span>
+                  <span className="text-[10px] text-emerald-200">Inspected Material Value</span>
                 </div>
 
                 <div className="bg-gradient-to-br from-rose-600 to-rose-700 text-white p-3.5 rounded-2xl shadow-md space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-rose-100">Pending Advance Eligible</span>
+                  <span className="text-[10px] uppercase font-bold text-rose-100">Total Eligible Advance Payable</span>
                   <div className="text-xl font-black text-white">
                     ₹{filteredAdvanceMrList.reduce((a, c) => a + c.pendingAdvancePayable, 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                   </div>
-                  <span className="text-[10px] text-rose-100">Eligible for Disbursal</span>
+                  <span className="text-[10px] text-rose-100">Ready for Advance Payment</span>
                 </div>
               </div>
 
@@ -1032,10 +1219,10 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
                 <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between">
                   <h3 className="text-xs font-black uppercase text-slate-800 flex items-center gap-2">
                     <UserCheck className="w-4 h-4 text-[#D94B5A]" />
-                    <span>LIST OF MRs ELIGIBLE FOR ADVANCE DISBURSAL</span>
+                    <span>LIST OF MRs ELIGIBLE FOR ADVANCE (MILL INSPECTION SECTION)</span>
                   </h3>
                   <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md">
-                    Target Eligibility: 90% of Material Value
+                    No Mismatch or Cleared by Level 4 User • Advance Unpaid
                   </span>
                 </div>
 
@@ -1043,42 +1230,58 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
                   <table className="w-full text-[11px] text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-800 text-white font-bold uppercase text-[10px]">
-                        <th className="p-2.5">MR No & Date</th>
+                        <th className="p-2.5">Mill Inspection No &amp; Date</th>
                         <th className="p-2.5">PO No</th>
                         <th className="p-2.5">Supplier / Party</th>
                         <th className="p-2.5">Broker</th>
-                        <th className="p-2.5 text-right">Arrival Wt (MT)</th>
+                        <th className="p-2.5">Lorry No</th>
+                        <th className="p-2.5 text-center">Mismatch / Clearance Status</th>
+                        <th className="p-2.5 text-right">Inspected Wt (MT)</th>
                         <th className="p-2.5 text-right">Est. Mat. Value (₹)</th>
-                        <th className="p-2.5 text-right">Eligible Adv (90%) (₹)</th>
-                        <th className="p-2.5 text-right">Paid Adv (₹)</th>
-                        <th className="p-2.5 text-right text-amber-300">Pending Adv Payable (₹)</th>
+                        <th className="p-2.5 text-right text-amber-300">Eligible Adv Payable (₹)</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {filteredAdvanceMrList.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 transition">
-                          <td className="p-2.5 font-bold font-mono text-[#D94B5A]">
-                            <div>{row.mrNo}</div>
-                            <div className="text-[9.5px] font-normal text-slate-500">{row.arrivalDate}</div>
-                          </td>
-                          <td className="p-2.5 font-mono font-bold text-slate-700">{row.poNo}</td>
-                          <td className="p-2.5 font-bold">{row.supplier}</td>
-                          <td className="p-2.5 text-slate-600">{row.broker}</td>
-                          <td className="p-2.5 text-right font-mono">{row.arrWtMt.toFixed(2)} MT</td>
-                          <td className="p-2.5 text-right font-mono font-bold">
-                            ₹{row.materialValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                          </td>
-                          <td className="p-2.5 text-right font-mono font-bold text-indigo-700">
-                            ₹{row.eligibleAdvanceAmt.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                          </td>
-                          <td className="p-2.5 text-right font-mono font-bold text-emerald-700">
-                            ₹{row.paidAdvanceAmt.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                          </td>
-                          <td className="p-2.5 text-right font-mono font-bold text-rose-600">
-                            ₹{row.pendingAdvancePayable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                      {filteredAdvanceMrList.length === 0 ? (
+                        <tr>
+                          <td colSpan={9} className="p-8 text-center text-slate-500 font-bold">
+                            No unpaid Mill Inspection MRs eligible for advance found for the selected criteria.
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        filteredAdvanceMrList.map((row, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50 transition">
+                            <td className="p-2.5 font-bold font-mono text-[#D94B5A]">
+                              <div>{row.mrNo}</div>
+                              <div className="text-[9.5px] font-normal text-slate-500">{row.arrivalDate}</div>
+                            </td>
+                            <td className="p-2.5 font-mono font-bold text-slate-700">{row.poNo}</td>
+                            <td className="p-2.5 font-bold">{row.supplier}</td>
+                            <td className="p-2.5 text-slate-600">{row.broker}</td>
+                            <td className="p-2.5 font-mono text-slate-700">{row.lorryNumber}</td>
+                            <td className="p-2.5 text-center">
+                              {row.mismatchStatus.includes('Cleared') ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9.5px] font-black rounded-full bg-indigo-100 text-indigo-800">
+                                  <ShieldCheck className="w-3 h-3" />
+                                  {row.mismatchStatus}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9.5px] font-black rounded-full bg-emerald-100 text-emerald-800">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  {row.mismatchStatus}
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-2.5 text-right font-mono">{row.arrWtMt.toFixed(2)} MT</td>
+                            <td className="p-2.5 text-right font-mono font-bold">
+                              ₹{row.materialValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                            </td>
+                            <td className="p-2.5 text-right font-mono font-bold text-rose-600">
+                              ₹{row.pendingAdvancePayable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1132,7 +1335,7 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
                   <table className="w-full text-[11px] text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-800 text-white font-bold uppercase text-[10px]">
-                        <th className="p-2.5">MR No & Date</th>
+                        <th className="p-2.5">MR No &amp; Date</th>
                         <th className="p-2.5">PO No</th>
                         <th className="p-2.5">Supplier</th>
                         <th className="p-2.5">Broker</th>
@@ -1185,11 +1388,11 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
                 </div>
 
                 <div className="bg-gradient-to-br from-amber-600 to-amber-700 text-white p-3.5 rounded-2xl shadow-md space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-amber-100">Total Detention / Delay Days</span>
+                  <span className="text-[10px] uppercase font-bold text-amber-100">Total Detention / Delay Days (Average)</span>
                   <div className="text-xl font-black text-white">
-                    {filteredDeliveryClaimList.reduce((a, c) => a + c.detentionDays, 0)} Days
+                    {avgDetentionDays} Days
                   </div>
-                  <span className="text-[10px] text-amber-100">Delayed Arrival Periods</span>
+                  <span className="text-[10px] text-amber-100">Average Delayed Arrival Period</span>
                 </div>
 
                 <div className="bg-gradient-to-br from-rose-700 to-rose-800 text-white p-3.5 rounded-2xl shadow-md space-y-1">
@@ -1209,7 +1412,7 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
                     <span>MR WISE DELIVERY CLAIM REPORT (SAUDA CHECK POINT TO TEMPORARY ARRIVAL)</span>
                   </h3>
                   <span className="text-[10px] bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded-md">
-                    Late Delivery Penalties & Claims
+                    Late Delivery Penalties &amp; Claims
                   </span>
                 </div>
 
@@ -1217,8 +1420,8 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
                   <table className="w-full text-[11px] text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-800 text-white font-bold uppercase text-[10px]">
-                        <th className="p-2.5">MR No & Temp Arrival Date</th>
-                        <th className="p-2.5">PO No & PO Date</th>
+                        <th className="p-2.5">Mill Inspection No</th>
+                        <th className="p-2.5">PO No &amp; PO Date</th>
                         <th className="p-2.5">Delivery Due Date</th>
                         <th className="p-2.5">Supplier</th>
                         <th className="p-2.5">Broker</th>
@@ -1239,7 +1442,6 @@ export const NewCustomReportsView: React.FC<NewCustomReportsViewProps> = ({ init
                           <tr key={idx} className="hover:bg-slate-50 transition">
                             <td className="p-2.5 font-bold font-mono text-[#D94B5A]">
                               <div>{row.mrNo}</div>
-                              <div className="text-[9.5px] font-normal text-slate-500">Temp Arr: {row.arrivalDate || row.mrDate}</div>
                             </td>
                             <td className="p-2.5 font-mono text-slate-700">
                               <div className="font-bold">{row.poNo}</div>
