@@ -43,10 +43,12 @@ interface PrintModalProps {
   copyType?: string | null;
   setCopyType?: (val: any) => void;
   onPrint?: () => void | Promise<void>;
+  customPrintHandler?: () => void | Promise<void>;
+  customPdfBase64?: string;
   extraActions?: React.ReactNode;
 }
 
-export default function PrintModal({ isOpen, onClose, title, children, showTip = true, copyType, setCopyType, onPrint, extraActions }: PrintModalProps) {
+export default function PrintModal({ isOpen, onClose, title, children, showTip = true, copyType, setCopyType, onPrint, customPrintHandler, customPdfBase64, extraActions }: PrintModalProps) {
   const [emailRecipient, setEmailRecipient] = useState("");
   const [emailSubject, setEmailSubject] = useState(`[Bally Jute ERP] ${title}`);
   const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
@@ -88,6 +90,9 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
         // Clone and sanitize elements with classes to ensure inline compatibility in emails
         const cloned = canvasEl.cloneNode(true) as HTMLElement;
         
+        // Remove any embedded PDF iframe or no-print elements from email HTML body
+        cloned.querySelectorAll("iframe, .no-print, .pdf-embed-container").forEach((el) => el.remove());
+
         // Remove input borders or styled wrappers that might look bad in email client
         const inputs = cloned.querySelectorAll("input, textarea, select");
         inputs.forEach((inp: any) => {
@@ -128,8 +133,8 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
         </div>
       `;
 
-      // Capture the on-screen slip as a PDF attachment.
-      const pdfBase64 = canvasEl ? await slipElementToPdfBase64(canvasEl) : "";
+      // Use custom template-generated PDF base64 when provided, otherwise capture on-screen slip
+      const pdfBase64 = customPdfBase64 || (canvasEl ? await slipElementToPdfBase64(canvasEl) : "");
       const safeName = (title || "Document").replace(/[^a-z0-9]+/gi, "_");
 
       // Trigger the backend email sender
@@ -252,7 +257,11 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
                     console.warn("Print action callback failed:", e);
                   }
                 }
-                window.print();
+                if (customPrintHandler) {
+                  await customPrintHandler();
+                } else {
+                  window.print();
+                }
               }}
               className="bg-red-700 hover:bg-red-800 text-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-4 text-xs font-black h-8 flex items-center gap-1.5 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] font-mono cursor-pointer"
             >

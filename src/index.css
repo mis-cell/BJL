@@ -204,14 +204,14 @@
   }
 
   /* Table Standard - BJL approved headers and row states */
-  table {
+  table:not(.clean-print-table) {
     border-collapse: separate !important;
     border-spacing: 0 !important;
     width: 100%;
     background-color: #FFFFFF;
   }
 
-  table th {
+  table:not(.clean-print-table) th {
     background-color: #FDE7E6 !important;
     color: #111111 !important;
     font-weight: 700 !important;
@@ -221,24 +221,24 @@
     letter-spacing: 0.02em !important;
   }
 
-  table td {
+  table:not(.clean-print-table) td {
     padding: 9px 12px !important;
     color: #262626 !important;
     font-size: 13px !important;
     border-bottom: 1px solid #E5E7EB !important;
   }
 
-  table tbody tr {
+  table:not(.clean-print-table) tbody tr {
     background-color: #FFFFFF !important;
     transition: background-color 0.15s ease-in-out !important;
   }
 
-  table tbody tr:nth-child(even) {
+  table:not(.clean-print-table) tbody tr:nth-child(even) {
     background-color: #FFFCFB !important;
   }
 
   /* Table Hover State: Soft Gold (#FFF2CC) */
-  table tbody tr:hover {
+  table:not(.clean-print-table) tbody tr:hover {
     background-color: #FFF2CC !important;
     color: #111111 !important;
   }
@@ -489,11 +489,13 @@
     print-color-adjust: exact !important;
   }
 
-  th, td, legend {
+  table:not(.clean-print-table) th,
+  table:not(.clean-print-table) td,
+  legend {
     border-color: #000000 !important;
   }
 
-  th {
+  table:not(.clean-print-table) th {
     background-color: #e6e6e6 !important;
     color: #000000 !important;
     font-weight: bold !important;
