@@ -26,10 +26,32 @@ const SearchablePendingArrivalSelect: React.FC<SearchablePendingArrivalSelectPro
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredList = pendingArrivalList.filter((fa) => {
+  /* const filteredList = pendingArrivalList.filter((fa) => {
     if (!searchTerm.trim()) return true;
     const q = searchTerm.toLowerCase().trim();
     const faNo = String(fa.final_arrival_no || fa.mr_no || "").toLowerCase();
+    const poNo = String(fa.po_no || "").toLowerCase();
+    const supplier = String(fa.supplier || fa.challan_supplier || "").toLowerCase();
+    const lorry = String(fa.lorry_number || "").toLowerCase();
+    const broker = String(fa.broker || "").toLowerCase();
+
+    return (
+      faNo.includes(q) ||
+      poNo.includes(q) ||
+      supplier.includes(q) ||
+      lorry.includes(q) ||
+      broker.includes(q)
+    );
+  }); */
+  const filteredList = pendingArrivalList.filter((fa) => {
+    // Show only MR records, exclude AR records
+    const faNo = String(fa.final_arrival_no || fa.mr_no || "").toLowerCase();
+
+    if (!faNo.startsWith("mr")) return false;
+
+    if (!searchTerm.trim()) return true;
+
+    const q = searchTerm.toLowerCase().trim();
     const poNo = String(fa.po_no || "").toLowerCase();
     const supplier = String(fa.supplier || fa.challan_supplier || "").toLowerCase();
     const lorry = String(fa.lorry_number || "").toLowerCase();
@@ -109,7 +131,7 @@ const SearchablePendingArrivalSelect: React.FC<SearchablePendingArrivalSelectPro
               </div>
             ) : (
               filteredList.map((fa, idx) => {
-                const arrNo = fa.final_arrival_no || fa.mr_no || 'FA';
+                const arrNo = fa.final_arrival_no || 'MR';
                 const poNo = fa.po_no || '-';
                 const suppName = fa.supplier || fa.challan_supplier || 'Supplier';
                 const lorryNo = fa.lorry_number || '-';
