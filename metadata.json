@@ -1,11 +1,8 @@
 {
   "name": "Bally Jute Company Limited",
-  "description": "A comprehensive raw jute management system for Bally Jute Company Limited, featuring arrival tracking (Amad), transaction management (Sauda), and inventory reporting.",
+  "description": "KatEye",
   "requestFramePermissions": [],
   "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API",
-    "Inventory Management",
-    "Account Ledgers",
-    "Data Export"
-  ]
+    "KATEYE"
+      ]
 }
