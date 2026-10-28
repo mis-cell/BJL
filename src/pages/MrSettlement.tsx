@@ -142,7 +142,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
   const [lastSyncTime, setLastSyncTime] = useState<string>('');
   const [showSuccessAnim, setShowSuccessAnim] = useState<boolean>(false);
   const [paymentList, setPaymentList] = useState<any[]>([]);
-  const [paymentValidationInfo, setPaymentValidationInfo] = useState<{ mrNo: string; poNo: string; paidAmount: number; voucherNo: string } | null>(null);
+  const [paymentValidationInfo, setPaymentValidationInfo] = useState<{ mrNo: string; poNo: string; paidAmount: number; voucherNo: string; advanceDone?: string } | null>(null);
   
   // Overwrite Authorization / Audit modal state
   const [showAuditOverwriteModal, setShowAuditOverwriteModal] = useState<boolean>(false);
@@ -153,7 +153,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     targetMrNo: string;
   } | null>(null);
 
-  const syncPaymentModuleData = async (mrNo: string, poNo: string): Promise<{ totalPaid: number; payDetails: any[] }> => {
+  const syncPaymentModuleData = async (mrNo: string, poNo: string): Promise<{ totalPaid: number; payDetails: any[]; hasMatchedPayment: boolean }> => {
     try {
       const cleanMr = (mrNo || '').replace(/#/g, '').trim();
       const cleanPo = (poNo || '').replace(/#/g, '').trim();
@@ -175,7 +175,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           const { data: pData } = await supabase
             .from('payment_master')
             .select('*')
-            .or(`mr_no.eq.${cleanMr},arrival_no.eq.${cleanMr},payable_bill_no.eq.${cleanMr},reference_no.eq.${cleanMr}`);
+            .or(`mr_no.eq.${cleanMr},mr_no.ilike.${cleanMr},arrival_no.eq.${cleanMr}`);
           if (pData && pData.length > 0) {
             targetedPayments.push(...pData);
             const vNos = Array.from(new Set(pData.map(p => p.voucher_no).filter(Boolean)));
@@ -190,8 +190,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         } catch (e) {}
       }
 
-      // Also search by cleanPo if provided
-      if (supabase && cleanPo && targetedPayments.length === 0) {
+      // Also search by cleanPo if provided and no MR was specified
+      if (supabase && cleanPo && !cleanMr && targetedPayments.length === 0) {
         try {
           const { data: poPayData } = await supabase
             .from('payment_master')
@@ -257,63 +257,63 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         const db = extractCoreMrToken(b);
         return Boolean(da && db && da === db);
       };
-      const exactPoMatch = (a: string, b: string) => {
-        const ca = cleanStr(a);
-        const cb = cleanStr(b);
-        if (!ca || !cb) return false;
-        return ca === cb;
-      };
 
       const targetMrClean = cleanStr(mrNo);
-      const targetPoClean = cleanStr(poNo);
-      const targetPoRaw = (poNo || '').replace(/#/g, '').trim().toLowerCase();
+
+      // If no MR is selected yet, do not aggregate payments across the whole PO into On/Ac Adv
+      if (!targetMrClean) {
+        setPaymentValidationInfo(null);
+        setMasterData(prev => ({
+          ...prev,
+          final_on_ac_adv: 0
+        }));
+        return { totalPaid: 0, payDetails: [], hasMatchedPayment: false };
+      }
 
       // Collect voucher numbers linked via payment_details table matching target MR strictly
       const vouchersFromDetails = new Set<string>();
       const matchedDetailsList: any[] = [];
-      if (targetMrClean) {
-        details.forEach((d: any) => {
-          if (exactMrMatch(d.mr_no, mrNo)) {
-            if (d.voucher_no) vouchersFromDetails.add(d.voucher_no);
-            matchedDetailsList.push(d);
-          }
-        });
-      }
+      details.forEach((d: any) => {
+        if (exactMrMatch(d.mr_no, mrNo)) {
+          if (d.voucher_no) vouchersFromDetails.add(d.voucher_no);
+          matchedDetailsList.push(d);
+        }
+      });
 
-      // Priority 1: Match payments specifically linked to this MR (exact token match only)
-      let matchingPayments: any[] = [];
-      if (targetMrClean) {
+      // Priority 1A: Strictly match payment_master rows whose mr_no matches target mrNo
+      let matchingPayments: any[] = payments.filter((p: any) => {
+        const st = String(p.status || '').toLowerCase().trim();
+        if (st === 'cancelled' || st === 'rejected') return false;
+        return exactMrMatch(p.mr_no, mrNo);
+      });
+
+      // Priority 1B: Fallback to voucher match or arrival_no ONLY for payment rows that do NOT have a different mr_no
+      if (matchingPayments.length === 0) {
         matchingPayments = payments.filter((p: any) => {
+          const st = String(p.status || '').toLowerCase().trim();
+          if (st === 'cancelled' || st === 'rejected') return false;
+          const pMr = String(p.mr_no || '').trim();
+          // Never match a payment record that explicitly belongs to a different MR number (e.g. MR01323 vs MR01324)
+          if (pMr && !exactMrMatch(pMr, mrNo)) return false;
           const isVoucherMatch = Boolean(p.voucher_no && vouchersFromDetails.has(p.voucher_no));
           return (
             isVoucherMatch ||
-            exactMrMatch(p.mr_no, mrNo) ||
             exactMrMatch(p.arrival_no, mrNo) ||
-            exactMrMatch(p.payable_bill_no, mrNo) ||
-            exactMrMatch(p.reference_no, mrNo)
+            exactMrMatch(p.payable_bill_no, mrNo)
           );
         });
       }
 
-      // Priority 2: Fallback to exact PO-matched payments if no MR-specific payments found
-      if (matchingPayments.length === 0 && (targetPoClean || targetPoRaw)) {
-        matchingPayments = payments.filter((p: any) => {
-          const pPoRaw = (p.po_no || '').replace(/#/g, '').trim().toLowerCase();
-          return (
-            (targetPoRaw && pPoRaw === targetPoRaw) ||
-            exactPoMatch(p.po_no, poNo)
-          );
-        });
-      }
-
-      // Also gather payment_details from matched payments if not already collected
-      if (matchingPayments.length > 0 && matchedDetailsList.length === 0) {
-        const matchedVoucherSet = new Set(matchingPayments.map(p => p.voucher_no).filter(Boolean));
-        details.forEach((d: any) => {
-          if (d.voucher_no && matchedVoucherSet.has(d.voucher_no)) {
-            matchedDetailsList.push(d);
-          }
-        });
+      // Filter matchedDetailsList to only belong to the matched payment vouchers (or target MR)
+      const matchedVoucherSet = new Set(matchingPayments.map(p => p.voucher_no).filter(Boolean));
+      if (matchedVoucherSet.size > 0) {
+        const filteredDetails = details.filter((d: any) =>
+          (d.voucher_no && matchedVoucherSet.has(d.voucher_no)) || exactMrMatch(d.mr_no, mrNo)
+        );
+        if (filteredDetails.length > 0) {
+          matchedDetailsList.length = 0;
+          matchedDetailsList.push(...filteredDetails);
+        }
       }
 
       // Ensure satta differentials are cached for Sett Rate calculation
@@ -324,7 +324,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         } catch (e) {}
       }
 
-      // Also live-update detailCols with Payment Operations -> Details fields (preserving original PO rate in rate_value!)
+      // Live-update detailCols with Payment Operations -> Details fields (preserving original PO rate in rate_value!)
       if (matchedDetailsList.length > 0) {
         setDetailCols(prevCols => prevCols.map(col => {
           const match = matchedDetailsList.find(pd => Number(pd.col_index) === col.col_index) ||
@@ -404,26 +404,42 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
 
       if (matchingPayments.length > 0) {
-        const totalPaid = matchingPayments.reduce((sum, p) => sum + Number(p.paid_amount !== undefined && p.paid_amount !== null ? p.paid_amount : (p.total_amount || 0)), 0);
+        // Respect "Advance Payment Done? *" (advance_payment_done): if "No", Advance Done is 0!
+        const totalPaid = matchingPayments.reduce((sum, p) => {
+          const advDoneRaw = String(p.advance_payment_done ?? 'Yes').trim().toLowerCase();
+          const isAdvanceNo = advDoneRaw === 'no' || advDoneRaw === 'false' || p.advance_payment_done === false;
+          if (isAdvanceNo) return sum;
+          return sum + Number(p.paid_amount !== undefined && p.paid_amount !== null ? p.paid_amount : (p.total_amount || 0));
+        }, 0);
         const firstMatch = matchingPayments[0];
+        const advDoneLabel = matchingPayments.some(p => {
+          const r = String(p.advance_payment_done ?? 'Yes').trim().toLowerCase();
+          return r !== 'no' && r !== 'false' && p.advance_payment_done !== false;
+        }) ? 'Yes' : 'No';
+
         setPaymentValidationInfo({
           mrNo: firstMatch.mr_no || mrNo,
           poNo: firstMatch.po_no || poNo,
           paidAmount: totalPaid,
-          voucherNo: matchingPayments.map(p => p.voucher_no || 'N/A').join(', ')
+          voucherNo: matchingPayments.map(p => p.voucher_no || 'N/A').join(', '),
+          advanceDone: advDoneLabel
         });
         setMasterData(prev => ({
           ...prev,
           final_on_ac_adv: totalPaid
         }));
-        return { totalPaid, payDetails: matchedDetailsList };
+        return { totalPaid, payDetails: matchedDetailsList, hasMatchedPayment: true };
       } else {
         setPaymentValidationInfo(null);
-        return { totalPaid: 0, payDetails: matchedDetailsList };
+        setMasterData(prev => ({
+          ...prev,
+          final_on_ac_adv: 0
+        }));
+        return { totalPaid: 0, payDetails: matchedDetailsList, hasMatchedPayment: false };
       }
     } catch (e) {
       console.warn("Payment module sync error:", e);
-      return { totalPaid: 0, payDetails: [] };
+      return { totalPaid: 0, payDetails: [], hasMatchedPayment: false };
     }
   };
 
@@ -520,7 +536,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       // Also fetch PO details, final_arrival, material_inspection, supplier_master, and payment_details for accurate print preview
       const targetPoForView = activeMaster.po_no || selectedPoNo || '';
-      const [{ poData: viewPoData, poDetails: viewPoDetails }, { totalPaid: viewPaidAmt, payDetails: viewPayDetails }] = await Promise.all([
+      const [{ poData: viewPoData, poDetails: viewPoDetails }, { totalPaid: viewPaidAmt, payDetails: viewPayDetails, hasMatchedPayment: viewHasPay }] = await Promise.all([
         targetPoForView ? fetchPoAndItemDetails(targetPoForView) : Promise.resolve({ poData: null, poDetails: [] }),
         syncPaymentModuleData(targetMrNo, targetPoForView)
       ]);
@@ -533,17 +549,37 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       if (supabase) {
         try {
-          const [faRes, matInspRes, matInspDetRes] = await Promise.all([
-            supabase.from('final_arrival').select('*').or(`mr_no.eq.${targetMrNo},final_arrival_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).maybeSingle(),
-            supabase.from('material_inspection').select('*').or(`mr_no.eq.${targetMrNo},final_arrival_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).maybeSingle(),
-            supabase.from('material_inspection_details').select('*').eq('mr_no', targetMrNo)
+          const [matInspExact, matInspDetRes] = await Promise.all([
+            supabase.from('material_inspection').select('*').eq('mr_no', targetMrNo).maybeSingle(),
+            supabase.from('material_inspection_details').select('*').eq('mr_no', targetMrNo).order('srl_no', { ascending: true })
           ]);
-          if (faRes.data) faRecord = faRes.data;
-          if (matInspRes.data) inspRecord = matInspRes.data;
+          if (matInspExact.data) {
+            inspRecord = matInspExact.data;
+          } else {
+            const { data: matInspFallback } = await supabase.from('material_inspection').select('*').eq('arrival_no', targetMrNo).limit(1);
+            if (matInspFallback && matInspFallback.length > 0) inspRecord = matInspFallback[0];
+          }
           if (matInspDetRes.data) inspDetailsList = matInspDetRes.data;
+
+          const targetArrForFa = inspRecord?.arrival_no || targetMrNo;
+          const { data: faCandidates } = await supabase
+            .from('final_arrival')
+            .select('*')
+            .or(`mr_no.eq.${targetMrNo},final_arrival_no.eq.${targetArrForFa},arrival_no.eq.${targetArrForFa}`);
+          if (faCandidates && faCandidates.length > 0) {
+            const normLorry = (v: any) => String(v || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+            const expectedLorry = normLorry(inspRecord?.lorry_number || activeMaster.lorry_number);
+            const matchedFa = faCandidates.find((f: any) => {
+              const fLorry = normLorry(f.lorry_number || f.lorry_no || f.vehicle_no);
+              if (expectedLorry && fLorry && expectedLorry !== fLorry) return false;
+              const fArr = String(f.final_arrival_no || f.arrival_no || f.mr_no || '').trim().toUpperCase();
+              return fArr === String(targetArrForFa).trim().toUpperCase() || fArr === String(targetMrNo).trim().toUpperCase();
+            });
+            if (matchedFa) faRecord = matchedFa;
+          }
         } catch (e) {}
 
-        const supName = (activeMaster.supplier || faRecord?.supplier || inspRecord?.supplier_name || '').trim();
+        const supName = (inspRecord?.supplier_name || activeMaster.supplier || faRecord?.supplier || '').trim();
         if (supName && !supplierAddress) {
           try {
             const { data: supData } = await supabase
@@ -638,12 +674,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
 
       const faGridArr = parseGridOrItems(
-        faRecord?.specification_grid ||
-        faRecord?.items ||
-        faRecord?.grid_details ||
         inspRecord?.specification_grid ||
         inspRecord?.items ||
-        inspRecord?.grid_details
+        inspRecord?.grid_details ||
+        faRecord?.specification_grid ||
+        faRecord?.items ||
+        faRecord?.grid_details
       );
       const alignedFallbackCols = buildAlignedSettlementColumns(
         viewPoDetails,
@@ -699,15 +735,15 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       setViewModalData({
         master: {
           ...activeMaster,
-          mr_date: activeMaster.mr_date || faRecord?.date || faRecord?.mr_date || inspRecord?.mr_date || inspRecord?.arrival_date || activeMaster.arrival_date || activeMaster.sett_date,
-          po_date: activeMaster.po_date || viewPoData?.po_date || viewPoData?.s_date || faRecord?.po_date || inspRecord?.po_date || '',
+          mr_date: inspRecord?.mr_date || inspRecord?.date || activeMaster.mr_date || faRecord?.date || faRecord?.mr_date || inspRecord?.arrival_date || activeMaster.arrival_date || activeMaster.sett_date,
+          po_date: activeMaster.po_date || viewPoData?.po_date || viewPoData?.s_date || inspRecord?.po_date || faRecord?.po_date || '',
           supplier_address: supplierAddress || faRecord?.supplier_address || '',
           consign_no: faRecord?.challan_rr_no || faRecord?.challan_railway_receipt_no || activeMaster.consign_no || faRecord?.challan_no || '',
           consign_date: activeMaster.consign_date || faRecord?.challan_date || faRecord?.po_date || viewPoData?.po_date || '',
           way_bill: activeMaster.way_bill || faRecord?.way_bill_no || faRecord?.way_bill || '',
           pan_no: supplierPan || faRecord?.pan_no || '',
           arival_apmc_fees: viewApmcFees,
-          final_on_ac_adv: Number(activeMaster.final_on_ac_adv) > 0 ? Number(activeMaster.final_on_ac_adv) : viewPaidAmt,
+          final_on_ac_adv: viewHasPay ? viewPaidAmt : (Number(activeMaster.final_on_ac_adv) || 0),
           deductions: deductionsList
         },
         details: activeDetails
@@ -1612,45 +1648,74 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     setSuccessMessage('');
     try {
       if (!supabase) return;
+      const cleanTargetMr = String(targetMrNo || '').trim().toUpperCase();
 
-      // 0. Resolve MR and PO from payment_master (table: payment_master, columns: mr_no, po_no)
+      // 0. Resolve MR and PO from payment_master strictly by mr_no first
       let payMasterRec: any = paymentList.find(
-        (p: any) => String(p.mr_no || '').trim().toUpperCase() === targetMrNo.trim().toUpperCase()
+        (p: any) => String(p.mr_no || '').trim().toUpperCase() === cleanTargetMr
       ) || null;
       if (!payMasterRec) {
+        payMasterRec = paymentList.find((p: any) => {
+          const pMr = String(p.mr_no || '').trim().toUpperCase();
+          const pArr = String(p.arrival_no || '').trim().toUpperCase();
+          return (!pMr || pMr === cleanTargetMr) && pArr === cleanTargetMr;
+        }) || null;
+      }
+      if (!payMasterRec) {
         try {
-          const { data: pmRows } = await supabase
+          const { data: pmExact } = await supabase
             .from('payment_master')
             .select('*')
-            .or(`mr_no.eq.${targetMrNo},mr_no.ilike.${targetMrNo},arrival_no.eq.${targetMrNo}`)
-            .limit(1);
-          if (pmRows && pmRows.length > 0) payMasterRec = pmRows[0];
+            .or(`mr_no.eq.${targetMrNo},mr_no.ilike.${targetMrNo}`);
+          if (pmExact && pmExact.length > 0) {
+            payMasterRec = pmExact.find((p: any) => String(p.mr_no || '').trim().toUpperCase() === cleanTargetMr) || pmExact[0];
+          } else {
+            const { data: pmArr } = await supabase
+              .from('payment_master')
+              .select('*')
+              .eq('arrival_no', targetMrNo);
+            if (pmArr && pmArr.length > 0) {
+              payMasterRec = pmArr.find((p: any) => !p.mr_no || String(p.mr_no).trim().toUpperCase() === cleanTargetMr) || null;
+            }
+          }
         } catch (e) {}
       }
 
-      // 1. Fetch source records first (final_arrival or mill_inspection_master & details) for enrichment
-      const { data: faMasterList } = await supabase
-        .from('final_arrival')
-        .select('*')
-        .or(`mr_no.eq.${targetMrNo},final_arrival_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo},temporary_arrival_no.eq.${targetMrNo}`)
-        .limit(1);
-      const faMaster = faMasterList?.[0] || null;
-
-      let faGridArr: any[] = [];
-      if (faMaster?.grid_details) {
-        if (Array.isArray(faMaster.grid_details)) faGridArr = faMaster.grid_details;
-        else if (typeof faMaster.grid_details === 'string') {
-          try { faGridArr = JSON.parse(faMaster.grid_details); } catch (e) {}
-        }
-      }
-
+      // 1. Fetch material_inspection / mill_inspection_master by exact mr_no FIRST
       let inspMaster: any = null;
       try {
-        const matInspRes = await supabase.from('material_inspection').select('*').or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).limit(1);
-        inspMaster = matInspRes?.data?.[0] || null;
+        const matExactRes = await supabase
+          .from('material_inspection')
+          .select('*')
+          .eq('mr_no', targetMrNo);
+        if (matExactRes?.data && matExactRes.data.length > 0) {
+          inspMaster = matExactRes.data[0];
+        } else {
+          const matArrRes = await supabase
+            .from('material_inspection')
+            .select('*')
+            .eq('arrival_no', targetMrNo);
+          if (matArrRes?.data && matArrRes.data.length > 0) {
+            inspMaster = matArrRes.data.find((r: any) => !r.mr_no || String(r.mr_no).trim().toUpperCase() === cleanTargetMr) || null;
+          }
+        }
+
         if (!inspMaster) {
-          const millInspRes = await supabase.from('mill_inspection_master').select('*').or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`).limit(1);
-          inspMaster = millInspRes?.data?.[0] || null;
+          const millExactRes = await supabase
+            .from('mill_inspection_master')
+            .select('*')
+            .eq('mr_no', targetMrNo);
+          if (millExactRes?.data && millExactRes.data.length > 0) {
+            inspMaster = millExactRes.data[0];
+          } else {
+            const millArrRes = await supabase
+              .from('mill_inspection_master')
+              .select('*')
+              .eq('arrival_no', targetMrNo);
+            if (millArrRes?.data && millArrRes.data.length > 0) {
+              inspMaster = millArrRes.data.find((r: any) => !r.mr_no || String(r.mr_no).trim().toUpperCase() === cleanTargetMr) || null;
+            }
+          }
         }
       } catch (e) {
         console.warn("Error fetching inspection master:", e);
@@ -1670,7 +1735,11 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       if (inspDetails.length === 0) {
         try {
-          const matDetRes = await supabase.from('material_inspection_details').select('*').eq('mr_no', targetMrNo).order('srl_no', { ascending: true });
+          const matDetRes = await supabase
+            .from('material_inspection_details')
+            .select('*')
+            .eq('mr_no', targetMrNo)
+            .order('srl_no', { ascending: true });
           const fetchedDet = matDetRes?.data || [];
           if (fetchedDet.length > 0) inspDetails = fetchedDet;
         } catch (e) {
@@ -1678,7 +1747,50 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         }
       }
 
-      const poNoForDet = payMasterRec?.po_no || faMaster?.po_no || inspMaster?.po_no || '';
+      // 2. Fetch final_arrival WITHOUT temporary_arrival_no and validate against inspMaster / payMasterRec
+      const targetArrNo = String(inspMaster?.arrival_no || targetMrNo).trim();
+      const { data: faMasterList } = await supabase
+        .from('final_arrival')
+        .select('*')
+        .or(`mr_no.eq.${targetMrNo},final_arrival_no.eq.${targetArrNo},arrival_no.eq.${targetArrNo}`);
+
+      let faMaster: any = null;
+      if (faMasterList && faMasterList.length > 0) {
+        const expectedLorry = String(inspMaster?.lorry_number || inspMaster?.lorry_no || payMasterRec?.lorry_number || '').trim().toUpperCase();
+        const expectedSupplier = String(inspMaster?.supplier_name || inspMaster?.supplier || payMasterRec?.party_name || payMasterRec?.supplier_name || payMasterRec?.supplier || '').trim().toUpperCase();
+        const cleanArr = targetArrNo.toUpperCase();
+
+        const validFaCandidates = faMasterList.filter((r: any) => {
+          const rMr = String(r.mr_no || '').trim().toUpperCase();
+          const rFaNo = String(r.final_arrival_no || '').trim().toUpperCase();
+          const rLorry = String(r.lorry_number || r.lorry_no || '').trim().toUpperCase();
+          // Reject if final_arrival explicitly belongs to a different MR number
+          if (rMr && rMr !== cleanTargetMr && rMr !== cleanArr) return false;
+          // Reject if final_arrival_no is an MR series that conflicts with targetMrNo / targetArrNo
+          if (rFaNo && rFaNo.startsWith('MR') && rFaNo !== cleanTargetMr && rFaNo !== cleanArr) return false;
+          // Reject if inspection/payment has a lorry number and final_arrival has a different lorry number
+          if (expectedLorry && rLorry && rLorry !== expectedLorry) return false;
+          return true;
+        });
+
+        faMaster =
+          validFaCandidates.find((r: any) => String(r.mr_no || '').trim().toUpperCase() === cleanTargetMr) ||
+          validFaCandidates.find((r: any) => String(r.final_arrival_no || '').trim().toUpperCase() === cleanArr) ||
+          validFaCandidates.find((r: any) => expectedLorry && String(r.lorry_number || r.lorry_no || '').trim().toUpperCase() === expectedLorry) ||
+          validFaCandidates.find((r: any) => expectedSupplier && String(r.supplier || r.supplier_name || '').trim().toUpperCase() === expectedSupplier) ||
+          validFaCandidates[0] ||
+          null;
+      }
+
+      let faGridArr: any[] = [];
+      if (faMaster?.grid_details) {
+        if (Array.isArray(faMaster.grid_details)) faGridArr = faMaster.grid_details;
+        else if (typeof faMaster.grid_details === 'string') {
+          try { faGridArr = JSON.parse(faMaster.grid_details); } catch (e) {}
+        }
+      }
+
+      const poNoForDet = inspMaster?.po_no || payMasterRec?.po_no || faMaster?.po_no || '';
       const cleanTargetPo = (poNoForDet || selectedPoNo || masterData.po_no || '').trim().replace(/^#/, '');
       const isLastMr = isLastMrForPo(targetMrNo, cleanTargetPo, inspections, selectedPoData);
 
@@ -1736,17 +1848,17 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       // Fetch Temporary Arrival record to retrieve A.P.M.C Fees (Rs.)
       const resolvedArrivalApmcFees = await resolveTemporaryArrivalApmcFees({
         candidateNos: [
+          inspMaster?.arrival_no,
+          inspMaster?.ref_arrival_no,
+          inspMaster?.mr_no,
           faMaster?.temporary_arrival_no,
           faMaster?.arrival_no,
           faMaster?.final_arrival_no,
           faMaster?.mr_no,
-          inspMaster?.arrival_no,
-          inspMaster?.ref_arrival_no,
-          inspMaster?.mr_no,
           targetMrNo
         ],
         poNo: poNoForDet || cleanTargetPo,
-        lorryNo: faMaster?.lorry_number || faMaster?.lorry_no || inspMaster?.lorry_number || inspMaster?.lorry_no || '',
+        lorryNo: inspMaster?.lorry_number || inspMaster?.lorry_no || faMaster?.lorry_number || faMaster?.lorry_no || payMasterRec?.lorry_number || '',
         faMaster,
         inspMaster
       });
@@ -1758,7 +1870,40 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         } catch (e) {}
       }
 
-      const { totalPaid: syncedPaidAmount, payDetails: matchedPayDetails } = await syncPaymentModuleData(targetMrNo, effectivePoNo);
+      const { totalPaid: syncedPaidAmount, payDetails: matchedPayDetails, hasMatchedPayment } = await syncPaymentModuleData(targetMrNo, effectivePoNo);
+
+      // Calculate fallback weights in MT from inspection details and payment details
+      const toSingleMt = (val: any): number => {
+        const p = Number(val) || 0;
+        if (p <= 0) return 0;
+        if (p > 500) return Number((p / 1000).toFixed(3));
+        if (p > 50) return Number((p / 10).toFixed(3));
+        return Number(p.toFixed(3));
+      };
+
+      let inspDetailsChallanMtSum = 0;
+      let inspDetailsSupplierMtSum = 0;
+      let inspDetailsScaleMtSum = 0;
+      if (inspDetails && inspDetails.length > 0) {
+        inspDetails.forEach((d: any) => {
+          const cWt = toSingleMt(d.challan_gross_wt || d.challan_wt || d.receipt_gross_wt || d.final_receipt_wt || d.arr_qty_wt || d.weight);
+          const sWt = toSingleMt(d.receipt_gross_wt || d.supplier_net_wt || d.challan_gross_wt || d.final_receipt_wt || d.arr_qty_wt || d.weight);
+          const eWt = toSingleMt(d.final_receipt_wt || d.receipt_gross_wt || d.challan_gross_wt || d.arr_qty_wt || d.weight);
+          inspDetailsChallanMtSum += cWt;
+          inspDetailsSupplierMtSum += sWt;
+          inspDetailsScaleMtSum += eWt;
+        });
+      }
+      let payDetailsWtMtSum = 0;
+      if (matchedPayDetails && matchedPayDetails.length > 0) {
+        matchedPayDetails.forEach((pd: any) => {
+          payDetailsWtMtSum += toSingleMt(pd.arr_qty_wt || pd.weight || (Number(pd.quantity_qtl) > 0 ? Number(pd.quantity_qtl) / 10 : 0));
+        });
+      }
+      inspDetailsChallanMtSum = Number(inspDetailsChallanMtSum.toFixed(3));
+      inspDetailsSupplierMtSum = Number(inspDetailsSupplierMtSum.toFixed(3));
+      inspDetailsScaleMtSum = Number(inspDetailsScaleMtSum.toFixed(3));
+      payDetailsWtMtSum = Number(payDetailsWtMtSum.toFixed(3));
 
       // Calculate total Premium Quantity (MT), Premium WT (Qtl), and Premium Amount (₹) from Inspection Details
       let totalPremMt = 0;
@@ -1907,6 +2052,33 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         inspDeductionAmount = 0;
       }
 
+      const toMtWeight = (primaryVal: any, fallbackQtlVal?: any): number => {
+        const p = Number(primaryVal) || 0;
+        if (p > 0) {
+          if (p > 500) return Number((p / 1000).toFixed(3));
+          if (p > 50) return Number((p / 10).toFixed(3));
+          return Number(p.toFixed(3));
+        }
+        const q = Number(fallbackQtlVal) || 0;
+        if (q > 0) {
+          return Number((q / 10).toFixed(3));
+        }
+        return 0;
+      };
+
+      const sourceChallanMt = toMtWeight(
+        inspMaster?.challan_material_weight || faMaster?.challan_material_weight || payMasterRec?.challan_weight || inspDetailsChallanMtSum || payDetailsWtMtSum,
+        inspMaster?.weight_qtl || faMaster?.weight_qtl
+      );
+      const sourceSupplierNetMt = toMtWeight(
+        inspMaster?.supplier_net_weight || faMaster?.supplier_net_weight || payMasterRec?.supplier_net_wt || ((Number(faMaster?.supplier_challan_gross) || 0) - (Number(faMaster?.supplier_tare_weight) || 0)) || inspDetailsSupplierMtSum || payDetailsWtMtSum,
+        inspMaster?.weight_qtl || faMaster?.weight_qtl
+      );
+      const sourceElectronicNetMt = toMtWeight(
+        inspMaster?.electronic_net_weight || faMaster?.electronic_net_weight || payMasterRec?.electronic_scale_net || ((Number(faMaster?.electronic_gross_weight) || 0) - (Number(faMaster?.electronic_tare_weight) || 0)) || inspDetailsScaleMtSum || payDetailsWtMtSum,
+        inspMaster?.weight_qtl || faMaster?.weight_qtl
+      );
+
       // Check if settlement already exists for this MR. If yes, load for editing!
       if (!forceSync) {
         const { data: existingMaster } = await supabase
@@ -1927,19 +2099,6 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             ? inspDeductionAmount
             : ((Number(existingMaster.summary_deduction_amount) > 0) ? existingMaster.summary_deduction_amount : inspDeductionAmount);
 
-          const toMtWeight = (primaryVal: any, fallbackQtlVal?: any): number => {
-            const p = Number(primaryVal) || 0;
-            if (p > 0) {
-              if (p > 500) return Number((p / 1000).toFixed(3));
-              if (p > 50) return Number((p / 10).toFixed(3));
-              return Number(p.toFixed(3));
-            }
-            const q = Number(fallbackQtlVal) || 0;
-            if (q > 0) {
-              return Number((q / 10).toFixed(3));
-            }
-            return 0;
-          };
           const isMrSeriesStr = (s: any) => Boolean(s && String(s).trim().toUpperCase().startsWith('MR'));
           let masterMrNoToUse = existingMaster.mr_no || targetMrNo;
           if (!isMrSeriesStr(masterMrNoToUse) && isMrSeriesStr(targetMrNo)) {
@@ -1948,15 +2107,48 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             masterMrNoToUse = inspMaster.mr_no;
           }
 
+          // Detect if existingMaster had stale/wrong arrival_no or lorry_number from a different MR
+          const expectedArrNo = String(inspMaster?.arrival_no || payMasterRec?.arrival_no || targetMrNo).trim();
+          const expectedLorry = String(inspMaster?.lorry_number || payMasterRec?.lorry_number || '').trim();
+          const existingArrClean = String(existingMaster.arrival_no || '').trim().toUpperCase();
+          const isStaleExistingIdentity =
+            (existingArrClean && existingArrClean.startsWith('MR') && existingArrClean !== cleanTargetMr && existingArrClean !== expectedArrNo.toUpperCase()) ||
+            (expectedLorry && existingMaster.lorry_number && String(existingMaster.lorry_number).trim().toUpperCase() !== expectedLorry.toUpperCase());
+
+          const effChallanWt = isStaleExistingIdentity
+            ? (sourceChallanMt || toMtWeight(existingMaster.challan_weight))
+            : toMtWeight(existingMaster.challan_weight || sourceChallanMt);
+          const effSupplierWt = isStaleExistingIdentity
+            ? (sourceSupplierNetMt || toMtWeight(existingMaster.supplier_net_wt))
+            : toMtWeight(existingMaster.supplier_net_wt || sourceSupplierNetMt);
+          const effScaleWt = isStaleExistingIdentity
+            ? (sourceElectronicNetMt || toMtWeight(existingMaster.electronic_scale_net))
+            : toMtWeight(existingMaster.electronic_scale_net || sourceElectronicNetMt);
+
           const mergedMaster = {
             ...existingMaster,
             mr_no: masterMrNoToUse,
-            challan_weight: toMtWeight(existingMaster.challan_weight || faMaster?.challan_material_weight || inspMaster?.challan_material_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
-            supplier_net_wt: toMtWeight(existingMaster.supplier_net_wt || faMaster?.supplier_net_weight || inspMaster?.supplier_net_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
-            electronic_scale_net: toMtWeight(existingMaster.electronic_scale_net || faMaster?.electronic_net_weight || inspMaster?.electronic_net_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
-            wt_ded_wt_1: toMtWeight(existingMaster.wt_ded_wt_1 || existingMaster.challan_weight || faMaster?.challan_material_weight || inspMaster?.challan_material_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
-            wt_ded_wt_2: toMtWeight(existingMaster.wt_ded_wt_2 || existingMaster.supplier_net_wt || faMaster?.supplier_net_weight || inspMaster?.supplier_net_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
-            wt_ded_wt_3: toMtWeight(existingMaster.wt_ded_wt_3 || existingMaster.electronic_scale_net || faMaster?.electronic_net_weight || inspMaster?.electronic_net_weight, faMaster?.weight_qtl || inspMaster?.weight_qtl),
+            broker: isStaleExistingIdentity
+              ? (inspMaster?.broker_name || inspMaster?.broker || payMasterRec?.broker_name || payMasterRec?.broker || existingMaster.broker || '')
+              : (existingMaster.broker || inspMaster?.broker_name || inspMaster?.broker || payMasterRec?.broker_name || payMasterRec?.broker || ''),
+            supplier: isStaleExistingIdentity
+              ? (inspMaster?.supplier_name || inspMaster?.supplier || payMasterRec?.party_name || payMasterRec?.supplier_name || payMasterRec?.supplier || existingMaster.supplier || '')
+              : (existingMaster.supplier || inspMaster?.supplier_name || inspMaster?.supplier || payMasterRec?.party_name || payMasterRec?.supplier_name || payMasterRec?.supplier || ''),
+            chn_supplier: isStaleExistingIdentity
+              ? (inspMaster?.supplier_name || inspMaster?.supplier || payMasterRec?.chn_supplier || payMasterRec?.party_name || payMasterRec?.supplier || existingMaster.chn_supplier || '')
+              : (existingMaster.chn_supplier || inspMaster?.supplier_name || inspMaster?.supplier || payMasterRec?.chn_supplier || payMasterRec?.party_name || payMasterRec?.supplier || ''),
+            lorry_number: isStaleExistingIdentity
+              ? (expectedLorry || existingMaster.lorry_number || '')
+              : (existingMaster.lorry_number || expectedLorry || ''),
+            arrival_no: isStaleExistingIdentity
+              ? (expectedArrNo || existingMaster.arrival_no || '')
+              : (existingMaster.arrival_no || expectedArrNo || ''),
+            challan_weight: effChallanWt,
+            supplier_net_wt: effSupplierWt,
+            electronic_scale_net: effScaleWt,
+            wt_ded_wt_1: isStaleExistingIdentity ? effChallanWt : toMtWeight(existingMaster.wt_ded_wt_1 || effChallanWt),
+            wt_ded_wt_2: isStaleExistingIdentity ? effSupplierWt : toMtWeight(existingMaster.wt_ded_wt_2 || effSupplierWt),
+            wt_ded_wt_3: isStaleExistingIdentity ? effScaleWt : toMtWeight(existingMaster.wt_ded_wt_3 || effScaleWt),
             summary_deduction_type: existingMaster.summary_deduction_type || deductionSummaryText || '',
             summary_deduction_rate: (Number(existingMaster.summary_deduction_rate) > 0) ? existingMaster.summary_deduction_rate : inspDeductionRate,
             summary_deduction_qty: (Number(existingMaster.summary_deduction_qty) > 0) ? existingMaster.summary_deduction_qty : (inspDeductionQty || (deductionSummaryText ? 1 : 0)),
@@ -1979,9 +2171,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
               : Number(existingMaster.val_ex_short || 0),
             val_less_amt: Number(existingMaster.val_less_amt || 0),
             summary_delivery_claim: (existingMaster.summary_delivery_claim === 5550) ? 0 : (Number(existingMaster.summary_delivery_claim) || 0),
-            arival_apmc_fees: (Number(existingMaster.arival_apmc_fees) > 0) ? existingMaster.arival_apmc_fees : resolvedArrivalApmcFees,
+            arival_apmc_fees: (Number(existingMaster.arival_apmc_fees) > 0 && !isStaleExistingIdentity) ? existingMaster.arival_apmc_fees : resolvedArrivalApmcFees,
             actual_apmc_fees: Math.round(Number(existingMaster.actual_apmc_fees) || 0),
-            final_on_ac_adv: (existingMaster.final_on_ac_adv && Number(existingMaster.final_on_ac_adv) > 0) ? Number(existingMaster.final_on_ac_adv) : syncedPaidAmount
+            final_on_ac_adv: hasMatchedPayment ? syncedPaidAmount : (Number(existingMaster.final_on_ac_adv) || 0)
           };
           setMasterData(mergedMaster);
 
@@ -2005,7 +2197,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             matchedPayDetails
           );
 
-          if (existingDetails && existingDetails.length > 0) {
+          if (existingDetails && existingDetails.length > 0 && !isStaleExistingIdentity) {
             // Fill columns up to 4, backfilling missing fields if necessary
             const newCols = [1, 2, 3, 4].map(idx => {
               const dbMatch = existingDetails.find(d => d.col_index === idx);
@@ -2090,82 +2282,55 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             setDetailCols(fallbackCols);
           }
           if (existingMaster.po_no) {
-          setSelectedPoNo(existingMaster.po_no);
-          handlePoNoSelection(existingMaster.po_no, true);
-        }
+            setSelectedPoNo(existingMaster.po_no);
+            handlePoNoSelection(existingMaster.po_no, true);
+          }
           setSuccessMessage(`Loaded existing Settlement Report for M.R. No. ${targetMrNo}`);
           return;
         }
       }
 
-      const toMtWeightNew = (primaryVal: any, fallbackQtlVal?: any): number => {
-        const p = Number(primaryVal) || 0;
-        if (p > 0) {
-          if (p > 500) return Number((p / 1000).toFixed(3));
-          if (p > 50) return Number((p / 10).toFixed(3));
-          return Number(p.toFixed(3));
-        }
-        const q = Number(fallbackQtlVal) || 0;
-        if (q > 0) {
-          return Number((q / 10).toFixed(3));
-        }
-        return 0;
-      };
-
-      // 2. Build new settlement from payment_master / final_arrival / mill_inspection_master
-      if (faMaster || inspMaster || payMasterRec) {
+      // 2. Build new settlement prioritizing material_inspection (inspMaster) and payment_master (payMasterRec) over final_arrival (faMaster)
+      if (inspMaster || payMasterRec || faMaster) {
         setIsEdit(false);
         const isMrSeriesStr = (s: any) => Boolean(s && String(s).trim().toUpperCase().startsWith('MR'));
         let resolvedMrNo = targetMrNo;
         if (isMrSeriesStr(targetMrNo)) {
           resolvedMrNo = targetMrNo;
-        } else if (isMrSeriesStr(payMasterRec?.mr_no)) {
-          resolvedMrNo = payMasterRec.mr_no;
         } else if (isMrSeriesStr(inspMaster?.mr_no)) {
           resolvedMrNo = inspMaster.mr_no;
+        } else if (isMrSeriesStr(payMasterRec?.mr_no)) {
+          resolvedMrNo = payMasterRec.mr_no;
         } else if (isMrSeriesStr(faMaster?.mr_no)) {
           resolvedMrNo = faMaster.mr_no;
         } else {
-          resolvedMrNo = payMasterRec?.mr_no || inspMaster?.mr_no || targetMrNo || faMaster?.mr_no || faMaster?.final_arrival_no || faMaster?.arrival_no || '';
+          resolvedMrNo = inspMaster?.mr_no || payMasterRec?.mr_no || targetMrNo || faMaster?.mr_no || faMaster?.final_arrival_no || faMaster?.arrival_no || '';
         }
 
-        const challanMt = toMtWeightNew(
-          faMaster?.challan_material_weight || inspMaster?.challan_material_weight || payMasterRec?.challan_weight,
-          faMaster?.weight_qtl || inspMaster?.weight_qtl
-        );
-        const supplierNetMt = toMtWeightNew(
-          faMaster?.supplier_net_weight || inspMaster?.supplier_net_weight || payMasterRec?.supplier_net_wt || ((Number(faMaster?.supplier_challan_gross) || 0) - (Number(faMaster?.supplier_tare_weight) || 0)),
-          faMaster?.weight_qtl || inspMaster?.weight_qtl
-        );
-        const electronicNetMt = toMtWeightNew(
-          faMaster?.electronic_net_weight || inspMaster?.electronic_net_weight || payMasterRec?.electronic_scale_net || ((Number(faMaster?.electronic_gross_weight) || 0) - (Number(faMaster?.electronic_tare_weight) || 0)),
-          faMaster?.weight_qtl || inspMaster?.weight_qtl
-        );
-
-        const resolvedPoVal = payMasterRec?.po_no || faMaster?.po_no || inspMaster?.po_no || effectivePoNo || '';
+        const resolvedPoVal = inspMaster?.po_no || payMasterRec?.po_no || faMaster?.po_no || effectivePoNo || '';
         const prefilledMaster: SettlementMaster = {
           ...initialMaster(),
           mr_no: resolvedMrNo,
-          mr_date: faMaster?.date || faMaster?.mr_date || inspMaster?.mr_date || inspMaster?.arrival_date || payMasterRec?.mr_date || '',
+          mr_date: inspMaster?.mr_date || inspMaster?.date || inspMaster?.arrival_date || payMasterRec?.mr_date || faMaster?.date || faMaster?.mr_date || '',
           po_type: poData?.po_type || payMasterRec?.po_type || 'MILL_PO',
-          broker: faMaster?.broker || inspMaster?.broker_name || inspMaster?.broker || payMasterRec?.broker || poData?.broker || '',
-          supplier: faMaster?.supplier || inspMaster?.supplier_name || inspMaster?.supplier || payMasterRec?.supplier || poData?.supplier || '',
-          chn_supplier: faMaster?.challan_supplier || faMaster?.supplier || inspMaster?.supplier_name || inspMaster?.supplier || payMasterRec?.chn_supplier || payMasterRec?.supplier || poData?.supplier || '',
+          broker: inspMaster?.broker_name || inspMaster?.broker || payMasterRec?.broker_name || payMasterRec?.broker || faMaster?.broker || poData?.broker || '',
+          supplier: inspMaster?.supplier_name || inspMaster?.supplier || payMasterRec?.party_name || payMasterRec?.supplier_name || payMasterRec?.supplier || faMaster?.supplier || poData?.supplier || '',
+          chn_supplier: inspMaster?.supplier_name || inspMaster?.supplier || payMasterRec?.chn_supplier || payMasterRec?.party_name || payMasterRec?.supplier_name || payMasterRec?.supplier || faMaster?.challan_supplier || faMaster?.supplier || poData?.supplier || '',
           po_no: resolvedPoVal,
-          po_date: faMaster?.po_date || inspMaster?.po_date || payMasterRec?.po_date || poData?.po_date || '',
+          po_date: inspMaster?.po_date || payMasterRec?.po_date || faMaster?.po_date || poData?.po_date || '',
           rate_qntl: Number(poData?.rate_qntl || poData?.rate_mt || poData?.b_rate || payMasterRec?.rate_qntl || 0),
-          lorry_number: faMaster?.lorry_number || inspMaster?.lorry_number || payMasterRec?.lorry_number || faMaster?.final_arrival_no || inspMaster?.arrival_no || '',
+          lorry_number: inspMaster?.lorry_number || inspMaster?.lorry_no || payMasterRec?.lorry_number || faMaster?.lorry_number || inspMaster?.arrival_no || faMaster?.final_arrival_no || '',
           detention_days: Number(inspMaster?.detention_days || faMaster?.detention_days || payMasterRec?.detention_days || 0),
-          arrival_no: faMaster?.final_arrival_no || faMaster?.arrival_no || inspMaster?.arrival_no || payMasterRec?.arrival_no || '',
-          arrival_date: formatToInputDate(faMaster?.date || faMaster?.arrival_date || inspMaster?.arrival_date || payMasterRec?.arrival_date) || '',
-          remarks: faMaster?.remarks || inspMaster?.remarks || payMasterRec?.remarks || '',
-          consign_no: faMaster?.challan_rr_no || faMaster?.challan_railway_receipt_no || faMaster?.consignment_note_no || faMaster?.challan_no || '',
-          challan_weight: challanMt,
-          supplier_net_wt: supplierNetMt,
-          electronic_scale_net: electronicNetMt,
-          wt_ded_wt_1: challanMt,
-          wt_ded_wt_2: supplierNetMt,
-          wt_ded_wt_3: electronicNetMt,
+          arrival_no: inspMaster?.arrival_no || payMasterRec?.arrival_no || faMaster?.final_arrival_no || faMaster?.arrival_no || resolvedMrNo || '',
+          arrival_date: formatToInputDate(inspMaster?.arrival_date || inspMaster?.date || payMasterRec?.arrival_date || faMaster?.date || faMaster?.arrival_date) || '',
+          remarks: inspMaster?.remarks || payMasterRec?.remarks || faMaster?.remarks || '',
+          consign_no: inspMaster?.challan_no || faMaster?.challan_rr_no || faMaster?.challan_railway_receipt_no || faMaster?.consignment_note_no || faMaster?.challan_no || '',
+          challan_weight: sourceChallanMt,
+          supplier_net_wt: sourceSupplierNetMt,
+          electronic_scale_net: sourceElectronicNetMt,
+          wt_ded_wt_1: sourceChallanMt,
+          wt_ded_wt_2: sourceSupplierNetMt,
+          wt_ded_wt_3: sourceElectronicNetMt,
           summary_deduction_type: deductionSummaryText || '',
           summary_deduction_rate: inspDeductionRate,
           summary_deduction_qty: inspDeductionQty > 0 ? inspDeductionQty : (deductionSummaryText ? 1 : 0),
@@ -2245,9 +2410,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
 
       setIsEdit(false);
-      const fbChallanMt = toMtWeightNew(inspMaster.challan_material_weight, inspMaster.weight_qtl);
-      const fbSupplierMt = toMtWeightNew(inspMaster.supplier_net_weight, inspMaster.weight_qtl);
-      const fbElectronicMt = toMtWeightNew(inspMaster.electronic_net_weight, inspMaster.weight_qtl);
+      const fbChallanMt = sourceChallanMt;
+      const fbSupplierMt = sourceSupplierNetMt;
+      const fbElectronicMt = sourceElectronicNetMt;
 
       const prefilledMaster: SettlementMaster = {
         ...initialMaster(),

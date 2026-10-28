@@ -476,7 +476,7 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
               readOnly
               disabled
               className="bg-slate-100 border border-slate-300 rounded-md px-2 py-1 h-7 text-right font-mono font-bold text-xs text-slate-800 shadow-2xs cursor-not-allowed w-full"
-              value={masterData.final_on_ac_adv || ""}
+              value={masterData.final_on_ac_adv !== undefined && masterData.final_on_ac_adv !== null ? masterData.final_on_ac_adv : 0}
             />
           </div>
 

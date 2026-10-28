@@ -16,7 +16,7 @@ export interface SettlementMasterHeaderCardProps {
   handleOpenViewSettlement: (mrNo: string) => void;
   handleExportExcelForSelectedPo: () => void;
   loading: boolean;
-  paymentValidationInfo: { mrNo: string; poNo: string; paidAmount: number; voucherNo: string } | null;
+  paymentValidationInfo: { mrNo: string; poNo: string; paidAmount: number; voucherNo: string; advanceDone?: string } | null;
   detailCols: SettlementDetailColumn[];
   calculateWeightedRatePerMT: (cols: SettlementDetailColumn[]) => number;
 }
@@ -151,6 +151,7 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
             <div className="col-span-4 bg-emerald-50 border border-emerald-300 text-emerald-900 px-2 py-1.5 text-[10px] font-bold rounded flex items-center justify-between mb-1">
               <span>
                 ✓ <strong>Payment Module Validated (`payment_master`)</strong>: MR: {paymentValidationInfo.mrNo} | P.O: {paymentValidationInfo.poNo} | Voucher: {paymentValidationInfo.voucherNo}
+                {paymentValidationInfo.advanceDone ? ` | Advance Done: ${paymentValidationInfo.advanceDone}` : ""}
               </span>
               <span className="font-mono bg-emerald-200 px-1.5 py-0.5 rounded text-emerald-950 font-black">
                 Paid Amount (On/Ac Adv): ₹{paymentValidationInfo.paidAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
