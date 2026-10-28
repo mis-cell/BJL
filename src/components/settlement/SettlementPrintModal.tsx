@@ -63,7 +63,7 @@ function formatDateDdMmYySlash(dateStr?: string): string {
 
 function formatIndAmount(val: number): string {
   const num = Number(val) || 0;
-  if (Math.abs(num) < 0.005) return "";
+  if (Math.abs(num) < 0.005) return "0.00";
   return num.toLocaleString("en-IN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -241,6 +241,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
   resolveGradeName = (g: string) => g,
 }) => {
   const [persistedPrintCount, setPersistedPrintCount] = useState<number>(0);
+  const [advancePayment, setAdvancePaymentDone] = useState<string>('Yes');
   const isPrintingRef = useRef(false);
 
   useEffect(() => {
@@ -252,7 +253,17 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
 
     const loadDbCount = async () => {
       if (!supabase) return;
+      //alert('11111')
       try {
+        const { data: paymentData, error: paymentError } = await supabase
+          .from("payment_master")
+          .select("advance_payment_done")
+          .eq("mr_no", mrNo)
+          .maybeSingle();
+        if (paymentData && paymentData.advance_payment_done !== null && paymentData.advance_payment_done !== undefined ) {
+            setAdvancePaymentDone(paymentData.advance_payment_done);
+        }
+        //alert('2222')
         const { data } = await supabase
           .from("mr_settlement_master")
           .select("print_count")
@@ -272,6 +283,8 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
         if (histData && histData.length > 0 && histData[0].print_count !== undefined) {
           if (isMounted) setPersistedPrintCount(Number(histData[0].print_count));
         }
+        
+        
       } catch {
         // ignore
       }
@@ -450,7 +463,7 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
     >
       <div
         id="print-modal-children-canvas"
-        className="bg-white text-black px-3 py-2 mx-auto w-full max-w-[190mm] min-h-[285mm] flex flex-col justify-between text-[11px] leading-tight select-text"
+        className="bg-white text-black px-3 py-2 mx-auto w-full max-w-[190mm] min-h-[275mm] flex flex-col justify-between text-[10px] leading-tight select-text"
         style={{ fontFamily: "'font-sans', font-sans, font-sans", boxSizing: "border-box" }}
       >
         <style dangerouslySetInnerHTML={{ __html: `
@@ -471,6 +484,15 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
               margin: 0 !important;
               box-sizing: border-box !important;
             }
+            .print-grade-table thead,
+            .print-grade-table thead tr,
+            .print-grade-table thead th {
+              background: #fff !important;
+              background-color: #fff !important;
+              border: none !important;
+              box-shadow: none !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
           }
         `}} />
 
@@ -786,17 +808,17 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                       <div className="underline text-[12px] font-extrabold font-sans">Note:</div>
                       <div className="flex justify-between pr-4 text-[12px] font-extrabold font-sans">
                         <span>On A/c Total Advance</span>
-                        <span>: Rs. {onAcTotalAdv || ""}</span>
+                        <span>: Rs. {onAcTotalAdv || "0.00"}</span>
                       </div>
                       <div className="flex justify-between pr-4 text-[12px] font-extrabold font-sans">
                         <span>On A/c Total Adv. Adjusted</span>
-                        <span>: Rs. {onAcTotalAdvAdj || ""}</span>
+                        <span>: Rs. {onAcTotalAdvAdj || "0.00"}</span>
                       </div>
                     </div>
 
                     <div className="border-b border-black px-2 py-1 flex justify-between pr-4 text-[12px] font-extrabold font-sans">
                       <span>Balance Amount</span>
-                      <span>: Rs. {onAcBalanceAmt > 0 ? onAcBalanceAmt : ""}</span>
+                      <span>: Rs. {onAcBalanceAmt > 0 ? onAcBalanceAmt : "0.00"}</span>
                     </div>
 
                     <div className="border-b border-black px-2 py-1 text-center text-[12px] font-extrabold font-sans">
@@ -849,13 +871,25 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                       </div>
                       <div className="flex justify-between text-[12px] font-extrabold font-sans">
                         <span>MR Advance Amount</span>
-                        <span>: {formatIndAmount(mrAdvanceAmount)}</span>
+                        {advancePayment === 'Yes' && (
+                          <span>: {formatIndAmount(mrAdvanceAmount)}</span>
+                        )}
+                        {advancePayment === 'No' && (
+                          <span>: {formatIndAmount(0.00)}</span>
+                        )}
+                        
                       </div>
                     </div>
 
                     <div className="border-b border-black px-1.5 py-1 flex justify-between text-[13px] font-extrabold font-sans">
                       <span>Balance Due (Rounded)</span>
-                      <span>: {formatIndAmount(balanceDueRounded)}</span>
+                      {advancePayment === 'Yes' && (
+                        <span>: {formatIndAmount(balanceDueRounded)}</span>
+                      )}
+                      {advancePayment === 'No' && (
+                        <span>: {formatIndAmount(totalMrAmount)}</span>
+                      )}
+                      
                     </div>
 
                     <div className="border-b border-black px-1.5 py-1 flex justify-between text-[11px] font-sans">
@@ -865,14 +899,26 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                   </div>
 
                   <div className="p-1.5 flex-1 flex flex-col justify-between min-h-[75px]">
-                    <div className="flex justify-between text-[11px] font-sans">
+                    <div className="flex justify-between text-[11px] font-extrabold font-sans">
                       <span>Net Amount to be Paid</span>
-                      <span>:Rs. {formatIndAmount(netAmountToBePaid)}</span>
+                      {advancePayment === 'Yes' && (
+                        <span className="font-extrabold font-sans">:Rs. {formatIndAmount(netAmountToBePaid)}</span>
+                      )}
+                      {advancePayment === 'No' && (
+                       <span className="font-extrabold font-sans">:Rs.  {formatIndAmount(totalMrAmount)}</span>
+                      )}
+                      
                     </div>
 
                     <div className="pt-2 text-[10px] leading-snug">
                       <span className="mr-1 text-[11px] font-sans">Rs. :</span>
-                      <span className="text-[11px] font-sans">{numberToIndianWords(netAmountToBePaid)} ONLY</span>
+                      {advancePayment === 'Yes' && (
+                        <span className="text-[11px] font-sans">{numberToIndianWords(netAmountToBePaid)} ONLY</span>
+                      )}
+                      {advancePayment === 'No' && (
+                        <span className="text-[11px] font-sans">{numberToIndianWords(totalMrAmount)} ONLY</span>
+                      )}
+                      
                     </div>
                   </div>
                 </div>
@@ -880,15 +926,15 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
             </div>
 
             {/* Signature Footer */}
-            <div className="pt-8 pb-2 px-6 flex justify-between items-end text-[11px] font-bold">
+            <div className="pt-3 pb-1 px-6 flex justify-between items-end text-[11px] font-bold">
               <div>
-                <u className="pb-0.5 inline-block text-[12px] font-extrabold font-sans">Prepared by</u>
+                <u className="pb-0 inline-block text-[12px] font-extrabold font-sans">Prepared by</u>
               </div>
               <div>
-                <u className="pb-0.5 inline-block text-[12px] font-extrabold font-sans">Checked by</u>
+                <u className="pb-0 inline-block text-[12px] font-extrabold font-sans">Checked by</u>
               </div>
               <div>
-                <u className="pb-0.5 inline-block text-[12px] font-extrabold font-sans">Authorised Signatory</u>
+                <u className="pb-0 inline-block text-[12px] font-extrabold font-sans">Authorised Signatory</u>
               </div>
             </div>
           </div>

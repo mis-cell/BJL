@@ -45,14 +45,37 @@ export const SearchableMrSelect: React.FC<SearchableMrSelectProps> = ({
 
   const normalizedSearch = searchTerm.toLowerCase().trim();
 
-  const filteredList = baseList.filter(arr => {
+
+  const filteredList = baseList.filter((arr) => {
+    const mrNo = String(
+      arr.mr_no || arr.final_arrival_no || arr.arrival_no || ""
+    ).toLowerCase();
+
+    // Show only MR series
+    if (!mrNo.startsWith("mr")) return false;
+
     if (!normalizedSearch) return true;
+
+    const supp = String(arr.supplier || arr.supplier_name || "").toLowerCase();
+    const poNo = String(arr.po_no || arr.mill_po_no || "").toLowerCase();
+    const lorry = String(arr.lorry_number || "").toLowerCase();
+
+    return (
+      mrNo.includes(normalizedSearch) ||
+      supp.includes(normalizedSearch) ||
+      poNo.includes(normalizedSearch) ||
+      lorry.includes(normalizedSearch)
+    );
+  });
+
+  /* const filteredList = baseList.filter(arr => {
+    if (!normalizedSearch) return true;zz
     const mrNo = String(arr.mr_no || arr.final_arrival_no || arr.arrival_no || '').toLowerCase();
     const supp = String(arr.supplier || arr.supplier_name || '').toLowerCase();
     const poNo = String(arr.po_no || arr.mill_po_no || '').toLowerCase();
     const lorry = String(arr.lorry_number || '').toLowerCase();
     return mrNo.includes(normalizedSearch) || supp.includes(normalizedSearch) || poNo.includes(normalizedSearch) || lorry.includes(normalizedSearch);
-  });
+  }); */
 
   const masterListToFind = allArrivals || verifiedArrivals;
   const selectedArr = masterListToFind.find(a => {
