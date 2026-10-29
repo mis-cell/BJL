@@ -1396,72 +1396,33 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
     <PrintModal
       isOpen={isOpen}
       onClose={onClose}
-      title={`MR SETTLEMENT PDF PREVIEW (CSV TEMPLATE) - ${master.mr_no || "N/A"}`}
+      title={`MR SETTLEMENT PDF PREVIEW - ${master.mr_no || "N/A"}`}
       onPrint={handleInitiatePrint}
       customPrintHandler={handleSendPdfToPrinter}
       customPdfBase64={pdfBase64}
       showTip={false}
-      extraActions={
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <div className="flex border border-gray-400 bg-white rounded overflow-hidden mr-1">
-            <button
-              type="button"
-              onClick={() => setViewMode("pdf")}
-              className={`px-2.5 h-8 text-[11px] font-black cursor-pointer transition ${
-                viewMode === "pdf"
-                  ? "bg-[#2a3088] text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              📄 PDF PREVIEW
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("sheet")}
-              className={`px-2.5 h-8 text-[11px] font-black cursor-pointer transition border-l border-gray-300 ${
-                viewMode === "sheet"
-                  ? "bg-[#2a3088] text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              🖨️ TEMPLATE SHEET
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleDownloadPdf}
-            className="bg-blue-700 hover:bg-blue-800 text-white border border-blue-950 shadow-[1px_1px_0_0_rgba(0,0,0,0.4)] px-3 text-xs font-black h-8 flex items-center gap-1.5 cursor-pointer transition"
-            title="Download generated PDF file"
-          >
-            ⬇ DOWNLOAD PDF
-          </button>
-
-          <button
-            type="button"
-            onClick={handleDownloadPopulatedCsv}
-            className="bg-emerald-700 hover:bg-emerald-800 text-white border border-emerald-950 shadow-[1px_1px_0_0_rgba(0,0,0,0.4)] px-3 text-xs font-black h-8 flex items-center gap-1.5 cursor-pointer transition"
-            title="Download populated CSV template file"
-          >
-            📊 DOWNLOAD CSV
-          </button>
-        </div>
-      }
+      hideActionBar={true}
     >
-      {/* Embedded Live PDF Viewer (Generated directly from /public/templates/settlement_template.csv) */}
-      {viewMode === "pdf" && pdfBlobUrl && (
-        <div className="pdf-embed-container no-print w-full bg-neutral-800 p-3 flex flex-col items-center">
-          <div className="w-full max-w-[960px] bg-neutral-900 text-white px-3 py-1.5 text-[11px] font-mono flex justify-between items-center rounded-t border border-neutral-700">
-            <span>
-              ✓ Generated from GitHub CSV Template: <strong>/public/templates/settlement_template.csv</strong>
-            </span>
-            <span>A4 Portrait PDF • Ready for Laser / Dot-Matrix Print</span>
-          </div>
+      {/* Embedded Live PDF Viewer (Screenshot 2 view + Close button) */}
+      {pdfBlobUrl && (
+        <div className="pdf-embed-container no-print w-full bg-[#323639] flex flex-col items-center">
           <iframe
             ref={pdfIframeRef}
             src={`${pdfBlobUrl}#toolbar=1&navpanes=0&view=FitH`}
             title={`Settlement PDF - ${master.mr_no || ""}`}
-            className="w-full max-w-[960px] h-[78vh] bg-white border border-neutral-700 rounded-b shadow-2xl"
+            onLoad={() => {
+              try {
+                const win = pdfIframeRef.current?.contentWindow;
+                if (win) {
+                  win.addEventListener("beforeprint", () => {
+                    handleInitiatePrint();
+                  });
+                }
+              } catch {
+                // ignore cross-origin or browser restrictions
+              }
+            }}
+            className="w-full h-[88vh] bg-white border-0"
           />
         </div>
       )}

@@ -46,9 +46,10 @@ interface PrintModalProps {
   customPrintHandler?: () => void | Promise<void>;
   customPdfBase64?: string;
   extraActions?: React.ReactNode;
+  hideActionBar?: boolean;
 }
 
-export default function PrintModal({ isOpen, onClose, title, children, showTip = true, copyType, setCopyType, onPrint, customPrintHandler, customPdfBase64, extraActions }: PrintModalProps) {
+export default function PrintModal({ isOpen, onClose, title, children, showTip = true, copyType, setCopyType, onPrint, customPrintHandler, customPdfBase64, extraActions, hideActionBar = false }: PrintModalProps) {
   const [emailRecipient, setEmailRecipient] = useState("");
   const [emailSubject, setEmailSubject] = useState(`[Bally Jute ERP] ${title}`);
   const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
@@ -202,73 +203,75 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
         </div>
 
         {/* Print Controls / Tip Strip */}
-        <div className="bg-[#f0ece4] p-3 border-b border-gray-400 text-[11px] font-semibold text-gray-800 flex justify-between items-center flex-wrap gap-2 no-print">
-          {showTip ? (
-            <div className="flex flex-col">
-              <p className="text-red-800 font-extrabold flex items-center gap-1 text-xs">
-                💡 Double-Check & Adjust Values On Screen!
-              </p>
-              <p className="text-gray-500 mt-0.5 max-w-[650px] leading-tight font-sans font-medium">
-                All cells in the report table, supplier, order numbers, dates, and remarks are completely editable. Overwrite values directly; calculations updating Net Wt. occur automatically before physical print.
-              </p>
-            </div>
-          ) : (
-            <div></div>
-          )}
-          <div className="flex gap-1.5 ml-auto">
-            {extraActions}
-            {setCopyType && (
-              <select 
-                value={copyType || "1"} 
-                onChange={(e) => setCopyType?.(e.target.value)} 
-                className="h-8 border border-gray-400 bg-white px-2 text-xs font-bold text-gray-800 shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
-              >
-                <option value="1">Mill Copy</option>
-                <option value="2">Original Copy</option>
-                <option value="3">Not for Bill</option>
-              </select>
+        {!hideActionBar && (
+          <div className="bg-[#f0ece4] p-3 border-b border-gray-400 text-[11px] font-semibold text-gray-800 flex justify-between items-center flex-wrap gap-2 no-print">
+            {showTip ? (
+              <div className="flex flex-col">
+                <p className="text-red-800 font-extrabold flex items-center gap-1 text-xs">
+                  💡 Double-Check & Adjust Values On Screen!
+                </p>
+                <p className="text-gray-500 mt-0.5 max-w-[650px] leading-tight font-sans font-medium">
+                  All cells in the report table, supplier, order numbers, dates, and remarks are completely editable. Overwrite values directly; calculations updating Net Wt. occur automatically before physical print.
+                </p>
+              </div>
+            ) : (
+              <div></div>
             )}
-            <button 
-              type="button"
-              onClick={() => setShowEmailPanel(!showEmailPanel)}
-              className={`border shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] px-3 text-xs font-black h-8 flex items-center gap-1.5 cursor-pointer transition ${
-                showEmailPanel 
-                  ? "bg-indigo-700 text-white border-indigo-950" 
-                  : "bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border-indigo-300"
-              }`}
-            >
-              <Mail className="w-4 h-4" /> 
-              {showEmailPanel ? "HIDE EMAIL PANEL" : "📧 EMAIL THIS SLIP (1-CLICK)"}
-            </button>
-            <button 
-              type="button"
-              onClick={onClose}
-              className="bg-white border border-gray-400 hover:bg-gray-100 shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] px-3 text-xs font-bold h-8 text-gray-700 cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button 
-              type="button"
-              onClick={async () => {
-                if (onPrint) {
-                  try {
-                    await onPrint();
-                  } catch (e) {
-                    console.warn("Print action callback failed:", e);
+            <div className="flex gap-1.5 ml-auto">
+              {extraActions}
+              {setCopyType && (
+                <select 
+                  value={copyType || "1"} 
+                  onChange={(e) => setCopyType?.(e.target.value)} 
+                  className="h-8 border border-gray-400 bg-white px-2 text-xs font-bold text-gray-800 shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="1">Mill Copy</option>
+                  <option value="2">Original Copy</option>
+                  <option value="3">Not for Bill</option>
+                </select>
+              )}
+              <button 
+                type="button"
+                onClick={() => setShowEmailPanel(!showEmailPanel)}
+                className={`border shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] px-3 text-xs font-black h-8 flex items-center gap-1.5 cursor-pointer transition ${
+                  showEmailPanel 
+                    ? "bg-indigo-700 text-white border-indigo-950" 
+                    : "bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border-indigo-300"
+                }`}
+              >
+                <Mail className="w-4 h-4" /> 
+                {showEmailPanel ? "HIDE EMAIL PANEL" : "📧 EMAIL THIS SLIP (1-CLICK)"}
+              </button>
+              <button 
+                type="button"
+                onClick={onClose}
+                className="bg-white border border-gray-400 hover:bg-gray-100 shadow-[1px_1px_0_0_rgba(0,0,0,0.3)] px-3 text-xs font-bold h-8 text-gray-700 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={async () => {
+                  if (onPrint) {
+                    try {
+                      await onPrint();
+                    } catch (e) {
+                      console.warn("Print action callback failed:", e);
+                    }
                   }
-                }
-                if (customPrintHandler) {
-                  await customPrintHandler();
-                } else {
-                  window.print();
-                }
-              }}
-              className="bg-red-700 hover:bg-red-800 text-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-4 text-xs font-black h-8 flex items-center gap-1.5 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] font-mono cursor-pointer"
-            >
-              <Printer className="w-4 h-4" /> SEND TO PRINTER
-            </button>
+                  if (customPrintHandler) {
+                    await customPrintHandler();
+                  } else {
+                    window.print();
+                  }
+                }}
+                className="bg-red-700 hover:bg-red-800 text-white shadow-[1px_1px_0_0_rgba(0,0,0,0.5)] px-4 text-xs font-black h-8 flex items-center gap-1.5 active:shadow-[inset_1px_1px_0_0_rgba(0,0,0,0.5)] font-mono cursor-pointer"
+              >
+                <Printer className="w-4 h-4" /> SEND TO PRINTER
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Dynamic Email Configuration Panel */}
         {showEmailPanel && (
@@ -386,10 +389,12 @@ export default function PrintModal({ isOpen, onClose, title, children, showTip =
         </div>
 
         {/* Bottom Status feedback */}
-        <div className="bg-[#FBCFCB] py-1 px-3 text-[10px] text-gray-600 font-bold uppercase  border-t border-gray-400 flex justify-between no-print">
-          <span>Standard Form No: JMCL/QR/2026</span>
-          <span>Layout Optimized for Dot-Matrix & Standard Laser Printing</span>
-        </div>
+        {!hideActionBar && (
+          <div className="bg-[#FBCFCB] py-1 px-3 text-[10px] text-gray-600 font-bold uppercase  border-t border-gray-400 flex justify-between no-print">
+            <span>Standard Form No: JMCL/QR/2026</span>
+            <span>Layout Optimized for Dot-Matrix & Standard Laser Printing</span>
+          </div>
+        )}
       </div>
     </div>,
     document.body
