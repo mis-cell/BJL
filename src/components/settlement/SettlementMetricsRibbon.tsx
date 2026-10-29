@@ -1,6 +1,7 @@
 import React from "react";
 import { Truck, CheckCircle2, RefreshCw, Layers } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { getPoContractLorryCount, getUniquePoLorryGroups } from "../../services/settlementService";
 
 export interface SettlementMetricsRibbonProps {
   poStats: {
@@ -13,6 +14,7 @@ export interface SettlementMetricsRibbonProps {
     dbPendingReceived: number;
   } | null;
   selectedPoNo: string;
+  selectedPoData?: any;
   lastSyncTime: string;
   inspections: any[];
   customSettlementRecords: any[];
@@ -21,6 +23,7 @@ export interface SettlementMetricsRibbonProps {
 export const SettlementMetricsRibbon: React.FC<SettlementMetricsRibbonProps> = ({
   poStats,
   selectedPoNo,
+  selectedPoData,
   lastSyncTime,
   inspections,
   customSettlementRecords,
@@ -30,7 +33,9 @@ export const SettlementMetricsRibbon: React.FC<SettlementMetricsRibbonProps> = (
   const totalDelivered = (poStats?.customReceivedQty || 0) + (poStats?.receivedQty || 0);
   const contractQty = poStats?.contractQty || 0;
   const pendingQty = poStats?.pendingReceivedQty ?? 0;
-  const linkedCount = (inspections || []).filter((i) => i.po_no === selectedPoNo).length;
+  const uniqueLorryGroups = getUniquePoLorryGroups(selectedPoNo, inspections || []);
+  const linkedCount = uniqueLorryGroups.length;
+  const contractLorries = getPoContractLorryCount(selectedPoData);
 
   const fulfillmentPercent = contractQty > 0
     ? Math.min(100, Math.max(0, (totalDelivered / contractQty) * 100))
@@ -72,7 +77,7 @@ export const SettlementMetricsRibbon: React.FC<SettlementMetricsRibbonProps> = (
             <strong className="text-amber-300 font-bold">{pendingQty.toFixed(3)} MT</strong>
           </span>
           <span className="text-cyan-300 font-bold">
-            Linked Consignments: {linkedCount} Truckload{linkedCount !== 1 ? 's' : ''}
+            Linked Consignments: {linkedCount}{contractLorries > 0 ? ` / ${contractLorries}` : ""} Lorr{linkedCount === 1 && contractLorries <= 1 ? 'y' : 'ies'}
           </span>
         </div>
       </div>

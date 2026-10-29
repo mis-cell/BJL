@@ -408,10 +408,10 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
                       {saudaDeductionRecord.deduction_qty_mt && (
                         <p>Quantity: <span className="text-white">{saudaDeductionRecord.deduction_qty_mt} MT ({saudaDeductionRecord.deduction_qty_qtl} Qtl)</span></p>
                       )}
-                      <p className="text-emerald-200 text-[8px] mt-1 italic font-semibold">✓ Automatically populated on Last Final M.R. without approval requirement</p>
+                      <p className="text-emerald-200 text-[8px] mt-1 italic font-semibold">✓ Applied strictly on the Last Lorry of the contract once all lorries are received</p>
                     </div>
                   ) : (
-                    <p className="text-slate-400 italic mt-1">No checkpoint short weight deduction recorded for this P.O.</p>
+                    <p className="text-slate-400 italic mt-1">Applied only on the Last Lorry once all contracted lorries are received (or P.O. is Force-Closed).</p>
                   )}
                 </div>
               </div>

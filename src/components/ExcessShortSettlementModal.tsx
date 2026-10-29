@@ -787,9 +787,9 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     return linkedMrNosList.length > 0 ? linkedMrNosList.join(', ') : (lastMrNo || 'MR-001');
   }, [linkedMrNosList, lastMrNo]);
 
-  // Lightweight local cache sync (does NOT fire dbModule events or trigger full-app live refresh loops on open)
+  // Lightweight local cache sync (only updates existing settled cache; does NOT create premature records before saving)
   useEffect(() => {
-    if (contractMt <= 0 || isSaving) return;
+    if (!isSettled || contractMt <= 0 || isSaving) return;
 
     const nowIso = new Date().toISOString();
     const payload = {

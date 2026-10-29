@@ -23,7 +23,9 @@ import {
   buildAlignedSettlementColumns,
   fetchPoAndItemDetails,
   fetchSaudaCheckpointDeduction,
-  isLastMrForPo
+  isLastMrForPo,
+  getPoContractLorryCount,
+  getUniquePoLorryGroups
 } from "../services/settlementService";
 
 import {
@@ -1018,15 +1020,68 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           return '';
         };
 
+        // Build alias sets linking final_arrival_no, mr_no, arrival_no, and temporary_arrival_no for the same lorry
+        const arrivalAliasMap = new Map<string, Set<string>>();
+        const linkAliases = (...ids: any[]) => {
+          const cleanIds = ids
+            .map(id => String(id || '').trim().toUpperCase())
+            .filter(id => id && id !== 'NO' && id !== 'N/A' && id !== 'NONE');
+          if (cleanIds.length === 0) return;
+          const mergedSet = new Set<string>(cleanIds);
+          for (const id of cleanIds) {
+            const existing = arrivalAliasMap.get(id);
+            if (existing) {
+              existing.forEach(x => mergedSet.add(x));
+            }
+          }
+          for (const id of mergedSet) {
+            arrivalAliasMap.set(id, mergedSet);
+          }
+        };
+
+        if (faRes) {
+          for (const fa of faRes) {
+            linkAliases(fa.final_arrival_no, fa.mr_no, fa.arrival_no, fa.temporary_arrival_no);
+          }
+        }
+        if (matInspRes) {
+          for (const mi of matInspRes) {
+            linkAliases(mi.mr_no, mi.final_arrival_no, mi.arrival_no, mi.temporary_arrival_no);
+          }
+        }
+
         const combinedInspections: any[] = [];
         const seenMrNos = new Set<string>();
+
+        const checkAndMarkSeen = (item: any): boolean => {
+          const rawKeys = [item.final_arrival_no, item.mr_no, item.arrival_no, item.temporary_arrival_no]
+            .map(v => String(v || '').trim().toUpperCase())
+            .filter(v => v && v !== 'NO' && v !== 'N/A' && v !== 'NONE');
+          if (rawKeys.length === 0) return true;
+          for (const k of rawKeys) {
+            if (seenMrNos.has(k)) return true;
+            const aliases = arrivalAliasMap.get(k);
+            if (aliases) {
+              for (const a of aliases) {
+                if (seenMrNos.has(a)) return true;
+              }
+            }
+          }
+          for (const k of rawKeys) {
+            seenMrNos.add(k);
+            const aliases = arrivalAliasMap.get(k);
+            if (aliases) {
+              aliases.forEach(a => seenMrNos.add(a));
+            }
+          }
+          return false;
+        };
 
         // Priority 1: material_inspection (Mill Inspection primary)
         if (matInspRes) {
           for (const item of matInspRes) {
-            const mrKey = item.mr_no || item.arrival_no || item.final_arrival_no;
-            if (mrKey && !seenMrNos.has(mrKey)) {
-              seenMrNos.add(mrKey);
+            const mrKey = item.mr_no || item.final_arrival_no || item.arrival_no;
+            if (mrKey && !checkAndMarkSeen(item)) {
               const boundPo = resolveBoundPoForItem(item);
               combinedInspections.push(boundPo ? { ...item, po_no: boundPo } : item);
             }
@@ -1036,9 +1091,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         // Priority 2: final_arrival
         if (faRes) {
           for (const item of faRes) {
-            const mrKey = item.mr_no || item.final_arrival_no || item.arrival_no;
-            if (mrKey && !seenMrNos.has(mrKey)) {
-              seenMrNos.add(mrKey);
+            const mrKey = item.final_arrival_no || item.mr_no || item.arrival_no;
+            if (mrKey && !checkAndMarkSeen(item)) {
               if (!item.mr_no) item.mr_no = mrKey;
               if (!item.final_arrival_no) item.final_arrival_no = mrKey;
               const boundPo = resolveBoundPoForItem(item);
@@ -1054,9 +1108,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             const parsed = JSON.parse(cachedMat);
             if (Array.isArray(parsed)) {
               parsed.forEach((item: any) => {
-                const mrKey = item.mr_no || item.arrival_no || item.final_arrival_no;
-                if (mrKey && !seenMrNos.has(mrKey)) {
-                  seenMrNos.add(mrKey);
+                const mrKey = item.mr_no || item.final_arrival_no || item.arrival_no;
+                if (mrKey && !checkAndMarkSeen(item)) {
                   const boundPo = resolveBoundPoForItem(item);
                   combinedInspections.push(boundPo ? { ...item, po_no: boundPo } : item);
                 }
@@ -1299,12 +1352,13 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     }
   };
 
-  const handlePoNoSelection = async (poNo: string, preserveMrNo: boolean = false) => {
+  const handlePoNoSelection = async (poNo: string, preserveMrNo: boolean = false, explicitMrNo?: string) => {
     setSelectedPoNo(poNo);
     if (!poNo) {
       setSelectedPoData(null);
       setPoStats(null);
       setCustomSettlementRecords([]);
+      setSaudaDeductionRecord(null);
       if (!preserveMrNo) {
         setMasterData(prev => ({
           ...prev,
@@ -1316,7 +1370,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           mr_no: '',
           lorry_number: '',
           arrival_no: '',
-          arrival_date: ''
+          arrival_date: '',
+          val_ex_short: 0
         }));
       }
       return;
@@ -1329,13 +1384,67 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       
       const cleanPoNo = poNo.trim().replace(/^#/, '');
 
-      // Fetch Sauda Checkpoint deduction recorded for this PO from sauda_check_point_deductions table
-      const saudaDed = await fetchSaudaCheckpointDeduction(cleanPoNo);
-      const isLastMr = masterData.mr_no ? isLastMrForPo(masterData.mr_no, cleanPoNo, inspections, selectedPoData) : true;
+      // 1. Fetch matching PO master and item details FIRST (checking purchase_master, sauda_check_point, sauda_master, po_archive, and indexedDB)
+      const { poData, poDetails: fetchedDetails } = await fetchPoAndItemDetails(cleanPoNo, gradeMasterList, agencyMasterList);
 
-      if (isLastMr && saudaDed) {
+      if (!poData) {
+        setSelectedPoData(null);
+        setSaudaDeductionRecord(null);
+        setErrorMessage(`Could not resolve details for P.O No. ${poNo}`);
+        setLoading(false);
+        return;
+      }
+
+      setSelectedPoData(poData);
+      const effectiveMrNo = explicitMrNo !== undefined ? explicitMrNo : (preserveMrNo ? masterData.mr_no : '');
+      if (preserveMrNo && effectiveMrNo) {
+        await syncPaymentModuleData(effectiveMrNo, poNo);
+      }
+
+      // 2. Fetch all mill inspections & final arrivals for this P.O to sum total received quantity in Metric Tons (MT)
+      const targetPoVal = poData.po_no || cleanPoNo;
+      const [matInspForPoRes, finalArrivalsForPoRes] = await Promise.all([
+        supabase.from('material_inspection').select('*').or(`po_no.eq."${targetPoVal}",po_no.eq."${cleanPoNo}",po_no.eq."#${cleanPoNo}"`).then(r => r.data || [], () => []),
+        supabase.from('final_arrival').select('*').or(`po_no.eq."${targetPoVal}",po_no.eq."${cleanPoNo}",po_no.eq."#${cleanPoNo}"`).then(r => r.data || [], () => [])
+      ]);
+
+      const inspectionsForPo = matInspForPoRes || [];
+      const finalArrivalsForPo = finalArrivalsForPoRes || [];
+
+      // Merge newly fetched arrivals into state with alias deduplication so the same lorry is never duplicated
+      const incomingList: any[] = [...(inspectionsForPo || []), ...(finalArrivalsForPo || [])];
+      let mergedInspectionsSnapshot: any[] = inspections;
+      if (incomingList.length > 0) {
+        const aliasSet = new Set<string>();
+        inspections.forEach(i => {
+          [i.final_arrival_no, i.mr_no, i.arrival_no, i.temporary_arrival_no]
+            .map(v => String(v || '').trim().toUpperCase())
+            .filter(Boolean)
+            .forEach(k => aliasSet.add(k));
+        });
+        const nextList = [...inspections];
+        incomingList.forEach(item => {
+          const itemKeys = [item.final_arrival_no, item.mr_no, item.arrival_no, item.temporary_arrival_no]
+            .map(v => String(v || '').trim().toUpperCase())
+            .filter(Boolean);
+          if (itemKeys.length > 0 && !itemKeys.some(k => aliasSet.has(k))) {
+            itemKeys.forEach(k => aliasSet.add(k));
+            nextList.push(item);
+          }
+        });
+        mergedInspectionsSnapshot = nextList;
+        setInspections(nextList);
+      }
+
+      // Check if current MR is the Last Lorry of this P.O contract
+      const isLastMr = effectiveMrNo
+        ? isLastMrForPo(effectiveMrNo, cleanPoNo, [...mergedInspectionsSnapshot, ...incomingList], poData)
+        : false;
+
+      if (isLastMr) {
+        const saudaDed = await fetchSaudaCheckpointDeduction(cleanPoNo);
         setSaudaDeductionRecord(saudaDed);
-        if (Number(saudaDed.deduction_amount) > 0) {
+        if (saudaDed && Number(saudaDed.deduction_amount) > 0) {
           setMasterData(prev => ({
             ...prev,
             val_ex_short: Number(saudaDed.deduction_amount)
@@ -1343,55 +1452,29 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         }
       } else {
         setSaudaDeductionRecord(null);
-      }
-
-      // 1. Fetch matching PO master and item details (checking purchase_master, sauda_check_point, po_archive, and indexedDB)
-      const { poData, poDetails: fetchedDetails } = await fetchPoAndItemDetails(cleanPoNo, gradeMasterList, agencyMasterList);
-
-      if (!poData) {
-        setSelectedPoData(null);
-        setErrorMessage(`Could not resolve details for P.O No. ${poNo}`);
-        setLoading(false);
-        return;
-      }
-
-      setSelectedPoData(poData);
-      if (preserveMrNo && masterData.mr_no) {
-        await syncPaymentModuleData(masterData.mr_no, poNo);
-      }
-
-      // 2. Fetch all mill inspections & final arrivals for this P.O to sum total received quantity in Metric Tons (MT)
-      const [matInspForPoRes, finalArrivalsForPoRes] = await Promise.all([
-        supabase.from('material_inspection').select('*').eq('po_no', poData.po_no || cleanPoNo).then(r => r.data || [], () => []),
-        supabase.from('final_arrival').select('*').eq('po_no', poData.po_no || cleanPoNo).then(r => r.data || [], () => [])
-      ]);
-
-      const inspectionsForPo = matInspForPoRes || [];
-      const finalArrivalsForPo = finalArrivalsForPoRes || [];
-
-      // Merge newly fetched arrivals into state so FA dropdown is always complete
-      const incomingList: any[] = [...(inspectionsForPo || []), ...(finalArrivalsForPo || [])];
-      if (incomingList.length > 0) {
-        setInspections(prev => {
-          const existingMap = new Map(prev.map(i => [(i.mr_no || i.final_arrival_no || i.arrival_no), i]));
-          incomingList.forEach(item => {
-            const key = item.mr_no || item.final_arrival_no || item.arrival_no;
-            if (key && !existingMap.has(key)) {
-              existingMap.set(key, item);
-            }
-          });
-          return Array.from(existingMap.values());
-        });
+        setMasterData(prev => (prev.val_ex_short !== 0 ? { ...prev, val_ex_short: 0 } : prev));
       }
 
       let totalInspectedMt = 0;
       const processedMrNos = new Set<string>();
+      const registerProcessedItem = (item: any) => {
+        [item.final_arrival_no, item.mr_no, item.arrival_no, item.temporary_arrival_no]
+          .map(v => String(v || '').trim().toUpperCase())
+          .filter(Boolean)
+          .forEach(k => processedMrNos.add(k));
+      };
+      const isAlreadyProcessedItem = (item: any): boolean => {
+        const keys = [item.final_arrival_no, item.mr_no, item.arrival_no, item.temporary_arrival_no]
+          .map(v => String(v || '').trim().toUpperCase())
+          .filter(Boolean);
+        return keys.some(k => processedMrNos.has(k));
+      };
 
       // A) Process final_arrival records for this PO
       if (finalArrivalsForPo && finalArrivalsForPo.length > 0) {
         for (const item of finalArrivalsForPo) {
-          const key = item.mr_no || item.final_arrival_no || item.arrival_no;
-          if (key) processedMrNos.add(key);
+          if (isAlreadyProcessedItem(item)) continue;
+          registerProcessedItem(item);
 
           let wtMt = 0;
           if (item.weight_qtl && Number(item.weight_qtl) > 0) {
@@ -1423,8 +1506,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       // B) Process mill_inspection_master records for this PO
       if (inspectionsForPo && inspectionsForPo.length > 0) {
         for (const item of inspectionsForPo) {
-          if (item.mr_no && processedMrNos.has(item.mr_no)) continue;
-          if (item.mr_no) processedMrNos.add(item.mr_no);
+          if (isAlreadyProcessedItem(item)) continue;
+          registerProcessedItem(item);
 
           let wtMt = 0;
           if (item.weight_qtl && Number(item.weight_qtl) > 0) {
@@ -1752,15 +1835,6 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       const poNoForDet = inspMaster?.po_no || payMasterRec?.po_no || faMaster?.po_no || '';
       const cleanTargetPo = (poNoForDet || selectedPoNo || masterData.po_no || '').trim().replace(/^#/, '');
-      const isLastMr = isLastMrForPo(targetMrNo, cleanTargetPo, inspections, selectedPoData);
-
-      let saudaDedRecord: any = null;
-      if (isLastMr && cleanTargetPo) {
-        saudaDedRecord = await fetchSaudaCheckpointDeduction(cleanTargetPo);
-        setSaudaDeductionRecord(saudaDedRecord);
-      } else {
-        setSaudaDeductionRecord(null);
-      }
 
       let poDetails: any[] = [];
       let poData: any = null;
@@ -1770,6 +1844,21 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         poData = fetchedPo;
         poDetails = fetchedDetails;
         if (poData) setSelectedPoData(poData);
+      }
+
+      const poolForPoCheck = [
+        ...inspections,
+        ...(inspMaster ? [inspMaster] : []),
+        ...(faMaster ? [faMaster] : [])
+      ];
+      const isLastMr = isLastMrForPo(targetMrNo, cleanTargetPo, poolForPoCheck, poData || selectedPoData);
+
+      let saudaDedRecord: any = null;
+      if (isLastMr && cleanTargetPo) {
+        saudaDedRecord = await fetchSaudaCheckpointDeduction(cleanTargetPo);
+        setSaudaDeductionRecord(saudaDedRecord);
+      } else {
+        setSaudaDeductionRecord(null);
       }
 
       let gList = gradeMasterList;
@@ -2118,7 +2207,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
               : calculatedPremTotalAmt,
             val_ex_short: isLastMr
               ? (Number(existingMaster.val_ex_short) > 0 ? existingMaster.val_ex_short : Number(saudaDedRecord?.deduction_amount || 0))
-              : Number(existingMaster.val_ex_short || 0),
+              : 0,
             val_less_amt: Number(existingMaster.val_less_amt || 0),
             summary_delivery_claim: (existingMaster.summary_delivery_claim === 5550) ? 0 : (Number(existingMaster.summary_delivery_claim) || 0),
             arival_apmc_fees: resolvedArrivalApmcFees,
@@ -2233,7 +2322,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           }
           if (existingMaster.po_no) {
             setSelectedPoNo(existingMaster.po_no);
-            handlePoNoSelection(existingMaster.po_no, true);
+            handlePoNoSelection(existingMaster.po_no, true, masterMrNoToUse);
           }
           setSuccessMessage(`Loaded existing Settlement Report for M.R. No. ${targetMrNo}`);
           return;
@@ -2346,7 +2435,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         setDetailCols(populatedCols);
         if (prefilledMaster.po_no) {
           setSelectedPoNo(prefilledMaster.po_no);
-          handlePoNoSelection(prefilledMaster.po_no, true);
+          handlePoNoSelection(prefilledMaster.po_no, true, resolvedMrNo);
         }
         setSuccessMessage(`Prepopulated settlement data successfully from M.R. [${resolvedMrNo}]`);
         return;
@@ -2464,16 +2553,12 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     if (!targetPo || !supabase) {
       return;
     }
-    if (selectedPoData && selectedPoData.po_no === targetPo) return;
+    const cleanTarget = targetPo.trim().replace(/^#/, '');
+    if (selectedPoData && String(selectedPoData.po_no || '').trim().replace(/^#/, '') === cleanTarget) return;
 
-    supabase
-      .from('purchase_master')
-      .select('*')
-      .eq('po_no', targetPo)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) setSelectedPoData(data);
-      });
+    fetchPoAndItemDetails(cleanTarget, gradeMasterList, agencyMasterList).then(({ poData }) => {
+      if (poData) setSelectedPoData(poData);
+    });
   }, [masterData.po_no, selectedPoNo]);
 
   // Live Auto Calculations based on inputs
@@ -3579,6 +3664,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                 <SettlementMetricsRibbon
                   poStats={poStats}
                   selectedPoNo={selectedPoNo}
+                  selectedPoData={selectedPoData}
                   lastSyncTime={lastSyncTime}
                   inspections={inspections}
                   customSettlementRecords={customSettlementRecords}

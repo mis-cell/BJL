@@ -661,16 +661,59 @@ export const fetchPoAndItemDetails = async (
   let scpItemsForMerge: any[] = [];
 
   try {
+    const resolveContractLorries = (...records: any[]): number => {
+      let maxLorries = 0;
+      for (const r of records) {
+        if (!r) continue;
+        const cands = [
+          r.total_lorries,
+          r.total_no_of_lorries,
+          r.no_of_lorries,
+          r.lorries,
+          r.contract_lorries
+        ];
+        for (const c of cands) {
+          const n = parseInt(String(c ?? ''), 10);
+          if (!isNaN(n) && n > maxLorries) {
+            maxLorries = n;
+          }
+        }
+      }
+      if (maxLorries > 1) return maxLorries;
+
+      for (const r of records) {
+        if (!r) continue;
+        const contractMt = parseFloat(r.total_contract_mt || r.total_wt_in_ton || r.quantity || 0);
+        const wtPerLorry = parseFloat(r.weight_per_lorry || r.wt_per_lorry || 0);
+        if (contractMt > 0 && wtPerLorry > 0 && contractMt > wtPerLorry * 1.3) {
+          return Math.max(1, Math.round(contractMt / wtPerLorry));
+        }
+      }
+
+      for (const r of records) {
+        if (!r) continue;
+        const contractMt = parseFloat(r.total_contract_mt || r.total_wt_in_ton || r.quantity || 0);
+        if (contractMt >= 16) {
+          return Math.max(1, Math.round(contractMt / 10));
+        }
+      }
+
+      return Math.max(1, maxLorries);
+    };
+
     if (supabase) {
-      const [pmRes, scpRes] = await Promise.all([
+      const [pmRes, scpRes, smRes] = await Promise.all([
         supabase.from('purchase_master').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).maybeSingle(),
-        supabase.from('sauda_check_point').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}",ptf_no.eq."${cleanPo}",sauda_no.eq."${cleanPo}"`).maybeSingle()
+        supabase.from('sauda_check_point').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}",ptf_no.eq."${cleanPo}",sauda_no.eq."${cleanPo}"`).maybeSingle(),
+        supabase.from('sauda_master').select('*').or(`sauda_no.eq."${cleanPo}",po_no.eq."${cleanPo}",contract_no.eq."${cleanPo}"`).maybeSingle()
       ]);
 
       const pm = pmRes?.data || null;
       const scp = scpRes?.data || null;
+      const sm = smRes?.data || null;
 
       if (pm && scp) {
+        const totalLorries = resolveContractLorries(scp, pm, sm);
         poData = {
           ...pm,
           ...scp,
@@ -679,25 +722,48 @@ export const fetchPoAndItemDetails = async (
           supplier: pm.supplier || scp.supplier_name || scp.supplier,
           broker: pm.broker || scp.broker_name || scp.broker,
           total_contract_mt: pm.total_contract_mt || scp.total_contract_mt || scp.quantity || 0,
+          total_lorries: totalLorries,
+          total_no_of_lorries: totalLorries,
+          no_of_lorries: totalLorries,
+          contract_lorries: totalLorries,
           premium: Number(scp.premium || pm.premium || 0),
           items: scp.items || pm.items,
           grid_details: scp.grid_details || pm.grid_details
         };
       } else if (pm) {
-        poData = pm;
+        const totalLorries = resolveContractLorries(pm, sm);
+        poData = {
+          ...pm,
+          total_lorries: totalLorries,
+          total_no_of_lorries: totalLorries,
+          no_of_lorries: totalLorries,
+          contract_lorries: totalLorries
+        };
       } else if (scp) {
+        const totalLorries = resolveContractLorries(scp, sm);
         poData = {
           ...scp,
           po_date: scp.po_date || scp.s_date,
           supplier: scp.supplier_name || scp.supplier,
           broker: scp.broker_name || scp.broker,
           total_contract_mt: scp.total_contract_mt || scp.quantity || 0,
+          total_lorries: totalLorries,
+          total_no_of_lorries: totalLorries,
+          no_of_lorries: totalLorries,
+          contract_lorries: totalLorries,
           pending: scp.pending ?? true,
           status: scp.status || 'temp'
         };
       } else {
         const { data: archPo } = await supabase.from('po_archive').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).maybeSingle();
-        if (archPo) poData = archPo;
+        if (archPo) {
+          const totalLorries = resolveContractLorries(archPo, sm);
+          poData = {
+            ...archPo,
+            total_lorries: totalLorries,
+            contract_lorries: totalLorries
+          };
+        }
       }
 
       if (!poData) {
@@ -708,6 +774,7 @@ export const fetchPoAndItemDetails = async (
         const pmRow = pmIlike?.data?.[0] || null;
         const scpRow = scpIlike?.data?.[0] || null;
         if (pmRow && scpRow) {
+          const totalLorries = resolveContractLorries(scpRow, pmRow, sm);
           poData = {
             ...pmRow,
             ...scpRow,
@@ -715,19 +782,31 @@ export const fetchPoAndItemDetails = async (
             supplier: pmRow.supplier || scpRow.supplier_name || scpRow.supplier,
             broker: pmRow.broker || scpRow.broker_name || scpRow.broker,
             total_contract_mt: pmRow.total_contract_mt || scpRow.total_contract_mt || scpRow.quantity || 0,
+            total_lorries: totalLorries,
+            total_no_of_lorries: totalLorries,
+            no_of_lorries: totalLorries,
+            contract_lorries: totalLorries,
             premium: Number(scpRow.premium || pmRow.premium || 0),
             items: scpRow.items || pmRow.items,
             grid_details: scpRow.grid_details || pmRow.grid_details
           };
         } else if (pmRow) {
-          poData = pmRow;
+          const totalLorries = resolveContractLorries(pmRow, sm);
+          poData = {
+            ...pmRow,
+            total_lorries: totalLorries,
+            contract_lorries: totalLorries
+          };
         } else if (scpRow) {
+          const totalLorries = resolveContractLorries(scpRow, sm);
           poData = {
             ...scpRow,
             po_date: scpRow.po_date || scpRow.s_date,
             supplier: scpRow.supplier_name || scpRow.supplier,
             broker: scpRow.broker_name || scpRow.broker,
             total_contract_mt: scpRow.total_contract_mt || scpRow.quantity || 0,
+            total_lorries: totalLorries,
+            contract_lorries: totalLorries,
             pending: scpRow.pending ?? true,
             status: scpRow.status || 'temp'
           };
@@ -775,15 +854,18 @@ export const fetchPoAndItemDetails = async (
     }
 
     if (!poData) {
-      const [localPm, localScp] = await Promise.all([
+      const [localPm, localScp, localSm] = await Promise.all([
         dbModule.fetchAll('purchase_master').catch(() => []),
-        dbModule.fetchAll('sauda_check_point').catch(() => [])
+        dbModule.fetchAll('sauda_check_point').catch(() => []),
+        dbModule.fetchAll('sauda_master').catch(() => [])
       ]);
       const matchPm = (localPm || []).find((p: any) => String(p.po_no || '').trim().toUpperCase().replace(/^#/, '') === cleanPo.toUpperCase());
       const matchScp = (localScp || []).find((p: any) => String(p.po_no || '').trim().toUpperCase().replace(/^#/, '') === cleanPo.toUpperCase());
-      if (matchPm && matchScp) poData = { ...matchPm, ...matchScp };
-      else if (matchPm) poData = matchPm;
-      else if (matchScp) poData = matchScp;
+      const matchSm = (localSm || []).find((s: any) => String(s.sauda_no || s.po_no || s.contract_no || '').trim().toUpperCase().replace(/^#/, '') === cleanPo.toUpperCase());
+      const totalLorries = resolveContractLorries(matchScp, matchPm, matchSm);
+      if (matchPm && matchScp) poData = { ...matchPm, ...matchScp, total_lorries: totalLorries, contract_lorries: totalLorries };
+      else if (matchPm) poData = { ...matchPm, total_lorries: totalLorries, contract_lorries: totalLorries };
+      else if (matchScp) poData = { ...matchScp, total_lorries: totalLorries, contract_lorries: totalLorries };
     }
 
     if (poDetails.length === 0) {
@@ -949,38 +1031,182 @@ export const fetchSaudaCheckpointDeduction = async (cleanPoNo: string) => {
   return null;
 };
 
-export const isLastMrForPo = (targetMrNo: string, poNo: string, inspections: any[], selectedPoData?: any): boolean => {
-  if (!targetMrNo || !poNo) return true;
+export const getPoContractLorryCount = (poData?: any): number => {
+  if (!poData) return 0;
+  const cands = [
+    poData.total_lorries,
+    poData.total_no_of_lorries,
+    poData.no_of_lorries,
+    poData.lorries,
+    poData.contract_lorries
+  ];
+  let maxLorries = 0;
+  for (const c of cands) {
+    const n = parseInt(String(c ?? ''), 10);
+    if (!isNaN(n) && n > maxLorries) {
+      maxLorries = n;
+    }
+  }
+  if (maxLorries > 1) return maxLorries;
+
+  const contractMt = parseFloat(
+    poData.total_contract_mt || poData.contract_weight_mt || poData.total_wt_in_ton || poData.quantity || 0
+  );
+  const wtPerLorry = parseFloat(poData.weight_per_lorry || poData.wt_per_lorry || 0);
+  if (contractMt > 0 && wtPerLorry > 0 && contractMt > wtPerLorry * 1.3) {
+    return Math.max(1, Math.round(contractMt / wtPerLorry));
+  }
+  if (contractMt >= 16) {
+    return Math.max(1, Math.round(contractMt / 10));
+  }
+  return Math.max(1, maxLorries);
+};
+
+export const getUniquePoLorryGroups = (
+  poNo: string,
+  inspections: any[],
+  selectedPoData?: any
+): Array<{ primaryMr: string; allIds: Set<string>; dateStr: string; lorryNo: string }> => {
+  if (!poNo) return [];
   const cleanTargetPo = poNo.trim().replace(/^#/, '').toUpperCase();
+  const cleanAlphaTargetPo = cleanTargetPo.replace(/[^A-Z0-9]/g, '');
 
   const matched = (inspections || []).filter((insp: any) => {
-    const mrVal = insp.mr_no || insp.final_arrival_no || insp.arrival_no;
+    const mrVal = insp.mr_no || insp.final_arrival_no || insp.arrival_no || insp.temporary_arrival_no;
     if (!mrVal) return false;
-    const inspPo = (insp.po_no || '').trim().replace(/^#/, '').toUpperCase();
-    return inspPo === cleanTargetPo ||
+    const inspPo = String(insp.po_no || insp.contract_no || '').trim().replace(/^#/, '').toUpperCase();
+    const inspAlphaPo = inspPo.replace(/[^A-Z0-9]/g, '');
+    return (
+      inspPo === cleanTargetPo ||
+      (cleanAlphaTargetPo && inspAlphaPo === cleanAlphaTargetPo) ||
       (selectedPoData?.id && insp.po_id === selectedPoData.id) ||
-      (selectedPoData?.purchase_order_id && (insp.po_id === selectedPoData.purchase_order_id || insp.purchase_order_id === selectedPoData.purchase_order_id));
+      (selectedPoData?.purchase_order_id &&
+        (insp.po_id === selectedPoData.purchase_order_id ||
+          insp.purchase_order_id === selectedPoData.purchase_order_id))
+    );
   });
 
-  const mrKeys = Array.from(new Set(matched.map((insp: any) => String(insp.mr_no || insp.final_arrival_no || insp.arrival_no || '').trim()).filter(Boolean)));
+  const groups: Array<{ primaryMr: string; allIds: Set<string>; dateStr: string; lorryNo: string }> = [];
 
-  if (targetMrNo && !mrKeys.some(k => k.toUpperCase() === targetMrNo.trim().toUpperCase())) {
-    mrKeys.push(targetMrNo.trim());
+  const getNum = (s: string) => {
+    const m = s.match(/\d+/g);
+    return m ? Number(m[m.length - 1]) : 0;
+  };
+
+  for (const insp of matched) {
+    const idCandidates = [
+      insp.final_arrival_no,
+      insp.mr_no,
+      insp.arrival_no,
+      insp.temporary_arrival_no
+    ]
+      .map((v: any) => String(v || '').trim().toUpperCase())
+      .filter((v: string) => v && v !== 'NO' && v !== 'N/A' && v !== 'NONE');
+
+    if (idCandidates.length === 0) continue;
+
+    const normLorry = String(insp.lorry_number || insp.lorry_no || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+    const rawDate = String(insp.arrival_date || insp.date || insp.mr_date || insp.created_at || '')
+      .trim()
+      .slice(0, 10);
+
+    const existingGroup = groups.find((g) => {
+      for (const id of idCandidates) {
+        if (g.allIds.has(id)) return true;
+      }
+      if (normLorry && g.lorryNo && normLorry === g.lorryNo && (!rawDate || !g.dateStr || rawDate === g.dateStr)) {
+        return true;
+      }
+      return false;
+    });
+
+    if (existingGroup) {
+      idCandidates.forEach((id) => existingGroup.allIds.add(id));
+      const bestCandidate = idCandidates[0];
+      if (getNum(bestCandidate) > getNum(existingGroup.primaryMr)) {
+        existingGroup.primaryMr = bestCandidate;
+      }
+      if (!existingGroup.dateStr && rawDate) existingGroup.dateStr = rawDate;
+      if (!existingGroup.lorryNo && normLorry) existingGroup.lorryNo = normLorry;
+    } else {
+      groups.push({
+        primaryMr: idCandidates[0],
+        allIds: new Set(idCandidates),
+        dateStr: rawDate,
+        lorryNo: normLorry
+      });
+    }
   }
 
-  if (mrKeys.length <= 1) return true;
+  return groups;
+};
 
-  mrKeys.sort((a, b) => {
-    const getSuffix = (val: string) => {
-      const m = val.match(/\d+/g);
-      return m ? Number(m[m.length - 1]) : 0;
-    };
-    const suffA = getSuffix(a);
-    const suffB = getSuffix(b);
+export const isLastMrForPo = (targetMrNo: string, poNo: string, inspections: any[], selectedPoData?: any): boolean => {
+  if (!targetMrNo || !poNo || !selectedPoData) return false;
+  const cleanTargetPo = poNo.trim().replace(/^#/, '').toUpperCase();
+  const cleanTargetMr = targetMrNo.trim().toUpperCase();
+
+  const contractLorries = getPoContractLorryCount(selectedPoData);
+  const groups = getUniquePoLorryGroups(poNo, inspections, selectedPoData);
+
+  // Ensure targetMrNo is represented in groups if not already matched
+  const isTargetInGroups = groups.some(
+    (g) => g.allIds.has(cleanTargetMr) || g.primaryMr.toUpperCase() === cleanTargetMr
+  );
+  if (!isTargetInGroups) {
+    groups.push({
+      primaryMr: cleanTargetMr,
+      allIds: new Set([cleanTargetMr]),
+      dateStr: '',
+      lorryNo: ''
+    });
+  }
+
+  const statusLower = String(selectedPoData?.status || '').trim().toLowerCase();
+  const isReopened = Boolean(
+    selectedPoData?.is_reopened === true ||
+    selectedPoData?.reopened === true ||
+    statusLower === 'open' ||
+    (typeof localStorage !== 'undefined' && localStorage.getItem(`sauda_reopened_${cleanTargetPo}`) === 'true')
+  );
+  const isExplicitForceClosed =
+    !isReopened &&
+    Boolean(
+      selectedPoData?.is_closed === true ||
+      selectedPoData?.sauda_closed === true ||
+      statusLower === 'closed' ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem(`sauda_closed_${cleanTargetPo}`) === 'true')
+    );
+
+  const receivedLorries = groups.length;
+  const allLorriesReceived = contractLorries > 0 && receivedLorries >= contractLorries;
+
+  // Short / Excess deduction MUST ONLY be implemented on the Last Lorry of the contract.
+  // If more lorries are still pending arrival (e.g., 3 received out of 6 Lorry Sauda), return false.
+  if (!allLorriesReceived && !isExplicitForceClosed) {
+    return false;
+  }
+
+  if (groups.length === 0) return false;
+
+  const getSuffix = (val: string) => {
+    const m = val.match(/\d+/g);
+    return m ? Number(m[m.length - 1]) : 0;
+  };
+
+  groups.sort((a, b) => {
+    const suffA = getSuffix(a.primaryMr);
+    const suffB = getSuffix(b.primaryMr);
     if (suffA !== suffB) return suffB - suffA;
-    return b.localeCompare(a);
+    if (a.dateStr && b.dateStr && a.dateStr !== b.dateStr) {
+      return b.dateStr.localeCompare(a.dateStr);
+    }
+    return b.primaryMr.localeCompare(a.primaryMr);
   });
 
-  const lastMr = mrKeys[0];
-  return targetMrNo.trim().toUpperCase() === lastMr.trim().toUpperCase();
+  const lastGroup = groups[0];
+  return lastGroup.allIds.has(cleanTargetMr) || lastGroup.primaryMr.toUpperCase() === cleanTargetMr;
 };
