@@ -38,7 +38,8 @@ import {
   Warehouse,
   Users,
   Settings,
-  History
+  History,
+  Truck 
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useHeartbeat } from '../hooks/useHeartbeat';
@@ -358,6 +359,7 @@ export default function LegacyLayout({
         { id: 'final_arrival', label: 'FINAL ARRIVAL', icon: CheckCircle2, pageId: 'final_arrival' },
         { id: 'inspection', label: 'MILL INSPECTION', icon: ClipboardCheck, pageId: 'inspection' },
         { id: 'material_inspection', label: 'INSPECTION CHECKLIST', icon: ShieldCheck, pageId: 'material_inspection' },
+        { id: 'return_lorry', label: 'RETURN LORRY', icon: Truck, pageId: 'return_lorry' },
         { id: 'mismatch', label: 'SATTA MISMATCH', icon: AlertTriangle, pageId: 'mismatch' },
         { id: 'material_mismatch', label: 'MATERIAL MISMATCH', icon: AlertTriangle, pageId: 'material_mismatch' },
       ]

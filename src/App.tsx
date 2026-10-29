@@ -97,6 +97,7 @@ const MaterialIssue = lazyWithRetry(() => import("./pages/MaterialIssue"));
 const AdminDesk = lazyWithRetry(() => import("./pages/AdminDesk"));
 const AIPortal = lazyWithRetry(() => import("./pages/AIPortal"));
 const MaterialInspection = lazyWithRetry(() => import("./pages/MaterialInspection"));
+const ReturnLorry = lazyWithRetry(() => import("./pages/ReturnLorry"));
 const Inspection = lazyWithRetry(() => import("./pages/Inspection"));
 const WeightBridge = lazyWithRetry(() => import("./pages/WeightBridge"));
 const MrSettlement = lazyWithRetry(() => import("./pages/MrSettlement"));
@@ -1291,6 +1292,14 @@ export default function App() {
                       content = (
                         <MaterialInspection
                           onClose={() => closePage("material_inspection", "dashboard")}
+                          onLogEvent={logEvent}
+                        />
+                      );
+                      break;
+                    case "return_lorry":
+                      content = (
+                        <ReturnLorry
+                          onClose={() => closePage("return_lorry", "dashboard")}
                           onLogEvent={logEvent}
                         />
                       );

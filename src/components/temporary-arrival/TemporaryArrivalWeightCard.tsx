@@ -23,7 +23,7 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
         {/* 1st: Gross Weight */}
         <div className="p-3 space-y-2">
           <h4 className="text-[11px] font-bold text-[#D94B5A] border-b border-gray-300 pb-1 uppercase">
-            Gross Weight
+            CHALLAN WEIGHT (PARTY)
           </h4>
 
           <div className="flex justify-between items-center">
@@ -41,41 +41,6 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold">MILL GROSS</span>
-            <input
-              id="supplier_challan_gross_1960"
-              aria-label="supplier challan gross"
-              type="number"
-              step="0.001"
-              name="supplier_challan_gross"
-              value={formData.supplier_challan_gross || ""}
-              onChange={onChange}
-              className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
-            />
-          </div>
-
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold">ELECTRONIC GROSS</span>
-            <input
-              id="electronic_gross_weight_1972"
-              aria-label="electronic gross weight"
-              type="number"
-              step="0.001"
-              name="electronic_gross_weight"
-              value={formData.electronic_gross_weight || ""}
-              onChange={onChange}
-              className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
-            />
-          </div>
-        </div>
-
-        {/* 2nd: Tare Weight */}
-        <div className="p-3 space-y-2">
-          <h4 className="text-[11px] font-bold text-[#D94B5A] border-b border-gray-300 pb-1 uppercase">
-            Tare Weight
-          </h4>
-
-          <div className="flex justify-between items-center">
             <span className="text-[10px] font-bold">CHALLAN TARE <b> (Party)</b></span>
             <input
               id="actual_tare_weight_1991"
@@ -84,6 +49,42 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
               step="0.001"
               name="actual_tare_weight"
               value={formData.actual_tare_weight || ""}
+              onChange={onChange}
+              className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+            />
+          </div>
+
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-bold">CHALLAN NET <b> (Party)</b> <span className="text-rose-600 font-black text-sm">*</span></span>
+            <input
+              id="challan_material_weight_1905"
+              aria-label="challan material weight"
+              type="number"
+              step="0.001"
+              name="challan_material_weight"
+              value={formData.challan_material_weight || 0}
+              onChange={onChange}
+              required
+              className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+            />
+          </div>
+        </div>
+
+        {/* 2nd: Tare Weight */}
+        <div className="p-3 space-y-2">
+          <h4 className="text-[11px] font-bold text-[#D94B5A] border-b border-gray-300 pb-1 uppercase">
+            MILL WEIGHT
+          </h4>
+
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-bold">MILL GROSS</span>
+            <input
+              id="supplier_challan_gross_1960"
+              aria-label="supplier challan gross"
+              type="number"
+              step="0.001"
+              name="supplier_challan_gross"
+              value={formData.supplier_challan_gross || ""}
               onChange={onChange}
               className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
             />
@@ -104,42 +105,6 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
           </div>
 
           <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold">ELECTRONIC TARE</span>
-            <input
-              id="electronic_tare_weight_2015"
-              aria-label="electronic tare weight"
-              type="number"
-              step="0.001"
-              name="electronic_tare_weight"
-              value={formData.electronic_tare_weight || ""}
-              onChange={onChange}
-              className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
-            />
-          </div>
-        </div>
-
-        {/* 3rd: Net Weight */}
-        <div className="p-3 space-y-2">
-          <h4 className="text-[11px] font-bold text-[#D94B5A] border-b border-gray-300 pb-1 uppercase">
-            Net Weight
-          </h4>
-
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold">CHALLAN WT <b> (Party)</b> <span className="text-rose-600 font-black text-sm">*</span></span>
-            <input
-              id="challan_material_weight_1905"
-              aria-label="challan material weight"
-              type="number"
-              step="0.001"
-              name="challan_material_weight"
-              value={formData.challan_material_weight || 0}
-              onChange={onChange}
-              required
-              className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
-            />
-          </div>
-
-          <div className="flex justify-between items-center">
             <span className="text-[10px] font-bold">MILL NET <span className="text-rose-600 font-black text-sm">*</span></span>
             <input
               id="supplier_net_weight_1917"
@@ -150,6 +115,41 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
               value={formData.supplier_net_weight || 0}
               onChange={onChange}
               required
+              className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+            />
+          </div>
+
+        </div>
+
+        {/* 3rd: Net Weight */}
+        <div className="p-3 space-y-2">
+          <h4 className="text-[11px] font-bold text-[#D94B5A] border-b border-gray-300 pb-1 uppercase">
+            ELECTRONIC WEIGHT
+          </h4>
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-bold">ELECTRONIC GROSS</span>
+            <input
+              id="electronic_gross_weight_1972"
+              aria-label="electronic gross weight"
+              type="number"
+              step="0.001"
+              name="electronic_gross_weight"
+              value={formData.electronic_gross_weight || ""}
+              onChange={onChange}
+              className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+            />
+          </div>
+
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-bold">ELECTRONIC TARE</span>
+            <input
+              id="electronic_tare_weight_2015"
+              aria-label="electronic tare weight"
+              type="number"
+              step="0.001"
+              name="electronic_tare_weight"
+              value={formData.electronic_tare_weight || ""}
+              onChange={onChange}
               className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
             />
           </div>

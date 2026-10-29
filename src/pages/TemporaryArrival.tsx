@@ -1084,6 +1084,10 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         alert('Please enter Arrival No.');
         return;
       }
+    } 
+    if(formData.date==='' || formData.date===null){
+       alert('Please Enter The Arrival Date.');
+      return
     }
     if(formData.challan_supplier==='' || formData.challan_supplier===null){
        alert('Please Select Challan Supplier.');
@@ -1097,6 +1101,10 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
        alert('Please Select Broker.');
       return
     }
+    if(formData.challan_rr_no==='' || formData.challan_rr_no===null){
+       alert('Please Enter The Challan No & Date.');
+      return
+    }
     if(formData.lorry_suffix==='' || formData.lorry_suffix===null){
        alert('Please Enter Lorry No.');
       return
@@ -1107,6 +1115,46 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
     }
     if(formData.arrival_area_name==='' || formData.arrival_area_name===null){
        alert('Please Select Area.');
+      return
+    }
+
+    const filteredDetailstempo = details.filter(
+      (row) =>
+        row.receipt_grade_code ||
+        row.receipt_grade_name ||
+        row.challan_grade_name ||
+        row.challan_marka_name ||
+        row.agency_name ||
+        Number(row.netto_pnto) > 0 ||
+        Number(row.quantity_rcpt) > 0 ||
+        Number(row.quantity_chln) > 0
+    );
+
+    // Row-wise validation
+    for (let i = 0; i < filteredDetailstempo.length; i++) {
+      const row12 = filteredDetailstempo[i];
+
+      if (!String(row12.receipt_grade_name || "").trim()) {
+        alert(`Row ${i + 1}: Receipt Grade Name is required.`);
+        return;
+      }
+
+      if (!String(row12.agency_name || "").trim()) {
+        alert(`Row ${i + 1}: Agency Name is required.`);
+        return;
+      }
+    }
+
+    if(formData.challan_material_weight==='' || formData.challan_material_weight===null){
+       alert('Please Enter The Challan Net Weight.');
+      return
+    }
+    if(formData.supplier_net_weight==='' || formData.supplier_net_weight===null){
+       alert('Please Enter The Mill Net Weight.');
+      return
+    }
+    if(formData.electronic_net_weight==='' || formData.electronic_net_weight===null){
+       alert('Please Enter The Electronic Net Weight.');
       return
     }
     
