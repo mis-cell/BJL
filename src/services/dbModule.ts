@@ -42,6 +42,8 @@ const MODULE_LABELS: Record<string, string> = {
   customer_master: "Trader Directory",
   tolerance_policy_master: "Tolerance Policy",
   clubbed_pomr: "Clubbed PO/MR",
+  return_lorry: "Return Lorry (4000 Series P.O.)",
+  return_lorry_details: "Return Lorry Item Details",
 };
 
 // In-flight request deduplication map to prevent multiple identical concurrent queries

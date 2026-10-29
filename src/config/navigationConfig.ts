@@ -59,6 +59,7 @@ export type Page =
   | "mismatch"
   | "material_mismatch"
   | "club_po_mr"
+  | "return_lorry"
   | "final_arrival"
   | "satta_chart"
   | "sms_sauda"
@@ -82,6 +83,7 @@ export const allSidebarItems = [
   { id: "material_inspection", label: "INSPECTION CHECKLIST", icon: ShieldCheck },
   { id: "mismatch", label: "Mismatch Case", icon: AlertTriangle },
   { id: "club_po_mr", label: "Club P.O & Arrival", icon: Link },
+  { id: "return_lorry", label: "Return Lorry", icon: Truck },
   { id: "payment", label: "Payment", icon: Wallet },
   { id: "mr_settlement", label: "Settlement", icon: FileCheck },
   { id: "issue", label: "Material Issue", icon: PackageCheck },

@@ -18,6 +18,11 @@ import {
   initialQualityMatrix,
   calculateClaimMoisture
 } from "../../services/inspectionService";
+import {
+  checkAndProcessReturnLorryOnInspection,
+  calculateInspectionWeightMt,
+  fetchAllReturnLorries,
+} from "../../services/returnLorryService";
 
 export function useMaterialInspectionLogic(onLogEvent?: (event: string, details: string) => void) {
   // Autocomplete lists from database
@@ -598,17 +603,50 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
         }
       });
 
+      const returnLorries = await fetchAllReturnLorries().catch(() => []);
+      const rlByMr = new Map<string, any>();
+      returnLorries.forEach(rl => {
+        const k = norm(rl.mr_no || rl.final_arrival_no);
+        if (k) rlByMr.set(k, rl);
+      });
+
       const allInspections = Array.from(uniqueMap.values()).map((insp: any) => {
-        if (isBlankPo(insp.po_no)) {
+        let updated = { ...insp };
+        if (isBlankPo(updated.po_no)) {
           const boundPo =
-            poByKey.get(norm(insp.mr_no)) ||
-            poByKey.get(norm(insp.arrival_no)) ||
-            poByKey.get(norm(insp.temporary_arrival_no));
+            poByKey.get(norm(updated.mr_no)) ||
+            poByKey.get(norm(updated.arrival_no)) ||
+            poByKey.get(norm(updated.temporary_arrival_no));
           if (boundPo) {
-            return { ...insp, po_no: boundPo };
+            updated.po_no = boundPo;
           }
         }
-        return insp;
+        let parsedGrid: any[] = [];
+        if (updated.grid_details) {
+          if (Array.isArray(updated.grid_details)) parsedGrid = updated.grid_details;
+          else if (typeof updated.grid_details === "string") {
+            try {
+              const p = JSON.parse(updated.grid_details);
+              if (Array.isArray(p)) parsedGrid = p;
+            } catch (e) {}
+          }
+        }
+        const matchedFa = (arrivalsData || []).find((f: any) => norm(f.final_arrival_no || f.mr_no) === norm(updated.mr_no));
+        const wtMt = calculateInspectionWeightMt(updated, parsedGrid, matchedFa);
+        updated.received_weight_mt = wtMt;
+        const matchedRl = rlByMr.get(norm(updated.mr_no));
+        if (matchedRl) {
+          updated.is_return_lorry = true;
+          updated.return_po_no = matchedRl.new_po_no || matchedRl.po_no;
+          updated.reference_po_no = matchedRl.reference_po_no || updated.po_no;
+          if (!updated.received_weight_mt && Number(matchedRl.received_weight_mt) > 0) {
+            updated.received_weight_mt = Number(matchedRl.received_weight_mt);
+          }
+        } else if (wtMt > 0 && wtMt < 5 && updated.po_no) {
+          updated.is_return_lorry = true;
+          updated.reference_po_no = updated.reference_po_no || updated.po_no;
+        }
+        return updated;
       });
       setSavedInspections(allInspections);
 
@@ -2018,9 +2056,26 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
         console.warn("Failed to process Ruka to Final PO movement:", e);
       }
 
-      setSuccessMessage(
-        `System Database Updated: Inspection report ${masterData.mr_no} registered successfully!`,
-      );
+      // Auto-check Return Lorry (< 5 MT) and copy Sauda Check Point P.O. to Return Lorry (4000 series)
+      const returnCheck = await checkAndProcessReturnLorryOnInspection({
+        mrNo: masterData.mr_no,
+        poNo: masterData.po_no || "",
+        arrivalNo: masterData.arrival_no || masterData.mr_no,
+        lorryNo: masterData.lorry_number || "",
+        inspectionDate: masterData.mr_date || masterData.arrival_date || undefined,
+        headerForm: masterData,
+        detailRows: validRowsToWrite,
+      });
+
+      if (returnCheck.isReturnLorry && returnCheck.newPoNo) {
+        setSuccessMessage(
+          `System Database Updated: Inspection ${masterData.mr_no} saved! [RETURN LORRY < 5 MT: ${returnCheck.weightMt.toFixed(3)} MT -> Generated 4000-Series P.O. #${returnCheck.newPoNo} (Ref: #${returnCheck.referencePoNo})]`
+        );
+      } else {
+        setSuccessMessage(
+          `System Database Updated: Inspection report ${masterData.mr_no} registered successfully!`,
+        );
+      }
       if (onLogEvent) {
         onLogEvent(
           "PO_SYNC",

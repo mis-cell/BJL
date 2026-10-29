@@ -558,12 +558,14 @@ export const MaterialInspectionRegisterView: React.FC<MaterialInspectionRegister
                         }
                       }}
                       title="Click to toggle expand / Double-click to instantly edit this report"
-                      className={`h-9 cursor-pointer hover:bg-amber-100/50 transition-colors ${
-                        expandedMrNo === row.mr_no
-                          ? "bg-amber-50"
+                      className={`h-9 cursor-pointer transition-colors ${
+                        (row as any).is_return_lorry || (Number((row as any).received_weight_mt) > 0 && Number((row as any).received_weight_mt) < 5 && row.po_no)
+                          ? "bg-red-100/90 hover:bg-red-200/80 border-l-4 border-l-red-600 text-red-950"
+                          : expandedMrNo === row.mr_no
+                          ? "bg-amber-50 hover:bg-amber-100/50"
                           : idx % 2 === 0
-                          ? "bg-white"
-                          : "bg-slate-50/50"
+                          ? "bg-white hover:bg-amber-100/50"
+                          : "bg-slate-50/50 hover:bg-amber-100/50"
                       }`}
                     >
                       {visibleColumns.select && (
@@ -591,8 +593,15 @@ export const MaterialInspectionRegisterView: React.FC<MaterialInspectionRegister
                         </td>
                       )}
                       {visibleColumns.mr_no && (
-                        <td className="px-3 font-extrabold text-[#0d47a1] border-r border-slate-200">
-                          {row.mr_no}
+                        <td className={`px-3 font-extrabold border-r border-slate-200 ${(row as any).is_return_lorry ? "text-red-900" : "text-[#0d47a1]"}`}>
+                          <div className="flex flex-col gap-0.5">
+                            <span>{row.mr_no}</span>
+                            {((row as any).is_return_lorry || (Number((row as any).received_weight_mt) > 0 && Number((row as any).received_weight_mt) < 5 && row.po_no)) && (
+                              <span className="inline-block bg-red-600 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded w-fit">
+                                RETURN LORRY {Number((row as any).received_weight_mt) > 0 ? `(${Number((row as any).received_weight_mt).toFixed(3)} MT)` : "(< 5 MT)"}
+                              </span>
+                            )}
+                          </div>
                         </td>
                       )}
                       {visibleColumns.mr_date && (
@@ -614,12 +623,18 @@ export const MaterialInspectionRegisterView: React.FC<MaterialInspectionRegister
                         const hasFinalArrival = row.po_no && finalArrivals.some(
                           fa => fa.po_no && String(fa.po_no).trim().toUpperCase() === String(row.po_no).trim().toUpperCase()
                         );
+                        const isRet = Boolean((row as any).is_return_lorry || (row as any).return_po_no);
                         return (
                           <td className="px-3 text-center border-r border-slate-200">
                             <div className="flex flex-col items-center justify-center gap-0.5">
-                              <span className="font-mono text-stone-600 font-bold">
-                                {row.po_no ? `#${row.po_no}` : "-"}
+                              <span className={`font-mono font-bold ${isRet ? "text-red-800 font-black" : "text-stone-600"}`}>
+                                {(row as any).return_po_no ? `#${(row as any).return_po_no}` : (row.po_no ? `#${row.po_no}` : "-")}
                               </span>
+                              {isRet && ((row as any).reference_po_no || row.po_no) && (
+                                <span className="inline-block bg-red-200 text-red-900 border border-red-400 text-[8px] font-black uppercase px-1 rounded tracking-wider leading-normal">
+                                  Ref: #{(row as any).reference_po_no || row.po_no}
+                                </span>
+                              )}
                               {hasFinalArrival && (
                                 <span className="inline-block bg-emerald-100 text-emerald-800 border border-emerald-300 text-[8px] font-black uppercase px-1 rounded tracking-wider leading-normal shadow-xs" title="Final received data exists in Final Arrival Register">
                                   ✓ FINAL RECEIVED

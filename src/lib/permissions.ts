@@ -133,6 +133,13 @@ export const ALL_SYSTEM_MODULES: SystemModuleDef[] = [
     aliases: ['club_po_mr', 'club po mr', 'club_po', 'club po', 'club_mr', 'club mr', 'club']
   },
   {
+    id: 'return_lorry',
+    label: 'Return Lorry',
+    category: 'Club & Financial',
+    pageId: 'return_lorry',
+    aliases: ['return_lorry', 'return lorry', 'returnlorry']
+  },
+  {
     id: 'payment',
     label: 'Payment Module',
     category: 'Club & Financial',

@@ -991,7 +991,8 @@ export function getLinkedMrsForPo(poOrPoNo: any, arrivalsList: any[] = []): any[
 
   const targetPoNo = typeof poOrPoNo === 'string'
     ? poOrPoNo
-    : (poOrPoNo.po_no || poOrPoNo.ptf_no || poOrPoNo.sauda_no || poOrPoNo.contract_po_no || '');
+    : (poOrPoNo.po_no || poOrPoNo.new_po_no || poOrPoNo.ptf_no || poOrPoNo.sauda_no || poOrPoNo.contract_po_no || '');
+  const boundMrNo = typeof poOrPoNo === 'object' ? String(poOrPoNo.mr_no || '').trim().toUpperCase() : '';
 
   const cleanTarget = String(targetPoNo).trim().toUpperCase().replace(/^#+/, '').trim();
   if (!cleanTarget || cleanTarget === 'N/A') return [];
@@ -1001,11 +1002,15 @@ export function getLinkedMrsForPo(poOrPoNo: any, arrivalsList: any[] = []): any[
   const targetDigits = cleanTarget.replace(/[^0-9]/g, '');
 
   return arrivalsList.filter(arr => {
+    const arrMr = String(arr.mr_no || arr.final_arrival_no || arr.arrival_no || '').trim().toUpperCase();
+    if (boundMrNo && arrMr && arrMr === boundMrNo) return true;
+
     const arrPo1 = String(arr.po_no || '').trim().toUpperCase().replace(/^#+/, '').trim();
     const arrPo2 = String(arr.mill_po_no || '').trim().toUpperCase().replace(/^#+/, '').trim();
     const arrPo3 = String(arr.contract_po_no || arr.sauda_no || arr.po_contract || '').trim().toUpperCase().replace(/^#+/, '').trim();
+    const arrPo4 = String(arr.return_po_no || '').trim().toUpperCase().replace(/^#+/, '').trim();
     
-    const candidates = [arrPo1, arrPo2, arrPo3].filter(Boolean);
+    const candidates = [arrPo1, arrPo2, arrPo3, arrPo4].filter(Boolean);
     for (const cand of candidates) {
       const candNoPtf = cand.replace(/\(PTF\)/gi, '').trim();
       if (cand === cleanTarget || candNoPtf === cleanTargetNoPtf) return true;
@@ -1101,12 +1106,13 @@ export function isPoEligibleForPayment(
 ): boolean {
   if (!po) return false;
 
+  const isReturnLorryPo = Boolean(po.is_return_lorry || po.source_table === 'return_lorry' || String(po.status || '').toUpperCase() === 'RETURN_LORRY');
   const statusStr = String(po.status || '').toLowerCase().trim();
   const passMismatchStr = String(po.pass_mismatch || po.pass_status || po.mismatch_status || po.quality_status || '').toUpperCase().trim();
   
-  const isCompleted = (statusStr === 'completed' || statusStr === 'closed' || statusStr === 'final' || statusStr === 'moved_to_final' || statusStr === 'settled' || (po.ptf_no && String(po.ptf_no).trim() && String(po.ptf_no).trim() !== 'N/A'));
+  const isCompleted = isReturnLorryPo || (statusStr === 'completed' || statusStr === 'closed' || statusStr === 'final' || statusStr === 'moved_to_final' || statusStr === 'settled' || statusStr === 'active' || (po.ptf_no && String(po.ptf_no).trim() && String(po.ptf_no).trim() !== 'N/A'));
   
-  let isPass = false;
+  let isPass = isReturnLorryPo;
   if (passMismatchStr === 'PASS') isPass = true;
   else if (po.mismatch_cleared === true || String(po.mismatch_cleared) === 'true') isPass = true;
   else if (po.satta_dispute_approved === true || String(po.satta_dispute_approved) === 'true') isPass = true;

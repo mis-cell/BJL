@@ -359,7 +359,6 @@ export default function LegacyLayout({
         { id: 'final_arrival', label: 'FINAL ARRIVAL', icon: CheckCircle2, pageId: 'final_arrival' },
         { id: 'inspection', label: 'MILL INSPECTION', icon: ClipboardCheck, pageId: 'inspection' },
         { id: 'material_inspection', label: 'INSPECTION CHECKLIST', icon: ShieldCheck, pageId: 'material_inspection' },
-        { id: 'return_lorry', label: 'RETURN LORRY', icon: Truck, pageId: 'return_lorry' },
         { id: 'mismatch', label: 'SATTA MISMATCH', icon: AlertTriangle, pageId: 'mismatch' },
         { id: 'material_mismatch', label: 'MATERIAL MISMATCH', icon: AlertTriangle, pageId: 'material_mismatch' },
       ]
@@ -370,6 +369,7 @@ export default function LegacyLayout({
       icon: Wallet,
       subItems: [
         { id: 'club_po_mr', label: 'Club P.O & Arrival', icon: Link, pageId: 'club_po_mr' },
+        { id: 'return_lorry', label: 'Return Lorry', icon: Truck, pageId: 'return_lorry' },
         { id: 'payment', label: 'Payment', icon: Wallet, pageId: 'payment' },
         { id: 'mr_settlement', label: 'Settlement', icon: FileCheck, pageId: 'mr_settlement' },
       ]
