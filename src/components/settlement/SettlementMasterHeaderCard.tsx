@@ -392,7 +392,7 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               readOnly
               disabled
               className="bg-slate-100 border border-gray-400 p-1 text-right font-mono cursor-not-allowed"
-              value={masterData.arival_apmc_fees || ""}
+              value={masterData.arival_apmc_fees !== undefined && masterData.arival_apmc_fees !== null ? masterData.arival_apmc_fees : ""}
             />
           </div>
 
