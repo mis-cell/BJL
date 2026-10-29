@@ -922,7 +922,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       'temporary_material_received', 
       'sauda_check_point', 
       'sauda_master',
-      'clubbed_pomr'
+      'clubbed_pomr',
+      'return_lorry',
+      'return_lorry_details'
     ] 
   });
 
@@ -970,21 +972,22 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         const payList = Array.from(mergedPayMap.values());
         setPaymentList(payList);
 
-        // 2. Fetch completed inspections from Mill Inspection Section (material_inspection, final_arrival, clubbed_pomr)
-        const [matInspRes, faRes, clubbedRes] = await Promise.all([
+        // 2. Fetch completed inspections from Mill Inspection Section (material_inspection, final_arrival, clubbed_pomr, return_lorry)
+        const [matInspRes, faRes, clubbedRes, returnLorryRes] = await Promise.all([
           supabase.from('material_inspection').select('*').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
           supabase.from('final_arrival').select('*').order('date', { ascending: false }).then(r => r.data || [], () => []),
-          dbModule.fetchAll('clubbed_pomr').catch(() => [])
+          dbModule.fetchAll('clubbed_pomr').catch(() => []),
+          supabase.from('return_lorry').select('*').then(r => r.data || [], () => [])
         ]);
 
-        // Map any bound PO numbers from final_arrival and clubbed_pomr by MR/Arrival number
+        // Map any bound PO numbers from final_arrival, clubbed_pomr, and return_lorry by MR/Arrival number
         const mrToBoundPoMap = new Map<string, string>();
-        const registerBoundPo = (mrCandidate: any, poCandidate: any) => {
+        const registerBoundPo = (mrCandidate: any, poCandidate: any, overwrite: boolean = false) => {
           const mrStr = String(mrCandidate || '').trim().toUpperCase();
           const poStr = String(poCandidate || '').trim();
           const poUpper = poStr.toUpperCase();
           if (mrStr && poStr && poUpper !== 'NO' && poUpper !== 'N/A' && poUpper !== 'NONE') {
-            if (!mrToBoundPoMap.has(mrStr)) {
+            if (overwrite || !mrToBoundPoMap.has(mrStr)) {
               mrToBoundPoMap.set(mrStr, poStr);
             }
           }
@@ -992,10 +995,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
         if (faRes) {
           for (const fa of faRes) {
-            registerBoundPo(fa.mr_no, fa.po_no || fa.contract_no);
-            registerBoundPo(fa.final_arrival_no, fa.po_no || fa.contract_no);
-            registerBoundPo(fa.arrival_no, fa.po_no || fa.contract_no);
-            registerBoundPo(fa.temporary_arrival_no, fa.po_no || fa.contract_no);
+            registerBoundPo(fa.mr_no, fa.return_po_no || fa.po_no || fa.contract_no);
+            registerBoundPo(fa.final_arrival_no, fa.return_po_no || fa.po_no || fa.contract_no);
+            registerBoundPo(fa.arrival_no, fa.return_po_no || fa.po_no || fa.contract_no);
+            registerBoundPo(fa.temporary_arrival_no, fa.return_po_no || fa.po_no || fa.contract_no);
           }
         }
         if (clubbedRes && Array.isArray(clubbedRes)) {
@@ -1003,8 +1006,23 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             registerBoundPo(c.mr_no, c.po_no);
           }
         }
+        if (returnLorryRes && Array.isArray(returnLorryRes)) {
+          for (const rl of returnLorryRes) {
+            registerBoundPo(rl.mr_no, rl.new_po_no || rl.po_no, true);
+            registerBoundPo(rl.final_arrival_no, rl.new_po_no || rl.po_no, true);
+          }
+        }
 
         const resolveBoundPoForItem = (item: any): string => {
+          const mrCands = [item.mr_no, item.final_arrival_no, item.arrival_no];
+          for (const c of mrCands) {
+            const k = String(c || '').trim().toUpperCase();
+            if (k && mrToBoundPoMap.has(k)) {
+              const mapped = mrToBoundPoMap.get(k)!;
+              if (mapped.includes('/4')) return mapped; // Prefer 4000-series Return Lorry P.O.
+            }
+          }
+          if (item.return_po_no) return String(item.return_po_no).trim();
           const existingPo = String(item.po_no || item.mill_po_no || item.contract_no || '').trim();
           const existingUpper = existingPo.toUpperCase();
           if (existingPo && existingUpper !== 'NO' && existingUpper !== 'N/A' && existingUpper !== 'NONE') {
@@ -1138,6 +1156,17 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           .then(res => res, () => ({ data: [] }));
 
         const rawCombined = [
+          ...((returnLorryRes || []).map((rl: any) => ({
+            ...rl,
+            po_no: rl.new_po_no || rl.po_no,
+            po_date: rl.po_date || rl.s_date,
+            broker: rl.broker || rl.broker_name,
+            supplier: rl.supplier || rl.supplier_name,
+            total_contract_mt: rl.total_contract_mt || rl.received_weight_mt || 0,
+            status: 'completed',
+            pending: false,
+            is_return_lorry: true
+          }))),
           ...(poList || []),
           ...(poArchList || []),
           ...((scpPoList || []).map((s: any) => ({

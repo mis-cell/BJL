@@ -530,6 +530,23 @@ export function usePaymentData(onSaveSuccess?: () => void) {
         console.warn("dbModule fallback fetch error:", err);
       }
 
+      let returnLorries: any[] = [];
+      try {
+        if (supabase) {
+          const { data: rlData } = await supabase.from('return_lorry').select('*');
+          if (rlData) returnLorries = rlData;
+        }
+        if (returnLorries.length === 0) {
+          returnLorries = await dbModule.fetchAll('return_lorry').catch(() => []);
+        }
+      } catch (e) {}
+
+      const rlByMrMap = new Map<string, any>();
+      (returnLorries || []).forEach((rl: any) => {
+        const mrKey = String(rl.mr_no || rl.final_arrival_no || '').trim().toUpperCase();
+        if (mrKey) rlByMrMap.set(mrKey, rl);
+      });
+
       const combinedPoMap = new Map<string, any>();
       (poList || []).forEach((p: any) => {
         const k = String(p.po_no || p.contract_po_no || p.ptf_no || '').trim().toUpperCase();
@@ -542,16 +559,51 @@ export function usePaymentData(onSaveSuccess?: () => void) {
           combinedPoMap.set(k, { ...existing, ...s, source_table: 'sauda_check_point' });
         }
       });
+      (returnLorries || []).forEach((rl: any) => {
+        const newPoKey = String(rl.new_po_no || rl.po_no || '').trim().toUpperCase();
+        if (newPoKey) {
+          combinedPoMap.set(newPoKey, {
+            ...rl,
+            po_no: rl.new_po_no || rl.po_no,
+            contract_po_no: rl.reference_po_no || rl.po_no,
+            is_return_lorry: true,
+            source_table: 'return_lorry'
+          });
+        }
+      });
       const combinedPos = Array.from(combinedPoMap.values());
 
       setPaymentList(payData);
       setPurchaseOrders(combinedPos);
-      setSaudaCheckPoints(scpList);
+      setSaudaCheckPoints([...scpList, ...(returnLorries || [])]);
 
-      const verified = (arrList || []).filter(item => {
-        const status = String(item.status || '').toLowerCase();
-        return status !== 'cancelled' && status !== 'rejected';
-      });
+      const verified = (arrList || [])
+        .filter(item => {
+          const status = String(item.status || '').toLowerCase();
+          return status !== 'cancelled' && status !== 'rejected';
+        })
+        .map(item => {
+          const mrKey = String(item.mr_no || item.final_arrival_no || item.arrival_no || '').trim().toUpperCase();
+          const matchedRl = mrKey ? rlByMrMap.get(mrKey) : null;
+          if (matchedRl) {
+            return {
+              ...item,
+              is_return_lorry: true,
+              return_po_no: matchedRl.new_po_no || matchedRl.po_no,
+              reference_po_no: matchedRl.reference_po_no || item.po_no,
+              po_no: matchedRl.new_po_no || matchedRl.po_no
+            };
+          }
+          if (item.return_po_no) {
+            return {
+              ...item,
+              is_return_lorry: true,
+              reference_po_no: item.reference_po_no || item.po_no,
+              po_no: item.return_po_no
+            };
+          }
+          return item;
+        });
       setVerifiedArrivals(verified);
 
       if (gData.length === 0) gData = await dbModule.fetchAll('grade_master').catch(() => []);
@@ -586,6 +638,8 @@ export function usePaymentData(onSaveSuccess?: () => void) {
       'sauda_check_point_deductions',
       'purchase_master',
       'purchase_detail_master',
+      'return_lorry',
+      'return_lorry_details',
       'satta_differentials'
     ]
   });
@@ -606,24 +660,39 @@ export function usePaymentData(onSaveSuccess?: () => void) {
       }
     }
 
-    if (itemsToEnrich.length === 0 && (po.po_no || po.contract_po_no || po.sauda_no)) {
+    if (itemsToEnrich.length === 0 && (po.po_no || po.contract_po_no || po.reference_po_no || po.sauda_no)) {
       const cleanPo = String(po.po_no || '').trim().replace(/^#/, '');
-      const cleanContract = String(po.contract_po_no || '').trim().replace(/^#/, '');
+      const cleanContract = String(po.contract_po_no || po.reference_po_no || '').trim().replace(/^#/, '');
       const cleanSauda = String(po.sauda_no || '').trim().replace(/^#/, '');
-      const candidateKeys = Array.from(new Set([cleanPo, `#${cleanPo}`, po.po_no, cleanContract, cleanSauda].filter(Boolean)));
+      const candidateKeys = Array.from(new Set([cleanPo, `#${cleanPo}`, po.po_no, cleanContract, `#${cleanContract}`, cleanSauda].filter(Boolean)));
 
       try {
         if (supabase) {
-          // 1. Check purchase_detail_master
+          // 0. Check return_lorry_details first if 4000-series Return Lorry
           for (const key of candidateKeys) {
-            const { data: pdm } = await supabase
-              .from('purchase_detail_master')
+            const { data: rld } = await supabase
+              .from('return_lorry_details')
               .select('*')
-              .eq('po_no', key)
+              .or(`po_no.eq."${key}",new_po_no.eq."${key}",reference_po_no.eq."${key}"`)
               .order('srl_no', { ascending: true });
-            if (pdm && pdm.length > 0) {
-              itemsToEnrich = pdm;
+            if (rld && rld.length > 0) {
+              itemsToEnrich = rld;
               break;
+            }
+          }
+
+          // 1. Check purchase_detail_master
+          if (itemsToEnrich.length === 0) {
+            for (const key of candidateKeys) {
+              const { data: pdm } = await supabase
+                .from('purchase_detail_master')
+                .select('*')
+                .eq('po_no', key)
+                .order('srl_no', { ascending: true });
+              if (pdm && pdm.length > 0) {
+                itemsToEnrich = pdm;
+                break;
+              }
             }
           }
 

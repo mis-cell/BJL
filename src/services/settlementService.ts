@@ -702,17 +702,55 @@ export const fetchPoAndItemDetails = async (
     };
 
     if (supabase) {
-      const [pmRes, scpRes, smRes] = await Promise.all([
+      const [pmRes, scpRes, smRes, rlRes] = await Promise.all([
         supabase.from('purchase_master').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).maybeSingle(),
         supabase.from('sauda_check_point').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}",ptf_no.eq."${cleanPo}",sauda_no.eq."${cleanPo}"`).maybeSingle(),
-        supabase.from('sauda_master').select('*').or(`sauda_no.eq."${cleanPo}",po_no.eq."${cleanPo}",contract_no.eq."${cleanPo}"`).maybeSingle()
+        supabase.from('sauda_master').select('*').or(`sauda_no.eq."${cleanPo}",po_no.eq."${cleanPo}",contract_no.eq."${cleanPo}"`).maybeSingle(),
+        supabase.from('return_lorry').select('*').or(`po_no.eq."${cleanPo}",new_po_no.eq."${cleanPo}",po_no.eq."${withHash}",new_po_no.eq."${withHash}"`).maybeSingle().then(r => r, () => ({ data: null }))
       ]);
 
       const pm = pmRes?.data || null;
       const scp = scpRes?.data || null;
       const sm = smRes?.data || null;
+      const rl = (rlRes as any)?.data || null;
 
-      if (pm && scp) {
+      if (rl) {
+        const totalLorries = resolveContractLorries(rl, scp, pm, sm);
+        poData = {
+          ...(rl.sauda_snapshot || {}),
+          ...rl,
+          po_no: rl.new_po_no || rl.po_no,
+          reference_po_no: rl.reference_po_no,
+          po_date: rl.po_date || rl.s_date,
+          supplier: rl.supplier || rl.supplier_name,
+          broker: rl.broker || rl.broker_name,
+          total_contract_mt: rl.total_contract_mt || rl.received_weight_mt || 0,
+          total_lorries: totalLorries,
+          total_no_of_lorries: totalLorries,
+          no_of_lorries: totalLorries,
+          contract_lorries: totalLorries,
+          premium: Number(rl.premium || 0),
+          items: rl.items || rl.grid_details,
+          grid_details: rl.grid_details || rl.items,
+          is_return_lorry: true
+        };
+        const parsedFromRl = parseGridOrItems(rl.items || rl.grid_details);
+        if (parsedFromRl.length > 0) {
+          scpItemsForMerge = parsedFromRl;
+          poDetails = parsedFromRl;
+        } else {
+          const { data: rldData } = await supabase
+            .from('return_lorry_details')
+            .select('*')
+            .or(`po_no.eq."${cleanPo}",new_po_no.eq."${cleanPo}"`)
+            .order('srl_no', { ascending: true })
+            .then(r => r, () => ({ data: [] }));
+          if (rldData && rldData.length > 0) {
+            scpItemsForMerge = rldData;
+            poDetails = rldData;
+          }
+        }
+      } else if (pm && scp) {
         const totalLorries = resolveContractLorries(scp, pm, sm);
         poData = {
           ...pm,

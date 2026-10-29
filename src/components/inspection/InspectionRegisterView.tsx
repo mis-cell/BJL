@@ -267,25 +267,67 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                paginatedRecords.map((r, idx) => (
+                paginatedRecords.map((r, idx) => {
+                  const recAny = r as any;
+                  const wtMt = Number(recAny.received_weight_mt || 0);
+                  const isReturnRow = Boolean(
+                    recAny.is_return_lorry ||
+                    recAny.return_po_no ||
+                    (wtMt > 0 && wtMt < 5 && r.po_no)
+                  );
+                  return (
                   <tr
                     key={r.id || r.mr_no || idx}
-                    className="hover:bg-slate-50 transition-colors"
+                    className={
+                      isReturnRow
+                        ? "bg-red-100/90 hover:bg-red-200/80 border-l-4 border-l-red-600 text-red-950 transition-colors"
+                        : "hover:bg-slate-50 transition-colors"
+                    }
                   >
-                    <td className="p-3 font-bold text-blue-900">{r.mr_no}</td>
+                    <td className={`p-3 font-bold ${isReturnRow ? "text-red-900" : "text-blue-900"}`}>
+                      <div className="flex flex-col gap-0.5">
+                        <span>{r.mr_no}</span>
+                        {isReturnRow && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-600 text-white text-[9px] font-black uppercase tracking-wider w-fit shadow-xs">
+                            RETURN LORRY {wtMt > 0 ? `(${wtMt.toFixed(3)} MT)` : "(< 5 MT)"}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="p-3 font-medium">{r.arrival_no || "-"}</td>
-                    <td className="p-3 font-mono text-slate-600">{r.arrival_date || r.mr_date || "-"}</td>
-                    <td className="p-3 font-mono">{r.po_no ? `#${r.po_no}` : "-"}</td>
-                    <td className="p-3 font-bold uppercase truncate max-w-[160px]">{r.supplier_name || "-"}</td>
-                    <td className="p-3 uppercase truncate max-w-[140px] text-slate-600">{r.broker_name || "-"}</td>
-                    <td className="p-3 text-right font-mono font-bold text-emerald-800">{Math.round(r.claim_moisture) ? `${Math.round(r.claim_moisture)}%` : "-"}</td>
-                    <td className="p-3 text-right font-mono text-amber-800">{formatIndianCurrency(r.deduction_amount || 0)}</td>
+                    <td className={`p-3 font-mono ${isReturnRow ? "text-red-900 font-semibold" : "text-slate-600"}`}>{r.arrival_date || r.mr_date || "-"}</td>
+                    <td className="p-3 font-mono">
+                      {isReturnRow ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-black text-red-800">
+                            {recAny.return_po_no ? `#${recAny.return_po_no}` : (r.po_no ? `#${r.po_no}` : "-")}
+                          </span>
+                          {(recAny.reference_po_no || r.po_no) && (
+                            <span className="text-[10px] font-bold text-red-700 bg-red-200/80 px-1.5 py-0.5 rounded w-fit">
+                              Ref: #{recAny.reference_po_no || r.po_no}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        r.po_no ? `#${r.po_no}` : "-"
+                      )}
+                    </td>
+                    <td className={`p-3 font-bold uppercase truncate max-w-[160px] ${isReturnRow ? "text-red-950" : ""}`}>{r.supplier_name || "-"}</td>
+                    <td className={`p-3 uppercase truncate max-w-[140px] ${isReturnRow ? "text-red-900 font-semibold" : "text-slate-600"}`}>{r.broker_name || "-"}</td>
+                    <td className={`p-3 text-right font-mono font-bold ${isReturnRow ? "text-red-900" : "text-emerald-800"}`}>{Math.round(r.claim_moisture) ? `${Math.round(r.claim_moisture)}%` : "-"}</td>
+                    <td className={`p-3 text-right font-mono ${isReturnRow ? "text-red-900 font-bold" : "text-amber-800"}`}>{formatIndianCurrency(r.deduction_amount || 0)}</td>
                     <td className="p-3 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        r.status === "Completed" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
-                      }`}>
-                        {r.status || "Completed"}
-                      </span>
+                      {isReturnRow ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-red-600 text-white shadow-xs">
+                          Return Lorry
+                        </span>
+                      ) : (
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                          r.status === "Completed" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                        }`}>
+                          {r.status || "Completed"}
+                        </span>
+                      )}
                     </td>
                     <td className="p-3 text-center">
                       <div className="flex items-center justify-center gap-1.5">
@@ -313,7 +355,8 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

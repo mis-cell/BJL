@@ -20,6 +20,11 @@ import {
   calculateClaimMoisture,
 } from "../../utils/inspectionCalculations";
 import { parseMonthKey } from "../common/MonthWiseCardsRibbon";
+import {
+  checkAndProcessReturnLorryOnInspection,
+  calculateInspectionWeightMt,
+  fetchAllReturnLorries,
+} from "../../services/returnLorryService";
 
 export function useInspectionLogic() {
   const [records, setRecords] = useState<InspectionMasterRecord[]>([]);
@@ -556,8 +561,80 @@ export function useInspectionLogic() {
           }
         }
 
+        // Compute weight and Return Lorry (< 5 MT) status
+        let parsedGrid: any[] = [];
+        if (rec.grid_details) {
+          if (Array.isArray(rec.grid_details)) parsedGrid = rec.grid_details;
+          else if (typeof rec.grid_details === "string") {
+            try {
+              const p = JSON.parse(rec.grid_details);
+              if (Array.isArray(p)) parsedGrid = p;
+            } catch (e) {}
+          }
+        }
+        const matchedFa = faList.find(f => {
+          const fk = String(f.final_arrival_no || f.mr_no || f.arrival_no || "").trim().toUpperCase();
+          return fk && (fk === mrK || fk === arrK);
+        });
+        const wtMt = calculateInspectionWeightMt(rec, parsedGrid, matchedFa);
+        (rec as any).received_weight_mt = wtMt;
+        if (wtMt > 0 && wtMt < 5 && rec.po_no) {
+          (rec as any).is_return_lorry = true;
+          if (!(rec as any).reference_po_no) {
+            (rec as any).reference_po_no = rec.po_no;
+          }
+        }
+
         return rec;
       });
+
+      // Enrich with saved Return Lorry (4000 series) records & auto-sync any new < 5 MT lorries
+      try {
+        const returnLorries = await fetchAllReturnLorries();
+        const rlByMr = new Map<string, any>();
+        returnLorries.forEach(rl => {
+          const k = String(rl.mr_no || rl.final_arrival_no || "").trim().toUpperCase();
+          if (k) rlByMr.set(k, rl);
+        });
+
+        for (const rec of displayList) {
+          const k = String(rec.mr_no || rec.arrival_no || "").trim().toUpperCase();
+          const matchedRl = k ? rlByMr.get(k) : null;
+          if (matchedRl) {
+            (rec as any).is_return_lorry = true;
+            (rec as any).return_po_no = matchedRl.new_po_no || matchedRl.po_no;
+            (rec as any).reference_po_no = matchedRl.reference_po_no || rec.po_no;
+            if (!Number((rec as any).received_weight_mt) && Number(matchedRl.received_weight_mt) > 0) {
+              (rec as any).received_weight_mt = Number(matchedRl.received_weight_mt);
+            }
+          } else if ((rec as any).is_return_lorry && rec.po_no && k) {
+            // Auto-process in background so 4000-series P.O. is created in return_lorry
+            checkAndProcessReturnLorryOnInspection({
+              mrNo: k,
+              poNo: rec.po_no,
+              arrivalNo: rec.arrival_no || k,
+              lorryNo: rec.lorry_number,
+              inspectionDate: rec.mr_date || rec.arrival_date,
+              headerForm: rec,
+            }).then(res => {
+              if (res.isReturnLorry && res.newPoNo) {
+                setRecords(prev =>
+                  prev.map(r =>
+                    String(r.mr_no || "").trim().toUpperCase() === k
+                      ? ({
+                          ...r,
+                          is_return_lorry: true,
+                          return_po_no: res.newPoNo,
+                          reference_po_no: res.referencePoNo || r.po_no,
+                        } as any)
+                      : r
+                  )
+                );
+              }
+            }).catch(() => {});
+          }
+        }
+      } catch (e) {}
 
       setRecords(displayList);
       if (isManual) {
@@ -1684,8 +1761,26 @@ export function useInspectionLogic() {
         remarks: `Mill Inspection for PO ${headerForm.po_no || 'N/A'}, Supplier: ${headerForm.supplier_name || 'N/A'}, Total Bales: ${totalBalesCount}, Gross: ${totalReceiptGrossMt.toFixed(3)} MT`
       });
 
-      alert("Data Saved Successfully.");
-      showToast("Data Saved Successfully.");
+      // Check if this Mill Inspection record is a Return Lorry (< 5 MT) and auto-copy to Return Lorry (4000 series)
+      const returnCheck = await checkAndProcessReturnLorryOnInspection({
+        mrNo: cleanMrNo,
+        poNo: headerForm.po_no || "",
+        arrivalNo: headerForm.arrival_no || cleanMrNo,
+        lorryNo: headerForm.lorry_number || "",
+        inspectionDate: resolvedMrDate || resolvedArrivalDate || undefined,
+        headerForm: { ...headerForm, total_actual_weight: totalReceiptGrossMt },
+        detailRows: validDetails,
+      });
+
+      if (returnCheck.isReturnLorry && returnCheck.newPoNo) {
+        alert(
+          `Data Saved Successfully.\n\n[RETURN LORRY DETECTED: ${returnCheck.weightMt.toFixed(3)} MT (< 5 MT)]\nReference P.O.: ${returnCheck.referencePoNo}\nNew Return Lorry P.O. (4000 Series): ${returnCheck.newPoNo}`
+        );
+        showToast(`Return Lorry P.O. ${returnCheck.newPoNo} auto-generated (Wt: ${returnCheck.weightMt.toFixed(3)} MT < 5 MT)`);
+      } else {
+        alert("Data Saved Successfully.");
+        showToast("Data Saved Successfully.");
+      }
       handleCreateNewInspection();
       setViewMode("dashboard");
       fetchInspectionRecords(true);
