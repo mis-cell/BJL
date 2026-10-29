@@ -762,5 +762,68 @@ CREATE INDEX IF NOT EXISTS idx_material_issue_no_date ON material_issue_master(i
 CREATE INDEX IF NOT EXISTS idx_material_mismatch_created ON material_mismatch(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_satta_mismatch_created ON satta_mismatch(created_at DESC);
 
+-- ============================================================================
+-- CLUB P.O & ARRIVAL MANUAL HISTORY TABLE (clubbed_pomr)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS clubbed_pomr (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    club_id TEXT UNIQUE NOT NULL,
+    clubbed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    primary_po_no TEXT NOT NULL,
+    po_no TEXT,
+    ptf_no TEXT,
+    po_date TEXT,
+    clubbed_po_nos JSONB DEFAULT '[]'::jsonb,
+    po_nos TEXT,
+    primary_mr_no TEXT,
+    mr_no TEXT,
+    final_arrival_no TEXT,
+    temporary_arrival_no TEXT,
+    arrival_date TEXT,
+    clubbed_mr_nos JSONB DEFAULT '[]'::jsonb,
+    amad_nos TEXT,
+    supplier TEXT,
+    challan_supplier TEXT,
+    broker TEXT,
+    area TEXT,
+    lorry_number TEXT,
+    challan_no TEXT,
+    packets NUMERIC(15,2) DEFAULT 0,
+    total_po_lorries INTEGER DEFAULT 1,
+    received_lorries_count INTEGER DEFAULT 1,
+    total_po_weight NUMERIC(15,3) DEFAULT 0,
+    total_received_weight NUMERIC(15,3) DEFAULT 0,
+    total_weight_mt NUMERIC(15,3) DEFAULT 0,
+    variance_pct NUMERIC(15,2) DEFAULT 0,
+    recorded_by TEXT,
+    clubbed_by TEXT,
+    remarks TEXT,
+    status TEXT DEFAULT 'ACTIVE',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    unclubbed_at TIMESTAMP WITH TIME ZONE
+);
 
-
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS clubbed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS po_no TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS ptf_no TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS po_date TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS po_nos TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS mr_no TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS final_arrival_no TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS temporary_arrival_no TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS arrival_date TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS amad_nos TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS supplier TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS challan_supplier TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS broker TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS area TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS lorry_number TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS challan_no TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS packets NUMERIC(15,2) DEFAULT 0;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS total_po_lorries INTEGER DEFAULT 1;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS received_lorries_count INTEGER DEFAULT 1;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS total_po_weight NUMERIC(15,3) DEFAULT 0;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS total_received_weight NUMERIC(15,3) DEFAULT 0;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS variance_pct NUMERIC(15,2) DEFAULT 0;
+ALTER TABLE IF EXISTS clubbed_pomr ADD COLUMN IF NOT EXISTS recorded_by TEXT;
+ALTER TABLE IF EXISTS clubbed_pomr DISABLE ROW LEVEL SECURITY;
