@@ -466,37 +466,49 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
         {/* List Table Grid of settlements */}
         <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse font-sans min-w-[1100px]">
+            <table className="w-full text-left border-collapse font-sans min-w-[1000px]">
+              <colgroup>
+                <col className="w-24" />  {/* M.R. NO. */}
+                <col className="w-28" />  {/* AUDIT DATE */}
+                <col className="w-44" />  {/* P.O. NO. */}
+                <col className="min-w-[160px]" /> {/* SUPPLIER NAME */}
+                <col className="min-w-[150px]" /> {/* BROKER NAME */}
+                <col className="w-28" />  {/* LORRY NUMBER */}
+                <col className="w-32" />  {/* SETTLED AMT */}
+                <col className="w-36" />  {/* BILL NO / DATE */}
+                <col className="w-24" />  {/* STATUS */}
+                <col className="w-28" />  {/* ACTIONS */}
+              </colgroup>
               <thead>
                 <tr className="bg-[#F7AFA8] text-[10px] font-black uppercase text-white tracking-wide">
-                  <th className="px-3 py-2.5 border-r border-white/20 whitespace-nowrap">
+                  <th className="px-2.5 py-2 border-r border-white/20 whitespace-nowrap">
                     M.R. No.
                   </th>
-                  <th className="px-3 py-2.5 border-r border-white/20 whitespace-nowrap">
+                  <th className="px-2.5 py-2 border-r border-white/20 whitespace-nowrap">
                     Audit Date
                   </th>
-                  <th className="px-3 py-2.5 border-r border-white/20 whitespace-nowrap">
+                  <th className="px-2.5 py-2 border-r border-white/20 whitespace-nowrap">
                     P.O. No.
                   </th>
-                  <th className="px-3 py-2.5 border-r border-white/20 whitespace-nowrap">
+                  <th className="px-2.5 py-2 border-r border-white/20 whitespace-nowrap">
                     Supplier Name
                   </th>
-                  <th className="px-3 py-2.5 border-r border-white/20 whitespace-nowrap">
+                  <th className="px-2.5 py-2 border-r border-white/20 whitespace-nowrap">
                     Broker Name
                   </th>
-                  <th className="px-3 py-2.5 border-r border-white/20 whitespace-nowrap">
+                  <th className="px-2.5 py-2 border-r border-white/20 whitespace-nowrap">
                     Lorry Number
                   </th>
-                  <th className="px-3 py-2.5 border-r border-white/20 text-right whitespace-nowrap">
+                  <th className="px-2.5 py-2 border-r border-white/20 text-right whitespace-nowrap">
                     Settled Amt
                   </th>
-                  <th className="px-3 py-2.5 border-r border-white/20 whitespace-nowrap">
+                  <th className="px-2.5 py-2 border-r border-white/20 whitespace-nowrap">
                     Bill No / Date
                   </th>
-                  <th className="px-3 py-2.5 border-r border-white/20 text-center whitespace-nowrap">
+                  <th className="px-2.5 py-2 border-r border-white/20 text-center whitespace-nowrap">
                     Status
                   </th>
-                  <th className="px-3 py-2.5 text-center whitespace-nowrap">
+                  <th className="px-2.5 py-2 text-center whitespace-nowrap">
                     Actions
                   </th>
                 </tr>
@@ -507,7 +519,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
                   <tr>
                     <td
                       colSpan={10}
-                      className="text-center py-10 text-xs font-bold text-slate-500 uppercase tracking-widest italic animate-pulse"
+                      className="text-center py-8 text-xs font-bold text-slate-500 uppercase tracking-widest italic animate-pulse"
                     >
                       Retrieving Accounts settlement ledger logs from Supabase ...
                     </td>
@@ -516,7 +528,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
                   <tr>
                     <td
                       colSpan={10}
-                      className="text-center py-10 text-xs font-bold text-slate-400 italic"
+                      className="text-center py-8 text-xs font-bold text-slate-400 italic"
                     >
                       No Settled M.R. Records discovered for {activeScopeLabel}.
                     </td>
@@ -531,38 +543,38 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
                         className="hover:bg-emerald-50/70 text-[11px] font-sans transition-colors duration-150 cursor-pointer select-none"
                         title="Double-click to open in Edit mode"
                       >
-                        <td className="px-3 py-2.5 border-r border-slate-100 font-bold text-rose-700 whitespace-nowrap">
+                        <td className="px-2.5 py-2 border-r border-slate-100 font-bold text-rose-700 whitespace-nowrap">
                           {row.mr_no}
                         </td>
-                        <td className="px-3 py-2.5 border-r border-slate-100 text-slate-600 whitespace-nowrap">
+                        <td className="px-2.5 py-2 border-r border-slate-100 text-slate-600 whitespace-nowrap">
                           {row.sett_date}
                         </td>
-                        <td className="px-3 py-2.5 border-r border-slate-100 font-semibold text-slate-700 whitespace-nowrap">
+                        <td className="px-2.5 py-2 border-r border-slate-100 font-semibold text-slate-700 whitespace-nowrap">
                           {row.po_no}
                         </td>
-                        <td className="px-3 py-2.5 border-r border-slate-100 text-slate-800 uppercase font-bold whitespace-nowrap">
+                        <td className="px-2.5 py-2 border-r border-slate-100 text-slate-800 uppercase font-bold whitespace-nowrap truncate max-w-[220px]">
                           {row.supplier}
                         </td>
-                        <td className="px-3 py-2.5 border-r border-slate-100 text-slate-600 whitespace-nowrap">
+                        <td className="px-2.5 py-2 border-r border-slate-100 text-slate-600 whitespace-nowrap truncate max-w-[180px]">
                           {row.broker}
                         </td>
-                        <td className="px-3 py-2.5 border-r border-slate-100 font-mono text-slate-700 whitespace-nowrap">
-                          {row.lorry_number.toUpperCase()}
+                        <td className="px-2.5 py-2 border-r border-slate-100 font-mono text-slate-700 whitespace-nowrap">
+                          {row.lorry_number ? row.lorry_number.toUpperCase() : ""}
                         </td>
-                        <td className="px-3 py-2.5 border-r border-slate-100 text-right font-mono font-black text-emerald-700 whitespace-nowrap">
+                        <td className="px-2.5 py-2 border-r border-slate-100 text-right font-mono font-black text-emerald-700 whitespace-nowrap">
                           ₹{" "}
                           {Number(row.payable_amt).toLocaleString(undefined, {
                             minimumFractionDigits: 2,
                           })}
                         </td>
-                        <td className="px-3 py-2.5 border-r border-slate-100 font-mono text-slate-500 whitespace-nowrap">
+                        <td className="px-2.5 py-2 border-r border-slate-100 font-mono text-slate-500 whitespace-nowrap">
                           {row.payable_bill_no
                             ? `${row.payable_bill_no} / ${row.payable_bill_date || ""}`
                             : "-"}
                         </td>
-                        <td className="px-3 py-2.5 border-r border-slate-100 text-center whitespace-nowrap">
+                        <td className="px-2 py-2 border-r border-slate-100 text-center whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[8px] font-extrabold uppercase tracking-wide ${
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-extrabold uppercase tracking-wide ${
                               row.payment_status === "Paid"
                                 ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                                 : row.payment_status === "Settled"
@@ -575,12 +587,12 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
                             {row.payment_status || "Pending"}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 text-center">
+                        <td className="px-2 py-2 text-center">
                           <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => onOpenView(row.mr_no)}
                               type="button"
-                              className="bg-emerald-50 hover:bg-emerald-700 hover:text-white border border-emerald-300 text-emerald-700 rounded px-2.5 py-1.5 font-bold text-[9px] uppercase transition-all cursor-pointer flex items-center gap-1"
+                              className="bg-emerald-50 hover:bg-emerald-700 hover:text-white border border-emerald-300 text-emerald-700 rounded px-2 py-1 font-bold text-[9px] uppercase transition-all cursor-pointer flex items-center gap-1"
                               title="View full settlement details & deduction breakdown table"
                             >
                               <Eye className="w-3 h-3" />
@@ -591,7 +603,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
                               <button
                                 onClick={() => onDelete(row.mr_no)}
                                 type="button"
-                                className="bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-300 text-rose-600 rounded px-2.5 py-1.5 font-bold text-[9px] uppercase transition-all cursor-pointer"
+                                className="bg-rose-50 hover:bg-rose-600 hover:text-white border border-rose-300 text-rose-600 rounded px-2 py-1 font-bold text-[9px] uppercase transition-all cursor-pointer"
                                 title="Delete Settlement record"
                               >
                                 Delete
