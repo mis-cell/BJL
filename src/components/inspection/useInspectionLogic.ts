@@ -791,6 +791,7 @@ export function useInspectionLogic() {
           arrival_no: arrNo,
           arrival_date: arrDate,
           po_no: fa.po_no || prev.po_no,
+          mr_date: sanitizeDate(fa.temporary_arrival_date || fa.date) || prev.po_date,
           po_date: sanitizeDate(fa.po_date || fa.date) || prev.po_date,
           supplier_name: fa.supplier || fa.challan_supplier || fa.supplier_name || prev.supplier_name,
           broker_name: fa.broker || fa.broker_name || prev.broker_name,
@@ -1271,8 +1272,8 @@ export function useInspectionLogic() {
 
     setHeaderForm({
       ...record,
-      mr_date: sanitizeDate(record.mr_date || record.date),
-      arrival_date: sanitizeDate(record.arrival_date || record.mr_date || record.date),
+      mr_date: sanitizeDate(record.mr_date || record.date || record.temporary_arrival_date),
+      arrival_date: sanitizeDate(record.arrival_date || record.mr_date || record.date || record.temporary_arrival_date),
       po_date: sanitizeDate(record.po_date),
       actual_moisture: actMoist,
       claim_moisture: clmMoist,
@@ -1443,6 +1444,10 @@ export function useInspectionLogic() {
   const handleSaveForm = async () => {
     if (!headerForm.mr_no) {
       alert("Inspection MR No is required.");
+      return;
+    }
+    if (headerForm.mr_date==='' || headerForm.mr_date===null) {
+      alert("Arrival date is required.");
       return;
     }
 

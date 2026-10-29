@@ -46,7 +46,7 @@ export function FinalArrivalEntryHeader({
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 items-end">
         {/* Temporary M.R No - Searchable Dropdown List */}
         <div className="lg:col-span-1 relative">
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">Temporary M.R No</label>
+          <label className="block text-[11px] font-bold text-slate-700 mb-1">Temporary M.R No <span className="text-rose-600 font-black text-sm">*</span></label>
           <div className="flex items-center gap-1 relative">
             <div className="relative flex-1">
               <input
@@ -65,6 +65,7 @@ export function FinalArrivalEntryHeader({
                     ? "bg-sky-100 border-2 border-sky-400 text-sky-950 font-bold shadow-xs" 
                     : "bg-white border border-slate-300 font-semibold"
                 )}
+                required
               />
               <div
                 className="absolute right-1 top-0 bottom-0 w-5 flex items-center justify-center cursor-pointer text-slate-500 hover:text-slate-800"
@@ -141,11 +142,12 @@ export function FinalArrivalEntryHeader({
 
         {/* Date */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">Temporary Date <span className="text-rose-600 font-black">*</span></label>
+          <label className="block text-[11px] font-bold text-slate-700 mb-1">Temporary Date <span className="text-rose-600 font-black text-sm">*</span></label>
           <input
             type="date"
             value={formData.temporary_arrival_date || ''}
             onChange={(e) => handleInputChange('temporary_arrival_date', e.target.value)}
+            required
             className={cn(
               "w-full h-8 rounded px-2 outline-none text-xs transition-colors",
               formData.temporary_arrival_date 
@@ -157,7 +159,7 @@ export function FinalArrivalEntryHeader({
 
         {/* Arrival No (Fixed MR0 prefix + user number input) */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">Arrival No</label>
+          <label className="block text-[11px] font-bold text-slate-700 mb-1">Arrival No <span className="text-rose-600 font-black text-sm">*</span></label>
           <input
             type="text"
             value={
@@ -189,17 +191,19 @@ export function FinalArrivalEntryHeader({
                 }
               }, 0);
             }}
+            required
             className="w-full h-8 bg-red-50/30 border border-red-500 rounded px-2 outline-none text-xs font-mono font-bold text-red-600 focus:border-red-700"
           />
         </div>
 
         {/* Date */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">Arrival Date</label>
+          <label className="block text-[11px] font-bold text-slate-700 mb-1">Arrival Date <span className="text-rose-600 font-black text-sm">*</span></label>
           <input
             type="date"
             value={formData.date || ''}
             onChange={(e) => handleInputChange('date', e.target.value)}
+            required
             className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs text-slate-800 focus:border-[#D94B5A]"
           />
         </div>
@@ -317,10 +321,11 @@ export function FinalArrivalEntryHeader({
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
         {/* Challan Supplier */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">Challan Supplier</label>
+          <label className="block text-[11px] font-bold text-slate-700 mb-1">Challan Supplier <span className="text-rose-600 font-black text-sm">*</span></label>
           <input
             list="challan-supplier-list"
             type="text"
+            required
             value={formData.challan_supplier || ''}
             onChange={(e) => handleInputChange('challan_supplier', e.target.value.toUpperCase())}
             placeholder="Search / Enter Challan Supplier"
@@ -335,13 +340,14 @@ export function FinalArrivalEntryHeader({
 
         {/* Supplier */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">Supplier</label>
+          <label className="block text-[11px] font-bold text-slate-700 mb-1">Supplier <span className="text-rose-600 font-black text-sm">*</span></label>
           <input
             list="supplier-list"
             type="text"
             value={formData.supplier || ''}
             onChange={(e) => handleInputChange('supplier', e.target.value.toUpperCase())}
             placeholder="Search / Enter Supplier"
+            required
             className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs uppercase focus:border-[#D94B5A]"
           />
           <datalist id="supplier-list">
@@ -353,11 +359,12 @@ export function FinalArrivalEntryHeader({
 
         {/* Broker */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">Broker</label>
+          <label className="block text-[11px] font-bold text-slate-700 mb-1">Broker <span className="text-rose-600 font-black text-sm">*</span></label>
           <input
             list="broker-list"
             type="text"
             value={formData.broker || ''}
+            required
             onChange={(e) => handleInputChange('broker', e.target.value.toUpperCase())}
             placeholder="Search / Enter Broker"
             className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs uppercase focus:border-[#D94B5A]"
@@ -410,9 +417,10 @@ export function FinalArrivalEntryHeader({
 
         {/* Lorry Number */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">Lorry Number</label>
+          <label className="block text-[11px] font-bold text-slate-700 mb-1">Lorry Number <span className="text-rose-600 font-black text-sm">*</span></label>
           <input
             type="text"
+            required
             value={formData.lorry_number.toUpperCase() || ''}
             onChange={(e) => handleInputChange('lorry_number', e.target.value.toUpperCase())}
             placeholder="WB-XX-XXXX"
@@ -515,8 +523,9 @@ export function FinalArrivalEntryHeader({
 
         {/* Area */}
         <div className="lg:col-span-2">
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">Area</label>
+          <label className="block text-[11px] font-bold text-slate-700 mb-1">Area <span className="text-rose-600 font-black text-sm">*</span></label>
           <input
+          required
             list="area-list"
             type="text"
             value={formData.arrival_area_name || formData.area || ''}
@@ -533,8 +542,9 @@ export function FinalArrivalEntryHeader({
 
         {/* Unit */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">Unit</label>
+          <label className="block text-[11px] font-bold text-slate-700 mb-1">Unit <span className="text-rose-600 font-black text-sm">*</span></label>
           <select
+          required
             value={formData.unit_name || 'BALES'}
             onChange={(e) => handleInputChange('unit_name', e.target.value)}
             className="w-full h-8 bg-white border border-slate-300 rounded px-2 outline-none text-xs font-bold uppercase focus:border-[#D94B5A]"

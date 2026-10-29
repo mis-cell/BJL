@@ -1276,11 +1276,51 @@ export function useFinalArrivalEntryLogic({ initialData, onSave }: UseFinalArriv
     if (initialData && !enforceEditOrDeletePermission("Edit")) {
       return;
     }
+    if(formData.temporary_arrival_no==='' || formData.temporary_arrival_no===null){
+        alert("Please Select Temporary Arrival No.");
+      return
+    }
     const cleanArrivalNo = String(formData.arrival_no || '').trim().replace(/^MR0?/i, '').trim();
     if (!formData.arrival_no || !cleanArrivalNo) {
       alert("Arrival No. is mandatory.");
       return;
     }
+    if (formData.date==='' || formData.date===null) {
+      alert("Please Enter The  Arrival Date.");
+      return;
+    }
+    for (let i = 0; i < details.length; i++) {
+      const row12 = details[i];
+      if (!row12.receipt_grade_name || !String(row12.receipt_grade_name).trim() ) {
+        alert(`Row ${i + 1}: Receipt Grade Name is required.`);
+        return;
+      }
+      if (!row12.crop_year || !String(row12.crop_year || "").trim()) {
+        alert(`Row ${i + 1}: Crop Year is required.`);
+        return;
+      }
+      if (!row12.agency_name || !String(row12.agency_name || "").trim()) {
+        alert(`Row ${i + 1}: Agency Name is required.`);
+        return;
+      }
+      if (!row12.netto_pnto || !String(row12.netto_pnto || "").trim()) {
+        alert(`Row ${i + 1}: Net WT is required.`);
+        return;
+      }
+    }
+    /* if(formData.challan_material_weight==='' || formData.challan_material_weight===null || Number(formData.supplier_net_weight) <= 0){
+       alert('Please Enter The Challan Net Weight.');
+      return
+    }
+    if(formData.supplier_net_weight==='' || formData.supplier_net_weight===null || Number(formData.supplier_net_weight) <= 0){
+       alert('Please Enter The Mill Net Weight.');
+      return
+    }
+    if (formData.electronic_net_weight === "" || formData.electronic_net_weight == null || Number(formData.electronic_net_weight) <= 0 ) {
+      alert("Please Enter The Electronic Net Weight.");
+      return;
+    } */
+    
 
     setLoading(true);
     try {

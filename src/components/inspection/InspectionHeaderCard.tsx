@@ -211,21 +211,23 @@ export const InspectionHeaderCard: React.FC<InspectionHeaderCardProps> = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-5">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-extrabold text-slate-700">Arrival No.</label>
+          <label className="text-xs font-extrabold text-slate-700">Arrival No. <span className="text-rose-600 font-black text-sm">*</span></label>
           <input
             type="text"
             value={headerForm.mr_no || ""}
             onChange={(e) => onHeaderChange("mr_no", e.target.value)}
+            required
             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono font-bold bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-extrabold text-slate-700">Arrival Date</label>
+          <label className="text-xs font-extrabold text-slate-700">Arrival Date <span className="text-rose-600 font-black text-sm">*</span></label>
           <input
             type="date"
             value={headerForm.mr_date || ""}
             onChange={(e) => onHeaderChange("mr_date", e.target.value)}
+            required
             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
           />
         </div>
@@ -252,21 +254,23 @@ export const InspectionHeaderCard: React.FC<InspectionHeaderCardProps> = ({
         </div>
 
         <div className="flex flex-col gap-1 sm:col-span-2 md:col-span-4">
-          <label className="text-xs font-extrabold text-slate-700">Broker Name</label>
+          <label className="text-xs font-extrabold text-slate-700">Broker Name <span className="text-rose-600 font-black text-sm">*</span></label>
           <input
             type="text"
             value={headerForm.broker_name || ""}
             onChange={(e) => onHeaderChange("broker_name", e.target.value)}
+            required
             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
           />
         </div>
 
         <div className="flex flex-col gap-1 sm:col-span-2 md:col-span-4">
-          <label className="text-xs font-extrabold text-slate-700">Supplier Name</label>
+          <label className="text-xs font-extrabold text-slate-700">Supplier Name <span className="text-rose-600 font-black text-sm">*</span></label>
           <input
             type="text"
             value={headerForm.supplier_name || ""}
             onChange={(e) => onHeaderChange("supplier_name", e.target.value)}
+            required
             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold bg-white text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
           />
         </div>
@@ -390,11 +394,12 @@ export const InspectionHeaderCard: React.FC<InspectionHeaderCardProps> = ({
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-extrabold text-slate-700">Lorry Number</label>
+          <label className="text-xs font-extrabold text-slate-700">Lorry Number <span className="text-rose-600 font-black text-sm">*</span></label>
           <input
             type="text"
             value={headerForm.lorry_number.toUpperCase() || ""}
             onChange={(e) => onHeaderChange("lorry_number", e.target.value.toUpperCase())}
+            required
             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono font-bold bg-white text-slate-900 focus:outline-none"
           />
         </div>
