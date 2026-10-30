@@ -473,7 +473,7 @@ export function useMaterialInspectionLogic(onLogEvent?: (event: string, details:
           withTimeout(Promise.resolve(supabase.from("area_master").select("area_name").order("area_name").limit(150))),
           withTimeout(Promise.resolve(supabase.from("agency_master").select("agency_name").order("agency_name").limit(150))),
           withTimeout(Promise.resolve(supabase.from("marka_master").select("marka_name").order("marka_name").limit(150))),
-          withTimeout(Promise.resolve(supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }).limit(250))),
+          withTimeout(Promise.resolve(supabase.from("material_inspection").select("*").order("created_at", { ascending: false }).limit(1000))),
           withTimeout(Promise.resolve(supabase.from("unit_master").select("unit_name").order("unit_name").limit(150))),
           withTimeout(Promise.resolve(supabase.from("moisture_logic").select("*"))),
           withTimeout(Promise.resolve(supabase.from("deduction_master").select("*"))).then((r: any) => r?.data || [], () => []),

@@ -376,7 +376,7 @@ export function useInspectionLogic() {
 
       if (supabase) {
         try {
-          const withTimeout = (promise: Promise<any>, ms: number = 4000) => {
+          const withTimeout = (promise: Promise<any>, ms: number = 20000) => {
             return Promise.race([
               promise,
               new Promise(resolve => setTimeout(() => resolve({ data: null, error: 'timeout' }), ms))
@@ -387,21 +387,26 @@ export function useInspectionLogic() {
           const faCols = "*";
 
           const queries: Promise<any>[] = [
-            withTimeout(Promise.resolve(supabase.from("material_inspection").select(miCols).order("created_at", { ascending: false }))),
-            withTimeout(Promise.resolve(supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false }))).catch(() => ({ data: null })),
-            withTimeout(Promise.resolve(supabase.from("final_arrival").select(faCols).order("created_at", { ascending: false }))),
-            withTimeout(Promise.resolve(supabase.from("temporary_material_received").select("*").order("created_at", { ascending: false }))).catch(() => ({ data: null })),
-            withTimeout(Promise.resolve(supabase.from("material_inspection_deductions").select("*").order("created_at", { ascending: true }))).catch(() => ({ data: null })),
-            withTimeout(Promise.resolve(supabase.from("mill_inspection_deduction").select("*").order("created_at", { ascending: true }))).catch(() => ({ data: null }))
+            withTimeout(Promise.resolve(supabase.from("material_inspection").select(miCols).order("created_at", { ascending: false })), 20000),
+            withTimeout(Promise.resolve(supabase.from("mill_inspection_master").select("*").order("created_at", { ascending: false })), 20000).catch(() => ({ data: null })),
+            withTimeout(Promise.resolve(supabase.from("final_arrival").select(faCols).order("created_at", { ascending: false })), 20000),
+            withTimeout(Promise.resolve(supabase.from("temporary_material_received").select("*").order("created_at", { ascending: false })), 20000).catch(() => ({ data: null })),
+            withTimeout(Promise.resolve(supabase.from("material_inspection_deductions").select("*").order("created_at", { ascending: true })), 20000).catch(() => ({ data: null })),
+            withTimeout(Promise.resolve(supabase.from("mill_inspection_deduction").select("*").order("created_at", { ascending: true })), 20000).catch(() => ({ data: null }))
           ];
 
-            queries.push(withTimeout(Promise.resolve(supabase.from("deduction_master").select("*").order("deduction", { ascending: true }))).catch(() => ({ data: null })));
-            queries.push(withTimeout(Promise.resolve(supabase.from("moisture_logic").select("*"))).catch(() => ({ data: null })));
+            queries.push(withTimeout(Promise.resolve(supabase.from("deduction_master").select("*").order("deduction", { ascending: true })), 20000).catch(() => ({ data: null })));
+            queries.push(withTimeout(Promise.resolve(supabase.from("moisture_logic").select("*")), 20000).catch(() => ({ data: null })));
 
           const [miRes, mimRes, faRes, tmrRes, dedPrimaryRes, dedFallbackRes, dMasterRes, moistRes] = await Promise.all(queries);
 
-          if (miRes.data && Array.isArray(miRes.data)) {
+          if (miRes.data && Array.isArray(miRes.data) && miRes.data.length > 0) {
             inspectionList = [...miRes.data];
+          } else if (supabase) {
+            const directMi = await supabase.from("material_inspection").select("*").order("created_at", { ascending: false });
+            if (directMi.data && Array.isArray(directMi.data)) {
+              inspectionList = [...directMi.data];
+            }
           }
           if (mimRes?.data && Array.isArray(mimRes.data)) {
             const existingKeys = new Set(inspectionList.map(r => (r.mr_no || r.arrival_no || "").trim().toUpperCase()).filter(Boolean));
