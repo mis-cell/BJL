@@ -1124,10 +1124,10 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         alert(`Row ${i + 1}: Receipt Grade Name is required.`);
         return;
       }
-      if (!row12.crop_year || !String(row12.crop_year || "").trim()) {
+      /* if (!row12.crop_year || !String(row12.crop_year || "").trim()) {
         alert(`Row ${i + 1}: Crop Year is required.`);
         return;
-      }
+      } */
       if (!row12.agency_name || !String(row12.agency_name || "").trim()) {
         alert(`Row ${i + 1}: Agency Name is required.`);
         return;
