@@ -77,39 +77,8 @@ function lazyWithRetry<T extends React.ComponentType<any>>(
   });
 }
 
-// Lazy-loaded page components for fast initial load & code-splitting
-const TemporaryArrival = lazyWithRetry(() => import("./pages/TemporaryArrival"));
-const AmadRegister = lazyWithRetry(() => import("./pages/AmadRegister"));
-const SaudaEntry = lazyWithRetry(() => import("./pages/SaudaEntry"));
-const BardanaVouchers = lazyWithRetry(() => import("./pages/BardanaVouchers"));
-const DirectoryView = lazyWithRetry(() => import("./pages/DirectoryView"));
-const Reports = lazyWithRetry(() => import("./pages/Reports"));
-const Dashboard = lazyWithRetry(() => import("./pages/Dashboard"));
-const StockSummary = lazyWithRetry(() => import("./pages/StockSummary"));
-const ConfigGuide = lazyWithRetry(() => import("./pages/ConfigGuide"));
-const SaudaRegister = lazyWithRetry(() => import("./pages/SaudaRegister"));
-const SmsSaudaDesk = lazyWithRetry(() => import("./pages/SmsSaudaDesk"));
-const SattaRegister = lazyWithRetry(() => import("./pages/SattaRegister"));
-const SattaEntry = lazyWithRetry(() => import("./pages/SattaEntry"));
-const SattaChart = lazyWithRetry(() => import("./pages/SattaChart"));
-const PurchaseOrder = lazyWithRetry(() => import("./pages/PurchaseOrder"));
-const MaterialIssue = lazyWithRetry(() => import("./pages/MaterialIssue"));
-const AdminDesk = lazyWithRetry(() => import("./pages/AdminDesk"));
-const AIPortal = lazyWithRetry(() => import("./pages/AIPortal"));
-const MaterialInspection = lazyWithRetry(() => import("./pages/MaterialInspection"));
-const ReturnLorry = lazyWithRetry(() => import("./pages/ReturnLorry"));
-const Inspection = lazyWithRetry(() => import("./pages/Inspection"));
-const WeightBridge = lazyWithRetry(() => import("./pages/WeightBridge"));
-const MrSettlement = lazyWithRetry(() => import("./pages/MrSettlement"));
-const ClosingStockEntry = lazyWithRetry(() => import("./pages/ClosingStockEntry"));
-const MismatchCase = lazyWithRetry(() => import("./pages/MismatchCase"));
-const ClubPOMR = lazyWithRetry(() => import("./pages/ClubPOMR"));
-const FinalArrival = lazyWithRetry(() => import("./pages/FinalArrival"));
-const RequisitionDesk = lazyWithRetry(() => import("./pages/RequisitionDesk"));
-const PaymentModule = lazyWithRetry(() => import("./pages/PaymentModule"));
-const TredeReport = lazyWithRetry(() => import("./pages/TredeReport"));
-const LorryDispatchSystem = lazyWithRetry(() => import("./pages/LorryDispatchSystem"));
-const SystemChangeLogPage = lazyWithRetry(() => import("./pages/SystemChangeLogPage"));
+import { AppPageRouter } from "./components/layout/AppPageRouter";
+import { AppWorkflowFooter } from "./components/layout/AppWorkflowFooter";
 import LegacyLayout, { LegacyButton } from "./components/LegacyLayout";
 import { setCurrentUserContext, getCurrentUserContext, hasModulePermission, getFirstAllowedPage, ALL_SYSTEM_MODULES, subscribeToPermissions, normalizeAllowedModules, getCanonicalModuleId } from "./lib/permissions";
 
@@ -1089,422 +1058,42 @@ export default function App() {
                   </div>
                 </LegacyLayout>
               ) : (
-                (() => {
-                  const meta = getPageMeta(currentPage);
-                  const title = meta?.title || currentPage;
-
-                  let content: React.ReactNode = null;
-
-                  switch (currentPage) {
-                    case "dashboard":
-                      content = (
-                        <Dashboard
-                          isActive={currentPage === "dashboard"}
-                          onNavigate={globalNavigate}
-                          isAdmin={isAdmin}
-                          allowedModules={allowedModules}
-                          currentTab={dashboardTab}
-                          setCurrentTab={setDashboardTab}
-                        />
-                      );
-                      break;
-                    case "main_gate":
-                      content = (
-                        <LorryDispatchSystem
-                          onNavigate={(page) => globalNavigate(page as Page)}
-                        />
-                      );
-                      break;
-                    case "amad":
-                      content = (
-                        <AmadRegister
-                          onClose={() => closePage("amad", "dashboard")}
-                          onNew={() => globalNavigate("amad_entry")}
-                          onNavigate={(page) => globalNavigate(page as Page)}
-                          onCreateFinalMr={(amad) => {
-                            setSelectedAmadForFinalMr(amad);
-                            globalNavigate("final_arrival");
-                          }}
-                        />
-                      );
-                      break;
-                    case "amad_entry":
-                      content = (
-                        <TemporaryArrival
-                          onCancel={() => closePage("amad_entry", "amad")}
-                          onSave={() => closePage("amad_entry", "amad")}
-                        />
-                      );
-                      break;
-                    case "sms_sauda":
-                      content = (
-                        <SmsSaudaDesk
-                          onClose={() => closePage("sms_sauda", "dashboard")}
-                          onNavigate={(page) => globalNavigate(page as Page)}
-                        />
-                      );
-                      break;
-                    case "sauda":
-                      content = (
-                        <SaudaRegister
-                          isActive={currentPage === "sauda"}
-                          onClose={() => closePage("sauda", "dashboard")}
-                          onNew={() => globalNavigate("sauda_entry")}
-                        />
-                      );
-                      break;
-                    case "sauda_entry":
-                      content = (
-                        <SaudaEntry
-                          onCancel={() => closePage("sauda_entry", "sauda")}
-                          onSave={() => closePage("sauda_entry", "sauda")}
-                          onNavigate={(page) => globalNavigate(page as Page)}
-                        />
-                      );
-                      break;
-                    case "satta":
-                      content = (
-                        <SattaChart onClose={() => closePage("satta", "dashboard")} />
-                      );
-                      break;
-                    case "satta_entry":
-                      content = (
-                        <SattaEntry
-                          onCancel={() => closePage("satta_entry", "satta")}
-                          onSave={() => closePage("satta_entry", "satta")}
-                        />
-                      );
-                      break;
-                    case "satta_chart":
-                      content = (
-                        <SattaChart
-                          onNavigate={(p) => globalNavigate(p as Page)}
-                          onClose={() => closePage("satta_chart", "dashboard")}
-                        />
-                      );
-                      break;
-                    case "po":
-                      content = (
-                        <PurchaseOrder
-                          onClose={() => closePage("po", "dashboard")}
-                          selectedYear={selectedYear}
-                          isTempPo={true}
-                        />
-                      );
-                      break;
-                    case "final_po":
-                      content = (
-                        <PurchaseOrder
-                          onClose={() => closePage("final_po", "dashboard")}
-                          selectedYear={selectedYear}
-                          isTempPo={false}
-                        />
-                      );
-                      break;
-                    case "issue":
-                      content = (
-                        <MaterialIssue
-                          onCancel={() => closePage("issue", "dashboard")}
-                          onSave={() => closePage("issue", "dashboard")}
-                          setCurrentPage={globalNavigate}
-                          closePage={closePage}
-                        />
-                      );
-                      break;
-                    case "bardana":
-                      content = (
-                        <BardanaVouchers
-                          onClose={() => closePage("bardana", "dashboard")}
-                        />
-                      );
-                      break;
-                    case "vyapari":
-                    case "trade" as any:
-                      content = (
-                        <DirectoryView
-                          title="Trade (Traders Directory)"
-                          type="vyapari"
-                          onClose={() => closePage("vyapari", "dashboard")}
-                        />
-                      );
-                      break;
-                    case "reports":
-                      content = (
-                        <Reports onClose={() => closePage("reports", "dashboard")} />
-                      );
-                      break;
-                    case "treds":
-                    case "trades" as any:
-                    case "trede" as any:
-                      content = (
-                        <TredeReport onClose={() => closePage(currentPage, "dashboard")} />
-                      );
-                      break;
-                    case "payment":
-                      content = (
-                        <PaymentModule onClose={() => closePage("payment", "dashboard")} />
-                      );
-                      break;
-                    case "stock":
-                      content = (
-                        <StockSummary
-                          onClose={() => closePage("stock", "dashboard")}
-                        />
-                      );
-                      break;
-                    case "settings":
-                      content = (
-                        <ConfigGuide
-                          onClose={() => closePage("settings", "dashboard")}
-                        />
-                      );
-                      break;
-                    case "system_change_logs":
-                    case "system_change_log" as any:
-                    case "change_log" as any:
-                      content = (
-                        <SystemChangeLogPage
-                          onClose={() => closePage(currentPage, "dashboard")}
-                          onNavigate={(p) => globalNavigate(p as Page)}
-                        />
-                      );
-                      break;
-                    case "admindesk":
-                      content = (
-                        <AdminDesk
-                          onClose={() => closePage("admindesk", "dashboard")}
-                          onLogin={() => setIsAdmin(true)}
-                          isAdmin={isAdmin}
-                          systemLogs={systemLogs}
-                          onClearLogs={() => setSystemLogs([])}
-                          onNavigate={(page) => globalNavigate(page)}
-                        />
-                      );
-                      break;
-                    case "ai_assistant":
-                      content = (
-                        <AIPortal
-                          onClose={() => closePage("ai_assistant", "dashboard")}
-                        />
-                      );
-                      break;
-                    case "material_inspection":
-                      content = (
-                        <MaterialInspection
-                          onClose={() => closePage("material_inspection", "dashboard")}
-                          onLogEvent={logEvent}
-                        />
-                      );
-                      break;
-                    case "return_lorry":
-                      content = (
-                        <ReturnLorry
-                          onClose={() => closePage("return_lorry", "dashboard")}
-                          onLogEvent={logEvent}
-                        />
-                      );
-                      break;
-                    case "inspection":
-                      content = (
-                        <Inspection
-                          onNavigate={(page) => globalNavigate(page as Page)}
-                        />
-                      );
-                      break;
-                    case "mr_settlement":
-                      content = (
-                        <MrSettlement
-                          onClose={() => closePage("mr_settlement", "dashboard")}
-                          onLogEvent={logEvent}
-                        />
-                      );
-                      break;
-                    case "closing_stock":
-                    case 'closing_stock_entry':
-                      content = (
-                        <ClosingStockEntry
-                          onClose={() => closePage("closing_stock", "dashboard")}
-                        />
-                      );
-                      break;
-                    case "mismatch":
-                      content = (
-                        <MismatchCase
-                          variant="satta"
-                          onClose={() => closePage("mismatch", "dashboard")}
-                        />
-                      );
-                      break;
-                    case "material_mismatch":
-                      content = (
-                        <MismatchCase
-                          variant="material"
-                          onClose={() => closePage("material_mismatch", "dashboard")}
-                        />
-                      );
-                      break;
-                    case "club_po_mr":
-                      content = (
-                        <ClubPOMR
-                          onClose={() => closePage("club_po_mr", "dashboard")}
-                        />
-                      );
-                      break;
-                    case "final_arrival":
-                      content = (
-                        <FinalArrival
-                          initialData={selectedAmadForFinalMr}
-                          onClose={() => {
-                            setSelectedAmadForFinalMr(null);
-                            closePage("final_arrival", "dashboard");
-                          }}
-                        />
-                      );
-                      break;
-                    case "requisition_desk":
-                      content = (
-                        <RequisitionDesk
-                          onClose={() => closePage("requisition_desk", "dashboard")}
-                        />
-                      );
-                      break;
-                    case "weight_bridge":
-                      content = (
-                        <WeightBridge
-                          currentUser={getCurrentUserContext()}
-                          allowedModules={allowedModules}
-                          onNavigate={(page) => globalNavigate(page as Page)}
-                        />
-                      );
-                      break;
-                    default:
-                      content = (
-                        <div className="flex-1 flex items-center justify-center p-8 text-slate-500">
-                          <span className="text-xs uppercase font-bold tracking-wider">Module [{currentPage}] Not Found</span>
-                        </div>
-                      );
-                  }
-
-                  return (
-                    <ScreenErrorBoundary key={currentPage} moduleName={title}>
-                      <React.Suspense fallback={<PageLoadingFallback moduleName={title} />}>
-                        <div className="flex-1 flex flex-col h-full w-full min-h-0 overflow-auto">
-                          {content}
-                        </div>
-                      </React.Suspense>
-                    </ScreenErrorBoundary>
-                  );
-                })()
+                <AppPageRouter
+                  currentPage={currentPage}
+                  isAdmin={isAdmin}
+                  allowedModules={allowedModules}
+                  globalNavigate={globalNavigate}
+                  closePage={closePage}
+                  dashboardTab={dashboardTab}
+                  setDashboardTab={setDashboardTab}
+                  selectedAmadForFinalMr={selectedAmadForFinalMr}
+                  setSelectedAmadForFinalMr={setSelectedAmadForFinalMr}
+                  selectedYear={selectedYear}
+                  systemLogs={systemLogs}
+                  setSystemLogs={setSystemLogs}
+                  logEvent={logEvent}
+                  setIsAdmin={setIsAdmin}
+                  currentUserContext={currentUserContext}
+                />
               )}
             </div>
           </div>
         </div>
 
         {/* Single Unified Rose Footer */}
-        <div className="bg-[#F7AFA8] border-t-2 border-[#FBCFCB] px-3 py-1.5 flex justify-between items-center text-white shrink-0 shadow-2xl z-40 gap-3 w-full min-w-0">
-          {/* Left Section: Online status & JCI Arrow-Wise Workflow Guide */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none flex-1 min-w-0">
-            {/* System Online Status Badge */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#D94B5A] rounded-md border border-[#FBCFCB] text-[#FDE7E6] shrink-0">
-              <div className={cn("w-2 h-2 rounded-full animate-pulse", isOnline ? "bg-emerald-300 shadow-xs" : "bg-yellow-300")} />
-              <span className={cn("uppercase tracking-wider font-mono font-bold text-[10px]", isOnline ? "text-emerald-200" : "text-amber-200")}>
-                {isOnline ? 'SYSTEM ONLINE' : 'OFFLINE'}
-              </span>
-            </div>
-
-            <div className="h-5 w-px bg-[#FBCFCB]/50 shrink-0" />
-
-            {/* JCI Software Process Workflow Arrow Guide */}
-            <div className="flex items-center gap-1.5 shrink-0 bg-[#D94B5A] px-2 py-0.5 rounded-lg border border-[#FBCFCB]/80 shadow-inner">
-              {/* Sequential Arrow-Wise Steps */}
-              <div className="flex items-center gap-1 shrink-0">
-                {(() => {
-                  const permittedWorkflowSteps = JCI_WORKFLOW_STEPS.filter((step) =>
-                    hasModulePermission(step.pageId, allowedModules, isAdmin) ||
-                    step.matchPages.some((p) => hasModulePermission(p, allowedModules, isAdmin))
-                  );
-
-                  if (permittedWorkflowSteps.length === 0) return null;
-
-                  const activeStepIdx = permittedWorkflowSteps.findIndex((step) =>
-                    step.matchPages.includes(currentPage)
-                  );
-
-                  return permittedWorkflowSteps.map((step, idx) => {
-                    const isCurrent = step.matchPages.includes(currentPage);
-                    const isPast = activeStepIdx !== -1 && idx < activeStepIdx;
-                    const IconComp = step.icon;
-
-                    return (
-                      <React.Fragment key={step.stepNumber}>
-                        <button
-                          type="button"
-                          onClick={() => globalNavigate(step.pageId)}
-                          title={`Step ${step.stepNumber}: ${step.title} — ${step.desc} (Click to Navigate)`}
-                          className={cn(
-                            "group/step flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-all duration-150 cursor-pointer shrink-0 border select-none",
-                            isCurrent
-                              ? "bg-[#FBCFCB] border-[#FDE7E6] text-white font-black shadow-md ring-2 ring-[#FBCFCB]/60 scale-[1.02]"
-                              : isPast
-                              ? "bg-[#E85A5A] border-[#F48F8B] text-[#FDE7E6] hover:bg-[#C23A4A] hover:text-white font-bold"
-                              : "bg-[#D94B5A] border-[#F7AFA8] text-[#FBCFCB] hover:bg-[#E85A5A] hover:text-white font-medium"
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-mono font-black shrink-0",
-                              isCurrent
-                                ? "bg-white text-[#D94B5A]"
-                                : isPast
-                                ? "bg-[#FBCFCB] text-white"
-                                : "bg-[#F7AFA8] text-[#FDE7E6] border border-[#F48F8B]"
-                            )}
-                          >
-                            {step.stepNumber}
-                          </span>
-                          <IconComp
-                            className={cn(
-                              "w-3 h-3 shrink-0",
-                              isCurrent ? "text-white" : isPast ? "text-[#FDE7E6]" : "text-[#FBCFCB]"
-                            )}
-                          />
-                          <span className="text-[11px] whitespace-nowrap tracking-tight font-bold">
-                            {step.title}
-                          </span>
-                        </button>
-
-                        {/* Arrow separator */}
-                        {idx < permittedWorkflowSteps.length - 1 && (
-                          <div className="flex items-center text-[#FDE7E6] px-0.5 shrink-0">
-                            <span className="text-[12px] font-black text-[#FDE7E6]">➔</span>
-                          </div>
-                        )}
-                      </React.Fragment>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Section: Logout */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Logout Button */}
-            <button
-              onClick={() => {
-                setIsLoggedIn(false);
-                clearAuthSessionSelective();
-                setCurrentUserContext({ username: 'Operator', userRole: 'L1', userLevel: 'L1', allowedModules: [] });
-                setCurrentPage("dashboard");
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1 bg-[#D94B5A] hover:bg-[#D94B5A] rounded-md border border-[#FBCFCB] text-[#FDE7E6] hover:text-white transition-colors text-[10px] font-extrabold uppercase tracking-wider shrink-0 cursor-pointer"
-              title="Logout System"
-            >
-              <Power className="h-3.5 w-3.5 text-[#FBCFCB]" />
-              <span className="hidden xs:inline">LOGOUT</span>
-            </button>
-          </div>
-        </div>
+        <AppWorkflowFooter
+          isOnline={isOnline}
+          allowedModules={allowedModules}
+          isAdmin={isAdmin}
+          currentPage={currentPage}
+          globalNavigate={globalNavigate}
+          onLogout={() => {
+            setIsLoggedIn(false);
+            clearAuthSessionSelective();
+            setCurrentUserContext({ username: 'Operator', userRole: 'L1', userLevel: 'L1', allowedModules: [] });
+            setCurrentPage("dashboard");
+          }}
+        />
       </div>
 
       {/* Global Quick-Command Navigator Modal (Ctrl+K Launcher Overlay) */}
