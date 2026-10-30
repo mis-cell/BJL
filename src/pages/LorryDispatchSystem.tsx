@@ -61,134 +61,34 @@ import DepartmentDashboardSection from "../components/DepartmentDashboardSection
 import { MASTER_BROKERS, MASTER_QUALITIES, MASTER_MOKAMS, MASTER_MARKAS } from "../data/masterData";
 
 // ==========================================
-// TYPES & INTERFACES
+// TYPES & INTERFACES (MODULARIZED)
 // ==========================================
+import {
+  UserRole,
+  DepartmentType,
+  LorryStatus,
+  LorryRecord,
+  AppAlert,
+  SystemSettings,
+  MasterOptions,
+  SystemUser,
+  AuditLog
+} from "../types/lorryDispatch.types";
+import { WeighmentOperatorCard } from "../components/lorry-dispatch/WeighmentOperatorCard";
+import { MasterListEditor } from "../components/lorry-dispatch/MasterListEditor";
+import { LorryReceiptModal } from "../components/lorry-dispatch/LorryReceiptModal";
 
-export type UserRole =
-  | "SUPER_ADMIN"
-  | "MAIN_GATE"
-  | "MILL_WEIGHTMENT"
-  | "ELECTRIC_WEIGHTMENT"
-  | "STORE_DEPT";
-
-export type DepartmentType = "Jute" | "Store" | "Finish Good" | "Other";
-
-export type LorryStatus =
-  | "GATE_ENTRY"
-  | "WAITING_FOR_MILL_GROSS"
-  | "ELECTRIC_GROSS_PENDING"
-  | "WAITING_FOR_UNLOADING"
-  | "MILL_TARE_PENDING"
-  | "ELECTRIC_TARE_PENDING"
-  | "STORE_PENDING"
-  | "FINISH_GOOD_PENDING"
-  | "OTHER_PENDING"
-  | "READY_FOR_GATE_EXIT"
-  | "COMPLETED";
-
-export interface LorryRecord {
-  id: string;
-  gatePassNo: string;
-  lorryNo: string;
-  driverPhone: string;
-  department: DepartmentType;
-  broker: string;
-  quality: string;
-  mokam: string;
-  marka: string;
-  status: LorryStatus;
-  
-  // Timestamps & Dates
-  inTime: string;
-  outTime?: string;
-  entryDate?: string;
-  outDate?: string;
-  chalanNo?: string;
-  partyName?: string;
-  description?: string;
-  quantity?: number;
-  unit?: string;
-  gateGrossWeight?: number;
-  gateTareWeight?: number;
-  gateNetWeight?: number;
-  outRemarks?: string;
-  grade?: string;
-  currentStage?: string;
-
-  // Weights (in KG)
-  millGrossWeight?: number;
-  millGrossTime?: string;
-  
-  electricGrossWeight?: number;
-  electricGrossTime?: string;
-  
-  millTareWeight?: number;
-  millTareTime?: string;
-  
-  electricTareWeight?: number;
-  electricTareTime?: string;
-
-  // Computed Net Weights
-  millNetWeight?: number;
-  electricNetWeight?: number;
-  finalNetWeight?: number;
-  
-  // Approval metadata
-  deptApprovedBy?: string;
-  deptApprovedTime?: string;
-  remarks?: string;
-  
-  // GPS tag at entry
-  entryGpsLocation?: { lat: number; lng: number; distanceMeters: number };
-}
-
-export interface AppAlert {
-  id: string;
-  timestamp: string;
-  title: string;
-  message: string;
-  targetRole: UserRole | "ALL";
-  lorryNo?: string;
-  gatePassNo?: string;
-  read: boolean;
-  type: "info" | "success" | "warning" | "alert";
-}
-
-export interface SystemSettings {
-  millZeroOffsetKg: number;
-  electricZeroOffsetKg: number;
-  inactivityTimeoutMinutes: number;
-  geofenceRadiusMeters: number;
-  millLat: number;
-  millLng: number;
-  enforceGeofence: boolean;
-  allowScreenCapture: boolean;
-}
-
-export interface MasterOptions {
-  brokers: string[];
-  qualities: string[];
-  mokams: string[];
-  markas: string[];
-}
-
-export interface SystemUser {
-  id: string;
-  username: string;
-  name: string;
-  role: UserRole;
-  active: boolean;
-  lastActive: string;
-}
-
-export interface AuditLog {
-  id: string;
-  timestamp: string;
-  username: string;
-  role: UserRole;
-  action: string;
-  details: string;
-}
+export type {
+  UserRole,
+  DepartmentType,
+  LorryStatus,
+  LorryRecord,
+  AppAlert,
+  SystemSettings,
+  MasterOptions,
+  SystemUser,
+  AuditLog
+};
 
 // ==========================================
 // DEFAULT MASTER & INITIAL DATA
@@ -1969,61 +1869,12 @@ export default function LorryDispatchSystem({
         </div>
       )}
 
-      {/* ==========================================
-          6. 3-INCH RECEIPT MODAL & PRINT PREVIEW
-         ========================================== */}
-      {isReceiptModalOpen && selectedLorryForReceipt && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-[#FDE7E6] border border-[#FBCFCB] w-full max-w-sm p-5 rounded-2xl shadow-2xl space-y-4 text-[#D94B5A]">
-            <div className="flex items-center justify-between border-b border-[#FBCFCB] pb-3">
-              <h3 className="text-xs font-black text-[#D94B5A] uppercase tracking-wider font-mono">
-                3-Inch Thermal Receipt Preview
-              </h3>
-              <button onClick={() => setIsReceiptModalOpen(false)} className="text-[#D94B5A] hover:text-[#D94B5A]">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Printed Ticket Card */}
-            <div className="bg-[#FDE7E6] text-[#D94B5A] p-4 rounded-xl text-xs font-mono space-y-2 border border-[#FBCFCB] shadow-xs">
-              <div className="text-center border-b border-[#FBCFCB] pb-2">
-                <p className="font-black text-sm uppercase">BALLY JUTE COMPANY LIMITED</p>
-                <p className="text-[9px] text-[#D94B5A]">Lorry Weighment & Dispatch Slip</p>
-              </div>
-
-              <div className="space-y-1 text-[11px]">
-                <p><strong>GATE PASS:</strong> {selectedLorryForReceipt.gatePassNo}</p>
-                <p><strong>LORRY NO:</strong> {selectedLorryForReceipt.lorryNo}</p>
-                <p><strong>Date/In-Time:</strong> {selectedLorryForReceipt.entryDate || ""} {selectedLorryForReceipt.inTime || "N/A"}</p>
-                <p><strong>Date/Out-Time:</strong> {selectedLorryForReceipt.outDate || ""} {selectedLorryForReceipt.outTime || "Active"}</p>
-                <p><strong>Driver Phone:</strong> {selectedLorryForReceipt.driverPhone || "N/A"}</p>
-                <p><strong>Department:</strong> {selectedLorryForReceipt.department}</p>
-                <p><strong>Broker:</strong> {selectedLorryForReceipt.broker || "N/A"}</p>
-                <p><strong>Quality:</strong> {selectedLorryForReceipt.quality || selectedLorryForReceipt.description || "N/A"}</p>
-                <p><strong>Mokam:</strong> {selectedLorryForReceipt.mokam || "N/A"} | <strong>Marka:</strong> {selectedLorryForReceipt.marka || "N/A"}</p>
-              </div>
-
-              <div className="border-t border-[#FBCFCB] pt-2 space-y-1 text-[11px]">
-                {selectedLorryForReceipt.millGrossWeight && <p>Mill Gross: {selectedLorryForReceipt.millGrossWeight.toLocaleString()} kg</p>}
-                {selectedLorryForReceipt.millTareWeight && <p>Mill Tare: {selectedLorryForReceipt.millTareWeight.toLocaleString()} kg</p>}
-                {selectedLorryForReceipt.electricGrossWeight && <p>Elec Gross: {selectedLorryForReceipt.electricGrossWeight.toLocaleString()} kg</p>}
-                {selectedLorryForReceipt.electricTareWeight && <p>Elec Tare: {selectedLorryForReceipt.electricTareWeight.toLocaleString()} kg</p>}
-                <p className="font-bold text-sm text-[#D94B5A] pt-1 border-t border-[#FBCFCB]">
-                  FINAL NET: {(selectedLorryForReceipt.finalNetWeight || 0).toLocaleString()} KG
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => generateReceiptSlipPdf(selectedLorryForReceipt)}
-              className="w-full py-2.5 bg-[#F7AFA8] hover:bg-[#D94B5A] text-[#FDE7E6] font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              <FileDown className="w-4 h-4" />
-              <span>Download / Print 3-Inch Slip PDF</span>
-            </button>
-          </div>
-        </div>
-      )}
+      <LorryReceiptModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        lorry={selectedLorryForReceipt}
+        onGeneratePdf={generateReceiptSlipPdf}
+      />
 
       {/* LOGOUT CONFIRMATION MODAL */}
       {isLogoutConfirmOpen && (
@@ -2058,154 +1909,5 @@ export default function LorryDispatchSystem({
 
       </div>
     </LegacyLayout>
-  );
-}
-
-// ==========================================
-// SUB-COMPONENT: WEIGHMENT OPERATOR CARD
-// ==========================================
-
-function WeighmentOperatorCard({
-  lorry,
-  currentUserRole,
-  settings,
-  onSaveWeighment,
-}: {
-  lorry: LorryRecord;
-  currentUserRole: UserRole;
-  settings: SystemSettings;
-  onSaveWeighment: (
-    lorryId: string,
-    station: "MILL" | "ELECTRIC",
-    type: "GROSS" | "TARE",
-    weightKg: number
-  ) => void;
-}) {
-  const isMill = currentUserRole === "MILL_WEIGHTMENT" || currentUserRole === "SUPER_ADMIN";
-  const isElectric = currentUserRole === "ELECTRIC_WEIGHTMENT";
-
-  const station = isElectric ? "ELECTRIC" : "MILL";
-  const isTareStep =
-    lorry.status === "MILL_TARE_PENDING" || lorry.status === "ELECTRIC_TARE_PENDING";
-  const type = isTareStep ? "TARE" : "GROSS";
-
-  const zeroOffset = isElectric ? settings.electricZeroOffsetKg : settings.millZeroOffsetKg;
-
-  const [simulatedWeight, setSimulatedWeight] = useState<number>(
-    isTareStep ? 14200 : 38500
-  );
-
-  const displayWeight = simulatedWeight + zeroOffset;
-
-  return (
-    <div className="bg-[#FDE7E6] border border-[#FBCFCB] rounded-2xl p-4 space-y-4 hover:border-[#F7AFA8] transition-all text-[#D94B5A] shadow-xs">
-      <div className="flex items-center justify-between border-b border-[#FBCFCB] pb-2.5">
-        <div>
-          <span className="text-sm font-black text-[#D94B5A] font-mono">{lorry.lorryNo}</span>
-          <p className="text-[10px] text-[#D94B5A] font-mono">{lorry.gatePassNo} • {lorry.broker}</p>
-        </div>
-        <span className="px-2.5 py-1 bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-mono font-bold rounded-full uppercase">
-          {type} WEIGHMENT PENDING
-        </span>
-      </div>
-
-      {/* Large Industrial LED Digital Weight Display */}
-      <div className="bg-[#F7AFA8] p-4 rounded-xl border border-[#FBCFCB] text-center space-y-1 shadow-inner">
-        <span className="text-[10px] font-mono font-bold uppercase text-[#FBCFCB] tracking-wider">
-          LIVE SCALE SIMULATED WEIGHT (KG)
-        </span>
-        <div className="text-3xl font-black font-mono text-[#FDE7E6] tracking-widest">
-          {displayWeight.toLocaleString()} <span className="text-sm font-bold text-amber-400">KG</span>
-        </div>
-      </div>
-
-      {/* Quick Weight Adjuster Controls */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setSimulatedWeight((prev) => Math.max(0, prev - 100))}
-          className="flex-1 py-1 bg-[#FBCFCB] hover:bg-[#FBCFCB] border border-[#FBCFCB] rounded text-[#D94B5A] text-xs font-mono font-bold cursor-pointer transition-colors"
-        >
-          -100 KG
-        </button>
-        <button
-          onClick={() => setSimulatedWeight((prev) => prev + 100)}
-          className="flex-1 py-1 bg-[#FBCFCB] hover:bg-[#FBCFCB] border border-[#FBCFCB] rounded text-[#D94B5A] text-xs font-mono font-bold cursor-pointer transition-colors"
-        >
-          +100 KG
-        </button>
-      </div>
-
-      <button
-        onClick={() => onSaveWeighment(lorry.id, station, type, displayWeight)}
-        className="w-full py-2.5 bg-[#F7AFA8] hover:bg-[#D94B5A] text-[#FDE7E6] font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
-      >
-        <Scale className="w-4 h-4" />
-        <span>Save & Confirm {station} {type} ({displayWeight.toLocaleString()} KG)</span>
-      </button>
-    </div>
-  );
-}
-
-// ==========================================
-// SUB-COMPONENT: MASTER DATA LIST EDITOR
-// ==========================================
-
-function MasterListEditor({
-  title,
-  items,
-  onAdd,
-  onDelete,
-}: {
-  title: string;
-  items: string[];
-  onAdd: (newItem: string) => void;
-  onDelete: (item: string) => void;
-}) {
-  const [inputVal, setInputVal] = useState("");
-
-  return (
-    <div className="bg-[#FDE7E6] border border-[#FBCFCB] p-5 rounded-2xl shadow-sm space-y-4 text-[#D94B5A]">
-      <h3 className="text-xs font-black text-[#D94B5A] uppercase tracking-wider font-mono border-b border-[#FBCFCB] pb-2">
-        {title} ({items.length})
-      </h3>
-
-      <div className="flex items-center gap-2">
-        <input
- id="inputval_2155" name="inputval" aria-label="inputval"          type="text"
-          placeholder={`Add new ${title.toLowerCase()}...`}
-          value={inputVal}
-          onChange={(e) => setInputVal(e.target.value)}
-          className="flex-1 bg-[#FDE7E6] border border-[#FBCFCB] rounded-xl px-3 py-1.5 text-xs text-[#D94B5A] outline-none focus:border-[#F7AFA8] font-mono"
-        />
-        <button
-          onClick={() => {
-            if (inputVal.trim()) {
-              onAdd(inputVal.trim());
-              setInputVal("");
-            }
-          }}
-          className="px-3 py-1.5 bg-[#F7AFA8] hover:bg-[#D94B5A] text-[#FDE7E6] font-bold text-xs uppercase rounded-xl cursor-pointer transition-colors"
-        >
-          Add
-        </button>
-      </div>
-
-      <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
-        {items.map((it) => (
-          <div
-            key={it}
-            className="bg-[#FDE7E6] border border-[#FBCFCB] px-3 py-2 rounded-xl flex items-center justify-between text-xs text-[#D94B5A]"
-          >
-            <span>{it}</span>
-            <button
-              onClick={() => onDelete(it)}
-              className="p-1 text-[#D94B5A] hover:text-rose-800 cursor-pointer transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
