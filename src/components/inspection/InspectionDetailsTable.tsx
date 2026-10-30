@@ -174,7 +174,7 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
               </th>
               <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[140px]">Remarks</th>
               <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[140px]">JCI Remarks</th>
-              <th rowSpan={2} className="p-2 text-center sticky right-0 bg-[#1e3a8a] z-20 min-w-[190px]">Row Actions</th>
+              <th rowSpan={2} className="p-2 text-center min-w-[70px]">Actions</th>
             </tr>
             <tr className="bg-[#243b68] text-white text-[11px]">
               <th className="p-1.5 border-r border-white/10 text-center sticky left-[170px] bg-[#243b68] z-20 min-w-[90px] w-[90px]">Code</th>
