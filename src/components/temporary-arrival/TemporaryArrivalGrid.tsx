@@ -159,17 +159,16 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
                 {/* Crop Year */}
                 <td className="p-0.5 border border-gray-300 w-24">
                   <select
-                    value={detail.crop_year}
+                    value={detail.crop_year || '2026-27'}
                     onChange={(e) => onDetailChange(idx, 'crop_year', e.target.value)}
-                    className="w-full bg-white border border-gray-300 p-0 text-center font-bold text-gray-900 outline-none h-6 text-xs"
+                    className="w-full bg-white border border-gray-300 p-0 text-center font-bold text-gray-900 outline-none h-6 text-xs font-semibold"
                   >
-                    <option value=""></option>
-                    {detail.crop_year && !['2024-25', '2025-26', '2026-27', '2027-28', '2028-29'].includes(detail.crop_year) && (
+                    {detail.crop_year && !['2026-27', '2025-26', '2024-25', '2027-28', '2028-29'].includes(detail.crop_year) && (
                       <option value={detail.crop_year}>{detail.crop_year}</option>
                     )}
-                    <option value="2024-25">2024-25</option>
-                    <option value="2025-26">2025-26</option>
                     <option value="2026-27">2026-27</option>
+                    <option value="2025-26">2025-26</option>
+                    <option value="2024-25">2024-25</option>
                     <option value="2027-28">2027-28</option>
                     <option value="2028-29">2028-29</option>
                   </select>

@@ -383,9 +383,14 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
               />
             </div>
 
-            {/* Challan No & Date (Split into 2 inputs) */}
+            {/* Challan No & Date (Split into 2 inputs with clean local state) */}
             {(() => {
-              const parseChallanParts = (raw: string) => {
+              const [localNo, setLocalNo] = React.useState('');
+              const [localDate, setLocalDate] = React.useState('');
+              const isInitializedRef = React.useRef(false);
+
+              // Extract parts from formData.challan_rr_no
+              const extractParts = (raw: string) => {
                 if (!raw) return { no: '', date: '' };
                 const str = String(raw).trim();
                 const dateMatch = str.match(/(\d{2}[-/]\d{2}[-/]\d{2,4})$/);
@@ -397,24 +402,33 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
                 return { no: str, date: '' };
               };
 
-              const formatChallanDate = (raw: string): string => {
+              // Sync local state when formData.challan_rr_no changes externally
+              React.useEffect(() => {
+                const parts = extractParts(formData.challan_rr_no || '');
+                setLocalNo(parts.no);
+                setLocalDate(parts.date);
+              }, [formData.challan_rr_no]);
+
+              const updateParent = (newNo: string, newDate: string) => {
+                const cleanNo = newNo.trim();
+                const cleanDate = newDate.trim();
+                const combined = cleanNo && cleanDate ? `${cleanNo} ${cleanDate}` : (cleanNo || cleanDate);
+                handleChange({ target: { name: 'challan_rr_no', value: combined } });
+              };
+
+              const formatTypedDate = (raw: string): string => {
                 const digits = raw.replace(/\D/g, "");
                 if (digits.length === 6) {
-                  const dd = digits.substring(0, 2);
-                  const mm = digits.substring(2, 4);
-                  const yy = digits.substring(4, 6);
-                  return `${dd}-${mm}-${yy}`;
+                  return `${digits.substring(0, 2)}-${digits.substring(2, 4)}-${digits.substring(4, 6)}`;
                 }
                 if (digits.length === 8) {
-                  const dd = digits.substring(0, 2);
-                  const mm = digits.substring(2, 4);
-                  const yy = digits.substring(6, 8);
-                  return `${dd}-${mm}-${yy}`;
+                  return `${digits.substring(0, 2)}-${digits.substring(2, 4)}-${digits.substring(6, 8)}`;
+                }
+                if (digits.length === 4) {
+                  return `${digits.substring(0, 2)}-${digits.substring(2, 4)}-26`;
                 }
                 return raw;
               };
-
-              const parts = parseChallanParts(formData.challan_rr_no || '');
 
               return (
                 <div className="flex items-center gap-2">
@@ -428,11 +442,11 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
                       aria-label="Challan No"
                       type="text"
                       placeholder="CHALLAN NO"
-                      value={parts.no}
+                      value={localNo}
                       onChange={(e) => {
-                        const newNo = e.target.value;
-                        const combined = newNo && parts.date ? `${newNo} ${parts.date}` : (newNo || parts.date);
-                        handleChange({ target: { name: 'challan_rr_no', value: combined } });
+                        const val = e.target.value;
+                        setLocalNo(val);
+                        updateParent(val, localDate);
                       }}
                       required
                       className="flex-1 border border-gray-400 rounded bg-white px-2.5 h-7 text-xs font-bold uppercase font-mono"
@@ -443,21 +457,21 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
                       aria-label="Challan Date"
                       type="text"
                       placeholder="DD-MM-YY (e.g. 311026)"
-                      value={parts.date}
+                      value={localDate}
                       onChange={(e) => {
                         let val = e.target.value;
                         const digits = val.replace(/\D/g, "");
                         if (digits.length === 6 || digits.length === 8) {
-                          val = formatChallanDate(digits);
+                          val = formatTypedDate(digits);
                         }
-                        const combined = parts.no && val ? `${parts.no} ${val}` : (parts.no || val);
-                        handleChange({ target: { name: 'challan_rr_no', value: combined } });
+                        setLocalDate(val);
+                        updateParent(localNo, val);
                       }}
                       onBlur={(e) => {
-                        const formatted = formatChallanDate(e.target.value);
+                        const formatted = formatTypedDate(e.target.value);
                         if (formatted !== e.target.value) {
-                          const combined = parts.no && formatted ? `${parts.no} ${formatted}` : (parts.no || formatted);
-                          handleChange({ target: { name: 'challan_rr_no', value: combined } });
+                          setLocalDate(formatted);
+                          updateParent(localNo, formatted);
                         }
                       }}
                       className="w-36 border border-gray-400 rounded bg-white px-2 h-7 text-xs font-bold text-center font-mono"
