@@ -25,7 +25,8 @@ import {
   fetchSaudaCheckpointDeduction,
   isLastMrForPo,
   getPoContractLorryCount,
-  getUniquePoLorryGroups
+  getUniquePoLorryGroups,
+  deduplicateArrivalItems
 } from "../services/settlementService";
 
 import {
@@ -308,6 +309,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       // Filter matchedDetailsList to only belong to the matched payment vouchers (or target MR)
       const matchedVoucherSet = new Set(matchingPayments.map(p => p.voucher_no).filter(Boolean));
+      const primaryVoucherNo = matchingPayments[0]?.voucher_no || '';
       if (matchedVoucherSet.size > 0) {
         const filteredDetails = details.filter((d: any) =>
           (d.voucher_no && matchedVoucherSet.has(d.voucher_no)) || exactMrMatch(d.mr_no, mrNo)
@@ -316,6 +318,27 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           matchedDetailsList.length = 0;
           matchedDetailsList.push(...filteredDetails);
         }
+      }
+
+      // Deduplicate matchedDetailsList by col_index (preferring primaryVoucherNo) so a single column is never duplicated
+      if (matchedDetailsList.length > 1) {
+        const byColIdx = new Map<number, any>();
+        const unindexed: any[] = [];
+        for (const d of matchedDetailsList) {
+          const cIdx = Number(d.col_index || 0);
+          if (cIdx > 0) {
+            const existing = byColIdx.get(cIdx);
+            if (!existing) {
+              byColIdx.set(cIdx, d);
+            } else if (primaryVoucherNo && d.voucher_no === primaryVoucherNo && existing.voucher_no !== primaryVoucherNo) {
+              byColIdx.set(cIdx, d);
+            }
+          } else {
+            unindexed.push(d);
+          }
+        }
+        matchedDetailsList.length = 0;
+        matchedDetailsList.push(...Array.from(byColIdx.values()).sort((a, b) => Number(a.col_index) - Number(b.col_index)), ...unindexed);
       }
 
       // Ensure satta differentials are cached for Sett Rate calculation
@@ -328,81 +351,100 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       // Live-update detailCols with Payment Operations -> Details fields (preserving original PO rate in rate_value!)
       if (matchedDetailsList.length > 0) {
-        setDetailCols(prevCols => prevCols.map(col => {
-          const match = matchedDetailsList.find(pd => Number(pd.col_index) === col.col_index) ||
-                        matchedDetailsList.find(pd => {
-                          const pdGrade = (resolveGradeName(pd.grade, gradeMasterList) || String(pd.grade || '')).trim().toUpperCase();
-                          const colGrade = (resolveGradeName(col.grade, gradeMasterList) || String(col.grade || '')).trim().toUpperCase();
-                          return Boolean(pdGrade && colGrade && pdGrade === colGrade);
-                        });
-          if (match) {
-            const origRate = Number(match.rate_value) > 0 ? Number(match.rate_value) : Number(col.rate_value || 0);
-            let prem = Number(match.premium) || 0;
-            if (!prem && matchingPayments.length > 0) {
-              const pMasterPremRate = Number(matchingPayments[0].summary_premium_amount || 0);
-              if (pMasterPremRate > 0) prem = pMasterPremRate;
-              else if (Number(matchingPayments[0].val_premium_amt || 0) > 0) {
-                const pWeight = Number(matchingPayments[0].electronic_scale_net || matchingPayments[0].challan_weight || 0);
-                const pQtl = pWeight > 0 ? (pWeight <= 50 ? pWeight * 10 : pWeight) : 0;
-                if (pQtl > 0) {
-                  prem = Number((Number(matchingPayments[0].val_premium_amt) / pQtl).toFixed(2));
+        setDetailCols(prevCols => {
+          const hasAnyActivePrevCol = prevCols.some(c => Number(c.arr_qty_wt) > 0 || Number(c.quantity) > 0);
+          const usedPayDetails = new Set<any>();
+
+          return prevCols.map(col => {
+            const isColActive = Number(col.arr_qty_wt) > 0 || Number(col.quantity) > 0;
+            // If inspection/arrival columns are already populated on screen, never activate an empty column from payment_details
+            if (hasAnyActivePrevCol && !isColActive) {
+              return col;
+            }
+
+            let match = matchedDetailsList.find(pd => !usedPayDetails.has(pd) && Number(pd.col_index) === col.col_index);
+            if (!match && isColActive) {
+              match = matchedDetailsList.find(pd => {
+                if (usedPayDetails.has(pd)) return false;
+                const pdColIdx = Number(pd.col_index || 0);
+                // Never steal a payment_details row that explicitly belongs to a different col_index
+                if (pdColIdx > 0 && pdColIdx !== col.col_index) return false;
+                const pdGrade = (resolveGradeName(pd.grade, gradeMasterList) || String(pd.grade || '')).trim().toUpperCase();
+                const colGrade = (resolveGradeName(col.grade, gradeMasterList) || String(col.grade || '')).trim().toUpperCase();
+                return Boolean(pdGrade && colGrade && pdGrade === colGrade);
+              });
+            }
+
+            if (match) {
+              usedPayDetails.add(match);
+              const origRate = Number(match.rate_value) > 0 ? Number(match.rate_value) : Number(col.rate_value || 0);
+              let prem = Number(match.premium) || 0;
+              if (!prem && matchingPayments.length > 0) {
+                const pMasterPremRate = Number(matchingPayments[0].summary_premium_amount || 0);
+                if (pMasterPremRate > 0) prem = pMasterPremRate;
+                else if (Number(matchingPayments[0].val_premium_amt || 0) > 0) {
+                  const pWeight = Number(matchingPayments[0].electronic_scale_net || matchingPayments[0].challan_weight || 0);
+                  const pQtl = pWeight > 0 ? (pWeight <= 50 ? pWeight * 10 : pWeight) : 0;
+                  if (pQtl > 0) {
+                    prem = Number((Number(matchingPayments[0].val_premium_amt) / pQtl).toFixed(2));
+                  }
                 }
               }
+              if (!prem) prem = Number(col.premium || 0);
+
+              const settPct = match.sett_pct !== undefined && match.sett_pct !== null && !isNaN(Number(match.sett_pct)) && Number(match.sett_pct) >= 0
+                ? Number(match.sett_pct)
+                : (Number(col.gd_sett) > 0 ? Number(col.gd_sett) : Number(col.gd_claim || 0));
+
+              const sattaObj = calculateSattaDeduction(
+                col.grade || match.grade,
+                origRate,
+                settPct,
+                getCachedSattaDiffs(),
+                gradeMasterList.map((g: any) => ({ code: g.grade_code || g.code || g.id, name: g.grade_name || g.name || g.grade })),
+                col.po_items,
+                match.lower_grade || col.lower_grade,
+                match.lower_grade_rate ?? col.lower_grade_rate,
+                prevCols
+              );
+
+              const pdDedRate = Number(match.deduction_rate) >= 0 ? Number(match.deduction_rate) : sattaObj.deduction;
+              const pdSettRate = (match.sett_rate !== undefined && match.sett_rate !== null && Number(match.sett_rate) > 0)
+                ? Number(match.sett_rate)
+                : (origRate > 0 ? Number((origRate + prem - pdDedRate).toFixed(2)) : 0);
+
+              const qtyVal = Number(col.quantity) > 0 ? Number(col.quantity) : (Number(match.quantity) > 0 ? Number(match.quantity) : 0);
+              const wtMt = getColWtMt(col) > 0 ? getColWtMt(col) : (Number(match.arr_qty_wt) > 0 ? Number(match.arr_qty_wt) : 0);
+              const qtyQtl = wtMt > 0 ? Number((wtMt * 10).toFixed(2)) : (Number(match.quantity_qtl) > 0 ? Number(match.quantity_qtl) : 0);
+              const colAmt = qtyQtl > 0 && pdSettRate > 0 ? Number((qtyQtl * pdSettRate).toFixed(2)) : (Number(match.amount) > 0 ? Number(match.amount) : 0);
+
+              return {
+                ...col,
+                grade: col.grade || match.grade,
+                area: col.area || match.area,
+                agency: col.agency || match.agency,
+                marka_crop: col.marka_crop || match.marka_crop,
+                quantity: qtyVal,
+                arr_qty_wt: wtMt,
+                min_qty_wt: Number(col.min_qty_wt) > 0 ? Number(col.min_qty_wt) : (wtMt > 0 ? Number((wtMt * 0.97).toFixed(3)) : 0),
+                wt_quantity: Number(col.wt_quantity) > 0 ? Number(col.wt_quantity) : (qtyVal > 0 && wtMt > 0 ? Math.round((wtMt * 1000) / qtyVal) : 0),
+                rate_value: origRate,
+                premium: prem,
+                sett_pct: settPct,
+                gd_sett: settPct,
+                deduction_rate: pdDedRate,
+                sett_rate: pdSettRate,
+                quantity_qtl: qtyQtl,
+                amount: colAmt,
+                lower_grade: match.lower_grade || col.lower_grade || sattaObj.targetGradeName,
+                target_lower_grade: sattaObj.targetGradeName,
+                lower_grade_rate: match.lower_grade_rate ?? col.lower_grade_rate ?? sattaObj.lowerRate,
+                grade_diff: sattaObj.diff
+              };
             }
-            if (!prem) prem = Number(col.premium || 0);
-
-            const settPct = match.sett_pct !== undefined && match.sett_pct !== null && !isNaN(Number(match.sett_pct)) && Number(match.sett_pct) >= 0
-              ? Number(match.sett_pct)
-              : (Number(col.gd_sett) > 0 ? Number(col.gd_sett) : Number(col.gd_claim || 0));
-
-            const sattaObj = calculateSattaDeduction(
-              col.grade || match.grade,
-              origRate,
-              settPct,
-              getCachedSattaDiffs(),
-              gradeMasterList.map((g: any) => ({ code: g.grade_code || g.code || g.id, name: g.grade_name || g.name || g.grade })),
-              col.po_items,
-              match.lower_grade || col.lower_grade,
-              match.lower_grade_rate ?? col.lower_grade_rate,
-              prevCols
-            );
-
-            const pdDedRate = Number(match.deduction_rate) >= 0 ? Number(match.deduction_rate) : sattaObj.deduction;
-            const pdSettRate = (match.sett_rate !== undefined && match.sett_rate !== null && Number(match.sett_rate) > 0)
-              ? Number(match.sett_rate)
-              : (origRate > 0 ? Number((origRate + prem - pdDedRate).toFixed(2)) : 0);
-
-            const qtyVal = Number(match.quantity) > 0 ? Number(match.quantity) : Number(col.quantity || 0);
-            const wtMt = Number(match.arr_qty_wt) > 0 ? Number(match.arr_qty_wt) : getColWtMt(col);
-            const qtyQtl = Number(match.quantity_qtl) > 0 ? Number(match.quantity_qtl) : Number((wtMt * 10).toFixed(2));
-            const colAmt = Number(match.amount) > 0 ? Number(match.amount) : Number((qtyQtl * pdSettRate).toFixed(2));
-
-            return {
-              ...col,
-              grade: col.grade || match.grade,
-              area: col.area || match.area,
-              agency: col.agency || match.agency,
-              marka_crop: col.marka_crop || match.marka_crop,
-              quantity: qtyVal,
-              arr_qty_wt: wtMt,
-              min_qty_wt: Number(match.min_qty_wt) > 0 ? Number(match.min_qty_wt) : (wtMt > 0 ? Number((wtMt * 0.97).toFixed(3)) : 0),
-              wt_quantity: Number(match.wt_quantity) > 0 ? Number(match.wt_quantity) : (qtyVal > 0 && wtMt > 0 ? Math.round((wtMt * 1000) / qtyVal) : 0),
-              rate_value: origRate,
-              premium: prem,
-              sett_pct: settPct,
-              gd_sett: settPct,
-              deduction_rate: pdDedRate,
-              sett_rate: pdSettRate,
-              quantity_qtl: qtyQtl,
-              amount: colAmt,
-              lower_grade: match.lower_grade || col.lower_grade || sattaObj.targetGradeName,
-              target_lower_grade: sattaObj.targetGradeName,
-              lower_grade_rate: match.lower_grade_rate ?? col.lower_grade_rate ?? sattaObj.lowerRate,
-              grade_diff: sattaObj.diff
-            };
-          }
-          return col;
-        }));
+            return col;
+          });
+        });
       }
 
       if (matchingPayments.length > 0) {
@@ -677,17 +719,26 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         }
       }
 
-      const faGridArr = parseGridOrItems(
-        inspRecord?.specification_grid ||
-        inspRecord?.items ||
-        inspRecord?.grid_details ||
-        faRecord?.specification_grid ||
-        faRecord?.items ||
-        faRecord?.grid_details
+      const faGridArr = deduplicateArrivalItems(
+        parseGridOrItems(
+          inspRecord?.specification_grid ||
+          inspRecord?.items ||
+          inspRecord?.grid_details ||
+          faRecord?.specification_grid ||
+          faRecord?.items ||
+          faRecord?.grid_details
+        ),
+        inspRecord?.electronic_net_weight || inspRecord?.challan_material_weight || faRecord?.electronic_net_weight || faRecord?.challan_material_weight,
+        inspRecord?.total_bales || inspRecord?.bales || faRecord?.total_bales || faRecord?.bales
+      );
+      const cleanInspDetailsList = deduplicateArrivalItems(
+        inspDetailsList,
+        inspRecord?.electronic_net_weight || inspRecord?.challan_material_weight,
+        inspRecord?.total_bales || inspRecord?.bales
       );
       const alignedFallbackCols = buildAlignedSettlementColumns(
         viewPoDetails,
-        inspDetailsList,
+        cleanInspDetailsList,
         faGridArr,
         faRecord,
         inspRecord,
@@ -699,11 +750,19 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         viewPayDetails
       );
 
+      const fallbackActiveCount = alignedFallbackCols.filter(
+        c => (Number(c.arr_qty_wt) || 0) > 0 || (Number(c.quantity) || 0) > 0
+      ).length;
+      const hasAuthoritativeInspectionCols = (cleanInspDetailsList.length > 0 || faGridArr.length > 0) && fallbackActiveCount > 0;
+
       const activeDetails: SettlementDetailColumn[] = [1, 2, 3, 4].map(idx => {
         const existing = foundDetails.find((d: any) => Number(d.col_index) === idx);
         const currentScreenCol = (targetMrNo === masterData.mr_no && detailCols[idx - 1]?.grade) ? detailCols[idx - 1] : null;
         const fb = currentScreenCol || alignedFallbackCols[idx - 1] || detailCols[idx - 1] || emptyDetailColumn(idx);
-        if (existing) {
+        const isFbActive = (Number(fb.arr_qty_wt) || 0) > 0 || (Number(fb.quantity) || 0) > 0;
+
+        // If Mill Inspection has fewer grades than stale saved details, do not resurrect duplicate inactive columns
+        if (existing && (!hasAuthoritativeInspectionCols || isFbActive || idx <= fallbackActiveCount)) {
           const merged: SettlementDetailColumn = {
             ...emptyDetailColumn(idx),
             ...fb,
@@ -1789,8 +1848,33 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         console.warn("Error fetching inspection master:", e);
       }
 
+      // Prioritize material_inspection_details table first (matching Mill Inspection & Payment sections),
+      // falling back to inspMaster.grid_details / details only if the detail table has no rows.
       let inspDetails: any[] = [];
-      if (inspMaster) {
+      try {
+        const matDetRes = await supabase
+          .from('material_inspection_details')
+          .select('*')
+          .eq('mr_no', targetMrNo)
+          .order('srl_no', { ascending: true });
+        const fetchedDet = matDetRes?.data || [];
+        if (fetchedDet.length > 0) {
+          inspDetails = fetchedDet;
+        } else {
+          const millDetRes = await supabase
+            .from('mill_inspection_detail')
+            .select('*')
+            .eq('mr_no', targetMrNo)
+            .order('srl_no', { ascending: true });
+          if (millDetRes?.data && millDetRes.data.length > 0) {
+            inspDetails = millDetRes.data;
+          }
+        }
+      } catch (e) {
+        console.warn("Error fetching inspection details:", e);
+      }
+
+      if (inspDetails.length === 0 && inspMaster) {
         if (inspMaster.grid_details) {
           if (Array.isArray(inspMaster.grid_details)) inspDetails = inspMaster.grid_details;
           else if (typeof inspMaster.grid_details === 'string') {
@@ -1801,19 +1885,11 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         }
       }
 
-      if (inspDetails.length === 0) {
-        try {
-          const matDetRes = await supabase
-            .from('material_inspection_details')
-            .select('*')
-            .eq('mr_no', targetMrNo)
-            .order('srl_no', { ascending: true });
-          const fetchedDet = matDetRes?.data || [];
-          if (fetchedDet.length > 0) inspDetails = fetchedDet;
-        } catch (e) {
-          console.warn("Error fetching inspection details:", e);
-        }
-      }
+      inspDetails = deduplicateArrivalItems(
+        inspDetails,
+        inspMaster?.electronic_net_weight || inspMaster?.challan_material_weight || inspMaster?.supplier_net_weight,
+        inspMaster?.total_bales || inspMaster?.bales || inspMaster?.quantity
+      );
 
       // 2. Fetch final_arrival and validate against targetMrNo / inspMaster / payMasterRec
       const targetArrNo = String(inspMaster?.arrival_no || targetMrNo).trim();
@@ -1861,6 +1937,11 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           try { faGridArr = JSON.parse(faMaster.grid_details); } catch (e) {}
         }
       }
+      faGridArr = deduplicateArrivalItems(
+        faGridArr,
+        faMaster?.electronic_net_weight || faMaster?.challan_material_weight || faMaster?.supplier_net_weight,
+        faMaster?.total_bales || faMaster?.bales || faMaster?.quantity
+      );
 
       const poNoForDet = inspMaster?.po_no || payMasterRec?.po_no || faMaster?.po_no || '';
       const cleanTargetPo = (poNoForDet || selectedPoNo || masterData.po_no || '').trim().replace(/^#/, '');
@@ -2266,12 +2347,19 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           );
 
           if (existingDetails && existingDetails.length > 0 && !isStaleExistingIdentity) {
+            const fallbackActiveCount = fallbackCols.filter(
+              c => (Number(c.arr_qty_wt) || 0) > 0 || (Number(c.quantity) || 0) > 0
+            ).length;
+            const hasAuthoritativeInspection = (inspDetails.length > 0 || faGridArr.length > 0) && fallbackActiveCount > 0;
+
             // Fill columns up to 4, backfilling missing fields if necessary
             const newCols = [1, 2, 3, 4].map(idx => {
               const dbMatch = existingDetails.find(d => d.col_index === idx);
               const fallbackCol = fallbackCols[idx - 1] || emptyDetailColumn(idx);
+              const isFallbackColActive = (Number(fallbackCol.arr_qty_wt) || 0) > 0 || (Number(fallbackCol.quantity) || 0) > 0;
 
-              if (dbMatch) {
+              // Do not resurrect a stale duplicate column beyond the actual Mill Inspection grade count
+              if (dbMatch && (!hasAuthoritativeInspection || isFallbackColActive || idx <= fallbackActiveCount)) {
                 const merged: SettlementDetailColumn = {
                   ...emptyDetailColumn(idx),
                   ...fallbackCol,
@@ -2301,6 +2389,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                 if (!resolvedPrem && matchedPayDetails && matchedPayDetails.length > 0) {
                   const pdMatch = matchedPayDetails.find((pd: any) => Number(pd.col_index) === idx) ||
                     matchedPayDetails.find((pd: any) => {
+                      const pdColIdx = Number(pd.col_index || 0);
+                      if (pdColIdx > 0 && pdColIdx !== idx) return false;
                       const pdG = String(pd.grade || '').trim().toUpperCase();
                       const colG = String(merged.grade || fallbackCol.grade || '').trim().toUpperCase();
                       return Boolean(pdG && colG && pdG === colG);

@@ -303,6 +303,116 @@ export const buildSettlementCol = (
   return col;
 };
 
+export const deduplicateArrivalItems = (
+  items: any[],
+  gList: any[] = [],
+  expectedLorryMt: number = 0,
+  expectedTotalBales: number = 0
+): any[] => {
+  if (!Array.isArray(items) || items.length === 0) return [];
+
+  const getNormWtMt = (it: any): number => {
+    const raw = Number(
+      it?.final_receipt_wt ||
+      it?.receipt_gross_wt ||
+      it?.challan_gross_wt ||
+      it?.arr_qty_wt ||
+      it?.weight_mt ||
+      it?.weight ||
+      (Number(it?.weight_qtl) > 0 ? Number(it.weight_qtl) / 10 : 0) ||
+      (Number(it?.quantity_qtl) > 0 ? Number(it.quantity_qtl) / 10 : 0) ||
+      0
+    );
+    if (raw <= 0) return 0;
+    if (raw > 500) return Number((raw / 1000).toFixed(3));
+    if (raw > 50) return Number((raw / 10).toFixed(3));
+    return Number(raw.toFixed(3));
+  };
+
+  const getNormQty = (it: any): number =>
+    Number(it?.bales || it?.quantity || it?.quantity_rcpt || it?.quantity_chln || it?.packets || 0);
+
+  const getNormGrade = (it: any): string => {
+    const rawG =
+      it?.stock_grade_name ||
+      it?.arrival_grade ||
+      it?.receipt_grade_name ||
+      it?.challan_grade_name ||
+      it?.grade_name ||
+      it?.grade ||
+      it?.quality ||
+      it?.stock_grade_code ||
+      it?.grade_code ||
+      '';
+    return (resolveGradeName(rawG, gList) || String(rawG || '')).trim().toUpperCase();
+  };
+
+  const valid = items.filter((it) => {
+    if (!it) return false;
+    const wt = getNormWtMt(it);
+    const qty = getNormQty(it);
+    const gr = getNormGrade(it);
+    return wt > 0 || qty > 0 || Boolean(gr);
+  });
+
+  if (valid.length <= 1) return valid;
+
+  const result: any[] = [];
+  const seenPositionalKeys = new Set<string>();
+  const seenSignatureMap = new Map<string, number>();
+  let runningWtMt = 0;
+  let runningBales = 0;
+
+  for (const it of valid) {
+    const gr = getNormGrade(it);
+    const qty = getNormQty(it);
+    const wt = getNormWtMt(it);
+    const area = String(it?.area || it?.area_name || '').trim().toUpperCase();
+    const agency = String(it?.agency || it?.agency_name || '').trim().toUpperCase();
+    const lot = String(it?.lot || it?.lot_no || '').trim().toUpperCase();
+    const posIndex = it?.col_index ?? it?.srl_no ?? '';
+
+    const sig = `${gr}|${area}|${agency}|${qty}|${wt.toFixed(3)}|${lot}`;
+    const posKey = posIndex !== '' ? `${posIndex}|${sig}` : '';
+
+    // 1. Exact same srl_no / col_index and identical specification/weight -> duplicate DB record
+    if (posKey && seenPositionalKeys.has(posKey)) {
+      continue;
+    }
+
+    // 2. Identical grade, area, agency, bale count, and weight
+    if (seenSignatureMap.has(sig) && wt > 0) {
+      const wouldExceedLorryWt =
+        expectedLorryMt > 0 &&
+        runningWtMt >= expectedLorryMt * 0.9 &&
+        runningWtMt + wt > expectedLorryMt * 1.08;
+      const wouldExceedLorryBales =
+        expectedTotalBales > 0 &&
+        runningBales >= expectedTotalBales &&
+        runningBales + qty > expectedTotalBales;
+      // Also guard against duplicate col_index / srl_no or cloned inspection row
+      const prevIdx = seenSignatureMap.get(sig);
+      const prevItem = prevIdx !== undefined ? result[prevIdx] : null;
+      const sameIdOrCol =
+        prevItem &&
+        ((it.col_index && prevItem.col_index && Number(it.col_index) === Number(prevItem.col_index)) ||
+          (it.srl_no && prevItem.srl_no && Number(it.srl_no) === Number(prevItem.srl_no)));
+
+      if (wouldExceedLorryWt || wouldExceedLorryBales || sameIdOrCol || !lot) {
+        continue;
+      }
+    }
+
+    if (posKey) seenPositionalKeys.add(posKey);
+    seenSignatureMap.set(sig, result.length);
+    result.push(it);
+    runningWtMt += wt;
+    runningBales += qty;
+  }
+
+  return result;
+};
+
 export const buildAlignedSettlementColumns = (
   poDetails: any[],
   inspDetails: any[],
@@ -316,41 +426,178 @@ export const buildAlignedSettlementColumns = (
   arList: any[],
   payDetails: any[] = []
 ): SettlementDetailColumn[] => {
+  const toHeaderMt = (val: any): number => {
+    const n = Number(val) || 0;
+    if (n <= 0) return 0;
+    if (n > 500) return Number((n / 1000).toFixed(3));
+    if (n > 50) return Number((n / 10).toFixed(3));
+    return Number(n.toFixed(3));
+  };
+
+  const expectedLorryMt =
+    toHeaderMt(inspMaster?.electronic_net_weight) ||
+    toHeaderMt(inspMaster?.challan_material_weight) ||
+    toHeaderMt(inspMaster?.supplier_net_weight) ||
+    toHeaderMt(faMaster?.electronic_net_weight) ||
+    toHeaderMt(faMaster?.challan_material_weight) ||
+    toHeaderMt(faMaster?.supplier_net_weight) ||
+    (Number(inspMaster?.weight_qtl || faMaster?.weight_qtl) > 0
+      ? Number(((Number(inspMaster?.weight_qtl || faMaster?.weight_qtl)) / 10).toFixed(3))
+      : 0);
+
+  const expectedTotalBales = Number(
+    inspMaster?.total_bales ||
+    inspMaster?.bales ||
+    inspMaster?.total_packets ||
+    faMaster?.total_packets ||
+    faMaster?.bales ||
+    0
+  );
+
+  // Deduplicate each source independently
+  const cleanInspDetails = deduplicateArrivalItems(inspDetails || [], gList, expectedLorryMt, expectedTotalBales);
+  const cleanFaGrid = deduplicateArrivalItems(faGridArr || [], gList, expectedLorryMt, expectedTotalBales);
+
+  // Deduplicate payDetails by col_index (and signature) so multiple saves/vouchers never create extra rows
+  const payByColMap = new Map<number, any>();
+  const unindexedPay: any[] = [];
+  for (const pd of deduplicateArrivalItems(payDetails || [], gList, expectedLorryMt, expectedTotalBales)) {
+    const cIdx = Number(pd?.col_index || 0);
+    if (cIdx >= 1 && cIdx <= 4) {
+      if (!payByColMap.has(cIdx)) {
+        payByColMap.set(cIdx, pd);
+      }
+    } else {
+      unindexedPay.push(pd);
+    }
+  }
+  const cleanPayDetails = [
+    ...Array.from(payByColMap.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map((e) => e[1]),
+    ...unindexedPay
+  ];
+
+  // Strict Single-Source Priority for Arrival Rows:
+  // 1. Mill Inspection (cleanInspDetails) is the authoritative source of truth when present.
+  // 2. Only if Mill Inspection has no rows, fall back to Final Arrival (cleanFaGrid).
+  // 3. Only if both have no rows, fall back to Payment Details (cleanPayDetails).
   const arrivalRows: Array<{ inspItem: any; faItem: any; rawGrade: string; gradeName: string; gradeCode: string; hasData: boolean }> = [];
-  const maxArrivalLen = Math.max(inspDetails?.length || 0, faGridArr?.length || 0, payDetails?.length || 0);
-  for (let i = 0; i < maxArrivalLen; i++) {
-    const inspItem = inspDetails?.[i] || null;
-    const faItem = faGridArr?.[i] || null;
-    const payItem = payDetails?.[i] || null;
-    const rawG = 
-      payItem?.grade ||
-      inspItem?.stock_grade_name || inspItem?.arrival_grade || inspItem?.grade || inspItem?.grade_name || 
-      inspItem?.stock_grade_code || inspItem?.grade_code ||
-      faItem?.receipt_grade_name || faItem?.challan_grade_name || faItem?.stock_grade_name || faItem?.arrival_grade || 
-      faItem?.grade || faItem?.grade_name || faItem?.quality || '';
-    const codeG = String(
-      inspItem?.stock_grade_code || inspItem?.grade_code || 
-      faItem?.receipt_grade_code || faItem?.grade_code || ''
-    ).trim();
-    const nameG = (resolveGradeName(rawG || codeG, gList) || rawG || '').trim().toUpperCase();
 
-    const wt = Number(payItem?.arr_qty_wt || inspItem?.final_receipt_wt || inspItem?.weight_qtl || inspItem?.arr_qty_wt || faItem?.weight_qtl || faItem?.arr_qty_wt || 0);
-    const qty = Number(payItem?.quantity || inspItem?.bales || inspItem?.quantity || faItem?.bales || faItem?.quantity || faItem?.quantity_rcpt || 0);
-    const hasData = wt > 0 || qty > 0;
+  if (cleanInspDetails.length > 0) {
+    for (let i = 0; i < cleanInspDetails.length; i++) {
+      const inspItem = cleanInspDetails[i];
+      const faItem = cleanFaGrid[i] || null;
+      const rawG =
+        inspItem?.stock_grade_name || inspItem?.arrival_grade || inspItem?.grade || inspItem?.grade_name ||
+        inspItem?.stock_grade_code || inspItem?.grade_code ||
+        faItem?.receipt_grade_name || faItem?.challan_grade_name || faItem?.stock_grade_name || faItem?.arrival_grade ||
+        faItem?.grade || faItem?.grade_name || faItem?.quality || '';
+      const codeG = String(
+        inspItem?.stock_grade_code || inspItem?.grade_code ||
+        faItem?.receipt_grade_code || faItem?.grade_code || ''
+      ).trim();
+      const nameG = (resolveGradeName(rawG || codeG, gList) || rawG || '').trim().toUpperCase();
 
-    if (hasData) {
-      arrivalRows.push({
-        inspItem,
-        faItem,
-        rawGrade: rawG,
-        gradeName: nameG,
-        gradeCode: codeG,
-        hasData
-      });
+      const wt = Number(
+        inspItem?.final_receipt_wt || inspItem?.receipt_gross_wt || inspItem?.challan_gross_wt ||
+        inspItem?.weight_qtl || inspItem?.arr_qty_wt || inspItem?.weight || 0
+      );
+      const qty = Number(inspItem?.bales || inspItem?.quantity || 0);
+      const hasData = wt > 0 || qty > 0 || Boolean(nameG);
+
+      if (hasData) {
+        arrivalRows.push({
+          inspItem,
+          faItem,
+          rawGrade: rawG,
+          gradeName: nameG,
+          gradeCode: codeG,
+          hasData
+        });
+      }
+    }
+  } else if (cleanFaGrid.length > 0) {
+    for (let i = 0; i < cleanFaGrid.length; i++) {
+      const faItem = cleanFaGrid[i];
+      const rawG =
+        faItem?.receipt_grade_name || faItem?.challan_grade_name || faItem?.stock_grade_name || faItem?.arrival_grade ||
+        faItem?.grade || faItem?.grade_name || faItem?.quality || '';
+      const codeG = String(faItem?.receipt_grade_code || faItem?.grade_code || '').trim();
+      const nameG = (resolveGradeName(rawG || codeG, gList) || rawG || '').trim().toUpperCase();
+
+      const wt = Number(
+        faItem?.netto_pnto || faItem?.weight_mt || faItem?.weight_qtl || faItem?.arr_qty_wt ||
+        faItem?.receipt_gross_wt || faItem?.challan_gross_wt || faItem?.weight || 0
+      );
+      const qty = Number(faItem?.bales || faItem?.quantity || faItem?.quantity_rcpt || faItem?.quantity_chln || 0);
+      const hasData = wt > 0 || qty > 0 || Boolean(nameG);
+
+      if (hasData) {
+        arrivalRows.push({
+          inspItem: null,
+          faItem,
+          rawGrade: rawG,
+          gradeName: nameG,
+          gradeCode: codeG,
+          hasData
+        });
+      }
+    }
+  } else if (cleanPayDetails.length > 0) {
+    for (let i = 0; i < cleanPayDetails.length; i++) {
+      const payItem = cleanPayDetails[i];
+      const rawG = payItem?.grade || '';
+      const codeG = String(payItem?.grade_code || '').trim();
+      const nameG = (resolveGradeName(rawG || codeG, gList) || rawG || '').trim().toUpperCase();
+      const wt = Number(payItem?.arr_qty_wt || payItem?.weight || 0);
+      const qty = Number(payItem?.quantity || 0);
+      const hasData = wt > 0 || qty > 0;
+
+      if (hasData) {
+        arrivalRows.push({
+          inspItem: null,
+          faItem: null,
+          rawGrade: rawG,
+          gradeName: nameG,
+          gradeCode: codeG,
+          hasData
+        });
+      }
     }
   }
 
   const matchedPoIndices = new Set<number>();
+  const matchedPayIndices = new Set<number>();
+
+  const findUnusedPayDetail = (colIdx: number, targetGradeStr: string): any => {
+    // 1. Exact col_index match first
+    for (let pIdx = 0; pIdx < cleanPayDetails.length; pIdx++) {
+      if (matchedPayIndices.has(pIdx)) continue;
+      const pd = cleanPayDetails[pIdx];
+      if (Number(pd?.col_index) === colIdx) {
+        matchedPayIndices.add(pIdx);
+        return pd;
+      }
+    }
+    // 2. Fallback grade match ONLY for unindexed payment_details or if col_index is not bound to another active row
+    const normTarget = (resolveGradeName(targetGradeStr, gList) || String(targetGradeStr || '')).trim().toUpperCase();
+    if (!normTarget) return null;
+    for (let pIdx = 0; pIdx < cleanPayDetails.length; pIdx++) {
+      if (matchedPayIndices.has(pIdx)) continue;
+      const pd = cleanPayDetails[pIdx];
+      const pdColIdx = Number(pd?.col_index || 0);
+      if (pdColIdx > 0 && pdColIdx !== colIdx && pdColIdx <= arrivalRows.length) {
+        continue;
+      }
+      const pdGrade = (resolveGradeName(pd?.grade, gList) || String(pd?.grade || '')).trim().toUpperCase();
+      if (pdGrade && pdGrade === normTarget) {
+        matchedPayIndices.add(pIdx);
+        return pd;
+      }
+    }
+    return null;
+  };
 
   const applyPaymentSettRates = (
     cols: SettlementDetailColumn[],
@@ -405,8 +652,9 @@ export const buildAlignedSettlementColumns = (
       const item = meta.faItem || meta.inspItem;
       const origRate = colsWithOrigRates[i].rate_value;
 
-      // If pd has specs or values, backfill them into col
-      if (pd) {
+      // If pd has specs or values, backfill them into col ONLY if this column is an active arrival row (or if no inspection/FA exists)
+      const isArrivalBackedCol = Boolean(inspItem || item || arrivalRows.length === 0);
+      if (pd && isArrivalBackedCol) {
         if (!col.grade && pd.grade) col.grade = resolveGradeName(pd.grade, gList) || pd.grade;
         if (!col.area && pd.area) col.area = resolveAreaName(pd.area, arList) || pd.area;
         if (!col.agency && pd.agency) col.agency = resolveAgencyName(pd.agency, agList) || pd.agency;
@@ -568,12 +816,7 @@ export const buildAlignedSettlementColumns = (
           matchedPoIndices.add(matchedPoIdx);
         }
 
-        const matchedPayDetail = (payDetails || []).find(pd => Number(pd.col_index) === idx) ||
-          (payDetails || []).find(pd => {
-            const pdGrade = (resolveGradeName(pd.grade, gList) || String(pd.grade || '')).trim().toUpperCase();
-            const arrGrade = (resolveGradeName(arr.gradeName || arr.rawGrade, gList) || String(arr.gradeName || arr.rawGrade || '')).trim().toUpperCase();
-            return Boolean(pdGrade && arrGrade && pdGrade === arrGrade);
-          });
+        const matchedPayDetail = findUnusedPayDetail(idx, arr.gradeName || arr.rawGrade);
 
         rawItemsByCol.push({
           inspItem: arr.inspItem,
@@ -610,12 +853,8 @@ export const buildAlignedSettlementColumns = (
     const builtCols = [1, 2, 3, 4].map(idx => {
       const pDet = poDetails[idx - 1] || null;
       if (pDet) {
-        const matchedPayDetail = (payDetails || []).find(pd => Number(pd.col_index) === idx) ||
-          (payDetails || []).find(pd => {
-            const pdGrade = (resolveGradeName(pd.grade, gList) || String(pd.grade || '')).trim().toUpperCase();
-            const poGrade = (resolveGradeName(pDet.grade_name || pDet.quality || pDet.grade, gList) || '').trim().toUpperCase();
-            return Boolean(pdGrade && poGrade && pdGrade === poGrade);
-          });
+        const poGrade = pDet.grade_name || pDet.quality || pDet.grade || '';
+        const matchedPayDetail = findUnusedPayDetail(idx, poGrade);
 
         rawItemsByCol.push({
           pDet,
