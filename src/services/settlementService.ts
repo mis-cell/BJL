@@ -160,19 +160,27 @@ export const buildSettlementCol = (
   col.wt_phota = col.wt_quantity;
 
   // 9. Deductions / Claims Mappings
+  const extractPositiveClaim = (...vals: any[]): number => {
+    for (const v of vals) {
+      if (v !== undefined && v !== null && v !== '' && !isNaN(Number(v))) {
+        const num = Number(v);
+        if (num > 0) return num;
+      }
+    }
+    return 0;
+  };
+
   const rawGdSett = inspItem?.settlement_grade_down ?? item?.settlement_grade_down ?? 
     inspItem?.grade_down_sett ?? item?.grade_down_sett ?? 
     inspItem?.gd_sett ?? item?.gd_sett ?? 
     inspItem?.sett_grade_down ?? item?.sett_grade_down;
   if (rawGdSett != null) col.gd_sett = Number(rawGdSett);
 
-  const rawGdClaim = inspItem?.grade_down_claim ?? item?.grade_down_claim ?? 
-    inspItem?.claim_grade_down ?? item?.claim_grade_down ?? 
-    inspItem?.grade_down_act ?? item?.grade_down_act ?? 
-    inspItem?.actual_grade_down ?? item?.actual_grade_down ?? 
-    inspItem?.gd_claim ?? item?.gd_claim;
-  if (rawGdClaim != null) col.gd_claim = Number(rawGdClaim);
-  else if (inspMaster?.claim_grade_down != null) col.gd_claim = Number(inspMaster.claim_grade_down);
+  col.gd_claim = extractPositiveClaim(
+    inspItem?.claim_grade_down, inspItem?.grade_down_claim, inspItem?.gd_claim,
+    item?.claim_grade_down, item?.grade_down_claim, item?.gd_claim,
+    inspMaster?.claim_grade_down, inspMaster?.grade_down_claim
+  );
 
   const rawMoistSett =
     payDetailItem?.moist_sett ?? payDetailItem?.moisture_sett ?? payDetailItem?.settlement_moisture ??
@@ -183,40 +191,34 @@ export const buildSettlementCol = (
     inspMaster?.settlement_moisture;
   if (rawMoistSett != null) col.moist_sett = Number(rawMoistSett);
 
-  const rawMoistClaim =
-    payDetailItem?.moist ?? payDetailItem?.moist_claim ?? payDetailItem?.moisture_claim ?? payDetailItem?.claim_moisture ??
-    inspItem?.moisture_claim ?? item?.moisture_claim ?? 
-    inspItem?.claim_moisture ?? item?.claim_moisture ?? 
-    inspItem?.moist_claim ?? item?.moist_claim ??
-    inspMaster?.claim_moisture;
-  if (rawMoistClaim != null) col.moist_claim = Number(rawMoistClaim);
-  else if (inspMaster?.claim_moisture != null) col.moist_claim = Number(inspMaster.claim_moisture);
+  col.moist_claim = extractPositiveClaim(
+    payDetailItem?.moist, payDetailItem?.moist_claim, payDetailItem?.moisture_claim, payDetailItem?.claim_moisture,
+    inspItem?.claim_moisture, inspItem?.moisture_claim, inspItem?.moist_claim,
+    item?.claim_moisture, item?.moisture_claim, item?.moist_claim,
+    inspMaster?.claim_moisture, inspMaster?.moisture_claim
+  );
 
   const rawDustSett = inspItem?.settlement_dust ?? item?.settlement_dust ?? 
     inspItem?.dust_sett ?? item?.dust_sett ?? 
     inspItem?.sett_dust ?? item?.sett_dust;
   if (rawDustSett != null) col.dust_sett = Number(rawDustSett);
 
-  const rawDustClaim = inspItem?.dust_claim ?? item?.dust_claim ?? 
-    inspItem?.claim_dust ?? item?.claim_dust ?? 
-    inspItem?.dust_act ?? item?.dust_act ?? 
-    inspItem?.actual_dust ?? item?.actual_dust ?? 
-    inspItem?.dust_claim ?? item?.dust_claim;
-  if (rawDustClaim != null) col.dust_claim = Number(rawDustClaim);
-  else if (inspMaster?.claim_dust != null) col.dust_claim = Number(inspMaster.claim_dust);
+  col.dust_claim = extractPositiveClaim(
+    inspItem?.claim_dust, inspItem?.dust_claim,
+    item?.claim_dust, item?.dust_claim,
+    inspMaster?.claim_dust, inspMaster?.dust_claim
+  );
 
   const rawNcvSett = inspItem?.settlement_ncv ?? item?.settlement_ncv ?? 
     inspItem?.ncv_sett ?? item?.ncv_sett ?? 
     inspItem?.sett_ncv ?? item?.sett_ncv;
   if (rawNcvSett != null) col.ncv_sett = Number(rawNcvSett);
 
-  const rawNcvClaim = inspItem?.ncv_claim ?? item?.ncv_claim ?? 
-    inspItem?.claim_ncv ?? item?.claim_ncv ?? 
-    inspItem?.ncv_act ?? item?.ncv_act ?? 
-    inspItem?.actual_ncv ?? item?.actual_ncv ?? 
-    inspItem?.ncv_claim ?? item?.ncv_claim;
-  if (rawNcvClaim != null) col.ncv_claim = Number(rawNcvClaim);
-  else if (inspMaster?.claim_ncv != null) col.ncv_claim = Number(inspMaster.claim_ncv);
+  col.ncv_claim = extractPositiveClaim(
+    inspItem?.claim_ncv, inspItem?.ncv_claim,
+    item?.claim_ncv, item?.ncv_claim,
+    inspMaster?.claim_ncv, inspMaster?.ncv_claim
+  );
 
   const rawPoGradeSett = inspItem?.po_grade_sett ?? item?.po_grade_sett;
   if (rawPoGradeSett != null) col.po_grade_sett = Number(rawPoGradeSett);
