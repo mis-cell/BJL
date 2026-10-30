@@ -139,7 +139,7 @@ export default function ReturnLorry({ onClose }: { onClose?: () => void }) {
   );
 
   return (
-    <LegacyLayout title="RETURN LORRY (4000 SERIES P.O.)" onClose={onClose}>
+    <LegacyLayout title="RETURN LORRY" onClose={onClose}>
       <div className="bg-[#FDF6F6] min-h-screen p-3 space-y-3 text-slate-800 font-sans">
         {/* Toast Notification */}
         {toastMessage && (
@@ -166,15 +166,9 @@ export default function ReturnLorry({ onClose }: { onClose?: () => void }) {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-sm font-black uppercase tracking-wider text-white">
-                  RETURN LORRY DESK (4000 SERIES P.O.)
+                  RETURN LORRY DESK
                 </h1>
-                <span className="bg-amber-400 text-red-950 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
-                  AUTO-GENERATED FROM MILL INSPECTION (&lt; 5 MT) &amp; SAUDA CHECK POINT
-                </span>
               </div>
-              <p className="text-[11px] text-red-100 font-medium mt-0.5">
-                Whenever <code className="bg-black/25 px-1 rounded text-amber-200">material_inspection</code> weight is under 5 MT (&lt; 5.000 MT), all fields from <code className="bg-black/25 px-1 rounded text-amber-200">material_inspection</code> &amp; <code className="bg-black/25 px-1 rounded text-amber-200">sauda_check_point</code> automatically copy here with a 4000-Series P.O.
-              </p>
             </div>
           </div>
 
