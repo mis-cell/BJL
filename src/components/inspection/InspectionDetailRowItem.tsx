@@ -218,11 +218,11 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
       <td className="p-1.5 border-r border-slate-200">
         <input
           type="number"
-          step="0.01"
+          step="0.001"
           readOnly={isChallanGrossWtBlocked}
           tabIndex={isChallanGrossWtBlocked ? -1 : 0}
           title={isChallanGrossWtBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-          value={row.challan_gross_wt || 0}
+          value={(Number(row.challan_gross_wt) || 0).toFixed(3)}
           onChange={(e) => !isChallanGrossWtBlocked && onDetailChange(index, "challan_gross_wt", Number(e.target.value))}
           className={getFieldInputStyle(isChallanGrossWtBlocked, "font-mono font-bold")}
         />
@@ -230,11 +230,11 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
       <td className="p-1.5 border-r border-slate-200">
         <input
           type="number"
-          step="0.01"
+          step="0.001"
           readOnly={isReceiptGrossWtBlocked}
           tabIndex={isReceiptGrossWtBlocked ? -1 : 0}
           title={isReceiptGrossWtBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-          value={row.receipt_gross_wt || 0}
+          value={(Number(row.receipt_gross_wt) || 0).toFixed(3)}
           onChange={(e) => !isReceiptGrossWtBlocked && onDetailChange(index, "receipt_gross_wt", Number(e.target.value))}
           className={getFieldInputStyle(isReceiptGrossWtBlocked, "font-mono font-bold")}
         />
@@ -242,11 +242,11 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
       <td className="p-1.5 border-r border-slate-200">
         <input
           type="number"
-          step="0.01"
+          step="0.001"
           readOnly={isGrossWeightBatchBlocked}
           tabIndex={isGrossWeightBatchBlocked ? -1 : 0}
           title={isGrossWeightBatchBlocked ? "Auto-populated (Manual edit blocked)" : undefined}
-          value={row.gross_weight_batch || 0}
+          value={(Number(row.gross_weight_batch) || 0).toFixed(3)}
           onChange={(e) => !isGrossWeightBatchBlocked && onDetailChange(index, "gross_weight_batch", Number(e.target.value))}
           className={getFieldInputStyle(isGrossWeightBatchBlocked, "font-mono")}
         />
@@ -254,11 +254,11 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
       <td className="p-1.5 border-r border-emerald-200 bg-emerald-50/40">
         <input
           type="number"
-          step="0.01"
+          step="0.001"
           readOnly={isAddWeightBlocked}
           tabIndex={isAddWeightBlocked ? -1 : 0}
           title={isAddWeightBlocked ? "Auto-populated (Manual edit blocked)" : "Add Weight M.Ton"}
-          value={row.add_weight || 0}
+          value={(Number(row.add_weight) || 0).toFixed(3)}
           onChange={(e) => !isAddWeightBlocked && onDetailChange(index, "add_weight", Number(e.target.value))}
           className={`w-full border border-emerald-300 rounded px-2 py-1 text-xs font-mono font-bold text-center bg-emerald-50/80 text-emerald-950 focus:ring-2 focus:ring-emerald-500 ${isAddWeightBlocked ? "cursor-not-allowed opacity-80" : ""}`}
         />
@@ -266,11 +266,11 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
       <td className="p-1.5 border-r border-rose-200 bg-rose-50/40">
         <input
           type="number"
-          step="0.01"
+          step="0.001"
           readOnly={isLessWeightBlocked}
           tabIndex={isLessWeightBlocked ? -1 : 0}
           title={isLessWeightBlocked ? "Auto-populated (Manual edit blocked)" : "Less Weight M.Ton"}
-          value={row.less_weight || 0}
+          value={(Number(row.less_weight) || 0).toFixed(3)}
           onChange={(e) => !isLessWeightBlocked && onDetailChange(index, "less_weight", Number(e.target.value))}
           className={`w-full border border-rose-300 rounded px-2 py-1 text-xs font-mono font-bold text-center bg-rose-50/80 text-rose-950 focus:ring-2 focus:ring-rose-500 ${isLessWeightBlocked ? "cursor-not-allowed opacity-80" : ""}`}
         />
@@ -278,11 +278,11 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
       <td className="p-1.5 border-r border-indigo-200 bg-indigo-50/40">
         <input
           type="number"
-          step="0.01"
+          step="0.001"
           readOnly={isReducedWeightBlocked}
           tabIndex={isReducedWeightBlocked ? -1 : 0}
           title={isReducedWeightBlocked ? "Auto-populated (Manual edit blocked)" : "Reduced Weight M.Ton"}
-          value={row.reduced_weight || 0}
+          value={(Number(row.reduced_weight) || 0).toFixed(3)}
           onChange={(e) => !isReducedWeightBlocked && onDetailChange(index, "reduced_weight", Number(e.target.value))}
           className={`w-full border border-indigo-300 rounded px-2 py-1 text-xs font-mono font-bold text-center bg-indigo-50/80 text-indigo-950 focus:ring-2 focus:ring-indigo-500 ${isReducedWeightBlocked ? "cursor-not-allowed opacity-80" : ""}`}
         />
@@ -522,6 +522,7 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
             const baseWt = Number(row.reduced_weight) > 0 ? Number(row.reduced_weight) : (Number(row.receipt_gross_wt) || 0);
             const mClaim = Number(row.moisture_claim) || 0;
             const dClaim = Number(row.dust_claim) || 0;
+            let val = 0;
             if (baseWt > 0 && (mClaim > 0 || dClaim > 0)) {
               if (
                 row.final_receipt_wt === undefined ||
@@ -529,12 +530,16 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
                 Math.abs(Number(row.final_receipt_wt) - baseWt) < 0.001 ||
                 Number(row.final_receipt_wt) <= 0
               ) {
-                return Math.round((baseWt - ((baseWt * mClaim) / 100) - ((baseWt * dClaim) / 100)) * 1000) / 1000;
+                val = baseWt - ((baseWt * mClaim) / 100) - ((baseWt * dClaim) / 100);
+              } else {
+                val = Number(row.final_receipt_wt);
               }
+            } else {
+              val = row.final_receipt_wt !== undefined && row.final_receipt_wt !== null 
+                ? Number(row.final_receipt_wt) 
+                : baseWt;
             }
-            return row.final_receipt_wt !== undefined && row.final_receipt_wt !== null 
-              ? (Math.round(Number(row.final_receipt_wt) * 1000) / 1000) 
-              : (Math.round(baseWt * 1000) / 1000 || 0);
+            return (Number(val) || 0).toFixed(3);
           })()}
           onChange={(e) => !isFinalReceiptWtBlocked && onDetailChange(index, "final_receipt_wt", Math.round(Number(e.target.value) * 1000) / 1000)}
           className={getFieldInputStyle(isFinalReceiptWtBlocked, "font-mono font-black text-indigo-950 bg-indigo-50/60 text-center")}

@@ -197,11 +197,12 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
             <tr className="border-r border-emerald-600 p-3 text-center font-extrabold text-white">
               <td
                 colSpan={9}
-                className="p-3 text-right font-extrabold text-emerald-900"
+                className="p-3 text-right font-extrabold text-emerald-900 bg-slate-100"
               >
                 Summary Totals:
               </td>
               
+              {/* Quantity */}
               <td className="border-x border-emerald-300 bg-emerald-200 p-3 text-center font-extrabold text-emerald-950">
                 {detailRows
                   .reduce(
@@ -211,12 +212,23 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
                   )
                   .toFixed(2)}
               </td>
-              <td
-                colSpan={2}
-                className="p-3 text-right font-extrabold text-emerald-900"
-              >
+
+              {/* Unit */}
+              <td className="p-3 text-center font-extrabold text-emerald-900 bg-slate-100">
               </td>
 
+              {/* Challan Gross Wt. MT */}
+              <td className="border-x border-emerald-300 bg-emerald-200 p-3 text-center font-extrabold text-emerald-950">
+                {detailRows
+                  .reduce(
+                    (total, item) =>
+                      total + (Number(item.challan_gross_wt) || 0),
+                    0
+                  )
+                  .toFixed(3)}
+              </td>
+
+              {/* Receipt Gross Wt. MT */}
               <td className="border-x border-emerald-300 bg-emerald-200 p-3 text-center font-extrabold text-emerald-950">
                 {detailRows
                   .reduce(
@@ -224,16 +236,61 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
                       total + (Number(item.receipt_gross_wt) || 0),
                     0
                   )
-                  .toFixed(2)}
-              </td>
-              
-              <td
-                colSpan={18}
-                className="p-3 text-right font-extrabold text-emerald-900"
-              >
-               
+                  .toFixed(3)}
               </td>
 
+              {/* Gross Weight Batch */}
+              <td className="border-x border-emerald-300 bg-emerald-200 p-3 text-center font-extrabold text-emerald-950">
+                {detailRows
+                  .reduce(
+                    (total, item) =>
+                      total + (Number(item.gross_weight_batch) || 0),
+                    0
+                  )
+                  .toFixed(3)}
+              </td>
+
+              {/* Add Weight */}
+              <td className="border-x border-emerald-300 bg-emerald-200 p-3 text-center font-extrabold text-emerald-950">
+                {detailRows
+                  .reduce(
+                    (total, item) =>
+                      total + (Number(item.add_weight) || 0),
+                    0
+                  )
+                  .toFixed(3)}
+              </td>
+
+              {/* Less Weight */}
+              <td className="border-x border-emerald-300 bg-emerald-200 p-3 text-center font-extrabold text-emerald-950">
+                {detailRows
+                  .reduce(
+                    (total, item) =>
+                      total + (Number(item.less_weight) || 0),
+                    0
+                  )
+                  .toFixed(3)}
+              </td>
+
+              {/* Reduced Weight */}
+              <td className="border-x border-emerald-300 bg-emerald-200 p-3 text-center font-extrabold text-emerald-950">
+                {detailRows
+                  .reduce(
+                    (total, item) =>
+                      total + (Number(item.reduced_weight) || 0),
+                    0
+                  )
+                  .toFixed(3)}
+              </td>
+              
+              {/* Spacer columns */}
+              <td
+                colSpan={14}
+                className="p-3 text-right font-extrabold text-emerald-900 bg-slate-100"
+              >
+              </td>
+
+              {/* Final Receipt Wt Claim */}
               <td className="border-x border-emerald-300 bg-emerald-200 p-3 text-center font-extrabold text-emerald-950">
                 {detailRows
                   .reduce(
@@ -241,7 +298,7 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
                       total + (Number(item.final_receipt_wt) || 0),
                     0
                   )
-                  .toFixed(2)}
+                  .toFixed(3)}
               </td>
             </tr>
           </tbody>
