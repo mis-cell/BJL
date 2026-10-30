@@ -547,7 +547,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
                           {row.mr_no}
                         </td>
                         <td className="px-2.5 py-2 border-r border-slate-100 text-slate-600 whitespace-nowrap">
-                          {new Date(row.sett_date).toLocaleDateString('en-GB')}
+                          {row.sett_date}
                         </td>
                         <td className="px-2.5 py-2 border-r border-slate-100 font-semibold text-slate-700 whitespace-nowrap">
                           {row.po_no}
@@ -569,7 +569,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
                         </td>
                         <td className="px-2.5 py-2 border-r border-slate-100 font-mono text-slate-500 whitespace-nowrap">
                           {row.payable_bill_no
-                            ? `${row.payable_bill_no} | ${new Date(row.payable_bill_date).toLocaleDateString('en-GB') || ""}`
+                             ? `${row.payable_bill_no} / ${row.payable_bill_date || ""}`
                             : "-"}
                         </td>
                         <td className="px-2 py-2 border-r border-slate-100 text-center whitespace-nowrap">
