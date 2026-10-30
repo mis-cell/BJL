@@ -1073,7 +1073,7 @@ export default function App() {
                   setSystemLogs={setSystemLogs}
                   logEvent={logEvent}
                   setIsAdmin={setIsAdmin}
-                  currentUserContext={currentUserContext}
+                  currentUserContext={getCurrentUserContext()}
                 />
               )}
             </div>
