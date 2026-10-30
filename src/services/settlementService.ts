@@ -8,7 +8,8 @@ import { findMatchedPoItem, parseGridOrItems, getColSettRate } from '../utils/pa
 import { getCachedSattaDiffs } from './sattaCalculation';
 
 
-export { resolveGradeName, resolveAgencyName, resolveMarkaName, resolveAreaName } from './settlement/settlementResolvers';
+import { resolveGradeName, resolveAgencyName, resolveMarkaName, resolveAreaName } from './settlement/settlementResolvers';
+export { resolveGradeName, resolveAgencyName, resolveMarkaName, resolveAreaName };
 
 export const buildSettlementCol = (
   idx: number,
