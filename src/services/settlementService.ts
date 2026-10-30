@@ -663,12 +663,16 @@ export const fetchPoAndItemDetails = async (
   try {
     const resolveContractLorries = (...records: any[]): number => {
       let maxLorries = 0;
+      let maxContractMt = 0;
+      let maxWtPerLorry = 0;
+
       for (const r of records) {
         if (!r) continue;
         const cands = [
           r.total_lorries,
           r.total_no_of_lorries,
           r.no_of_lorries,
+          r.no_of_lorry,
           r.lorries,
           r.contract_lorries
         ];
@@ -678,27 +682,42 @@ export const fetchPoAndItemDetails = async (
             maxLorries = n;
           }
         }
-      }
-      if (maxLorries > 1) return maxLorries;
-
-      for (const r of records) {
-        if (!r) continue;
-        const contractMt = parseFloat(r.total_contract_mt || r.total_wt_in_ton || r.quantity || 0);
-        const wtPerLorry = parseFloat(r.weight_per_lorry || r.wt_per_lorry || 0);
-        if (contractMt > 0 && wtPerLorry > 0 && contractMt > wtPerLorry * 1.3) {
-          return Math.max(1, Math.round(contractMt / wtPerLorry));
+        if (r.lorry_status) {
+          const m = String(r.lorry_status).match(/(\d+)\s*\/\s*(\d+)/);
+          if (m && m[2]) {
+            const parsedTotal = parseInt(m[2], 10);
+            if (!isNaN(parsedTotal) && parsedTotal > maxLorries) {
+              maxLorries = parsedTotal;
+            }
+          }
+        }
+        const mtCands = [
+          r.total_contract_mt,
+          r.contract_weight_mt,
+          r.sauda_contract_mt,
+          r.total_wt_in_ton,
+          r.quantity
+        ];
+        for (const mc of mtCands) {
+          const val = parseFloat(String(mc ?? ''));
+          if (!isNaN(val) && val > maxContractMt) {
+            maxContractMt = val;
+          }
+        }
+        const wpl = parseFloat(String(r.weight_per_lorry || r.wt_per_lorry || 0));
+        if (!isNaN(wpl) && wpl > maxWtPerLorry) {
+          maxWtPerLorry = wpl;
         }
       }
 
-      for (const r of records) {
-        if (!r) continue;
-        const contractMt = parseFloat(r.total_contract_mt || r.total_wt_in_ton || r.quantity || 0);
-        if (contractMt >= 16) {
-          return Math.max(1, Math.round(contractMt / 10));
-        }
+      let inferredByWt = 1;
+      if (maxContractMt > 0 && maxWtPerLorry > 0 && maxContractMt > maxWtPerLorry * 1.3) {
+        inferredByWt = Math.max(1, Math.round(maxContractMt / maxWtPerLorry));
+      } else if (maxContractMt >= 15) {
+        inferredByWt = Math.max(1, Math.round(maxContractMt / 10));
       }
 
-      return Math.max(1, maxLorries);
+      return Math.max(1, maxLorries, inferredByWt);
     };
 
     if (supabase) {
@@ -715,7 +734,7 @@ export const fetchPoAndItemDetails = async (
       const rl = (rlRes as any)?.data || null;
 
       if (rl) {
-        const totalLorries = resolveContractLorries(rl, scp, pm, sm);
+        const totalLorries = resolveContractLorries(rl);
         poData = {
           ...(rl.sauda_snapshot || {}),
           ...rl,
@@ -752,6 +771,13 @@ export const fetchPoAndItemDetails = async (
         }
       } else if (pm && scp) {
         const totalLorries = resolveContractLorries(scp, pm, sm);
+        const maxContractMt = Math.max(
+          Number(pm.total_contract_mt || 0),
+          Number(scp.total_contract_mt || 0),
+          Number(scp.contract_weight_mt || 0),
+          Number(scp.quantity || 0),
+          Number(sm?.total_wt_in_ton || sm?.quantity || 0)
+        );
         poData = {
           ...pm,
           ...scp,
@@ -759,7 +785,7 @@ export const fetchPoAndItemDetails = async (
           po_date: pm.po_date || scp.po_date || scp.s_date,
           supplier: pm.supplier || scp.supplier_name || scp.supplier,
           broker: pm.broker || scp.broker_name || scp.broker,
-          total_contract_mt: pm.total_contract_mt || scp.total_contract_mt || scp.quantity || 0,
+          total_contract_mt: maxContractMt || pm.total_contract_mt || scp.total_contract_mt || scp.quantity || 0,
           total_lorries: totalLorries,
           total_no_of_lorries: totalLorries,
           no_of_lorries: totalLorries,
@@ -770,8 +796,14 @@ export const fetchPoAndItemDetails = async (
         };
       } else if (pm) {
         const totalLorries = resolveContractLorries(pm, sm);
+        const maxContractMt = Math.max(
+          Number(pm.total_contract_mt || 0),
+          Number(pm.contract_weight_mt || 0),
+          Number(sm?.total_wt_in_ton || sm?.quantity || 0)
+        );
         poData = {
           ...pm,
+          total_contract_mt: maxContractMt || pm.total_contract_mt || 0,
           total_lorries: totalLorries,
           total_no_of_lorries: totalLorries,
           no_of_lorries: totalLorries,
@@ -779,12 +811,18 @@ export const fetchPoAndItemDetails = async (
         };
       } else if (scp) {
         const totalLorries = resolveContractLorries(scp, sm);
+        const maxContractMt = Math.max(
+          Number(scp.total_contract_mt || 0),
+          Number(scp.contract_weight_mt || 0),
+          Number(scp.quantity || 0),
+          Number(sm?.total_wt_in_ton || sm?.quantity || 0)
+        );
         poData = {
           ...scp,
           po_date: scp.po_date || scp.s_date,
           supplier: scp.supplier_name || scp.supplier,
           broker: scp.broker_name || scp.broker,
-          total_contract_mt: scp.total_contract_mt || scp.quantity || 0,
+          total_contract_mt: maxContractMt || scp.total_contract_mt || scp.quantity || 0,
           total_lorries: totalLorries,
           total_no_of_lorries: totalLorries,
           no_of_lorries: totalLorries,
@@ -1075,6 +1113,7 @@ export const getPoContractLorryCount = (poData?: any): number => {
     poData.total_lorries,
     poData.total_no_of_lorries,
     poData.no_of_lorries,
+    poData.no_of_lorry,
     poData.lorries,
     poData.contract_lorries
   ];
@@ -1085,19 +1124,40 @@ export const getPoContractLorryCount = (poData?: any): number => {
       maxLorries = n;
     }
   }
-  if (maxLorries > 1) return maxLorries;
+  if (poData.lorry_status) {
+    const m = String(poData.lorry_status).match(/(\d+)\s*\/\s*(\d+)/);
+    if (m && m[2]) {
+      const parsedTotal = parseInt(m[2], 10);
+      if (!isNaN(parsedTotal) && parsedTotal > maxLorries) {
+        maxLorries = parsedTotal;
+      }
+    }
+  }
 
-  const contractMt = parseFloat(
-    poData.total_contract_mt || poData.contract_weight_mt || poData.total_wt_in_ton || poData.quantity || 0
-  );
+  const mtCands = [
+    poData.total_contract_mt,
+    poData.contract_weight_mt,
+    poData.sauda_contract_mt,
+    poData.total_wt_in_ton,
+    poData.quantity
+  ];
+  let contractMt = 0;
+  for (const mc of mtCands) {
+    const val = parseFloat(String(mc ?? ''));
+    if (!isNaN(val) && val > contractMt) {
+      contractMt = val;
+    }
+  }
+
   const wtPerLorry = parseFloat(poData.weight_per_lorry || poData.wt_per_lorry || 0);
+  let inferredByWt = 1;
   if (contractMt > 0 && wtPerLorry > 0 && contractMt > wtPerLorry * 1.3) {
-    return Math.max(1, Math.round(contractMt / wtPerLorry));
+    inferredByWt = Math.max(1, Math.round(contractMt / wtPerLorry));
+  } else if (contractMt >= 15) {
+    inferredByWt = Math.max(1, Math.round(contractMt / 10));
   }
-  if (contractMt >= 16) {
-    return Math.max(1, Math.round(contractMt / 10));
-  }
-  return Math.max(1, maxLorries);
+
+  return Math.max(1, maxLorries, inferredByWt);
 };
 
 export const getUniquePoLorryGroups = (
@@ -1106,17 +1166,41 @@ export const getUniquePoLorryGroups = (
   selectedPoData?: any
 ): Array<{ primaryMr: string; allIds: Set<string>; dateStr: string; lorryNo: string }> => {
   if (!poNo) return [];
-  const cleanTargetPo = poNo.trim().replace(/^#/, '').toUpperCase();
+  const normPo = (s: any) =>
+    String(s || '')
+      .trim()
+      .replace(/^#+/, '')
+      .replace(/\(PTF\)/gi, '')
+      .trim()
+      .toUpperCase();
+
+  const cleanTargetPo = normPo(poNo);
   const cleanAlphaTargetPo = cleanTargetPo.replace(/[^A-Z0-9]/g, '');
 
   const matched = (inspections || []).filter((insp: any) => {
     const mrVal = insp.mr_no || insp.final_arrival_no || insp.arrival_no || insp.temporary_arrival_no;
     if (!mrVal) return false;
-    const inspPo = String(insp.po_no || insp.contract_no || '').trim().replace(/^#/, '').toUpperCase();
-    const inspAlphaPo = inspPo.replace(/[^A-Z0-9]/g, '');
-    return (
-      inspPo === cleanTargetPo ||
-      (cleanAlphaTargetPo && inspAlphaPo === cleanAlphaTargetPo) ||
+
+    const inspPoCands = [
+      insp.po_no,
+      insp.mill_po_no,
+      insp.contract_po_no,
+      insp.contract_no,
+      insp.sauda_no,
+      insp.po_contract,
+      insp.return_po_no
+    ]
+      .map(normPo)
+      .filter(Boolean);
+
+    for (const c of inspPoCands) {
+      const cAlpha = c.replace(/[^A-Z0-9]/g, '');
+      if (c === cleanTargetPo || (cleanAlphaTargetPo && cAlpha === cleanAlphaTargetPo)) {
+        return true;
+      }
+    }
+
+    return Boolean(
       (selectedPoData?.id && insp.po_id === selectedPoData.id) ||
       (selectedPoData?.purchase_order_id &&
         (insp.po_id === selectedPoData.purchase_order_id ||

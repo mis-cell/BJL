@@ -1600,7 +1600,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
 
     const deductions = await resolvePaymentDeductionsForPoAndMr({
       poNo: item.po_no,
-      mrNo: item.mr_no,
+      mrNo: item.mr_no || item.arrival_no,
       cols: loadedCols,
       saudaCheckPoints,
       purchaseOrders,
@@ -1609,10 +1609,10 @@ export function usePaymentData(onSaveSuccess?: () => void) {
 
     setMasterData(prev => ({
       ...prev,
-      summary_delivery_claim: Number(item.summary_delivery_claim) || deductions.deliveryClaim,
-      summary_deduction_amount: Number(item.summary_deduction_amount) || deductions.totalDeductionsAndPenalties,
-      summary_deduction_type: item.summary_deduction_type || deductions.deductionSummaryText,
-      val_ex_short: Number(item.val_ex_short) || deductions.extraAndShort
+      summary_delivery_claim: deductions.deliveryClaim,
+      summary_deduction_amount: deductions.totalDeductionsAndPenalties,
+      summary_deduction_type: deductions.deductionSummaryText,
+      val_ex_short: deductions.extraAndShort
     }));
   };
 

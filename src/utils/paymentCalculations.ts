@@ -3,7 +3,13 @@ import { calculateSattaDeduction } from '../services/sattaCalculation';
 export { calculateSattaDeduction };
 import { supabase } from '../lib/supabase';
 import { dbModule } from '../services/dbModule';
-import { fetchSaudaCheckpointDeduction } from '../services/settlementService';
+import {
+  fetchSaudaCheckpointDeduction,
+  isLastMrForPo,
+  fetchPoAndItemDetails,
+  getPoContractLorryCount,
+  getUniquePoLorryGroups
+} from '../services/settlementService';
 
 export const hasDetailColData = (col?: PaymentDetailColumn): boolean => {
   if (!col) return false;
@@ -129,21 +135,139 @@ export async function resolvePaymentDeductionsForPoAndMr(params: {
     ''
   ).trim();
 
-  // 1. Resolve Extra & Short from Sauda Check Point (sauda_check_point_deductions)
+  // Rule: All deductions for a P.O. MUST ONLY be deducted on the Last M.R. of that P.O.
+  // If no M.R. or P.O. is selected yet, return 0 for all deductions.
+  if (!cleanPoNo || !rawMrNo) {
+    return {
+      deliveryClaim: 0,
+      deliveryDelayDays: 0,
+      deliveryPenaltyRate: 0,
+      weightQtl: 0,
+      poDeliveryToDate: '',
+      arrivalDate: String(arrival?.date || arrival?.arrival_date || '').trim(),
+      totalDeductionsAndPenalties: 0,
+      deductionSummaryText: '',
+      extraAndShort: 0
+    };
+  }
+
+  const normPoKey = (v: any) =>
+    String(v || '')
+      .trim()
+      .replace(/^#+/, '')
+      .replace(/\(PTF\)/gi, '')
+      .trim()
+      .toUpperCase();
+  const targetPoNorm = normPoKey(cleanPoNo);
+
+  const matchInList = (list: any[]) =>
+    (list || []).find(item => {
+      if (!item) return false;
+      const cands = [item.po_no, item.ptf_no, item.sauda_no, item.contract_po_no, item.new_po_no].map(normPoKey);
+      return cands.includes(targetPoNorm);
+    });
+
+  const scpMatch = matchInList(saudaCheckPoints);
+  const poMatch = matchInList(purchaseOrders);
+
+  // 1. Fetch Sauda Check Point deduction record (also provides contract_weight_mt / total_received_mt)
+  let saudaDed: any = null;
   let extraAndShort = 0;
-  if (cleanPoNo) {
-    try {
-      const saudaDed = await fetchSaudaCheckpointDeduction(cleanPoNo);
-      if (saudaDed && Number(saudaDed.deduction_amount) > 0) {
-        extraAndShort = Number(saudaDed.deduction_amount);
-      }
-    } catch (e) {
-      console.warn('Error fetching sauda_check_point_deductions in payment:', e);
+  try {
+    saudaDed = await fetchSaudaCheckpointDeduction(cleanPoNo);
+    if (saudaDed && Number(saudaDed.deduction_amount) > 0) {
+      extraAndShort = Number(saudaDed.deduction_amount);
     }
+  } catch (e) {
+    console.warn('Error fetching sauda_check_point_deductions in payment:', e);
   }
   if (extraAndShort === 0 && po) {
     const fallbackEx = Number(po.excess_short_deduction || po.val_ex_short || 0);
     if (fallbackEx > 0) extraAndShort = fallbackEx;
+  }
+
+  // Build authoritative PO data (merging purchase_master, sauda_check_point, and live DB if needed)
+  let livePoData: any = null;
+  const prelimPo = {
+    ...(poMatch || {}),
+    ...(scpMatch || {}),
+    ...(po || {}),
+    contract_weight_mt: Math.max(
+      Number(po?.total_contract_mt || po?.contract_weight_mt || 0),
+      Number(scpMatch?.total_contract_mt || scpMatch?.contract_weight_mt || 0),
+      Number(poMatch?.total_contract_mt || poMatch?.contract_weight_mt || 0),
+      Number(saudaDed?.contract_weight_mt || 0)
+    )
+  };
+  if (!scpMatch || getPoContractLorryCount(prelimPo) <= 1) {
+    try {
+      const fetched = await fetchPoAndItemDetails(cleanPoNo);
+      if (fetched?.poData) {
+        livePoData = fetched.poData;
+      }
+    } catch (e) {
+      console.warn('Error fetching live PO details for Last M.R. check in payment:', e);
+    }
+  }
+
+  const maxContractMt = Math.max(
+    Number(prelimPo.contract_weight_mt || 0),
+    Number(livePoData?.total_contract_mt || livePoData?.contract_weight_mt || 0),
+    Number(saudaDed?.contract_weight_mt || 0)
+  );
+  const maxLorries = Math.max(
+    getPoContractLorryCount(poMatch),
+    getPoContractLorryCount(scpMatch),
+    getPoContractLorryCount(po),
+    getPoContractLorryCount(livePoData),
+    getPoContractLorryCount({ ...prelimPo, ...(livePoData || {}), total_contract_mt: maxContractMt })
+  );
+
+  const effectivePoData = {
+    ...(poMatch || {}),
+    ...(livePoData || {}),
+    ...(scpMatch || {}),
+    ...(po || {}),
+    total_contract_mt: maxContractMt || prelimPo.total_contract_mt || 0,
+    contract_weight_mt: maxContractMt || prelimPo.contract_weight_mt || 0,
+    total_lorries: maxLorries,
+    total_no_of_lorries: maxLorries,
+    no_of_lorries: maxLorries,
+    contract_lorries: maxLorries
+  };
+
+  // Gather arrivals pool for this P.O. to check if rawMrNo is the Last M.R.
+  let arrivalsPool: any[] = Array.isArray(verifiedArrivals) ? [...verifiedArrivals] : [];
+  if (arrival) {
+    arrivalsPool.push(arrival);
+  }
+  if (getUniquePoLorryGroups(cleanPoNo, arrivalsPool, effectivePoData).length <= Math.max(1, maxLorries) && supabase) {
+    try {
+      const noPtfPo = cleanPoNo.replace(/\(PTF\)/gi, '').trim();
+      const ptfPo = `${noPtfPo}(PTF)`;
+      const poOrFilter = `po_no.eq."${cleanPoNo}",po_no.eq."#${cleanPoNo}",po_no.eq."${noPtfPo}",po_no.eq."${ptfPo}",mill_po_no.eq."${cleanPoNo}",mill_po_no.eq."${noPtfPo}",mill_po_no.eq."${ptfPo}"`;
+      const [miRows, faRows, tmrRows] = await Promise.all([
+        supabase.from('material_inspection').select('mr_no, arrival_no, po_no, mill_po_no, lorry_number, date, arrival_date').or(poOrFilter).then(r => r.data || [], () => []),
+        supabase.from('final_arrival').select('mr_no, final_arrival_no, arrival_no, temporary_arrival_no, po_no, mill_po_no, lorry_number, date, arrival_date').or(poOrFilter).then(r => r.data || [], () => []),
+        supabase.from('temporary_material_received').select('temporary_arrival_no, amad_no, arrival_no, mr_no, po_no, mill_po_no, lorry_number, date, arrival_date').or(poOrFilter).then(r => r.data || [], () => [])
+      ]);
+      arrivalsPool = [...arrivalsPool, ...miRows, ...faRows, ...tmrRows];
+    } catch (_e) {}
+  }
+
+  const isLastMr = isLastMrForPo(rawMrNo, cleanPoNo, arrivalsPool, effectivePoData);
+  if (!isLastMr) {
+    return {
+      deliveryClaim: 0,
+      deliveryDelayDays: 0,
+      deliveryPenaltyRate: 0,
+      weightQtl: 0,
+      poDeliveryToDate: '',
+      arrivalDate: String(arrival?.date || arrival?.arrival_date || '').trim(),
+      totalDeductionsAndPenalties: 0,
+      deductionSummaryText: '',
+      extraAndShort: 0
+    };
   }
 
   // 2. Resolve Total Deductions & Penalties from Mill Inspection (mill_inspection_deduction / material_inspection / mill_inspection_master)
