@@ -1396,15 +1396,33 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
     <PrintModal
       isOpen={isOpen}
       onClose={onClose}
-      title={`MR SETTLEMENT PDF PREVIEW - ${master.mr_no || "N/A"}`}
+      title={`MR SETTLEMENT STATEMENT PREVIEW - ${master.mr_no || "N/A"}`}
       onPrint={handleInitiatePrint}
-      customPrintHandler={handleSendPdfToPrinter}
+      customPrintHandler={viewMode === "pdf" ? handleSendPdfToPrinter : undefined}
       customPdfBase64={pdfBase64}
       showTip={false}
-      hideActionBar={true}
+      hideActionBar={false}
+      extraActions={
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setViewMode(viewMode === "sheet" ? "pdf" : "sheet")}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-slate-500"
+          >
+            {viewMode === "sheet" ? "Switch to PDF Viewer" : "Switch to Sheet View"}
+          </button>
+          <button
+            type="button"
+            onClick={handleExportFilledCsvTemplate}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 hover:bg-teal-600 text-white rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer border border-teal-500"
+          >
+            Export CSV
+          </button>
+        </div>
+      }
     >
-      {/* Embedded Live PDF Viewer (Screenshot 2 view + Close button) */}
-      {pdfBlobUrl && (
+      {/* Embedded Live PDF Viewer (only when PDF mode is selected) */}
+      {viewMode === "pdf" && pdfBlobUrl && (
         <div className="pdf-embed-container no-print w-full bg-[#323639] flex flex-col items-center">
           <iframe
             ref={pdfIframeRef}
@@ -1422,16 +1440,16 @@ export const SettlementPrintModal: React.FC<SettlementPrintModalProps> = ({
                 // ignore cross-origin or browser restrictions
               }
             }}
-            className="w-full h-[88vh] bg-white border-0"
+            className="w-full h-[82vh] bg-white border-0"
           />
         </div>
       )}
 
-      {/* Clean A4 Template Sheet (Used for Sheet View, Email HTML, and fallback print) */}
+      {/* Clean A4 Template Sheet (Used for Sheet View, Email HTML, and direct Print) */}
       <div
         id="print-modal-children-canvas"
         className={`${
-          viewMode === "pdf" ? "hidden print:flex" : "flex"
+          viewMode === "pdf" && pdfBlobUrl ? "hidden print:flex" : "flex"
         } bg-white text-black px-3 py-2 mx-auto w-full max-w-[193mm] min-h-[275mm] flex-col justify-between text-[12px] leading-tight select-text`}
         style={{
           fontFamily: "'Times New Roman', Times, serif",

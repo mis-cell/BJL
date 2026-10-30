@@ -541,10 +541,13 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
     master: SettlementMaster;
     details: SettlementDetailColumn[];
   } | null>(null);
+  const [deleteConfirmMr, setDeleteConfirmMr] = useState<string | null>(null);
 
   const handleOpenViewSettlement = async (targetMrNo: string) => {
+    if (!targetMrNo) return;
     try {
       setLoading(true);
+      const cleanTargetMr = String(targetMrNo).trim();
       let foundMaster: any = null;
       let foundDetails: any[] = [];
 
@@ -553,27 +556,41 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           const { data: mData } = await supabase
             .from('mr_settlement_master')
             .select('*')
-            .eq('mr_no', targetMrNo)
+            .eq('mr_no', cleanTargetMr)
             .maybeSingle();
           if (mData) foundMaster = mData;
 
           const { data: dData } = await supabase
             .from('mr_settlement_detail')
             .select('*')
-            .eq('mr_no', targetMrNo)
+            .eq('mr_no', cleanTargetMr)
             .order('col_index', { ascending: true });
           if (dData && dData.length > 0) foundDetails = dData;
         } catch (e) {}
       }
 
       if (!foundMaster) {
+        foundMaster = settledList.find(
+          (m: any) => String(m?.mr_no || '').trim().toUpperCase() === cleanTargetMr.toUpperCase()
+        ) || null;
+      }
+
+      if (!foundMaster) {
         const localMasters = await dbModule.fetchAll('mr_settlement_master').catch(() => []);
-        foundMaster = localMasters.find((m: any) => m.mr_no === targetMrNo);
+        if (Array.isArray(localMasters)) {
+          foundMaster = localMasters.find(
+            (m: any) => String(m?.mr_no || '').trim().toUpperCase() === cleanTargetMr.toUpperCase()
+          );
+        }
       }
 
       if (foundDetails.length === 0) {
         const localDetails = await dbModule.fetchAll('mr_settlement_detail').catch(() => []);
-        foundDetails = localDetails.filter((d: any) => d.mr_no === targetMrNo);
+        if (Array.isArray(localDetails)) {
+          foundDetails = localDetails.filter(
+            (d: any) => String(d?.mr_no || '').trim().toUpperCase() === cleanTargetMr.toUpperCase()
+          );
+        }
       }
 
       const activeMaster = foundMaster || masterData;
@@ -581,8 +598,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       // Also fetch PO details, final_arrival, material_inspection, supplier_master, and payment_details for accurate print preview
       const targetPoForView = activeMaster.po_no || selectedPoNo || '';
       const [{ poData: viewPoData, poDetails: viewPoDetails }, { totalPaid: viewPaidAmt, payDetails: viewPayDetails, hasMatchedPayment: viewHasPay }] = await Promise.all([
-        targetPoForView ? fetchPoAndItemDetails(targetPoForView) : Promise.resolve({ poData: null, poDetails: [] }),
-        syncPaymentModuleData(targetMrNo, targetPoForView)
+        targetPoForView
+          ? fetchPoAndItemDetails(targetPoForView, gradeMasterList, agencyMasterList).catch(() => ({ poData: null, poDetails: [], gList: gradeMasterList, agList: agencyMasterList }))
+          : Promise.resolve({ poData: null, poDetails: [] }),
+        syncPaymentModuleData(cleanTargetMr, targetPoForView).catch(() => ({ totalPaid: 0, payDetails: [], hasMatchedPayment: false }))
       ]);
 
       let faRecord: any = null;
@@ -594,32 +613,32 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       if (supabase) {
         try {
           const [matInspExact, matInspDetRes] = await Promise.all([
-            supabase.from('material_inspection').select('*').eq('mr_no', targetMrNo).maybeSingle(),
-            supabase.from('material_inspection_details').select('*').eq('mr_no', targetMrNo).order('srl_no', { ascending: true })
+            supabase.from('material_inspection').select('*').eq('mr_no', cleanTargetMr).maybeSingle(),
+            supabase.from('material_inspection_details').select('*').eq('mr_no', cleanTargetMr).order('srl_no', { ascending: true })
           ]);
           if (matInspExact.data) {
             inspRecord = matInspExact.data;
           } else {
-            const { data: matInspFallback } = await supabase.from('material_inspection').select('*').eq('arrival_no', targetMrNo).limit(1);
+            const { data: matInspFallback } = await supabase.from('material_inspection').select('*').eq('arrival_no', cleanTargetMr).limit(1);
             if (matInspFallback && matInspFallback.length > 0) inspRecord = matInspFallback[0];
           }
           if (matInspDetRes.data) inspDetailsList = matInspDetRes.data;
 
-          const targetArrForFa = inspRecord?.arrival_no || targetMrNo;
+          const targetArrForFa = inspRecord?.arrival_no || cleanTargetMr;
           const { data: faCandidates } = await supabase
             .from('final_arrival')
             .select('*')
-            .or(`final_arrival_no.eq.${targetMrNo},mr_no.eq.${targetMrNo},final_arrival_no.eq.${targetArrForFa},arrival_no.eq.${targetArrForFa}`);
-          if (faCandidates && faCandidates.length > 0) {
+            .or(`final_arrival_no.eq.${cleanTargetMr},mr_no.eq.${cleanTargetMr},final_arrival_no.eq.${targetArrForFa},arrival_no.eq.${targetArrForFa}`);
+          if (Array.isArray(faCandidates) && faCandidates.length > 0) {
             const normLorry = (v: any) => String(v || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
             const expectedLorry = normLorry(inspRecord?.lorry_number || activeMaster.lorry_number);
             const matchedFa =
-              faCandidates.find((f: any) => String(f.final_arrival_no || '').trim().toUpperCase() === String(targetMrNo).trim().toUpperCase()) ||
+              faCandidates.find((f: any) => String(f.final_arrival_no || '').trim().toUpperCase() === cleanTargetMr.toUpperCase()) ||
               faCandidates.find((f: any) => {
                 const fLorry = normLorry(f.lorry_number || f.lorry_no || f.vehicle_no);
                 if (expectedLorry && fLorry && expectedLorry !== fLorry) return false;
                 const fArr = String(f.final_arrival_no || f.arrival_no || f.mr_no || '').trim().toUpperCase();
-                return fArr === String(targetArrForFa).trim().toUpperCase() || fArr === String(targetMrNo).trim().toUpperCase();
+                return fArr === String(targetArrForFa).trim().toUpperCase() || fArr === cleanTargetMr.toUpperCase();
               });
             if (matchedFa) faRecord = matchedFa;
           }
@@ -659,7 +678,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             const { data: millDedList } = await supabase
               .from('mill_inspection_deduction')
               .select('*')
-              .or(`mr_no.eq.${targetMrNo},arrival_no.eq.${targetMrNo}`)
+              .or(`mr_no.eq.${cleanTargetMr},arrival_no.eq.${cleanTargetMr}`)
               .order('created_at', { ascending: true });
 
             if (millDedList && millDedList.length > 0) {
@@ -728,13 +747,15 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           faRecord?.items ||
           faRecord?.grid_details
         ),
-        inspRecord?.electronic_net_weight || inspRecord?.challan_material_weight || faRecord?.electronic_net_weight || faRecord?.challan_material_weight,
-        inspRecord?.total_bales || inspRecord?.bales || faRecord?.total_bales || faRecord?.bales
+        gradeMasterList,
+        Number(inspRecord?.electronic_net_weight || inspRecord?.challan_material_weight || faRecord?.electronic_net_weight || faRecord?.challan_material_weight || 0),
+        Number(inspRecord?.total_bales || inspRecord?.bales || faRecord?.total_bales || faRecord?.bales || 0)
       );
       const cleanInspDetailsList = deduplicateArrivalItems(
         inspDetailsList,
-        inspRecord?.electronic_net_weight || inspRecord?.challan_material_weight,
-        inspRecord?.total_bales || inspRecord?.bales
+        gradeMasterList,
+        Number(inspRecord?.electronic_net_weight || inspRecord?.challan_material_weight || 0),
+        Number(inspRecord?.total_bales || inspRecord?.bales || 0)
       );
       const alignedFallbackCols = buildAlignedSettlementColumns(
         viewPoDetails,
@@ -756,8 +777,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       const hasAuthoritativeInspectionCols = (cleanInspDetailsList.length > 0 || faGridArr.length > 0) && fallbackActiveCount > 0;
 
       const activeDetails: SettlementDetailColumn[] = [1, 2, 3, 4].map(idx => {
-        const existing = foundDetails.find((d: any) => Number(d.col_index) === idx);
-        const currentScreenCol = (targetMrNo === masterData.mr_no && detailCols[idx - 1]?.grade) ? detailCols[idx - 1] : null;
+        const existing = Array.isArray(foundDetails) ? foundDetails.find((d: any) => Number(d.col_index) === idx) : null;
+        const currentScreenCol = (cleanTargetMr === masterData.mr_no && detailCols[idx - 1]?.grade) ? detailCols[idx - 1] : null;
         const fb = currentScreenCol || alignedFallbackCols[idx - 1] || detailCols[idx - 1] || emptyDetailColumn(idx);
         const isFbActive = (Number(fb.arr_qty_wt) || 0) > 0 || (Number(fb.quantity) || 0) > 0;
 
@@ -787,10 +808,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       });
 
       const viewApmcFees = await resolveTemporaryArrivalApmcFees({
-        mrNo: targetMrNo || activeMaster.mr_no || activeMaster.arrival_no,
+        mrNo: cleanTargetMr || activeMaster.mr_no || activeMaster.arrival_no,
         faMaster: faRecord,
         inspMaster: inspRecord
-      });
+      }).catch(() => Number(activeMaster.arival_apmc_fees || 0));
 
       setViewModalData({
         master: {
@@ -937,6 +958,45 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       });
     });
 
+    // Secondary Fallback: also include inspected arrivals (material_inspection / final_arrival) matching selectedPoNo
+    inspections.forEach((insp: any) => {
+      const mrVal = String(insp.mr_no || insp.final_arrival_no || insp.arrival_no || '').trim();
+      if (!mrVal || mrVal.toUpperCase() === 'NO' || mrVal.toUpperCase() === 'N/A' || mrVal === '-') return;
+      const key = mrVal.toUpperCase();
+      if (seen.has(key)) return;
+
+      const inspPo = String(insp.po_no || insp.mill_po_no || insp.contract_no || '').trim().replace(/^#/, '').toUpperCase();
+      const inspPoNormalized = cleanPo(inspPo);
+
+      if (targetPoNormalized) {
+        if (!inspPoNormalized) return;
+        const isPoMatch = inspPo === cleanTargetPo || inspPoNormalized === targetPoNormalized;
+        if (!isPoMatch) return;
+      }
+
+      const isAlreadySettled = settledList.some(
+        s => String(s.mr_no || '').trim().toUpperCase() === key
+      );
+      const isCurrentMr =
+        masterData.mr_no && String(masterData.mr_no).trim().toUpperCase() === key;
+
+      if (isAlreadySettled && !isCurrentMr && !(isEdit && isCurrentMr)) return;
+
+      seen.add(key);
+      const lorryVal = insp.lorry_number || insp.lorry_no || insp.vehicle_no || '';
+      const supVal = insp.supplier_name || insp.supplier || '';
+
+      optionsList.push({
+        value: mrVal,
+        label: lorryVal
+          ? `${mrVal} (Lorry: ${lorryVal})`
+          : inspPo
+          ? `${mrVal} (PO: ${inspPo})`
+          : mrVal,
+        details: inspPo ? `PO: ${inspPo}${supVal ? ` | ${supVal}` : ''}` : undefined
+      });
+    });
+
     optionsList.sort((a, b) => {
       const getSuffix = (val: string) => {
         const m = val.match(/\d+/g);
@@ -1016,15 +1076,22 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           }
         }
 
-        // 1. Fetch saved settlements & payments (combining supabase & dbModule.fetchAll for complete payment_master list)
-        const [mDataRes, payRes, dbPayRes] = await Promise.all([
+        // 1. Fetch saved settlements & payments (combining supabase & dbModule.fetchAll for complete lists)
+        const [mDataRes, dbSettledRes, payRes, dbPayRes] = await Promise.all([
           supabase.from('mr_settlement_master').select('*').order('created_at', { ascending: false }),
+          dbModule.fetchAll('mr_settlement_master').catch(() => []),
           supabase.from('payment_master').select('*').order('created_at', { ascending: false }).then(res => res.data || [], () => []),
           dbModule.fetchAll('payment_master').catch(() => [])
         ]);
-        if (!mDataRes.error && mDataRes.data) setSettledList(mDataRes.data);
+        const mergedSettledMap = new Map<string, any>();
+        [...(Array.isArray(dbSettledRes) ? dbSettledRes : []), ...(mDataRes?.data || [])].forEach((s: any) => {
+          const k = String(s?.mr_no || s?.settlement_id || '').trim();
+          if (k) mergedSettledMap.set(k, s);
+        });
+        setSettledList(Array.from(mergedSettledMap.values()));
+
         const mergedPayMap = new Map<string, any>();
-        [...(dbPayRes || []), ...(payRes || [])].forEach((p: any) => {
+        [...(Array.isArray(dbPayRes) ? dbPayRes : []), ...(payRes || [])].forEach((p: any) => {
           const k = String(p.payment_id || p.voucher_no || `${p.mr_no || ''}_${p.po_no || ''}`).trim();
           if (k) mergedPayMap.set(k, p);
         });
@@ -1906,8 +1973,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
 
       inspDetails = deduplicateArrivalItems(
         inspDetails,
-        inspMaster?.electronic_net_weight || inspMaster?.challan_material_weight || inspMaster?.supplier_net_weight,
-        inspMaster?.total_bales || inspMaster?.bales || inspMaster?.quantity
+        gradeMasterList,
+        Number(inspMaster?.electronic_net_weight || inspMaster?.challan_material_weight || inspMaster?.supplier_net_weight || 0),
+        Number(inspMaster?.total_bales || inspMaster?.bales || inspMaster?.quantity || 0)
       );
 
       // 2. Fetch final_arrival and validate against targetMrNo / inspMaster / payMasterRec
@@ -1958,8 +2026,9 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       }
       faGridArr = deduplicateArrivalItems(
         faGridArr,
-        faMaster?.electronic_net_weight || faMaster?.challan_material_weight || faMaster?.supplier_net_weight,
-        faMaster?.total_bales || faMaster?.bales || faMaster?.quantity
+        gradeMasterList,
+        Number(faMaster?.electronic_net_weight || faMaster?.challan_material_weight || faMaster?.supplier_net_weight || 0),
+        Number(faMaster?.total_bales || faMaster?.bales || faMaster?.quantity || 0)
       );
 
       const poNoForDet = inspMaster?.po_no || payMasterRec?.po_no || faMaster?.po_no || '';
@@ -3496,24 +3565,50 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
   };
 
   // Settle removal / purge
-  const handleDeleteSettlement = async (targetMr: string) => {
+  const handleDeleteSettlement = (targetMr: string) => {
+    if (!targetMr) return;
     if (!enforceEditOrDeletePermission("Delete")) {
       return;
     }
+    setDeleteConfirmMr(targetMr);
+  };
 
-    if (!window.confirm(`Settle Warning: Permanently purge Settlement record for MR: ${targetMr}?`)) return;
+  const executeDeleteSettlement = async (targetMr: string) => {
+    if (!targetMr) return;
+    const cleanMr = String(targetMr).trim();
+    setDeleteConfirmMr(null);
     setLoading(true);
     try {
-      if (!supabase) return;
-      const { error } = await supabase
-        .from('mr_settlement_master')
-        .delete()
-        .eq('mr_no', targetMr);
-      if (error) throw error;
-      alert(`Settlement report for ${targetMr} deleted.`);
-      initPage();
+      // 1. Delete child rows and master from Supabase
+      if (supabase) {
+        await supabase.from('mr_settlement_detail').delete().eq('mr_no', cleanMr);
+        await supabase.from('m_r_settlement').delete().eq('mr_no', cleanMr);
+        const { error } = await supabase
+          .from('mr_settlement_master')
+          .delete()
+          .eq('mr_no', cleanMr);
+        if (error) {
+          console.warn("Supabase mr_settlement_master delete warning:", error);
+        }
+      }
+
+      // 2. Also delete from dbModule local cache / IndexedDB
+      await dbModule.delete('mr_settlement_detail', cleanMr, 'mr_no').catch(() => {});
+      await dbModule.delete('m_r_settlement', cleanMr, 'mr_no').catch(() => {});
+      await dbModule.delete('mr_settlement_master', cleanMr, 'mr_no').catch(() => {});
+
+      // 3. Immediately update settledList state so UI reflects deletion right away
+      setSettledList(prev =>
+        prev.filter(r => String(r?.mr_no || '').trim().toUpperCase() !== cleanMr.toUpperCase())
+      );
+
+      if (onLogEvent) {
+        onLogEvent('MR_SETTLEMENT_DELETE', `Deleted settlement record for M.R. ${cleanMr}`);
+      }
+      await initPage();
     } catch (err: any) {
-      alert("Error dropping record: " + err.message);
+      console.error("Error dropping settlement record:", err);
+      setErrorMessage("Error deleting settlement record: " + (err.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -3853,6 +3948,52 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         auditOverwriteInfo={auditOverwriteInfo}
         fallbackMrNo={masterData.mr_no}
       />
+
+      {/* Delete Confirmation Modal (avoids window.confirm blocking in sandboxed iframe) */}
+      {deleteConfirmMr && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white border-2 border-rose-500 rounded-xl shadow-2xl max-w-md w-full overflow-hidden font-sans">
+            <div className="bg-[#D94B5A] text-white px-5 py-3.5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-200" />
+                <h3 className="text-sm font-black uppercase tracking-wider">Confirm Settlement Deletion</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmMr(null)}
+                className="text-white/80 hover:text-white text-sm font-bold px-2 py-0.5 rounded cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-slate-700 font-semibold leading-relaxed">
+                Are you sure you want to permanently delete the Settlement record for M.R. No.{" "}
+                <span className="font-mono font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                  {deleteConfirmMr}
+                </span>
+                ?
+              </p>
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmMr(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => executeDeleteSettlement(deleteConfirmMr)}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm transition-colors cursor-pointer"
+                >
+                  Delete Permanently
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

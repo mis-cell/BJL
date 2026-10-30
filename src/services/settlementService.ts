@@ -11,15 +11,15 @@ export const resolveGradeName = (raw: any, overrideList?: any[]): string => {
   if (!raw && raw !== 0) return '';
   const str = String(raw).trim();
   if (!str) return '';
-  const list = overrideList || [];
+  const list = Array.isArray(overrideList) ? overrideList : [];
   const matchByName = list.find(g => 
-    String(g.grade_name || '').trim().toUpperCase() === str.toUpperCase() ||
-    String(g.grade || '').trim().toUpperCase() === str.toUpperCase()
+    String(g?.grade_name || '').trim().toUpperCase() === str.toUpperCase() ||
+    String(g?.grade || '').trim().toUpperCase() === str.toUpperCase()
   );
   if (matchByName) return matchByName.grade_name || matchByName.grade || str;
   const matchByCode = list.find(g => 
-    String(g.grade_code || '').trim().toUpperCase() === str.toUpperCase() ||
-    String(g.id || '').trim() === str
+    String(g?.grade_code || '').trim().toUpperCase() === str.toUpperCase() ||
+    String(g?.id || '').trim() === str
   );
   if (matchByCode) return matchByCode.grade_name || matchByCode.grade || str;
   return str;
@@ -29,15 +29,15 @@ export const resolveAgencyName = (raw: any, overrideList?: any[]): string => {
   if (!raw && raw !== 0) return '';
   const str = String(raw).trim();
   if (!str) return '';
-  const list = overrideList || [];
+  const list = Array.isArray(overrideList) ? overrideList : [];
   const matchByName = list.find(a => 
-    String(a.agency_name || '').trim().toUpperCase() === str.toUpperCase() ||
-    String(a.agency || '').trim().toUpperCase() === str.toUpperCase()
+    String(a?.agency_name || '').trim().toUpperCase() === str.toUpperCase() ||
+    String(a?.agency || '').trim().toUpperCase() === str.toUpperCase()
   );
   if (matchByName) return matchByName.agency_name || matchByName.agency || str;
   const matchByCode = list.find(a => 
-    String(a.agency_code || '').trim().toUpperCase() === str.toUpperCase() ||
-    String(a.id || '').trim() === str
+    String(a?.agency_code || '').trim().toUpperCase() === str.toUpperCase() ||
+    String(a?.id || '').trim() === str
   );
   if (matchByCode) return matchByCode.agency_name || matchByCode.agency || str;
   return str;
@@ -47,15 +47,15 @@ export const resolveMarkaName = (raw: any, overrideList?: any[]): string => {
   if (!raw && raw !== 0) return '';
   const str = String(raw).trim();
   if (!str) return '';
-  const list = overrideList || [];
+  const list = Array.isArray(overrideList) ? overrideList : [];
   const matchByName = list.find(m => 
-    String(m.marka_name || '').trim().toUpperCase() === str.toUpperCase() ||
-    String(m.marka || '').trim().toUpperCase() === str.toUpperCase()
+    String(m?.marka_name || '').trim().toUpperCase() === str.toUpperCase() ||
+    String(m?.marka || '').trim().toUpperCase() === str.toUpperCase()
   );
   if (matchByName) return matchByName.marka_name || matchByName.marka || str;
   const matchByCode = list.find(m => 
-    String(m.marka_code || '').trim().toUpperCase() === str.toUpperCase() ||
-    String(m.id || '').trim() === str
+    String(m?.marka_code || '').trim().toUpperCase() === str.toUpperCase() ||
+    String(m?.id || '').trim() === str
   );
   if (matchByCode) return matchByCode.marka_name || matchByCode.marka || str;
   return str;
@@ -65,15 +65,15 @@ export const resolveAreaName = (raw: any, overrideList?: any[]): string => {
   if (!raw && raw !== 0) return '';
   const str = String(raw).trim();
   if (!str) return '';
-  const list = overrideList || [];
+  const list = Array.isArray(overrideList) ? overrideList : [];
   const matchByName = list.find(a => 
-    String(a.area_name || '').trim().toUpperCase() === str.toUpperCase() ||
-    String(a.area || '').trim().toUpperCase() === str.toUpperCase()
+    String(a?.area_name || '').trim().toUpperCase() === str.toUpperCase() ||
+    String(a?.area || '').trim().toUpperCase() === str.toUpperCase()
   );
   if (matchByName) return matchByName.area_name || matchByName.area || str;
   const matchByCode = list.find(a => 
-    String(a.area_code || '').trim().toUpperCase() === str.toUpperCase() ||
-    String(a.id || '').trim() === str
+    String(a?.area_code || '').trim().toUpperCase() === str.toUpperCase() ||
+    String(a?.id || '').trim() === str
   );
   if (matchByCode) return matchByCode.area_name || matchByCode.area || str;
   return str;
