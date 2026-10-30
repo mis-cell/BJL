@@ -295,7 +295,7 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
                       </div>
                     </td>
                     <td className="p-3 font-medium">{r.arrival_no || "-"}</td>
-                    <td className={`p-3 font-mono ${isReturnRow ? "text-red-900 font-semibold" : "text-slate-600"}`}>{r.arrival_date || r.mr_date || "-"}</td>
+                    <td className={`p-3 font-mono ${isReturnRow ? "text-red-900 font-semibold" : "text-slate-600"}`}>{new Date(r.arrival_date).toLocaleDateString('en-GB') || new Date(r.mr_date).toLocaleDateString('en-GB') || "-"}</td>
                     <td className="p-3 font-mono">
                       {isReturnRow ? (
                         <div className="flex flex-col gap-0.5">

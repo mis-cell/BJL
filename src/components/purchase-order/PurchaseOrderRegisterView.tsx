@@ -758,7 +758,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
 
                   {/* 2. Date */}
                   <td className="px-1.5 py-1 text-center font-mono tabular-nums text-[10.5px] text-slate-700 whitespace-nowrap border-r border-slate-200/80">
-                    {item.po_date || item.date || item.created_at?.slice(0, 10) || '-'}
+                    {new Date(item.po_date).toLocaleDateString('en-GB') || new Date(item.date).toLocaleDateString('en-GB') || new Date(item.created_at).toLocaleDateString('en-GB') || '-'}
                   </td>
 
                   {/* 3. Type */}
