@@ -513,7 +513,15 @@ export function useInspectionLogic() {
           if (!existing.broker_name && fa.broker) existing.broker_name = fa.broker;
           if (!existing.lorry_number && fa.lorry_number) existing.lorry_number = fa.lorry_number;
           if (!existing.arrival_no && fa.final_arrival_no) existing.arrival_no = fa.final_arrival_no;
-          if (!existing.arrival_date && fa.date) existing.arrival_date = fa.date;
+          const faArrDate = sanitizeDate(fa.date || fa.arrival_date || fa.final_arrival_date);
+          if (faArrDate) {
+            if (!existing.arrival_date || sanitizeDate(existing.arrival_date) === sanitizeDate(fa.temporary_arrival_date)) {
+              existing.arrival_date = faArrDate;
+            }
+            if (!existing.mr_date || sanitizeDate(existing.mr_date) === sanitizeDate(fa.temporary_arrival_date)) {
+              existing.mr_date = faArrDate;
+            }
+          }
           if (!existing.grid_details) existing.grid_details = fa.grid_details || fa.items || fa.details;
           if (!Number(existing.arival_apmc_fees) && (Number(fa.apmc_fees) > 0 || Number(fa.arival_apmc_fees) > 0)) {
             existing.arival_apmc_fees = Number(fa.apmc_fees || fa.arival_apmc_fees || 0);
@@ -854,7 +862,7 @@ export function useInspectionLogic() {
       const actNcv = Number(fa.actual_ncv) || 0;
       const clmNcv = Number(fa.claim_ncv) || 0;
       const detDays = Number(fa.detention_days) || 0;
-      const arrDate = sanitizeDate(fa.arrival_date || fa.final_arrival_date || fa.date || fa.temporary_arrival_date) || new Date().toISOString().split("T")[0];
+      const arrDate = sanitizeDate(fa.date || fa.arrival_date || fa.final_arrival_date || fa.temporary_arrival_date) || new Date().toISOString().split("T")[0];
 
       if (actMoist > 0 && clmMoist === 0) {
         clmMoist = calculateClaimMoisture(actMoist, arrDate, resolvedArea, moistureLogicRules);
@@ -868,7 +876,7 @@ export function useInspectionLogic() {
           arrival_no: arrNo,
           arrival_date: arrDate,
           po_no: fa.po_no || prev.po_no,
-          mr_date: sanitizeDate(fa.temporary_arrival_date || fa.date) || prev.po_date,
+          mr_date: arrDate,
           po_date: sanitizeDate(fa.po_date || fa.date) || prev.po_date,
           supplier_name: fa.supplier || fa.challan_supplier || fa.supplier_name || prev.supplier_name,
           broker_name: fa.broker || fa.broker_name || prev.broker_name,
@@ -920,8 +928,13 @@ export function useInspectionLogic() {
           const foundFa = faDbRes.data;
           const foundTmr = tmrDbRes.data;
           const dbApmc = Number(foundTmr?.apmc_fees ?? foundTmr?.arival_apmc_fees ?? foundFa?.apmc_fees ?? foundFa?.arival_apmc_fees ?? 0);
-          if (dbApmc > 0) {
-            setHeaderForm(prev => ({ ...prev, arival_apmc_fees: dbApmc }));
+          const dbFaArrDate = sanitizeDate(foundFa?.date || foundFa?.arrival_date || foundFa?.final_arrival_date);
+          if (dbApmc > 0 || dbFaArrDate) {
+            setHeaderForm(prev => ({
+              ...prev,
+              ...(dbApmc > 0 ? { arival_apmc_fees: dbApmc } : {}),
+              ...(dbFaArrDate ? { mr_date: dbFaArrDate, arrival_date: dbFaArrDate } : {})
+            }));
           }
 
           if (midRes.data && Array.isArray(midRes.data) && midRes.data.length > 0) {
@@ -1091,10 +1104,15 @@ export function useInspectionLogic() {
   const handleHeaderChange = (field: keyof InspectionMasterRecord, value: any) => {
     setHeaderForm(prev => {
       const next = { ...prev, [field]: value };
-      if (field === 'actual_moisture' || field === 'arrival_date' || field === 'arrival_area') {
+      if (field === 'mr_date') {
+        next.arrival_date = value;
+      } else if (field === 'arrival_date') {
+        next.mr_date = value;
+      }
+      if (field === 'actual_moisture' || field === 'arrival_date' || field === 'mr_date' || field === 'arrival_area') {
         const autoClaim = calculateClaimMoisture(
           Number(next.actual_moisture) || 0,
-          next.arrival_date,
+          next.mr_date || next.arrival_date,
           next.arrival_area || next.arrival_area_name || "",
           moistureLogicRules
         );
@@ -1347,10 +1365,21 @@ export function useInspectionLogic() {
     const actNcv = Number(record.actual_ncv) || 0;
     const clmNcv = Number(record.claim_ncv) || 0;
 
+    const recKey = String(record.mr_no || record.arrival_no || "").trim().toUpperCase();
+    const matchedFaForEdit = finalArrivalList.find(f => {
+      const fk = String(f.final_arrival_no || f.mr_no || f.arrival_no || "").trim().toUpperCase();
+      return fk && recKey && fk === recKey;
+    });
+    const faArrDate = sanitizeDate(matchedFaForEdit?.date || matchedFaForEdit?.arrival_date || matchedFaForEdit?.final_arrival_date);
+    const recArrDate = sanitizeDate(record.mr_date || record.arrival_date || record.date || record.temporary_arrival_date);
+    const resolvedEditArrDate = (faArrDate && (!recArrDate || recArrDate === sanitizeDate(matchedFaForEdit?.temporary_arrival_date)))
+      ? faArrDate
+      : (recArrDate || faArrDate);
+
     setHeaderForm({
       ...record,
-      mr_date: sanitizeDate(record.mr_date || record.date || record.temporary_arrival_date),
-      arrival_date: sanitizeDate(record.arrival_date || record.mr_date || record.date || record.temporary_arrival_date),
+      mr_date: resolvedEditArrDate,
+      arrival_date: resolvedEditArrDate,
       po_date: sanitizeDate(record.po_date),
       actual_moisture: actMoist,
       claim_moisture: clmMoist,
@@ -1542,7 +1571,7 @@ export function useInspectionLogic() {
       const totalReceiptGrossMt = validDetails.reduce((sum, r) => sum + (Number(r.receipt_gross_wt) || Number(r.challan_gross_wt) || 0), 0);
       const totalBalesCount = validDetails.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
 
-      const resolvedArrivalDate = sanitizeDate(headerForm.arrival_date || headerForm.mr_date);
+      const resolvedArrivalDate = sanitizeDate(headerForm.mr_date || headerForm.arrival_date);
       const resolvedMrDate = sanitizeDate(headerForm.mr_date || headerForm.arrival_date);
       const resolvedPoDate = sanitizeDate(headerForm.po_date);
 

@@ -1688,7 +1688,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       // If preserveMrNo is false, check if this PO has a linked payment MR in payment_master to load automatically
       if (!preserveMrNo) {
         const cleanP = cleanPoNo.replace(/[\s\-\/]/g, '').toLowerCase();
-        const paymentMrsForPo = Array.from(
+        const allPaymentMrsForPo = Array.from(
           new Set(
             (paymentList || [])
               .filter((p: any) => {
@@ -1696,18 +1696,22 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
                 if (st === 'cancelled' || st === 'rejected') return false;
                 const pPo = String(p.po_no || '').replace(/#/g, '').replace(/[\s\-\/]/g, '').trim().toLowerCase();
                 const mr = String(p.mr_no || '').trim();
-                if (!mr || !pPo || pPo !== cleanP) return false;
-                const isSettled = settledList.some(
-                  s => String(s.mr_no || '').trim().toUpperCase() === mr.toUpperCase()
-                );
-                return !isSettled;
+                return Boolean(mr && pPo && pPo === cleanP);
               })
               .map((p: any) => String(p.mr_no).trim())
               .filter(Boolean)
           )
         );
+        const unsettledPaymentMrsForPo = allPaymentMrsForPo.filter(mr => {
+          const isSettled = settledList.some(
+            s => String(s.mr_no || '').trim().toUpperCase() === mr.toUpperCase()
+          );
+          return !isSettled;
+        });
 
-        let autoMr = paymentMrsForPo.length === 1 ? paymentMrsForPo[0] : '';
+        let autoMr = unsettledPaymentMrsForPo.length === 1
+          ? unsettledPaymentMrsForPo[0]
+          : (allPaymentMrsForPo.length === 1 ? allPaymentMrsForPo[0] : '');
 
         if (autoMr) {
           await handleProceedWithMrNo(autoMr);
@@ -1732,23 +1736,31 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           );
         });
 
-        setMasterData(prev => ({
-          ...initialMaster(),
-          po_no: poData.po_no || cleanPoNo,
-          po_date: poData.po_date || '',
-          broker: poData.broker || '',
-          supplier: poData.supplier || '',
-          chn_supplier: poData.supplier || '',
-          po_type: poData.po_type || 'MILL_PO',
-          rate_qntl: Number(poData.rate_qntl || poData.rate_mt || poData.b_rate || 0),
-          sett_date: prev.sett_date || new Date().toISOString().split('T')[0],
-          arival_apmc_fees: 0,
-          mr_no: '',
-          lorry_number: '',
-          arrival_no: '',
-          arrival_date: ''
-        }));
-        setDetailCols(newCols);
+        setMasterData(prev => {
+          if (prev.mr_no && String(prev.po_no || '').replace(/#/g, '').replace(/[\s\-\/]/g, '').trim().toLowerCase() === cleanP) {
+            return prev;
+          }
+          return {
+            ...initialMaster(),
+            po_no: poData.po_no || cleanPoNo,
+            po_date: poData.po_date || '',
+            broker: poData.broker || '',
+            supplier: poData.supplier || '',
+            chn_supplier: poData.supplier || '',
+            po_type: poData.po_type || 'MILL_PO',
+            rate_qntl: Number(poData.rate_qntl || poData.rate_mt || poData.b_rate || 0),
+            sett_date: prev.sett_date || new Date().toISOString().split('T')[0],
+            arival_apmc_fees: 0,
+            mr_no: '',
+            lorry_number: '',
+            arrival_no: '',
+            arrival_date: ''
+          };
+        });
+        setDetailCols(prevCols => {
+          const hasActiveCol = prevCols.some(c => Number(c.arr_qty_wt) > 0 || Number(c.quantity) > 0);
+          return (masterData.mr_no && hasActiveCol) ? prevCols : newCols;
+        });
         await syncPaymentModuleData('', poData.po_no || cleanPoNo);
       }
 
@@ -1843,6 +1855,13 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
               inspMaster = millArrRes.data.find((r: any) => !r.mr_no || String(r.mr_no).trim().toUpperCase() === cleanTargetMr) || null;
             }
           }
+        }
+        if (!inspMaster && inspections && inspections.length > 0) {
+          inspMaster = inspections.find((r: any) => {
+            const k1 = String(r.mr_no || '').trim().toUpperCase();
+            const k2 = String(r.arrival_no || r.final_arrival_no || '').trim().toUpperCase();
+            return k1 === cleanTargetMr || k2 === cleanTargetMr;
+          }) || null;
         }
       } catch (e) {
         console.warn("Error fetching inspection master:", e);
@@ -2228,6 +2247,18 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         inspMaster?.weight_qtl || faMaster?.weight_qtl
       );
 
+      // Resolve "Arrival Date *" from Mill Inspection Information Entry (inspMaster.mr_date / inspMaster.arrival_date)
+      const resolvedInspectionArrivalDate = formatToInputDate(
+        inspMaster?.mr_date ||
+        inspMaster?.arrival_date ||
+        inspMaster?.date ||
+        faMaster?.date ||
+        faMaster?.arrival_date ||
+        faMaster?.final_arrival_date ||
+        payMasterRec?.arrival_date ||
+        payMasterRec?.mr_date
+      ) || '';
+
       // Check if settlement already exists for this MR. If yes, load for editing!
       if (!forceSync) {
         const { data: existingMaster } = await supabase
@@ -2257,8 +2288,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           }
 
           // Detect if existingMaster had stale/wrong arrival_no or lorry_number from a different MR
-          const expectedArrNo = String(inspMaster?.arrival_no || payMasterRec?.arrival_no || targetMrNo).trim();
-          const expectedLorry = String(inspMaster?.lorry_number || payMasterRec?.lorry_number || '').trim();
+          const expectedArrNo = String(inspMaster?.arrival_no || payMasterRec?.arrival_no || faMaster?.final_arrival_no || targetMrNo).trim();
+          const expectedLorry = String(inspMaster?.lorry_number || inspMaster?.lorry_no || payMasterRec?.lorry_number || payMasterRec?.lorry_no || faMaster?.lorry_number || faMaster?.lorry_no || '').trim();
           const existingArrClean = String(existingMaster.arrival_no || '').trim().toUpperCase();
           const isStaleExistingIdentity =
             (existingArrClean && existingArrClean.startsWith('MR') && existingArrClean !== cleanTargetMr && existingArrClean !== expectedArrNo.toUpperCase()) ||
@@ -2274,9 +2305,14 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
             ? (sourceElectronicNetMt || toMtWeight(existingMaster.electronic_scale_net))
             : toMtWeight(existingMaster.electronic_scale_net || sourceElectronicNetMt);
 
+          const effectiveArrivalDate = resolvedInspectionArrivalDate || formatToInputDate(existingMaster.arrival_date || existingMaster.sett_date) || '';
+
           const mergedMaster = {
             ...existingMaster,
             mr_no: masterMrNoToUse,
+            sett_date: effectiveArrivalDate || existingMaster.sett_date || new Date().toISOString().split('T')[0],
+            mr_date: effectiveArrivalDate || existingMaster.mr_date || '',
+            arrival_date: effectiveArrivalDate,
             broker: isStaleExistingIdentity
               ? (inspMaster?.broker_name || inspMaster?.broker || payMasterRec?.broker_name || payMasterRec?.broker || existingMaster.broker || '')
               : (existingMaster.broker || inspMaster?.broker_name || inspMaster?.broker || payMasterRec?.broker_name || payMasterRec?.broker || ''),
@@ -2469,7 +2505,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         const prefilledMaster: SettlementMaster = {
           ...initialMaster(),
           mr_no: resolvedMrNo,
-          mr_date: inspMaster?.mr_date || inspMaster?.date || inspMaster?.arrival_date || payMasterRec?.mr_date || faMaster?.date || faMaster?.mr_date || '',
+          sett_date: resolvedInspectionArrivalDate || new Date().toISOString().split('T')[0],
+          mr_date: resolvedInspectionArrivalDate,
           po_type: poData?.po_type || payMasterRec?.po_type || 'MILL_PO',
           broker: inspMaster?.broker_name || inspMaster?.broker || payMasterRec?.broker_name || payMasterRec?.broker || faMaster?.broker || poData?.broker || '',
           supplier: inspMaster?.supplier_name || inspMaster?.supplier || payMasterRec?.party_name || payMasterRec?.supplier_name || payMasterRec?.supplier || faMaster?.supplier || poData?.supplier || '',
@@ -2477,10 +2514,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
           po_no: resolvedPoVal,
           po_date: inspMaster?.po_date || payMasterRec?.po_date || faMaster?.po_date || poData?.po_date || '',
           rate_qntl: Number(poData?.rate_qntl || poData?.rate_mt || poData?.b_rate || payMasterRec?.rate_qntl || 0),
-          lorry_number: inspMaster?.lorry_number || inspMaster?.lorry_no || payMasterRec?.lorry_number || faMaster?.lorry_number || inspMaster?.arrival_no || faMaster?.final_arrival_no || '',
+          lorry_number: inspMaster?.lorry_number || inspMaster?.lorry_no || payMasterRec?.lorry_number || payMasterRec?.lorry_no || faMaster?.lorry_number || faMaster?.lorry_no || inspMaster?.arrival_no || faMaster?.final_arrival_no || '',
           detention_days: Number(inspMaster?.detention_days || faMaster?.detention_days || payMasterRec?.detention_days || 0),
           arrival_no: inspMaster?.arrival_no || payMasterRec?.arrival_no || faMaster?.final_arrival_no || faMaster?.arrival_no || resolvedMrNo || '',
-          arrival_date: formatToInputDate(inspMaster?.arrival_date || inspMaster?.date || payMasterRec?.arrival_date || faMaster?.date || faMaster?.arrival_date) || '',
+          arrival_date: resolvedInspectionArrivalDate,
           remarks: inspMaster?.remarks || payMasterRec?.remarks || faMaster?.remarks || '',
           consign_no: inspMaster?.challan_no || faMaster?.challan_rr_no || faMaster?.challan_railway_receipt_no || faMaster?.consignment_note_no || faMaster?.challan_no || '',
           challan_weight: sourceChallanMt,
@@ -2575,6 +2612,8 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       const prefilledMaster: SettlementMaster = {
         ...initialMaster(),
         mr_no: inspMaster.mr_no || '',
+        sett_date: resolvedInspectionArrivalDate || new Date().toISOString().split('T')[0],
+        mr_date: resolvedInspectionArrivalDate,
         po_type: 'MILL_PO',
         broker: inspMaster.broker_name || '',
         supplier: inspMaster.supplier_name || '',
@@ -2582,10 +2621,10 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
         po_no: inspMaster.po_no || '',
         po_date: inspMaster.po_date || '',
         rate_qntl: Number(poData?.rate_qntl || poData?.rate_mt || poData?.b_rate || 0),
-        lorry_number: inspMaster.lorry_number || inspMaster.arrival_no || '',
+        lorry_number: inspMaster.lorry_number || inspMaster.lorry_no || inspMaster.arrival_no || '',
         detention_days: inspMaster.detention_days || 0,
         arrival_no: inspMaster.arrival_no || '',
-        arrival_date: formatToInputDate(inspMaster.arrival_date) || '',
+        arrival_date: resolvedInspectionArrivalDate,
         remarks: inspMaster.remarks || '',
         challan_weight: fbChallanMt,
         supplier_net_wt: fbSupplierMt,

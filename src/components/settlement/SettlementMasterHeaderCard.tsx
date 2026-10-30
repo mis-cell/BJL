@@ -180,16 +180,19 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
 
           <div className="flex flex-col">
             <label htmlFor="date_header_card" className="text-gray-500 text-[8px] uppercase">
-              Date
+              Arrival Date
             </label>
             <input
               id="date_header_card"
               name="date"
-              aria-label="Date"
+              aria-label="Arrival Date"
               type="date"
               className="bg-white border border-gray-400 p-1 font-mono text-center"
-              value={masterData.sett_date}
-              onChange={(e) => handleMasterChange("sett_date", e.target.value)}
+              value={masterData.arrival_date || masterData.sett_date || ""}
+              onChange={(e) => {
+                handleMasterChange("arrival_date", e.target.value);
+                handleMasterChange("sett_date", e.target.value);
+              }}
             />
           </div>
 
@@ -351,7 +354,7 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
               readOnly
               disabled
               className="bg-slate-100 border border-gray-400 p-1 font-mono text-center cursor-not-allowed"
-              value={masterData.arrival_date}
+              value={masterData.arrival_date || masterData.sett_date || ""}
             />
           </div>
 
