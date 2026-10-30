@@ -30,24 +30,29 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
 }) => {
   const [localChallanNo, setLocalChallanNo] = React.useState('');
   const [localChallanDate, setLocalChallanDate] = React.useState('');
+  const prevFullRef = React.useRef(formData.challan_rr_no);
 
-  // Sync state from formData.challan_rr_no when record loads or changes externally
+  // Sync state from formData.challan_rr_no ONLY when loaded or changed externally
   React.useEffect(() => {
     const raw = String(formData.challan_rr_no || '').trim();
     if (!raw) {
       setLocalChallanNo('');
       setLocalChallanDate('');
+      prevFullRef.current = '';
       return;
     }
-    const dateMatch = raw.match(/(\d{2}[-/]\d{2}[-/]\d{2,4})$/);
-    if (dateMatch) {
-      const dVal = dateMatch[1];
-      const nVal = raw.substring(0, raw.length - dVal.length).trim();
-      setLocalChallanNo(nVal);
-      setLocalChallanDate(dVal);
-    } else {
-      setLocalChallanNo(raw);
-      setLocalChallanDate('');
+    if (prevFullRef.current !== formData.challan_rr_no) {
+      prevFullRef.current = formData.challan_rr_no;
+      const dateMatch = raw.match(/(\d{2}[-/]\d{2}[-/]\d{2,4})$/);
+      if (dateMatch) {
+        const dVal = dateMatch[1];
+        const nVal = raw.substring(0, raw.length - dVal.length).trim();
+        setLocalChallanNo(nVal);
+        setLocalChallanDate(dVal);
+      } else if (!localChallanNo && !localChallanDate) {
+        setLocalChallanNo(raw);
+        setLocalChallanDate('');
+      }
     }
   }, [formData.challan_rr_no]);
 
@@ -55,6 +60,7 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
     const cNo = no.trim();
     const cDate = date.trim();
     const combined = cNo && cDate ? `${cNo} ${cDate}` : (cNo || cDate);
+    prevFullRef.current = combined;
     handleChange({ target: { name: 'challan_rr_no', value: combined } });
   };
 
