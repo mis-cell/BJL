@@ -664,7 +664,7 @@ export function useFinalArrivalRegisterLogic({ isArchiveView = false }: UseFinal
     const isVoid = r.status === 'cancelled';
     const matchSearch = !q || (
       (r.final_arrival_no || '').toLowerCase().includes(q) ||
-      (r.mr_no || '').toLowerCase().includes(q) ||
+      /* (r.mr_no || '').toLowerCase().includes(q) || */
       (r.po_no || '').toLowerCase().includes(q) ||
       (r.supplier || '').toLowerCase().includes(q) ||
       (r.broker || '').toLowerCase().includes(q) ||
