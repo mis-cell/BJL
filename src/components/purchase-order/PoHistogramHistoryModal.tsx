@@ -337,7 +337,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
   };
 
   // Derived Multi-MR list (e.g., MR00748, MR00694)
-  const linkedMrs = useMemo(() => {
+  /* const linkedMrs = useMemo(() => {
     const isGenuineMr = (val: any): boolean => {
       if (!val) return false;
       const str = String(val).trim().toUpperCase();
@@ -366,7 +366,7 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
       if (mr && isGenuineMr(mr)) mrSet.add(String(mr).trim().toUpperCase());
     });
     dbInspections.forEach((i: any) => {
-      const arrRef = i.arrival_no || i.ref_arrival_no || i.temporary_arrival_no || i.final_arrival_no;
+      const arrRef = i.arrival_no || i.ref_arrival_no || i.final_arrival_no;
       if (arrRef && isGenuineMr(arrRef)) {
         mrSet.add(String(arrRef).trim().toUpperCase());
       } else if (i.mr_no && isGenuineMr(i.mr_no)) {
@@ -374,11 +374,97 @@ export const PoHistogramHistoryModal: React.FC<PoHistogramHistoryModalProps> = (
       }
     });
     dbPayments.forEach((p: any) => {
-      const mr = p.mr_no || p.temporary_arrival_no || p.arrival_no;
+      const mr = p.mr_no || p.arrival_no;
       if (mr && isGenuineMr(mr)) mrSet.add(String(mr).trim().toUpperCase());
     });
     return Array.from(mrSet);
-  }, [dbArrivals, dbInspections, dbSettlements, dbPayments, po]);
+  }, [dbArrivals, dbInspections, dbSettlements, dbPayments, po]); */
+  const linkedMrs = useMemo(() => {
+  const isGenuineMr = (val: any): boolean => {
+    if (!val) return false;
+
+    const str = String(val).trim().toUpperCase();
+    if (!str) return false;
+
+    // Only allow MR series
+    if (!str.startsWith('MR')) return false;
+
+    // Exclude non-MR reference numbers
+    if (
+      str.startsWith('MRRC-') ||
+      str.startsWith('INSP-') ||
+      str.startsWith('CERT-') ||
+      str.startsWith('TEST-') ||
+      str.startsWith('SETTLEMENT-')
+    ) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const mrSet = new Set<string>();
+
+  // 1. Temporary Arrival / Final Arrival records
+  dbArrivals.forEach((a: any) => {
+    const mr =
+      a.temporary_arrival_no ||
+      a.mr_no ||
+      a.final_arrival_no ||
+      a.mr_number ||
+      a.amad_no ||
+      a.arrival_no;
+
+    if (mr && isGenuineMr(mr)) {
+      mrSet.add(String(mr).trim().toUpperCase());
+    }
+  });
+
+  // 2. Current PO MR number
+  if (po?.mr_no && isGenuineMr(po.mr_no)) {
+    mrSet.add(String(po.mr_no).trim().toUpperCase());
+  }
+
+  // 3. Linked MRs
+  if (po?.linked_mrs && Array.isArray(po.linked_mrs)) {
+    po.linked_mrs.forEach((m: any) => {
+      if (m && isGenuineMr(m)) {
+        mrSet.add(String(m).trim().toUpperCase());
+      }
+    });
+  }
+
+  // 4. Settlement records
+  dbSettlements.forEach((s: any) => {
+    const mr = s.mr_no || s.mr_number || s.arrival_no;
+
+    if (mr && isGenuineMr(mr)) {
+      mrSet.add(String(mr).trim().toUpperCase());
+    }
+  });
+
+  // 5. Inspection records
+  dbInspections.forEach((i: any) => {
+    const arrRef = i.arrival_no || i.ref_arrival_no || i.final_arrival_no;
+
+    if (arrRef && isGenuineMr(arrRef)) {
+      mrSet.add(String(arrRef).trim().toUpperCase());
+    } else if (i.mr_no && isGenuineMr(i.mr_no)) {
+      mrSet.add(String(i.mr_no).trim().toUpperCase());
+    }
+  });
+
+  // 6. Payment records
+  dbPayments.forEach((p: any) => {
+    const mr = p.mr_no || p.arrival_no;
+
+    if (mr && isGenuineMr(mr)) {
+      mrSet.add(String(mr).trim().toUpperCase());
+    }
+  });
+
+  return Array.from(mrSet);
+}, [dbArrivals, dbInspections, dbSettlements, dbPayments, po]);
 
   // Comprehensive Comparison Engine
   const comparisonResults = useMemo(() => {
