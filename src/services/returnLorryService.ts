@@ -52,9 +52,9 @@ export interface ReturnLorryItemRow {
 export interface ReturnLorryRecord {
   id?: string;
   // Core Return Lorry 4000-Series & Reference PO Identity
-  new_po_no: string; // 4000 series PO e.g. BJCL/2026-2027/4001
+  new_po_no: string; // 4000 series PO e.g. BJCL/2026-2027/4000
   po_no: string; // Alias for new_po_no for seamless Payment & Settlement compatibility
-  reference_po_no: string; // Original Sauda Check Point PO e.g. BJCL/2026-2027/0660
+  reference_po_no: string; // Original P.O. / M.R. reference from Mill Inspection
 
   // ============================================================================
   // ALL MILL INSPECTION ("material_inspection") FIELDS
@@ -110,7 +110,7 @@ export interface ReturnLorryRecord {
   grid_details?: any[];
 
   // ============================================================================
-  // ALL SAUDA CHECK POINT ("sauda_check_point") FIELDS
+  // SAUDA CHECK POINT FORM STRUCTURE FIELDS (PRE-FILLED FROM MILL INSPECTION)
   // ============================================================================
   financial_year: string;
   purchase_order: string;
@@ -159,6 +159,7 @@ export interface ReturnLorryRecord {
   po_identification: string;
   b_rate: number;
   is_return_lorry: boolean;
+  saved_to_sauda_checkpoint?: boolean;
   created_at?: string;
   items?: ReturnLorryItemRow[];
   sauda_details?: any[];
@@ -166,7 +167,7 @@ export interface ReturnLorryRecord {
   raw_sauda_check_point?: Record<string, any>;
 }
 
-const LOCAL_STORAGE_KEY = 'bjcl_return_lorry_records_v2';
+const LOCAL_STORAGE_KEY = 'bjcl_return_lorry_records_v3';
 
 function getLocalCachedReturnLorries(): ReturnLorryRecord[] {
   try {
@@ -190,8 +191,7 @@ function setLocalCachedReturnLorries(records: ReturnLorryRecord[]) {
 let schemaInitStarted = false;
 
 /**
- * Ensures the `return_lorry` and `return_lorry_details` tables exist in Supabase
- * with ALL columns from both `material_inspection` and `sauda_check_point`.
+ * Ensures the `return_lorry` and `return_lorry_details` tables exist in Supabase.
  * Runs non-blockingly with a short timeout so it never hangs page rendering.
  */
 export async function ensureReturnLorryTablesExist(): Promise<void> {
@@ -301,8 +301,11 @@ export async function ensureReturnLorryTablesExist(): Promise<void> {
       b_rate NUMERIC(15,2) DEFAULT 0,
       sauda_details JSONB DEFAULT '[]'::jsonb,
       is_return_lorry BOOLEAN DEFAULT TRUE,
+      saved_to_sauda_checkpoint BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    ALTER TABLE IF EXISTS return_lorry ADD COLUMN IF NOT EXISTS saved_to_sauda_checkpoint BOOLEAN DEFAULT FALSE;
 
     CREATE TABLE IF NOT EXISTS return_lorry_details (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -346,7 +349,6 @@ export async function ensureReturnLorryTablesExist(): Promise<void> {
     NOTIFY pgrst, 'reload schema';
   `;
 
-  // Execute in background with a 2.5s timeout so UI never waits on DDL
   Promise.race([
     (async () => {
       try {
@@ -396,15 +398,14 @@ export function is4000SeriesPo(poNo: any): boolean {
 }
 
 /**
- * Calculates the received weight in Metric Tons (MT) from a Mill Inspection record,
- * its detail rows (`material_inspection_details` / `mill_inspection_detail`),
- * `final_arrival`, and `temporary_material_received`.
+ * Calculates the received weight in Metric Tons (MT) strictly from a Mill Inspection record
+ * and its detail rows (`material_inspection_details` / `mill_inspection_detail`).
  */
 export function calculateInspectionWeightMt(
   inspectionRecord: any,
   detailRows?: any[],
-  finalArrivalRecord?: any,
-  tempArrivalRecord?: any
+  _finalArrivalRecord?: any,
+  _tempArrivalRecord?: any
 ): number {
   const toMt = (val: number, unitHint?: 'MT' | 'QTL' | 'KG'): number => {
     if (!isFinite(val) || val <= 0) return 0;
@@ -477,67 +478,12 @@ export function calculateInspectionWeightMt(
     }
   }
 
-  // 3. Check finalArrivalRecord
-  if (finalArrivalRecord) {
-    if (Number(finalArrivalRecord.weight_qtl) > 0) {
-      return toMt(Number(finalArrivalRecord.weight_qtl), 'QTL');
-    }
-    const faCandidates = [
-      finalArrivalRecord.electronic_net_weight,
-      finalArrivalRecord.supplier_net_weight,
-      finalArrivalRecord.challan_material_weight,
-      finalArrivalRecord.total_actual_weight,
-      finalArrivalRecord.weight_reduced,
-      finalArrivalRecord.weight,
-      finalArrivalRecord.challan_wt,
-    ];
-    for (const c of faCandidates) {
-      const n = Number(c);
-      if (n > 0) return toMt(n);
-    }
-    const faGd = finalArrivalRecord.grid_details;
-    let faRows: any[] = [];
-    if (Array.isArray(faGd)) faRows = faGd;
-    else if (typeof faGd === 'string' && faGd.trim().startsWith('[')) {
-      try {
-        const p = JSON.parse(faGd);
-        if (Array.isArray(p)) faRows = p;
-      } catch {}
-    }
-    if (faRows.length > 0) {
-      let faSum = 0;
-      for (const r of faRows) {
-        const w = Number(r.netto_pnto || r.netto_mt || r.weight_mt || r.weight_kgs || r.challan_gross_wt || r.weight || 0);
-        if (w > 0) faSum += toMt(w);
-      }
-      if (faSum > 0) return Number(faSum.toFixed(3));
-    }
-  }
-
-  // 4. Check tempArrivalRecord
-  if (tempArrivalRecord) {
-    if (Number(tempArrivalRecord.weight_qtl) > 0) {
-      return toMt(Number(tempArrivalRecord.weight_qtl), 'QTL');
-    }
-    const tmrCandidates = [
-      tempArrivalRecord.net_weight,
-      tempArrivalRecord.total_weight,
-      tempArrivalRecord.challan_wt,
-      tempArrivalRecord.weight,
-      tempArrivalRecord.gross_weight,
-    ];
-    for (const c of tmrCandidates) {
-      const n = Number(c);
-      if (n > 0) return toMt(n);
-    }
-  }
-
   return 0;
 }
 
 /**
  * Generates the next 4000-series PO number based on the reference PO prefix/financial year.
- * Example: Reference `BJCL/2026-2027/0660` -> `BJCL/2026-2027/4001`
+ * Example: `BJCL/2026-2027/4000`, `BJCL/2026-2027/4001`, etc.
  */
 export function generate4000SeriesPoNoFromSet(
   referencePoNo: string,
@@ -548,7 +494,7 @@ export function generate4000SeriesPoNoFromSet(
   const cleanRef = String(referencePoNo || '').trim().toUpperCase();
   if (cleanRef.includes('/')) {
     const parts = cleanRef.split('/');
-    if (parts.length >= 3) {
+    if (parts.length >= 3 && parts[0].startsWith('BJC')) {
       prefix = `${parts[0]}/${parts[1]}`;
     } else if (parts.length === 2 && parts[0].startsWith('BJC')) {
       prefix = `${parts[0]}/${financialYear || '2026-2027'}`;
@@ -604,99 +550,84 @@ export async function generateNext4000SeriesPoNo(
 }
 
 /**
- * Helper to build a complete `ReturnLorryRecord` combining ALL fields of
- * `material_inspection` + `material_inspection_details` AND
- * `sauda_check_point` + `sauda_check_point_details`.
+ * Helper to build a `ReturnLorryRecord` strictly from Mill Inspection
+ * (`material_inspection` + `material_inspection_details` / `mill_inspection_detail`).
+ * All fields are pre-filled from Mill Inspection, and Rate is left for manual user input
+ * unless already saved by the user in `return_lorry`.
  */
 export function buildCombinedReturnLorryRecord(params: {
   newPoNo: string;
   referencePoNo: string;
   insp: any;
   inspDetails: any[];
-  sourcePo: any;
-  sourcePoDetails: any[];
+  sourcePo?: any;
+  sourcePoDetails?: any[];
   matchedFa?: any;
   matchedTmr?: any;
   weightMt: number;
   lorrySeqNo: number;
+  existingSavedRl?: any;
+  existingSavedRlDetails?: any[];
+  isSavedToScp?: boolean;
 }): ReturnLorryRecord {
   const {
     newPoNo,
     referencePoNo,
     insp,
     inspDetails,
-    sourcePo,
-    sourcePoDetails,
-    matchedFa,
-    matchedTmr,
     weightMt,
     lorrySeqNo,
+    existingSavedRl,
+    existingSavedRlDetails = [],
+    isSavedToScp = false,
   } = params;
 
   const todayStr = new Date().toISOString().split('T')[0];
-  const mrNo = String(insp?.mr_no || matchedFa?.final_arrival_no || matchedFa?.mr_no || '').trim();
+  const mrNo = String(insp?.mr_no || '').trim();
   const tempArrNo = String(
     insp?.arrival_no ||
     insp?.temporary_arrival_no ||
-    matchedFa?.temporary_arrival_no ||
-    matchedTmr?.temporary_arrival_no ||
     mrNo
   ).trim();
-  const lorryNo = String(
-    insp?.lorry_number ||
-    matchedFa?.lorry_number ||
-    matchedFa?.lorry_no ||
-    matchedTmr?.lorry_no ||
-    matchedTmr?.lorry_number ||
-    ''
-  ).trim().toUpperCase();
+  const lorryNo = String(insp?.lorry_number || '').trim().toUpperCase();
 
-  const fy = String(
-    sourcePo?.financial_year ||
-    insp?.financial_year ||
-    matchedFa?.financial_year ||
-    '2026-2027'
-  ).trim();
+  const fy = String(insp?.financial_year || '2026-2027').trim();
 
   const poDate = String(
-    sourcePo?.po_date ||
-    sourcePo?.date ||
-    sourcePo?.s_date ||
     insp?.po_date ||
-    matchedFa?.po_date ||
+    insp?.mill_po_date ||
     insp?.mr_date ||
+    insp?.arrival_date ||
     todayStr
   ).trim();
 
   const supplierVal = String(
-    sourcePo?.supplier ||
     insp?.supplier_name ||
     insp?.supplier ||
-    matchedFa?.supplier ||
-    matchedTmr?.supplier ||
     ''
   ).trim().toUpperCase();
 
   const brokerVal = String(
-    sourcePo?.broker ||
     insp?.broker_name ||
     insp?.broker ||
-    matchedFa?.broker ||
-    matchedTmr?.broker ||
     ''
   ).trim().toUpperCase();
 
   const areaVal = String(
-    sourcePo?.area ||
     inspDetails?.[0]?.area ||
-    matchedFa?.arrival_area_name ||
-    matchedFa?.area ||
-    matchedTmr?.area ||
+    insp?.area ||
     ''
   ).trim().toUpperCase();
 
-  const challanGrossSum = inspDetails.reduce((s, r) => s + (Number(r.challan_gross_wt) || 0), 0);
-  const receiptGrossSum = inspDetails.reduce((s, r) => s + (Number(r.receipt_gross_wt ?? r.challan_gross_wt) || 0), 0);
+  const toMtVal = (val: number): number => {
+    if (!isFinite(val) || val <= 0) return 0;
+    if (val > 500) return Number((val / 1000).toFixed(3));
+    if (val > 40) return Number((val / 10).toFixed(3));
+    return Number(val.toFixed(3));
+  };
+
+  const challanGrossSum = inspDetails.reduce((s, r) => s + toMtVal(Number(r.challan_gross_wt) || 0), 0);
+  const receiptGrossSum = inspDetails.reduce((s, r) => s + toMtVal(Number(r.receipt_gross_wt ?? r.challan_gross_wt) || 0), 0);
 
   let parsedQualityMatrix: any = insp?.quality_matrix || {};
   if (typeof parsedQualityMatrix === 'string') {
@@ -707,38 +638,48 @@ export function buildCombinedReturnLorryRecord(params: {
     }
   }
 
-  // Merge item details from Sauda Check Point (`sauda_check_point_details`) and Mill Inspection (`material_inspection_details`)
-  const maxRows = Math.max(sourcePoDetails.length, inspDetails.length, 1);
+  // Build item rows strictly from Mill Inspection detail rows (`material_inspection_details` / `mill_inspection_detail`)
+  const rowCount = Math.max(inspDetails.length, 1);
   const combinedItems: ReturnLorryItemRow[] = [];
 
-  for (let i = 0; i < maxRows; i++) {
-    const sd = sourcePoDetails[i] || sourcePoDetails[0] || {};
+  for (let i = 0; i < rowCount; i++) {
     const idet = inspDetails[i] || {};
+    const savedDet = existingSavedRlDetails[i] || {};
+
     const gradeCode = String(
-      sd.grade_code ||
-      sd.quality ||
-      sd.grade ||
-      idet.arrival_grade ||
       idet.stock_grade_code ||
+      idet.arrival_grade ||
+      idet.grade_code ||
+      savedDet.grade_code ||
       'TD5'
     ).trim().toUpperCase();
     const gradeName = String(
-      sd.grade_name ||
-      idet.arrival_grade ||
       idet.stock_grade_name ||
+      idet.arrival_grade ||
+      idet.grade_name ||
+      savedDet.grade_name ||
       gradeCode
     ).trim().toUpperCase();
-    const agencyCode = String(sd.agency_code || sd.agency || idet.agency_code || idet.agency || '').trim().toUpperCase();
-    const agencyName = String(sd.agency_name || idet.agency || agencyCode).trim().toUpperCase();
-    const markaCode = String(sd.marka_code || sd.marka || idet.marka || idet.marks || '').trim().toUpperCase();
-    const markaName = String(sd.marka_name || idet.marka || idet.marks || markaCode).trim().toUpperCase();
+    const agencyCode = String(idet.agency_code || idet.agency || savedDet.agency_code || '').trim().toUpperCase();
+    const agencyName = String(idet.agency || idet.agency_name || savedDet.agency_name || agencyCode).trim().toUpperCase();
+    const markaCode = String(idet.marka_code || idet.marka || idet.marks || savedDet.marka_code || '').trim().toUpperCase();
+    const markaName = String(idet.marka || idet.marka_name || idet.marks || savedDet.marka_name || markaCode).trim().toUpperCase();
+
+    const rowWtRaw = Number(idet.receipt_gross_wt || idet.challan_gross_wt || idet.weight_mt || 0);
+    const rowWtMt = rowWtRaw > 0 ? toMtVal(rowWtRaw) : (i === 0 ? weightMt : 0);
+    const rowChallanMt = Number(idet.challan_gross_wt) > 0 ? toMtVal(Number(idet.challan_gross_wt)) : rowWtMt;
+
+    // Rate is only populated if previously saved by user; otherwise 0 so user manually inputs it
+    const savedRate = isSavedToScp
+      ? Number(savedDet.rate_qntl || existingSavedRl?.b_rate || 0)
+      : 0;
 
     combinedItems.push({
       return_po_no: newPoNo,
       reference_po_no: referencePoNo,
       mr_no: mrNo,
-      srl_no: Number(sd.srl_no || idet.srl_no || i + 1),
-      crop_year: String(sd.crop_year || sd.crop || idet.crop_year || '2026-27'),
+      srl_no: Number(idet.srl_no || i + 1),
+      crop_year: String(idet.crop_year || '2026-27'),
       grade_code: gradeCode,
       grade_name: gradeName,
       arrival_grade: String(idet.arrival_grade || gradeName).toUpperCase(),
@@ -750,14 +691,14 @@ export function buildCombinedReturnLorryRecord(params: {
       marka_code: markaCode,
       marka_name: markaName,
       lot: String(idet.lot || ''),
-      unit: String(idet.unit || sourcePo?.purchase_unit_name || 'BALES').toUpperCase(),
-      quantity: Number(idet.quantity || sd.quantity || sd.qty || 0),
-      weight_mt: Number(idet.receipt_gross_wt || idet.challan_gross_wt || sd.weight_mt || sd.weight || weightMt || 0),
-      challan_gross_wt: Number(idet.challan_gross_wt || weightMt || 0),
-      receipt_gross_wt: Number(idet.receipt_gross_wt || idet.challan_gross_wt || weightMt || 0),
-      final_receipt_wt: Number(idet.final_receipt_wt || idet.receipt_gross_wt || idet.challan_gross_wt || weightMt || 0),
-      rate_qntl: Number(sd.rate_qntl || sd.rate || sd.rs || idet.rate || idet.rate_qntl || sourcePo?.b_rate || 0),
-      premium: sd.premium ?? idet.premium ?? 0,
+      unit: String(idet.unit || insp?.unit_name || 'BALES').toUpperCase(),
+      quantity: Number(idet.quantity || 0),
+      weight_mt: rowWtMt,
+      challan_gross_wt: rowChallanMt,
+      receipt_gross_wt: rowWtMt,
+      final_receipt_wt: rowWtMt,
+      rate_qntl: savedRate,
+      premium: Number(idet.premium ?? savedDet.premium ?? 0),
       actual_moisture: Number(idet.actual_moisture ?? idet.moisture_act ?? insp?.actual_moisture ?? 0),
       claim_moisture: Number(idet.claim_moisture ?? idet.moisture_claim ?? insp?.claim_moisture ?? 0),
       settlement_moisture: Number(idet.settlement_moisture ?? 0),
@@ -781,6 +722,10 @@ export function buildCombinedReturnLorryRecord(params: {
     });
   }
 
+  const totalQty = combinedItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  const unitName = String(inspDetails?.[0]?.unit || insp?.unit_name || 'BALES').toUpperCase();
+  const savedBaseRate = isSavedToScp ? Number(existingSavedRl?.b_rate || combinedItems?.[0]?.rate_qntl || 0) : 0;
+
   return {
     new_po_no: newPoNo,
     po_no: newPoNo,
@@ -788,24 +733,24 @@ export function buildCombinedReturnLorryRecord(params: {
 
     // Mill Inspection ("material_inspection") complete fields
     mr_no: mrNo,
-    mr_date: String(insp?.mr_date || matchedFa?.mr_date || matchedFa?.date || todayStr),
-    final_arrival_no: String(matchedFa?.final_arrival_no || mrNo),
+    mr_date: String(insp?.mr_date || todayStr),
+    final_arrival_no: mrNo,
     temporary_arrival_no: tempArrNo,
     arrival_no: tempArrNo,
-    arrival_date: String(insp?.arrival_date || matchedFa?.arrival_date || matchedFa?.date || insp?.mr_date || todayStr),
-    unloading_date: String(insp?.unloading_date || matchedFa?.unloading_date || insp?.arrival_date || insp?.mr_date || todayStr),
-    mill_po_no: String(insp?.mill_po_no || referencePoNo),
-    mill_po_date: String(insp?.mill_po_date || poDate),
-    mr_spcl_print: String(insp?.mr_spcl_print || matchedFa?.way_bill_no || ''),
+    arrival_date: String(insp?.arrival_date || insp?.mr_date || todayStr),
+    unloading_date: String(insp?.unloading_date || insp?.arrival_date || insp?.mr_date || todayStr),
+    mill_po_no: String(insp?.mill_po_no || insp?.po_no || referencePoNo),
+    mill_po_date: String(insp?.mill_po_date || insp?.po_date || poDate),
+    mr_spcl_print: String(insp?.mr_spcl_print || ''),
     broker_name: brokerVal,
     supplier_name: supplierVal,
     lorry_number: lorryNo,
     lorry_sequence_no: lorrySeqNo,
     received_weight_mt: Number(weightMt.toFixed(3)),
-    challan_gross_wt: Number((Number(insp?.challan_gross_wt) || challanGrossSum || weightMt).toFixed(3)),
-    receipt_gross_wt: Number((Number(insp?.receipt_gross_wt) || receiptGrossSum || challanGrossSum || weightMt).toFixed(3)),
-    total_challan_gross_wt: Number((Number(insp?.total_challan_gross_wt) || challanGrossSum || weightMt).toFixed(3)),
-    total_receipt_gross_wt: Number((Number(insp?.total_receipt_gross_wt) || receiptGrossSum || challanGrossSum || weightMt).toFixed(3)),
+    challan_gross_wt: Number((challanGrossSum || weightMt).toFixed(3)),
+    receipt_gross_wt: Number((receiptGrossSum || challanGrossSum || weightMt).toFixed(3)),
+    total_challan_gross_wt: Number((challanGrossSum || weightMt).toFixed(3)),
+    total_receipt_gross_wt: Number((receiptGrossSum || challanGrossSum || weightMt).toFixed(3)),
     actual_moisture: Number(insp?.actual_moisture ?? inspDetails?.[0]?.actual_moisture ?? 0),
     claim_moisture: Number(insp?.claim_moisture ?? inspDetails?.[0]?.claim_moisture ?? 0),
     actual_dust: Number(insp?.actual_dust ?? inspDetails?.[0]?.actual_dust ?? 0),
@@ -827,182 +772,232 @@ export function buildCombinedReturnLorryRecord(params: {
     lorry_returned: 'Yes',
     lorry_returned_other_mill: String(insp?.lorry_returned_other_mill || 'No'),
     mr_print_date: String(insp?.mr_print_date || insp?.mr_date || todayStr),
-    consignment_no: String(insp?.consignment_no || matchedFa?.consignment_note_no || matchedFa?.consignment_no || ''),
-    consignment_date: String(insp?.consignment_date || matchedFa?.consignment_note_date || insp?.arrival_date || todayStr),
-    arival_apmc_fees: Number(insp?.arival_apmc_fees ?? matchedTmr?.apmc_fees ?? matchedFa?.apmc_fees ?? 0),
-    arrival_remarks: String(insp?.arrival_remarks || matchedFa?.remarks || ''),
+    consignment_no: String(insp?.consignment_no || ''),
+    consignment_date: String(insp?.consignment_date || insp?.arrival_date || todayStr),
+    arival_apmc_fees: Number(insp?.arival_apmc_fees || 0),
+    arrival_remarks: String(insp?.arrival_remarks || ''),
     insp_remarks: String(insp?.insp_remarks || insp?.remarks || ''),
-    unit_name: String(insp?.unit_name || inspDetails?.[0]?.unit || sourcePo?.purchase_unit_name || 'BALES').toUpperCase(),
+    unit_name: unitName,
     quality_matrix: parsedQualityMatrix,
     inspection_details: inspDetails,
     grid_details: inspDetails,
 
-    // Sauda Check Point ("sauda_check_point") complete fields
+    // Sauda Check Point Form structure fields (pre-filled strictly from Mill Inspection)
     financial_year: fy,
-    purchase_order: String(sourcePo?.purchase_order || 'FINAL PO'),
-    po_type: String(sourcePo?.po_type || 'Return Lorry'),
-    status: String(sourcePo?.status || 'open'),
-    ptf_no: sourcePo?.ptf_no || null,
-    pending: sourcePo?.pending !== undefined ? Boolean(sourcePo.pending) : true,
+    purchase_order: 'FINAL PO',
+    po_type: 'Normal',
+    status: 'open',
+    ptf_no: null,
+    pending: true,
     po_date: poDate,
-    s_date: sourcePo?.s_date || poDate,
-    broker_code: String(sourcePo?.broker_code || ''),
+    s_date: String(insp?.mr_date || poDate),
+    broker_code: '',
     broker: brokerVal,
-    supplier_code: String(sourcePo?.supplier_code || ''),
+    supplier_code: '',
     supplier: supplierVal,
-    challan_supplier_code: String(sourcePo?.challan_supplier_code || ''),
-    challan_supplier: String(sourcePo?.challan_supplier || supplierVal),
-    area_code: String(sourcePo?.area_code || ''),
+    challan_supplier_code: '',
+    challan_supplier: supplierVal,
+    area_code: '',
     area: areaVal,
-    trans_paid_by: String(sourcePo?.trans_paid_by || 'PARTY'),
-    weight_unit_kgs: Number(sourcePo?.weight_unit_kgs || 147.5),
-    against_cancellation: String(sourcePo?.against_cancellation || 'No'),
-    purchase_unit_code: String(sourcePo?.purchase_unit_code || '1'),
-    purchase_unit_name: String(sourcePo?.purchase_unit_name || 'BALES').toUpperCase(),
-    total_lorries: Number(sourcePo?.total_lorries || sourcePo?.no_of_lorries || 1),
-    units_per_lorry: Number(sourcePo?.units_per_lorry || 0),
-    total_units: Number(sourcePo?.total_units || 0),
-    weight_per_lorry: Number(sourcePo?.weight_per_lorry || weightMt),
-    total_contract_mt: Number(sourcePo?.total_contract_mt || sourcePo?.quantity_mt || weightMt),
-    marka_type: String(sourcePo?.marka_type || 'Normal'),
-    marka_penalty: Number(sourcePo?.marka_penalty || 0),
-    qty_penalty: Number(sourcePo?.qty_penalty || 0),
-    delivery_from: sourcePo?.delivery_from || null,
-    delivery_to: sourcePo?.delivery_to || null,
-    shipment_date: sourcePo?.shipment_date || sourcePo?.delivery_to || null,
-    grace_days: Number(sourcePo?.grace_days || 0),
-    shipment_days: Number(sourcePo?.shipment_days || sourcePo?.grace_days || 0),
-    delivery_penalty: Number(sourcePo?.delivery_penalty || 0),
-    shipment_penalty: Number(sourcePo?.shipment_penalty || sourcePo?.delivery_penalty || 0),
-    contract_po_no: String(sourcePo?.contract_po_no || referencePoNo),
-    sauda_no: String(sourcePo?.sauda_no || referencePoNo),
-    contract_date: sourcePo?.contract_date || poDate,
-    rate_detail: String(sourcePo?.rate_detail || ''),
-    delivery_schedule: String(sourcePo?.delivery_schedule || ''),
-    terms_condition: String(sourcePo?.terms_condition || ''),
+    trans_paid_by: 'PARTY',
+    weight_unit_kgs: 147.5,
+    against_cancellation: 'No',
+    purchase_unit_code: '1',
+    purchase_unit_name: unitName,
+    total_lorries: 1,
+    units_per_lorry: totalQty,
+    total_units: totalQty,
+    weight_per_lorry: Number(weightMt.toFixed(3)),
+    total_contract_mt: Number(weightMt.toFixed(3)),
+    marka_type: 'Normal',
+    marka_penalty: 0,
+    qty_penalty: 0,
+    delivery_from: String(insp?.arrival_date || insp?.mr_date || todayStr),
+    delivery_to: String(insp?.unloading_date || insp?.arrival_date || insp?.mr_date || todayStr),
+    shipment_date: String(insp?.unloading_date || insp?.arrival_date || insp?.mr_date || todayStr),
+    grace_days: Number(insp?.detention_days || 0),
+    shipment_days: Number(insp?.detention_days || 0),
+    delivery_penalty: Number(insp?.delivery_claim || 0),
+    shipment_penalty: Number(insp?.delivery_claim || 0),
+    contract_po_no: referencePoNo,
+    sauda_no: referencePoNo,
+    contract_date: String(insp?.mill_po_date || insp?.po_date || insp?.mr_date || todayStr),
+    rate_detail: '',
+    delivery_schedule: '',
+    terms_condition: '',
     remarks: String(
-      sourcePo?.remarks ||
       insp?.remarks ||
-      `Return Lorry (< 5 MT: ${weightMt.toFixed(3)} MT) Auto-Copied from Ref P.O. ${referencePoNo} & M.R. ${mrNo}`
+      insp?.arrival_remarks ||
+      `Return Lorry (< 5 MT: ${weightMt.toFixed(3)} MT) from Mill Inspection M.R. ${mrNo}`
     ),
-    po_remarks: String(sourcePo?.remarks || ''),
-    po_identification: String(sourcePo?.po_identification || 'Direct Advance Payment'),
-    b_rate: Number(sourcePo?.b_rate || sourcePo?.rate_qntl || sourcePo?.rate || combinedItems?.[0]?.rate_qntl || 0),
+    po_remarks: String(insp?.remarks || insp?.arrival_remarks || ''),
+    po_identification: 'Direct Advance Payment',
+    b_rate: savedBaseRate,
     is_return_lorry: true,
+    saved_to_sauda_checkpoint: isSavedToScp,
     created_at: insp?.created_at || new Date().toISOString(),
     items: combinedItems,
-    sauda_details: sourcePoDetails,
+    sauda_details: [],
     raw_inspection: insp || {},
-    raw_sauda_check_point: sourcePo || {},
+    raw_sauda_check_point: {},
   };
 }
 
 /**
- * Persists a combined ReturnLorryRecord to Supabase (`return_lorry`, `return_lorry_details`,
- * `sauda_check_point`, `sauda_check_point_details`, `purchase_master`, `purchase_detail_master`)
- * and local cache without blocking UI rendering.
+ * Saves a Return Lorry record after the user manually inputs the Rate in Return Lorry Desk,
+ * auto-generates the 4000-series P.O. number (if not yet generated), and moves/inserts the
+ * record into `sauda_check_point` & `sauda_check_point_details` (plus `purchase_master` & `purchase_detail_master`).
  */
-async function persistReturnLorryRecordToDb(record: ReturnLorryRecord): Promise<void> {
-  if (!supabase) return;
-  const newPoNo = record.new_po_no;
+export async function saveReturnLorryToSaudaCheckPoint(
+  record: ReturnLorryRecord
+): Promise<ReturnLorryRecord> {
+  ensureReturnLorryTablesExist();
 
-  try {
-    await dbModule.upsert('return_lorry', record, 'new_po_no').catch(async () => {
-      await supabase!.from('return_lorry').upsert(record, { onConflict: 'new_po_no' }).then(() => {}, () => {});
-    });
-
-    if (record.items && record.items.length > 0) {
-      await supabase.from('return_lorry_details').delete().eq('return_po_no', newPoNo).then(() => {}, () => {});
-      await supabase.from('return_lorry_details').insert(record.items).then(() => {}, () => {});
-    }
-
-    // Mirror 4000-series PO into sauda_check_point & purchase_master so Payment & Settlement pull it seamlessly
-    const mirroredPoPayload: Record<string, any> = {
-      financial_year: record.financial_year,
-      purchase_order: record.purchase_order,
-      po_type: 'Return Lorry',
-      status: 'open',
-      ptf_no: record.ptf_no,
-      pending: true,
-      po_no: newPoNo,
-      po_date: record.po_date,
-      broker: record.broker,
-      supplier: record.supplier,
-      challan_supplier: record.challan_supplier,
-      area: record.area,
-      trans_paid_by: record.trans_paid_by,
-      weight_unit_kgs: record.weight_unit_kgs,
-      against_cancellation: record.against_cancellation,
-      purchase_unit_code: record.purchase_unit_code,
-      purchase_unit_name: record.purchase_unit_name,
-      total_lorries: 1,
-      units_per_lorry: record.units_per_lorry,
-      total_units: record.total_units,
-      weight_per_lorry: record.received_weight_mt,
-      total_contract_mt: record.received_weight_mt,
-      marka_type: record.marka_type,
-      marka_penalty: record.marka_penalty,
-      qty_penalty: record.qty_penalty,
-      delivery_from: record.delivery_from,
-      delivery_to: record.delivery_to,
-      shipment_date: record.shipment_date,
-      grace_days: record.grace_days,
-      shipment_days: record.shipment_days,
-      delivery_penalty: record.delivery_penalty,
-      shipment_penalty: record.shipment_penalty,
-      contract_po_no: record.reference_po_no,
-      sauda_no: record.reference_po_no,
-      contract_date: record.contract_date,
-      rate_detail: record.rate_detail,
-      delivery_schedule: record.delivery_schedule,
-      terms_condition: record.terms_condition,
-      remarks: `[RETURN LORRY - REF PO: ${record.reference_po_no} | MR: ${record.mr_no} | WT: ${record.received_weight_mt.toFixed(3)} MT] ${record.po_remarks || ''}`.trim(),
-      po_identification: record.po_identification,
-      b_rate: record.b_rate,
-      s_date: record.s_date,
-    };
-
-    await dbModule.upsert('sauda_check_point', mirroredPoPayload, 'po_no').catch(async () => {
-      await supabase!.from('sauda_check_point').upsert(mirroredPoPayload, { onConflict: 'po_no' }).then(() => {}, () => {});
-    });
-
-    await dbModule.upsert('purchase_master', { ...mirroredPoPayload, status: 'final' }, 'po_no').catch(async () => {
-      await supabase!.from('purchase_master').upsert({ ...mirroredPoPayload, status: 'final' }, { onConflict: 'po_no' }).then(() => {}, () => {});
-    });
-
-    if (record.items && record.items.length > 0) {
-      const detailRowsForPo = record.items.map((it, idx) => ({
-        po_no: newPoNo,
-        srl_no: it.srl_no || idx + 1,
-        crop_year: it.crop_year || '2026-27',
-        grade_code: it.grade_code || '',
-        grade_name: it.grade_name || it.grade_code || '',
-        agency_code: it.agency_code || '',
-        agency_name: it.agency_name || it.agency_code || '',
-        marka_code: it.marka_code || '',
-        marka_name: it.marka_name || it.marka_code || '',
-        quantity: Number(it.quantity || 0),
-        weight_mt: Number(it.weight_mt || record.received_weight_mt || 0),
-        rate_qntl: Number(it.rate_qntl || record.b_rate || 0),
-        premium: Number(it.premium || 0),
-      }));
-
-      await supabase.from('sauda_check_point_details').delete().eq('po_no', newPoNo).then(() => {}, () => {});
-      await supabase.from('sauda_check_point_details').insert(detailRowsForPo).then(() => {}, () => {});
-
-      await supabase.from('purchase_detail_master').delete().eq('po_no', newPoNo).then(() => {}, () => {});
-      await supabase.from('purchase_detail_master').insert(detailRowsForPo).then(() => {}, () => {});
-    }
-  } catch (err) {
-    console.warn('[returnLorryService] Background DB persist warning:', err);
+  let finalPoNo = record.new_po_no;
+  if (!finalPoNo || !is4000SeriesPo(finalPoNo)) {
+    finalPoNo = await generateNext4000SeriesPoNo(record.reference_po_no, record.financial_year || '2026-2027');
   }
+
+  const effectiveBRate =
+    Number(record.b_rate) > 0
+      ? Number(record.b_rate)
+      : Number(record.items?.[0]?.rate_qntl || 0);
+
+  const updatedItems: ReturnLorryItemRow[] = (record.items || []).map((it, idx) => ({
+    ...it,
+    return_po_no: finalPoNo,
+    srl_no: it.srl_no || idx + 1,
+    rate_qntl: Number(it.rate_qntl) > 0 ? Number(it.rate_qntl) : effectiveBRate,
+  }));
+
+  const savedRecord: ReturnLorryRecord = {
+    ...record,
+    new_po_no: finalPoNo,
+    po_no: finalPoNo,
+    b_rate: effectiveBRate,
+    saved_to_sauda_checkpoint: true,
+    items: updatedItems,
+  };
+
+  // Update local cache
+  const cached = getLocalCachedReturnLorries();
+  const cleanMr = normalizeStr(savedRecord.mr_no);
+  const nextCache = [
+    savedRecord,
+    ...cached.filter((r) => normalizeStr(r.mr_no) !== cleanMr),
+  ];
+  setLocalCachedReturnLorries(nextCache);
+
+  if (supabase) {
+    try {
+      const dbRecordPayload: Record<string, any> = { ...savedRecord };
+      delete dbRecordPayload.items;
+      delete dbRecordPayload.raw_inspection;
+      delete dbRecordPayload.raw_sauda_check_point;
+
+      await dbModule.upsert('return_lorry', dbRecordPayload, 'new_po_no').catch(async () => {
+        await supabase!.from('return_lorry').upsert(dbRecordPayload, { onConflict: 'new_po_no' }).then(() => {}, () => {});
+      });
+
+      if (updatedItems.length > 0) {
+        await supabase.from('return_lorry_details').delete().eq('return_po_no', finalPoNo).then(() => {}, () => {});
+        await supabase.from('return_lorry_details').insert(updatedItems).then(() => {}, () => {});
+      }
+
+      // Move / Save into Sauda Check Point (`sauda_check_point` & `sauda_check_point_details`)
+      // and `purchase_master` & `purchase_detail_master`
+      const saudaCheckPointPayload: Record<string, any> = {
+        financial_year: savedRecord.financial_year || '2026-2027',
+        purchase_order: savedRecord.purchase_order || 'FINAL PO',
+        po_type: savedRecord.po_type || 'Normal',
+        status: 'open',
+        ptf_no: savedRecord.ptf_no || null,
+        pending: true,
+        po_no: finalPoNo,
+        po_date: savedRecord.po_date,
+        broker: savedRecord.broker || savedRecord.broker_name,
+        supplier: savedRecord.supplier || savedRecord.supplier_name,
+        challan_supplier: savedRecord.challan_supplier || savedRecord.supplier_name,
+        area: savedRecord.area,
+        trans_paid_by: savedRecord.trans_paid_by || 'PARTY',
+        weight_unit_kgs: savedRecord.weight_unit_kgs || 147.5,
+        against_cancellation: savedRecord.against_cancellation || 'No',
+        purchase_unit_code: savedRecord.purchase_unit_code || '1',
+        purchase_unit_name: savedRecord.purchase_unit_name || savedRecord.unit_name || 'BALES',
+        total_lorries: 1,
+        units_per_lorry: savedRecord.units_per_lorry || savedRecord.total_units || 0,
+        total_units: savedRecord.total_units || 0,
+        weight_per_lorry: savedRecord.received_weight_mt,
+        total_contract_mt: savedRecord.received_weight_mt,
+        marka_type: savedRecord.marka_type || 'Normal',
+        marka_penalty: savedRecord.marka_penalty || 0,
+        qty_penalty: savedRecord.qty_penalty || 0,
+        delivery_from: savedRecord.delivery_from,
+        delivery_to: savedRecord.delivery_to,
+        shipment_date: savedRecord.shipment_date,
+        grace_days: savedRecord.grace_days || 0,
+        shipment_days: savedRecord.shipment_days || 0,
+        delivery_penalty: savedRecord.delivery_penalty || 0,
+        shipment_penalty: savedRecord.shipment_penalty || 0,
+        contract_po_no: savedRecord.reference_po_no || savedRecord.mr_no,
+        sauda_no: savedRecord.reference_po_no || savedRecord.mr_no,
+        contract_date: savedRecord.contract_date || savedRecord.po_date,
+        rate_detail: savedRecord.rate_detail || '',
+        delivery_schedule: savedRecord.delivery_schedule || '',
+        terms_condition: savedRecord.terms_condition || '',
+        remarks: savedRecord.remarks || `Return Lorry M.R. ${savedRecord.mr_no} (${savedRecord.received_weight_mt.toFixed(3)} MT)`,
+        po_identification: savedRecord.po_identification || 'Direct Advance Payment',
+        b_rate: effectiveBRate,
+        s_date: savedRecord.s_date || savedRecord.po_date,
+      };
+
+      await dbModule.upsert('sauda_check_point', saudaCheckPointPayload, 'po_no').catch(async () => {
+        await supabase!.from('sauda_check_point').upsert(saudaCheckPointPayload, { onConflict: 'po_no' }).then(() => {}, () => {});
+      });
+
+      await dbModule.upsert('purchase_master', { ...saudaCheckPointPayload, status: 'final' }, 'po_no').catch(async () => {
+        await supabase!.from('purchase_master').upsert({ ...saudaCheckPointPayload, status: 'final' }, { onConflict: 'po_no' }).then(() => {}, () => {});
+      });
+
+      if (updatedItems.length > 0) {
+        const detailRowsForPo = updatedItems.map((it, idx) => ({
+          po_no: finalPoNo,
+          srl_no: it.srl_no || idx + 1,
+          crop_year: it.crop_year || '2026-27',
+          grade_code: it.grade_code || '',
+          grade_name: it.grade_name || it.grade_code || '',
+          agency_code: it.agency_code || '',
+          agency_name: it.agency_name || it.agency_code || '',
+          marka_code: it.marka_code || '',
+          marka_name: it.marka_name || it.marka_code || '',
+          quantity: Number(it.quantity || 0),
+          weight_mt: Number(it.weight_mt || savedRecord.received_weight_mt || 0),
+          rate_qntl: Number(it.rate_qntl || effectiveBRate || 0),
+          premium: Number(it.premium || 0),
+        }));
+
+        await supabase.from('sauda_check_point_details').delete().eq('po_no', finalPoNo).then(() => {}, () => {});
+        await supabase.from('sauda_check_point_details').insert(detailRowsForPo).then(() => {}, () => {});
+
+        await supabase.from('purchase_detail_master').delete().eq('po_no', finalPoNo).then(() => {}, () => {});
+        await supabase.from('purchase_detail_master').insert(detailRowsForPo).then(() => {}, () => {});
+      }
+    } catch (err) {
+      console.warn('[returnLorryService] Error saving Return Lorry to Sauda Check Point:', err);
+    }
+  }
+
+  notifyDataChanged('return_lorry');
+  notifyDataChanged('sauda_check_point');
+  notifyDataChanged('purchase_master');
+
+  return savedRecord;
 }
 
 /**
  * Checks a single Mill Inspection (`material_inspection`) save/update event.
- * If its received weight is under 5 MT (`> 0 && < 5`), automatically creates/updates
- * the Return Lorry record (4000-series P.O.) with all fields from `material_inspection`
- * and `sauda_check_point`.
+ * If its received weight is under 5 MT (`> 0 && < 5`), flags it as a Return Lorry
+ * so it appears in Return Lorry Desk (waiting for user to open, input Rate, and Save to Sauda Check Point).
  */
 export async function checkAndProcessReturnLorryOnInspection(params: {
   mrNo: string;
@@ -1020,8 +1015,8 @@ export async function checkAndProcessReturnLorryOnInspection(params: {
   referencePoNo?: string;
   record?: ReturnLorryRecord;
 }> {
-  const { mrNo, poNo, arrivalNo, lorryNo, headerForm, detailRows, finalArrivalRecord } = params;
-  const weightMt = calculateInspectionWeightMt(headerForm, detailRows, finalArrivalRecord);
+  const { mrNo, poNo, arrivalNo, lorryNo, headerForm, detailRows } = params;
+  const weightMt = calculateInspectionWeightMt(headerForm, detailRows);
 
   if (weightMt <= 0 || weightMt >= 5) {
     return { isReturnLorry: false, weightMt };
@@ -1038,52 +1033,9 @@ export async function checkAndProcessReturnLorryOnInspection(params: {
   const cached = getLocalCachedReturnLorries();
   const existingCached = cached.find((r) => normalizeStr(r.mr_no) === cleanMr);
 
-  let referencePoNo = existingCached?.reference_po_no || (is4000SeriesPo(cleanPo) ? '' : String(poNo || '').trim());
-  let newPoNo = existingCached?.new_po_no || (is4000SeriesPo(cleanPo) ? String(poNo).trim() : '');
-
-  let sourcePo: any = null;
-  let sourcePoDetails: any[] = [];
-
-  if (supabase) {
-    try {
-      // Check if return_lorry already has this MR
-      const { data: existingDb } = await supabase
-        .from('return_lorry')
-        .select('*')
-        .ilike('mr_no', cleanMr)
-        .limit(1)
-        .maybeSingle();
-
-      if (existingDb) {
-        newPoNo = existingDb.new_po_no || existingDb.po_no || newPoNo;
-        referencePoNo = existingDb.reference_po_no || referencePoNo;
-      }
-
-      const lookupPo = referencePoNo || cleanPo;
-      if (lookupPo) {
-        const [scpRes, scpDetRes, pmRes, pdmRes] = await Promise.all([
-          supabase.from('sauda_check_point').select('*').ilike('po_no', lookupPo).limit(1).maybeSingle(),
-          supabase.from('sauda_check_point_details').select('*').ilike('po_no', lookupPo).order('srl_no', { ascending: true }),
-          supabase.from('purchase_master').select('*').ilike('po_no', lookupPo).limit(1).maybeSingle(),
-          supabase.from('purchase_detail_master').select('*').ilike('po_no', lookupPo).order('srl_no', { ascending: true }),
-        ]);
-        sourcePo = scpRes.data || pmRes.data || null;
-        sourcePoDetails = (scpDetRes.data && scpDetRes.data.length > 0) ? scpDetRes.data : (pdmRes.data || []);
-        if (sourcePo && !referencePoNo) {
-          referencePoNo = sourcePo.contract_po_no || sourcePo.sauda_no || sourcePo.po_no || lookupPo;
-        }
-      }
-    } catch {}
-  }
-
-  if (!referencePoNo) {
-    referencePoNo = cleanPo || `REF/${cleanMr}`;
-  }
-
-  const fy = String(sourcePo?.financial_year || headerForm?.financial_year || '2026-2027').trim();
-  if (!newPoNo) {
-    newPoNo = await generateNext4000SeriesPoNo(referencePoNo, fy);
-  }
+  const referencePoNo = existingCached?.reference_po_no || cleanPo || String(headerForm?.mill_po_no || '').trim() || cleanMr;
+  const fy = String(headerForm?.financial_year || '2026-2027').trim();
+  const newPoNo = existingCached?.new_po_no || (await generateNext4000SeriesPoNo(referencePoNo, fy));
 
   const record = buildCombinedReturnLorryRecord({
     newPoNo,
@@ -1095,23 +1047,17 @@ export async function checkAndProcessReturnLorryOnInspection(params: {
       lorry_number: lorryNo || headerForm?.lorry_number || '',
     },
     inspDetails: detailRows || [],
-    sourcePo: sourcePo || {},
-    sourcePoDetails,
-    matchedFa: finalArrivalRecord,
     weightMt,
-    lorrySeqNo: Number(sourcePo?.total_lorries || 1),
+    lorrySeqNo: 1,
+    existingSavedRl: existingCached,
+    existingSavedRlDetails: existingCached?.items || [],
+    isSavedToScp: Boolean(existingCached?.saved_to_sauda_checkpoint),
   });
 
-  // Update local cache immediately
   const updatedCache = [record, ...cached.filter((r) => normalizeStr(r.mr_no) !== cleanMr)];
   setLocalCachedReturnLorries(updatedCache);
 
-  // Persist to DB asynchronously
-  await persistReturnLorryRecordToDb(record);
-
   notifyDataChanged('return_lorry');
-  notifyDataChanged('sauda_check_point');
-  notifyDataChanged('purchase_master');
 
   return {
     isReturnLorry: true,
@@ -1123,9 +1069,10 @@ export async function checkAndProcessReturnLorryOnInspection(params: {
 }
 
 /**
- * Batch-scans ALL `material_inspection` records (`< 5 MT`) and `sauda_check_point` records
- * in a single parallel batch (no N+1 queries) and automatically generates/updates
- * Return Lorry (4000-series P.O.) records with ALL fields from both tables.
+ * Fetches all `< 5 MT` Mill Inspection records strictly from the Mill Inspection tables
+ * (`material_inspection`, `material_inspection_details`, `mill_inspection_detail`)
+ * and merges any user-saved Rate / 4000-series P.O. state from `return_lorry`.
+ * Does NOT auto-push unsaved records to `sauda_check_point` until the user inputs Rate and clicks Save.
  */
 export async function syncAllReturnLorriesFromInspections(): Promise<ReturnLorryRecord[]> {
   ensureReturnLorryTablesExist();
@@ -1139,32 +1086,19 @@ export async function syncAllReturnLorriesFromInspections(): Promise<ReturnLorry
       inspRes,
       inspDetRes,
       millDetRes,
-      scpRes,
-      scpDetRes,
-      pmRes,
-      pdmRes,
-      faRes,
-      tmrRes,
-      clubRes,
       rlRes,
       rlDetRes,
+      scp4000Res,
     ] = await Promise.all([
       supabase.from('material_inspection').select('*').order('created_at', { ascending: false }).then((r) => r, () => ({ data: [] as any[] })),
       supabase.from('material_inspection_details').select('*').order('srl_no', { ascending: true }).then((r) => r, () => ({ data: [] as any[] })),
       supabase.from('mill_inspection_detail').select('*').order('srl_no', { ascending: true }).then((r) => r, () => ({ data: [] as any[] })),
-      supabase.from('sauda_check_point').select('*').order('created_at', { ascending: false }).then((r) => r, () => ({ data: [] as any[] })),
-      supabase.from('sauda_check_point_details').select('*').order('srl_no', { ascending: true }).then((r) => r, () => ({ data: [] as any[] })),
-      supabase.from('purchase_master').select('*').order('created_at', { ascending: false }).then((r) => r, () => ({ data: [] as any[] })),
-      supabase.from('purchase_detail_master').select('*').order('srl_no', { ascending: true }).then((r) => r, () => ({ data: [] as any[] })),
-      supabase.from('final_arrival').select('*').order('created_at', { ascending: false }).then((r) => r, () => ({ data: [] as any[] })),
-      supabase.from('temporary_material_received').select('*').order('created_at', { ascending: false }).then((r) => r, () => ({ data: [] as any[] })),
-      supabase.from('clubbed_pomr').select('*').then((r) => r, () => ({ data: [] as any[] })),
       supabase.from('return_lorry').select('*').order('created_at', { ascending: false }).then((r) => r, () => ({ data: [] as any[] })),
       supabase.from('return_lorry_details').select('*').order('srl_no', { ascending: true }).then((r) => r, () => ({ data: [] as any[] })),
+      supabase.from('sauda_check_point').select('po_no, b_rate').ilike('po_no', '%/4%').then((r) => r, () => ({ data: [] as any[] })),
     ]);
 
     const rawInspections: any[] = [...((inspRes as any)?.data || [])];
-    // Also merge any locally cached inspection records
     try {
       const localInsp = localStorage.getItem('inspection_master_records');
       if (localInsp) {
@@ -1183,17 +1117,11 @@ export async function syncAllReturnLorriesFromInspections(): Promise<ReturnLorry
       ...((inspDetRes as any)?.data || []),
       ...((millDetRes as any)?.data || []),
     ];
-    const allScp: any[] = (scpRes as any)?.data || [];
-    const allScpDetails: any[] = (scpDetRes as any)?.data || [];
-    const allPm: any[] = (pmRes as any)?.data || [];
-    const allPdm: any[] = (pdmRes as any)?.data || [];
-    const allFa: any[] = (faRes as any)?.data || [];
-    const allTmr: any[] = (tmrRes as any)?.data || [];
-    const allClubs: any[] = (clubRes as any)?.data || [];
     const existingDbReturnLorries: any[] = (rlRes as any)?.data || [];
     const existingDbRlDetails: any[] = (rlDetRes as any)?.data || [];
+    const existingScp4000: any[] = (scp4000Res as any)?.data || [];
 
-    // Group inspection details by MR No
+    // Group Mill Inspection details by MR No
     const detailsByMr = new Map<string, any[]>();
     for (const d of allInspDetails) {
       const k = normalizeStr(d.mr_no);
@@ -1206,84 +1134,7 @@ export async function syncAllReturnLorriesFromInspections(): Promise<ReturnLorry
       }
     }
 
-    // Index Final Arrivals & Temporary Arrivals
-    const faByMr = new Map<string, any>();
-    for (const fa of allFa) {
-      [fa.final_arrival_no, fa.mr_no, fa.temporary_arrival_no, fa.arrival_no, fa.amad_no].forEach((k) => {
-        const nk = normalizeStr(k);
-        if (nk && !faByMr.has(nk)) faByMr.set(nk, fa);
-      });
-    }
-
-    const tmrByNo = new Map<string, any>();
-    for (const tmr of allTmr) {
-      [tmr.temporary_arrival_no, tmr.amad_no, tmr.arrival_no, tmr.mr_no].forEach((k) => {
-        const nk = normalizeStr(k);
-        if (nk && !tmrByNo.has(nk)) tmrByNo.set(nk, tmr);
-      });
-    }
-
-    // Index Clubbed PO-MR bindings
-    const clubbedPoByMr = new Map<string, string>();
-    for (const c of allClubs) {
-      if (normalizeStr(c.status) === 'DELETED') continue;
-      const p = String(c.po_no || c.primary_po_no || '').trim();
-      if (!p) continue;
-      [c.mr_no, c.final_arrival_no, c.primary_mr_no, c.temporary_arrival_no].forEach((m) => {
-        const nm = normalizeStr(m);
-        if (nm) clubbedPoByMr.set(nm, p);
-      });
-    }
-
-    // Index Sauda Check Point & Purchase Master by exact PO No AND by canonical serial
-    const scpByPo = new Map<string, any>();
-    const scpBySerial = new Map<string, any>();
-    // Prefer non-4000 series as reference PO
-    for (const po of [...allScp, ...allPm]) {
-      const pNo = normalizeStr(po.po_no);
-      if (!pNo) continue;
-      if (!scpByPo.has(pNo) || (!is4000SeriesPo(pNo) && is4000SeriesPo(scpByPo.get(pNo)?.po_no))) {
-        scpByPo.set(pNo, po);
-      }
-      if (!is4000SeriesPo(pNo)) {
-        const serial = extractCanonicalPoSerial(pNo);
-        if (serial && !scpBySerial.has(serial)) {
-          scpBySerial.set(serial, po);
-        }
-        [po.contract_po_no, po.sauda_no, po.ptf_no].forEach((alt) => {
-          const nAlt = normalizeStr(alt);
-          if (nAlt && !scpByPo.has(nAlt)) scpByPo.set(nAlt, po);
-          const altSer = extractCanonicalPoSerial(alt);
-          if (altSer && !scpBySerial.has(altSer)) scpBySerial.set(altSer, po);
-        });
-      }
-    }
-
-    // Group Sauda Check Point Details & Purchase Detail Master by PO No & canonical serial
-    const poDetailsByPo = new Map<string, any[]>();
-    const poDetailsBySerial = new Map<string, any[]>();
-    for (const d of [...allScpDetails, ...allPdm]) {
-      const pNo = normalizeStr(d.po_no);
-      if (!pNo) continue;
-      if (!poDetailsByPo.has(pNo)) poDetailsByPo.set(pNo, []);
-      const list = poDetailsByPo.get(pNo)!;
-      const srl = Number(d.srl_no || list.length + 1);
-      if (!list.some((x) => Number(x.srl_no || 0) === srl)) {
-        list.push(d);
-      }
-      if (!is4000SeriesPo(pNo)) {
-        const ser = extractCanonicalPoSerial(pNo);
-        if (ser) {
-          if (!poDetailsBySerial.has(ser)) poDetailsBySerial.set(ser, []);
-          const sList = poDetailsBySerial.get(ser)!;
-          if (!sList.some((x) => Number(x.srl_no || 0) === srl)) {
-            sList.push(d);
-          }
-        }
-      }
-    }
-
-    // Track existing Return Lorry mappings by MR No and used 4000-series numbers
+    // Track existing user-saved Return Lorry records and used 4000-series numbers
     const existingByMr = new Map<string, any>();
     const used4000Numbers = new Set<number>();
 
@@ -1298,7 +1149,7 @@ export async function syncAllReturnLorriesFromInspections(): Promise<ReturnLorry
       }
     };
 
-    for (const rl of [...existingDbReturnLorries, ...getLocalCachedReturnLorries()]) {
+    for (const rl of [... getLocalCachedReturnLorries(), ...existingDbReturnLorries]) {
       const mKey = normalizeStr(rl.mr_no || rl.final_arrival_no);
       if (mKey && !existingByMr.has(mKey)) {
         existingByMr.set(mKey, rl);
@@ -1306,27 +1157,16 @@ export async function syncAllReturnLorriesFromInspections(): Promise<ReturnLorry
       register4000No(rl.new_po_no);
       register4000No(rl.po_no);
     }
-    for (const po of [...allScp, ...allPm]) {
-      register4000No(po.po_no);
+    for (const scp of existingScp4000) {
+      register4000No(scp.po_no);
     }
-
-    // Count lorry sequence per Reference PO
-    const mrListByRefPo = new Map<string, string[]>();
 
     const resultRecords: ReturnLorryRecord[] = [];
     const processedMrSet = new Set<string>();
-    const recordsToPersist: ReturnLorryRecord[] = [];
 
     for (const insp of rawInspections) {
       const mrKey = normalizeStr(insp.mr_no);
       if (!mrKey || processedMrSet.has(mrKey)) continue;
-
-      const arrKey = normalizeStr(insp.arrival_no || insp.temporary_arrival_no);
-      const matchedFa = faByMr.get(mrKey) || (arrKey ? faByMr.get(arrKey) : undefined);
-      const matchedTmr =
-        tmrByNo.get(arrKey) ||
-        tmrByNo.get(mrKey) ||
-        (matchedFa?.temporary_arrival_no ? tmrByNo.get(normalizeStr(matchedFa.temporary_arrival_no)) : undefined);
 
       let detailRows = detailsByMr.get(mrKey) || [];
       if (detailRows.length === 0 && insp.grid_details) {
@@ -1339,9 +1179,9 @@ export async function syncAllReturnLorriesFromInspections(): Promise<ReturnLorry
         }
       }
 
-      const wtMt = calculateInspectionWeightMt(insp, detailRows, matchedFa, matchedTmr);
+      const wtMt = calculateInspectionWeightMt(insp, detailRows);
 
-      // Condition: If Mill Inspection weight is under 5 MT (> 0 and < 5 MT)
+      // Strictly check Mill Inspection weight < 5 MT (> 0 and < 5 MT)
       if (wtMt <= 0 || wtMt >= 5) {
         continue;
       }
@@ -1349,165 +1189,57 @@ export async function syncAllReturnLorriesFromInspections(): Promise<ReturnLorry
       processedMrSet.add(mrKey);
       const existingRl = existingByMr.get(mrKey);
 
-      // Resolve Reference PO No (original Sauda Check Point PO)
       const isBlankPo = (v: any) => {
         const s = normalizeStr(v);
         return !s || s === 'NO' || s === 'N/A' || s === 'NONE' || s === '-';
       };
 
-      let candidatePo = '';
-      if (existingRl?.reference_po_no && !isBlankPo(existingRl.reference_po_no) && !is4000SeriesPo(existingRl.reference_po_no)) {
-        candidatePo = String(existingRl.reference_po_no).trim();
-      } else if (!isBlankPo(insp.reference_po_no) && !is4000SeriesPo(insp.reference_po_no)) {
-        candidatePo = String(insp.reference_po_no).trim();
-      } else if (!isBlankPo(insp.po_no) && !is4000SeriesPo(insp.po_no)) {
-        candidatePo = String(insp.po_no).trim();
-      } else if (!isBlankPo(insp.mill_po_no) && !is4000SeriesPo(insp.mill_po_no)) {
-        candidatePo = String(insp.mill_po_no).trim();
-      } else if (clubbedPoByMr.has(mrKey) && !is4000SeriesPo(clubbedPoByMr.get(mrKey))) {
-        candidatePo = clubbedPoByMr.get(mrKey)!;
-      } else if (arrKey && clubbedPoByMr.has(arrKey) && !is4000SeriesPo(clubbedPoByMr.get(arrKey))) {
-        candidatePo = clubbedPoByMr.get(arrKey)!;
-      } else if (matchedFa?.po_no && !isBlankPo(matchedFa.po_no) && !is4000SeriesPo(matchedFa.po_no)) {
-        candidatePo = String(matchedFa.po_no).trim();
-      } else if (matchedTmr?.po_no && !isBlankPo(matchedTmr.po_no) && !is4000SeriesPo(matchedTmr.po_no)) {
-        candidatePo = String(matchedTmr.po_no).trim();
-      } else if (!isBlankPo(insp.po_no) && is4000SeriesPo(insp.po_no)) {
-        // If insp.po_no was already replaced with a 4000-series PO, look up its contract_po_no / sauda_no in scpByPo
-        const po4000 = scpByPo.get(normalizeStr(insp.po_no));
-        if (po4000 && !isBlankPo(po4000.contract_po_no) && !is4000SeriesPo(po4000.contract_po_no)) {
-          candidatePo = String(po4000.contract_po_no).trim();
-        } else if (po4000 && !isBlankPo(po4000.sauda_no) && !is4000SeriesPo(po4000.sauda_no)) {
-          candidatePo = String(po4000.sauda_no).trim();
-        }
-      }
+      const referencePoNo =
+        (!isBlankPo(insp.po_no) ? String(insp.po_no).trim() : '') ||
+        (!isBlankPo(insp.mill_po_no) ? String(insp.mill_po_no).trim() : '') ||
+        (!isBlankPo(existingRl?.reference_po_no) ? String(existingRl.reference_po_no).trim() : '') ||
+        String(insp.mr_no).trim();
 
-      // Match Sauda Check Point record
-      let sourcePo: any = null;
-      let sourcePoDetails: any[] = [];
-      if (candidatePo) {
-        const cleanCand = normalizeStr(candidatePo);
-        const serialCand = extractCanonicalPoSerial(candidatePo);
-        sourcePo = scpByPo.get(cleanCand) || (serialCand ? scpBySerial.get(serialCand) : null) || null;
-        sourcePoDetails =
-          poDetailsByPo.get(cleanCand) ||
-          (sourcePo?.po_no ? poDetailsByPo.get(normalizeStr(sourcePo.po_no)) : undefined) ||
-          (serialCand ? poDetailsBySerial.get(serialCand) : undefined) ||
-          [];
-      }
-
-      // If still no sourcePo matched by PO number, try matching Sauda Check Point by Supplier + Broker
-      if (!sourcePo) {
-        const inspSupp = normalizeStr(insp.supplier_name || insp.supplier || matchedFa?.supplier);
-        const inspBrok = normalizeStr(insp.broker_name || insp.broker || matchedFa?.broker);
-        if (inspSupp) {
-          sourcePo =
-            allScp.find(
-              (s) =>
-                !is4000SeriesPo(s.po_no) &&
-                (normalizeStr(s.supplier) === inspSupp || normalizeStr(s.challan_supplier) === inspSupp) &&
-                (!inspBrok || !s.broker || normalizeStr(s.broker) === inspBrok)
-            ) ||
-            allPm.find(
-              (s) =>
-                !is4000SeriesPo(s.po_no) &&
-                (normalizeStr(s.supplier) === inspSupp || normalizeStr(s.challan_supplier) === inspSupp) &&
-                (!inspBrok || !s.broker || normalizeStr(s.broker) === inspBrok)
-            ) ||
-            null;
-          if (sourcePo) {
-            candidatePo = String(sourcePo.po_no || candidatePo).trim();
-            sourcePoDetails = poDetailsByPo.get(normalizeStr(sourcePo.po_no)) || [];
-          }
-        }
-      }
-
-      const resolvedReferencePoNo = String(
-        sourcePo?.po_no || candidatePo || existingRl?.reference_po_no || insp.po_no || `REF/${insp.mr_no}`
-      ).trim();
-
-      const fy = String(
-        sourcePo?.financial_year || existingRl?.financial_year || insp.financial_year || '2026-2027'
-      ).trim();
+      const fy = String(insp.financial_year || existingRl?.financial_year || '2026-2027').trim();
 
       const resolvedNewPoNo =
         (existingRl?.new_po_no && is4000SeriesPo(existingRl.new_po_no) ? String(existingRl.new_po_no).trim() : '') ||
         (existingRl?.po_no && is4000SeriesPo(existingRl.po_no) ? String(existingRl.po_no).trim() : '') ||
-        (is4000SeriesPo(insp.po_no) ? String(insp.po_no).trim() : '') ||
-        generate4000SeriesPoNoFromSet(resolvedReferencePoNo, fy, used4000Numbers);
+        generate4000SeriesPoNoFromSet(referencePoNo, fy, used4000Numbers);
 
-      const refKey = normalizeStr(resolvedReferencePoNo);
-      if (!mrListByRefPo.has(refKey)) {
-        const linkedCount = allFa.filter(
-          (f) =>
-            normalizeStr(f.po_no) === refKey ||
-            extractCanonicalPoSerial(f.po_no) === extractCanonicalPoSerial(resolvedReferencePoNo)
-        ).length;
-        mrListByRefPo.set(refKey, new Array(Math.max(linkedCount, Number(sourcePo?.total_lorries || 1))).fill(''));
-      }
-      const lorrySeqNo = Number(
-        existingRl?.lorry_sequence_no ||
-        sourcePo?.total_lorries ||
-        mrListByRefPo.get(refKey)?.length ||
-        1
+      const savedDetails = existingRl?.items?.length
+        ? existingRl.items
+        : existingDbRlDetails.filter(
+            (d) => normalizeStr(d.return_po_no) === normalizeStr(resolvedNewPoNo)
+          );
+
+      const isAlreadySavedToScp = Boolean(
+        existingRl?.saved_to_sauda_checkpoint === true && Number(existingRl?.b_rate || 0) > 0
       );
 
-      const combinedRecord = buildCombinedReturnLorryRecord({
+      const recordFromInspection = buildCombinedReturnLorryRecord({
         newPoNo: resolvedNewPoNo,
-        referencePoNo: resolvedReferencePoNo,
+        referencePoNo,
         insp,
         inspDetails: detailRows,
-        sourcePo: sourcePo || existingRl || {},
-        sourcePoDetails,
-        matchedFa,
-        matchedTmr,
         weightMt: wtMt,
-        lorrySeqNo,
+        lorrySeqNo: 1,
+        existingSavedRl: existingRl,
+        existingSavedRlDetails: savedDetails,
+        isSavedToScp: isAlreadySavedToScp,
       });
 
-      resultRecords.push(combinedRecord);
-
-      if (!existingDbReturnLorries.some((r) => normalizeStr(r.mr_no) === mrKey && normalizeStr(r.new_po_no) === normalizeStr(resolvedNewPoNo))) {
-        recordsToPersist.push(combinedRecord);
-      }
+      resultRecords.push(recordFromInspection);
     }
 
-    // Also include any existing rows in `return_lorry` table whose MR wasn't in `rawInspections`
-    for (const dbRow of existingDbReturnLorries) {
-      const mKey = normalizeStr(dbRow.mr_no || dbRow.final_arrival_no);
-      if (mKey && processedMrSet.has(mKey)) continue;
-      if (mKey) processedMrSet.add(mKey);
-      const rowItems = existingDbRlDetails.filter(
-        (d) => normalizeStr(d.return_po_no) === normalizeStr(dbRow.new_po_no || dbRow.po_no)
-      );
-      resultRecords.push({
-        ...dbRow,
-        new_po_no: dbRow.new_po_no || dbRow.po_no,
-        po_no: dbRow.po_no || dbRow.new_po_no,
-        is_return_lorry: true,
-        items: rowItems,
-      });
-    }
-
-    // Cache locally immediately
     setLocalCachedReturnLorries(resultRecords);
-
-    // Persist any newly discovered Return Lorry records in the background
-    if (recordsToPersist.length > 0) {
-      Promise.allSettled(recordsToPersist.map((r) => persistReturnLorryRecordToDb(r))).catch(() => {});
-    }
-
     return resultRecords;
   } catch (err) {
-    console.warn('[returnLorryService] Error during batch sync:', err);
+    console.warn('[returnLorryService] Error loading Mill Inspection (< 5 MT) records:', err);
     return getLocalCachedReturnLorries();
   }
 }
 
-/**
- * Fetches all Return Lorry records, running the fast batch sync from
- * `material_inspection` (< 5 MT) and `sauda_check_point` so records are always complete and up to date.
- */
 export async function fetchAllReturnLorries(): Promise<ReturnLorryRecord[]> {
   return syncAllReturnLorriesFromInspections();
 }
