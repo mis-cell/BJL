@@ -28,6 +28,49 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
   suppliers,
   brokers
 }) => {
+  const [localChallanNo, setLocalChallanNo] = React.useState('');
+  const [localChallanDate, setLocalChallanDate] = React.useState('');
+
+  // Sync state from formData.challan_rr_no when record loads or changes externally
+  React.useEffect(() => {
+    const raw = String(formData.challan_rr_no || '').trim();
+    if (!raw) {
+      setLocalChallanNo('');
+      setLocalChallanDate('');
+      return;
+    }
+    const dateMatch = raw.match(/(\d{2}[-/]\d{2}[-/]\d{2,4})$/);
+    if (dateMatch) {
+      const dVal = dateMatch[1];
+      const nVal = raw.substring(0, raw.length - dVal.length).trim();
+      setLocalChallanNo(nVal);
+      setLocalChallanDate(dVal);
+    } else {
+      setLocalChallanNo(raw);
+      setLocalChallanDate('');
+    }
+  }, [formData.challan_rr_no]);
+
+  const syncParentChallan = (no: string, date: string) => {
+    const cNo = no.trim();
+    const cDate = date.trim();
+    const combined = cNo && cDate ? `${cNo} ${cDate}` : (cNo || cDate);
+    handleChange({ target: { name: 'challan_rr_no', value: combined } });
+  };
+
+  const formatDateInput = (val: string): string => {
+    const digits = val.replace(/\D/g, "");
+    if (digits.length === 6) {
+      return `${digits.substring(0, 2)}-${digits.substring(2, 4)}-${digits.substring(4, 6)}`;
+    }
+    if (digits.length === 8) {
+      return `${digits.substring(0, 2)}-${digits.substring(2, 4)}-${digits.substring(6, 8)}`;
+    }
+    if (digits.length === 4) {
+      return `${digits.substring(0, 2)}-${digits.substring(2, 4)}-26`;
+    }
+    return val;
+  };
   return (
     <div className="w-full rounded-xl border border-[#F7AFA8] bg-white shadow-xs overflow-visible relative z-30 mt-3">
       {/* Header */}
@@ -383,103 +426,54 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
               />
             </div>
 
-            {/* Challan No & Date (Split into 2 inputs with clean local state) */}
-            {(() => {
-              const [localNo, setLocalNo] = React.useState('');
-              const [localDate, setLocalDate] = React.useState('');
-              const isInitializedRef = React.useRef(false);
+            {/* Challan No & Date (Split into 2 inputs) */}
+            <div className="flex items-center gap-2">
+              <label htmlFor="challan_no_input" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
+                Challan No & Date. <span className="text-rose-600 font-black text-sm">*</span>
+              </label>
 
-              // Extract parts from formData.challan_rr_no
-              const extractParts = (raw: string) => {
-                if (!raw) return { no: '', date: '' };
-                const str = String(raw).trim();
-                const dateMatch = str.match(/(\d{2}[-/]\d{2}[-/]\d{2,4})$/);
-                if (dateMatch) {
-                  const dateVal = dateMatch[1];
-                  const noVal = str.substring(0, str.length - dateVal.length).trim();
-                  return { no: noVal, date: dateVal };
-                }
-                return { no: str, date: '' };
-              };
+              <div className="flex-1 flex gap-1.5">
+                <input
+                  id="challan_no_input"
+                  aria-label="Challan No"
+                  type="text"
+                  placeholder="CHALLAN NO"
+                  value={localChallanNo}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setLocalChallanNo(val);
+                    syncParentChallan(val, localChallanDate);
+                  }}
+                  required
+                  className="flex-1 border border-gray-400 rounded bg-white px-2.5 h-7 text-xs font-bold uppercase font-mono"
+                />
 
-              // Sync local state when formData.challan_rr_no changes externally
-              React.useEffect(() => {
-                const parts = extractParts(formData.challan_rr_no || '');
-                setLocalNo(parts.no);
-                setLocalDate(parts.date);
-              }, [formData.challan_rr_no]);
-
-              const updateParent = (newNo: string, newDate: string) => {
-                const cleanNo = newNo.trim();
-                const cleanDate = newDate.trim();
-                const combined = cleanNo && cleanDate ? `${cleanNo} ${cleanDate}` : (cleanNo || cleanDate);
-                handleChange({ target: { name: 'challan_rr_no', value: combined } });
-              };
-
-              const formatTypedDate = (raw: string): string => {
-                const digits = raw.replace(/\D/g, "");
-                if (digits.length === 6) {
-                  return `${digits.substring(0, 2)}-${digits.substring(2, 4)}-${digits.substring(4, 6)}`;
-                }
-                if (digits.length === 8) {
-                  return `${digits.substring(0, 2)}-${digits.substring(2, 4)}-${digits.substring(6, 8)}`;
-                }
-                if (digits.length === 4) {
-                  return `${digits.substring(0, 2)}-${digits.substring(2, 4)}-26`;
-                }
-                return raw;
-              };
-
-              return (
-                <div className="flex items-center gap-2">
-                  <label htmlFor="challan_no_input" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                    Challan No & Date. <span className="text-rose-600 font-black text-sm">*</span>
-                  </label>
-
-                  <div className="flex-1 flex gap-1.5">
-                    <input
-                      id="challan_no_input"
-                      aria-label="Challan No"
-                      type="text"
-                      placeholder="CHALLAN NO"
-                      value={localNo}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setLocalNo(val);
-                        updateParent(val, localDate);
-                      }}
-                      required
-                      className="flex-1 border border-gray-400 rounded bg-white px-2.5 h-7 text-xs font-bold uppercase font-mono"
-                    />
-
-                    <input
-                      id="challan_date_input"
-                      aria-label="Challan Date"
-                      type="text"
-                      placeholder="DD-MM-YY (e.g. 311026)"
-                      value={localDate}
-                      onChange={(e) => {
-                        let val = e.target.value;
-                        const digits = val.replace(/\D/g, "");
-                        if (digits.length === 6 || digits.length === 8) {
-                          val = formatTypedDate(digits);
-                        }
-                        setLocalDate(val);
-                        updateParent(localNo, val);
-                      }}
-                      onBlur={(e) => {
-                        const formatted = formatTypedDate(e.target.value);
-                        if (formatted !== e.target.value) {
-                          setLocalDate(formatted);
-                          updateParent(localNo, formatted);
-                        }
-                      }}
-                      className="w-36 border border-gray-400 rounded bg-white px-2 h-7 text-xs font-bold text-center font-mono"
-                    />
-                  </div>
-                </div>
-              );
-            })()}
+                <input
+                  id="challan_date_input"
+                  aria-label="Challan Date"
+                  type="text"
+                  placeholder="DD-MM-YY"
+                  value={localChallanDate}
+                  onChange={(e) => {
+                    let val = e.target.value;
+                    const digits = val.replace(/\D/g, "");
+                    if (digits.length === 6 || digits.length === 8) {
+                      val = formatDateInput(digits);
+                    }
+                    setLocalChallanDate(val);
+                    syncParentChallan(localChallanNo, val);
+                  }}
+                  onBlur={(e) => {
+                    const formatted = formatDateInput(e.target.value);
+                    if (formatted !== e.target.value) {
+                      setLocalChallanDate(formatted);
+                      syncParentChallan(localChallanNo, formatted);
+                    }
+                  }}
+                  className="w-36 border border-gray-400 rounded bg-white px-2 h-7 text-xs font-bold text-center font-mono"
+                />
+              </div>
+            </div>
 
             {/* Lorry */}
             <div className="flex items-center gap-2">

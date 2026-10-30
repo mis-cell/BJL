@@ -177,19 +177,48 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
               <div className="flex gap-2">
                 <input
                   id="arrival_area_code_1489"
-                  aria-label="Arrival Area"
+                  aria-label="Arrival Area Code"
                   type="text"
                   name="arrival_area_code"
-                  value={formData.arrival_area_code}
-                  readOnly
-                  className="w-16 h-7 rounded border border-gray-300 bg-slate-100 text-center text-xs font-bold"
+                  placeholder="Code"
+                  value={formData.arrival_area_code || ''}
+                  onChange={(e) => {
+                    const codeVal = e.target.value;
+                    const matchedArea = areas.find(
+                      a => String(a.area_code || a.code || '').trim().toUpperCase() === codeVal.trim().toUpperCase()
+                    );
+                    const matchedName = matchedArea ? matchedArea.area_name : (formData.arrival_area_name || '');
+
+                    if (matchedName) {
+                      const validAgencies = getAgenciesForArea(matchedName);
+                      const validSet = new Set([
+                        ...validAgencies.map(a => a.AGENCY_NAME.toUpperCase()),
+                        ...validAgencies.map(a => a.AGENCY_CODE.toUpperCase())
+                      ]);
+                      setDetails(prev => prev.map(d => {
+                        const agName = (d.agency_name || '').trim().toUpperCase();
+                        const agCode = (d.agency_code || '').trim().toUpperCase();
+                        if ((agName && !validSet.has(agName)) || (agCode && !validSet.has(agCode))) {
+                          return { ...d, agency_name: '', agency_code: '' };
+                        }
+                        return d;
+                      }));
+                    }
+
+                    setFormData(prev => ({
+                      ...prev,
+                      arrival_area_code: codeVal,
+                      arrival_area_name: matchedArea ? matchedArea.area_name : prev.arrival_area_name
+                    }));
+                  }}
+                  className="w-16 h-7 rounded border border-gray-300 bg-white text-center text-xs font-bold font-mono uppercase focus:border-[#F7AFA8]"
                 />
 
                 <select
                   id="arrival_area_name_1497"
                   aria-label="Arrival area name"
                   name="arrival_area_name"
-                  value={formData.arrival_area_name}
+                  value={formData.arrival_area_name || ''}
                   onChange={(e) => {
                     const areaVal = e.target.value;
                     const matchedArea = areas.find(a => a.area_name === areaVal);
@@ -212,7 +241,7 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                     setFormData(prev => ({
                       ...prev,
                       arrival_area_name: areaVal,
-                      arrival_area_code: matchedArea ? matchedArea.area_code : prev.arrival_area_code
+                      arrival_area_code: matchedArea ? (matchedArea.area_code || matchedArea.code) : prev.arrival_area_code
                     }));
                   }}
                   required
@@ -221,7 +250,7 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                   <option value="">-- SELECT AREA --</option>
 
                   {areas.map(a => (
-                    <option key={a.id} value={a.area_name}>
+                    <option key={a.id || a.area_code || a.area_name} value={a.area_name}>
                       {a.area_name}
                     </option>
                   ))}
