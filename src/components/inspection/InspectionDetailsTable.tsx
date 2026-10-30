@@ -33,6 +33,43 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
   onPrintRecord,
   onSaveForm,
 }) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTableElement>) => {
+    if (e.key === "Enter") {
+      const target = e.target as HTMLElement;
+      if (
+        target &&
+        (target.tagName === "INPUT" || target.tagName === "SELECT" || target.tagName === "TEXTAREA")
+      ) {
+        e.preventDefault();
+
+        const table = e.currentTarget;
+        const focusables = Array.from(
+          table.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+            "input:not([readonly]):not([disabled]), select:not([disabled]), textarea:not([readonly]):not([disabled])"
+          )
+        ).filter((el) => {
+          return (
+            el.tabIndex !== -1 &&
+            el.getAttribute("readonly") === null &&
+            !el.disabled &&
+            (el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length > 0)
+          );
+        });
+
+        const currentIndex = focusables.indexOf(target as any);
+        if (currentIndex !== -1) {
+          const nextIndex = e.shiftKey ? currentIndex - 1 : currentIndex + 1;
+          if (nextIndex >= 0 && nextIndex < focusables.length) {
+            focusables[nextIndex].focus();
+            if ("select" in focusables[nextIndex] && typeof focusables[nextIndex].select === "function") {
+              focusables[nextIndex].select();
+            }
+          }
+        }
+      }
+    }
+  };
+
   return (
     <section className="bg-white border border-slate-200 rounded-2xl shadow-md overflow-hidden">
       <div className="bg-slate-50 px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
@@ -62,13 +99,13 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
         }
       `}</style>
       <div className="table-scroll overflow-auto max-h-[calc(100vh-180px)] border-t border-slate-200">
-        <table className="min-w-[4300px] w-full text-xs border-collapse">
+        <table className="min-w-[4300px] w-full text-xs border-collapse" onKeyDown={handleKeyDown}>
           <thead>
             <tr className="bg-[#1e3a8a] text-white text-[12px] font-bold">
-              <th rowSpan={2} className="p-2 border-r border-white/20 text-center sticky left-0 bg-[#1e3a8a] z-20 min-w-[50px]">Srl No.</th>
-              <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[120px]">Arrival Grade</th>
-              <th colSpan={2} className="p-2 border-r border-white/20 text-center bg-[#1d4ed8]">Stock Grade</th>
-              <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[100px]">Area</th>
+              <th rowSpan={2} className="p-2 border-r border-white/20 text-center sticky left-0 bg-[#1e3a8a] z-20 min-w-[50px] w-[50px]">Srl No.</th>
+              <th rowSpan={2} className="p-2 border-r border-white/20 text-center sticky left-[50px] bg-[#1e3a8a] z-20 min-w-[120px] w-[120px]">Arrival Grade</th>
+              <th colSpan={2} className="p-2 border-r border-white/20 text-center sticky left-[170px] bg-[#1d4ed8] z-20 min-w-[210px] w-[210px]">Stock Grade</th>
+              <th rowSpan={2} className="p-2 border-r border-white/20 text-center sticky left-[380px] bg-[#1e3a8a] z-20 min-w-[100px] w-[100px] shadow-[3px_0_5px_-2px_rgba(0,0,0,0.3)]">Area</th>
               <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[100px]">Agency</th>
               <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[100px]">Marks</th>
               <th rowSpan={2} className="p-2 border-r border-white/20 text-center min-w-[100px]">Crop Year</th>
@@ -140,8 +177,8 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
               <th rowSpan={2} className="p-2 text-center sticky right-0 bg-[#1e3a8a] z-20 min-w-[190px]">Row Actions</th>
             </tr>
             <tr className="bg-[#243b68] text-white text-[11px]">
-              <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Code</th>
-              <th className="p-1.5 border-r border-white/10 text-center min-w-[120px]">Name</th>
+              <th className="p-1.5 border-r border-white/10 text-center sticky left-[170px] bg-[#243b68] z-20 min-w-[90px] w-[90px]">Code</th>
+              <th className="p-1.5 border-r border-white/10 text-center sticky left-[260px] bg-[#243b68] z-20 min-w-[120px] w-[120px]">Name</th>
               <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Min</th>
               <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Max</th>
               <th className="p-1.5 border-r border-white/10 text-center min-w-[90px]">Avg</th>
@@ -197,7 +234,7 @@ export const InspectionDetailsTable: React.FC<InspectionDetailsTableProps> = ({
             <tr className="border-r border-emerald-600 p-3 text-center font-extrabold text-white">
               <td
                 colSpan={9}
-                className="p-3 text-right font-extrabold text-emerald-900 bg-slate-100"
+                className="p-3 text-right font-extrabold text-emerald-900 bg-slate-100 sticky left-0 z-10 shadow-[3px_0_5px_-2px_rgba(0,0,0,0.12)]"
               >
                 Summary Totals:
               </td>

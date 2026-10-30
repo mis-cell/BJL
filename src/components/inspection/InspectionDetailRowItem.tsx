@@ -68,10 +68,16 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
   const isChottaTotWtGrdBlocked = isAutoBlocked(row, "chotta_tot_wt_grd");
   const isChottaGradeBlocked = isAutoBlocked(row, "chotta_grade");
 
+  const stickyBgClass = row.expanded
+    ? "bg-blue-50"
+    : index % 2 === 0
+    ? "bg-white"
+    : "bg-slate-50";
+
   return (
     <tr className={`border-b border-slate-200 ${index % 2 === 0 ? "bg-white" : "bg-slate-50/60"} ${row.expanded ? "bg-blue-50/50" : ""}`}>
       {/* Srl No */}
-      <td className="p-2 border-r border-slate-200 text-center font-extrabold text-slate-700 sticky left-0 bg-white z-10">
+      <td className={`p-2 border-r border-slate-200 text-center font-extrabold text-slate-700 sticky left-0 z-10 ${stickyBgClass}`}>
         <div className="flex items-center justify-center gap-1">
           <span>{index + 1}</span>
           {row.is_auto && (
@@ -83,7 +89,7 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
       </td>
 
       {/* Arrival Grade */}
-      <td className="p-1.5 border-r border-slate-200">
+      <td className={`p-1.5 border-r border-slate-200 sticky left-[50px] z-10 ${stickyBgClass}`}>
         <input
           type="text"
           readOnly={isArrivalGradeBlocked}
@@ -96,7 +102,7 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
       </td>
 
       {/* Stock Grade Code & Name */}
-      <td className="p-1.5 border-r border-slate-200">
+      <td className={`p-1.5 border-r border-slate-200 sticky left-[170px] z-10 ${stickyBgClass}`}>
         <input
           type="text"
           readOnly={isStockGradeCodeBlocked}
@@ -107,7 +113,7 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
           className={getFieldInputStyle(isStockGradeCodeBlocked)}
         />
       </td>
-      <td className="p-1.5 border-r border-slate-200">
+      <td className={`p-1.5 border-r border-slate-200 sticky left-[260px] z-10 ${stickyBgClass}`}>
         <input
           type="text"
           readOnly={isStockGradeNameBlocked}
@@ -120,7 +126,7 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
       </td>
 
       {/* Area & Agency */}
-      <td className="p-1.5 border-r border-slate-200">
+      <td className={`p-1.5 border-r border-slate-200 sticky left-[380px] z-10 ${stickyBgClass} shadow-[3px_0_5px_-2px_rgba(0,0,0,0.12)]`}>
         <input
           type="text"
           readOnly={isAreaBlocked}
