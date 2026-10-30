@@ -1178,9 +1178,9 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
     if (!initialData && cleanEnteredPo && (isPoCancelled || isPoClosed)) {
       if (isPoCancelled) {
-        alert(`🚫 Action Prohibited: Sauda / Purchase Order #${cleanEnteredPo} is CANCELLED (VOID).\n\nCancelled Saudas cannot accept any Material Receipts (MR) or Temporary Arrivals. It must first be Restored by a Level 4 user or Admin from Sauda Check Point.`);
+        alert(`🚫 Action Prohibited: Sauda / Purchase Order ${cleanEnteredPo} is CANCELLED (VOID).\n\nCancelled Saudas cannot accept any Material Receipts (MR) or Temporary Arrivals. It must first be Restored by a Level 4 user or Admin from Sauda Check Point.`);
       } else {
-        alert(`🔒 Action Prohibited: Purchase Order #${cleanEnteredPo} is CLOSED.\n\nClosed P.O.s are not accepted in Temporary Arrival. It must first be Reopened by a Level 4 user or Admin from Sauda Check Point.`);
+        alert(`🔒 Action Prohibited: Purchase Order ${cleanEnteredPo} is CLOSED.\n\nClosed P.O.s are not accepted in Temporary Arrival. It must first be Reopened by a Level 4 user or Admin from Sauda Check Point.`);
       }
       return;
     }
@@ -1420,7 +1420,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
         screenDraftService.clearDraft('amad_entry_form');
         screenDraftService.clearDraft('amad_entry_details');
-        alert(`Arrival Register Voucher #${formData.arrival_no} updated successfully!`);
+        alert(`Arrival Register Voucher ${formData.arrival_no} updated successfully!`);
       } else {
         let insertAmadError: any = null;
         let insertIssueError: any = null;
@@ -1449,7 +1449,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
         screenDraftService.clearDraft('amad_entry_form');
         screenDraftService.clearDraft('amad_entry_details');
-        alert(`Arrival Register Saved successfully!\nAdded under Arrival Voucher #${formData.arrival_no}`);
+        alert(`Arrival Register Saved successfully!\nAdded under Arrival Voucher ${formData.arrival_no}`);
       }
 
       // Propagate A.P.M.C Fees (Rs.) downstream to Final Arrival, Inspection, and Settlement if linked records exist
@@ -1668,7 +1668,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                         return (
                           <div className="mt-1 flex items-center gap-1.5 text-[10px] font-bold text-amber-900 bg-amber-50 border border-amber-300 px-2 py-1 rounded">
                             <Lock className="w-3 h-3 text-amber-700 shrink-0" />
-                            <span>Sauda #{closedItem.po_no} is CLOSED ({closedItem.receivedLorries}/{closedItem.contractLorries} Lorries Received). Reopen by Admin or Level 4 User is required.</span>
+                            <span>Sauda {closedItem.po_no} is CLOSED ({closedItem.receivedLorries}/{closedItem.contractLorries} Lorries Received). Reopen by Admin or Level 4 User is required.</span>
                           </div>
                         );
                       }
@@ -1703,7 +1703,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                                   <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-xs space-y-1">
                                     <div className="flex items-center gap-1.5 font-bold text-amber-950">
                                       <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                                      <span>Sauda #{closedMatch.po_no} is CLOSED</span>
+                                      <span>Sauda {closedMatch.po_no} is CLOSED</span>
                                     </div>
                                     <p className="text-[11px] text-amber-900 leading-snug">
                                       All {closedMatch.contractLorries} contracted {closedMatch.contractLorries === 1 ? 'lorry has' : 'lorries have'} been received ({closedMatch.receivedLorries}/{closedMatch.contractLorries}).
@@ -1761,7 +1761,7 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
                               >
                                 <div className="flex items-center justify-between font-bold text-indigo-950">
                                   <span className="flex items-center gap-1.5">
-                                    P.O. #{po.po_no}
+                                    P.O. {po.po_no}
                                     {po.is_reopened ? (
                                       <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 font-sans font-bold flex items-center gap-0.5">
                                         <Unlock className="w-2.5 h-2.5 text-amber-700" />

@@ -168,7 +168,7 @@ export default function ReturnLorry({ onClose }: ReturnLorryProps) {
 
       showToast(
         'success',
-        `Saved 4000-Series P.O. #${saved.new_po_no} (M.R. ${saved.mr_no}) with Rate ₹${finalBRate.toLocaleString('en-IN')} and moved to Sauda Check Point!`
+        `Saved 4000-Series P.O. ${saved.new_po_no} (M.R. ${saved.mr_no}) with Rate ₹${finalBRate.toLocaleString('en-IN')} and moved to Sauda Check Point!`
       );
       setViewMode('register');
     } catch (err: any) {
@@ -247,7 +247,7 @@ export default function ReturnLorry({ onClose }: ReturnLorryProps) {
     return (
       <LegacyLayout
         title="SAUDA CHECK POINT ENTRY (RETURN LORRY)"
-        subtitle={`Mill Inspection M.R. #${activeRecord.mr_no} • 4000-Series P.O. #${activeRecord.new_po_no}`}
+        subtitle={`Mill Inspection M.R. ${activeRecord.mr_no} • 4000-Series P.O. ${activeRecord.new_po_no}`}
         onClose={() => setViewMode('register')}
       >
         <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-4 w-full pb-10 text-[11px]">
@@ -287,12 +287,12 @@ export default function ReturnLorry({ onClose }: ReturnLorryProps) {
                   Mill Inspection (&lt; 5 MT) Return Lorry
                 </span>
                 <h1 className="text-base md:text-lg font-black uppercase tracking-wider text-amber-300 drop-shadow mt-0.5 leading-tight">
-                  RETURN LORRY SAUDA CHECK POINT ENTRY — #{activeRecord.new_po_no}
+                  RETURN LORRY SAUDA CHECK POINT ENTRY — {activeRecord.new_po_no}
                 </h1>
                 <p className="text-[11px] font-bold text-amber-300 tracking-wide mt-0.5 flex flex-wrap items-center gap-1.5 leading-tight">
                   <span>Session: BJCL/{activeRecord.financial_year || '2026-2027'}/</span>
                   <span>•</span>
-                  <span>Mill Inspection M.R. No: #{activeRecord.mr_no}</span>
+                  <span>Mill Inspection M.R. No: {activeRecord.mr_no}</span>
                   <span>•</span>
                   <span>Lorry: {activeRecord.lorry_number || '-'} ({Number(activeRecord.received_weight_mt || 0).toFixed(3)} MT)</span>
                 </p>
@@ -346,7 +346,7 @@ export default function ReturnLorry({ onClose }: ReturnLorryProps) {
                     </span>
                   </div>
                   <span className="bg-red-800 text-white px-2 py-0.5 rounded text-[10px] font-black font-mono">
-                    4000-Series P.O: #{activeRecord.new_po_no}
+                    4000-Series P.O: {activeRecord.new_po_no}
                   </span>
                 </div>
 
@@ -832,7 +832,7 @@ export default function ReturnLorry({ onClose }: ReturnLorryProps) {
                     </span>
                   </div>
                   <div className="pr-2 text-[10px] font-black text-white font-mono">
-                    Auto 4000-Series P.O: #{activeRecord.new_po_no}
+                    Auto 4000-Series P.O: {activeRecord.new_po_no}
                   </div>
                 </div>
 
@@ -1000,7 +1000,7 @@ export default function ReturnLorry({ onClose }: ReturnLorryProps) {
                 <span>
                   {saving
                     ? 'Saving & Moving to Sauda Check Point...'
-                    : `Save P.O (#${activeRecord.new_po_no}) & Move to Sauda Check Point`}
+                    : `Save P.O (${activeRecord.new_po_no}) & Move to Sauda Check Point`}
                 </span>
               </button>
 

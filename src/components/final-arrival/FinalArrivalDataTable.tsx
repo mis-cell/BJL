@@ -71,8 +71,8 @@ export function FinalArrivalDataTable({
             <thead className="bg-[#D94B5A] text-white font-serif sticky top-0 z-10">
               <tr className="border-b border-[#FBCFCB] h-10 text-white">
                 <th className="px-3 border-r border-[#D94B5A] font-bold text-center w-24 whitespace-nowrap">Voucher Date</th>
-                <th className="px-3 border-r border-[#D94B5A] font-bold text-center w-24 whitespace-nowrap">Arrival #</th>
-                <th className="px-3 border-r border-[#D94B5A] font-bold text-center w-28 whitespace-nowrap">PO #</th>
+                <th className="px-3 border-r border-[#D94B5A] font-bold text-center w-24 whitespace-nowrap">Arrival</th>
+                <th className="px-3 border-r border-[#D94B5A] font-bold text-center w-28 whitespace-nowrap">PO</th>
                 <th className="px-3 border-r border-[#D94B5A] font-bold text-left whitespace-nowrap">Supplier Name</th>
                 <th className="px-3 border-r border-[#D94B5A] font-bold text-left whitespace-nowrap">Broker Reference</th>
                 <th className="px-3 border-r border-[#D94B5A] font-bold text-center w-28 whitespace-nowrap">Lorry Number</th>
@@ -120,7 +120,7 @@ export function FinalArrivalDataTable({
                     {/* Final Arrival No */}
                     <td className="text-center font-black px-2 border-r border-gray-200 whitespace-nowrap">
                       <div className="flex flex-col items-center justify-center py-0.5">
-                        <span className={cn(isSelected ? "text-indigo-950" : "text-gray-900")}>#{r.final_arrival_no}</span>
+                        <span className={cn(isSelected ? "text-indigo-950" : "text-gray-900")}>{String(r.final_arrival_no || '').replace(/^#+/, '')}</span>
                         {isPending && (
                           <span className="text-[8.5px] px-1 bg-amber-500 text-white font-extrabold uppercase rounded-sm mt-0.5 tracking-wide leading-none ">Pending</span>
                         )}

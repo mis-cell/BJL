@@ -300,16 +300,16 @@ export const InspectionRegisterView: React.FC<InspectionRegisterViewProps> = ({
                       {isReturnRow ? (
                         <div className="flex flex-col gap-0.5">
                           <span className="font-black text-red-800">
-                            {recAny.return_po_no ? `#${recAny.return_po_no}` : (r.po_no ? `#${r.po_no}` : "-")}
+                            {recAny.return_po_no ? String(recAny.return_po_no).replace(/^#+/, '') : (r.po_no ? String(r.po_no).replace(/^#+/, '') : "-")}
                           </span>
                           {(recAny.reference_po_no || r.po_no) && (
                             <span className="text-[10px] font-bold text-red-700 bg-red-200/80 px-1.5 py-0.5 rounded w-fit">
-                              Ref: #{recAny.reference_po_no || r.po_no}
+                              Ref: {String(recAny.reference_po_no || r.po_no).replace(/^#+/, '')}
                             </span>
                           )}
                         </div>
                       ) : (
-                        r.po_no ? `#${r.po_no}` : "-"
+                        r.po_no ? String(r.po_no).replace(/^#+/, '') : "-"
                       )}
                     </td>
                     <td className={`p-3 font-bold uppercase truncate max-w-[160px] ${isReturnRow ? "text-red-950" : ""}`}>{r.supplier_name || "-"}</td>

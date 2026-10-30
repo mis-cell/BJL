@@ -120,7 +120,7 @@ export function FinalArrivalEntryHeader({
                           <span>{opt.temp_mr_no}</span>
                           {opt.po_no && (
                             <span className="text-emerald-700 font-semibold text-[11px] bg-emerald-50 px-1 rounded">
-                              PO #{opt.po_no}
+                              PO {opt.po_no}
                             </span>
                           )}
                         </span>
@@ -267,7 +267,7 @@ export function FinalArrivalEntryHeader({
                     >
                       <div className="flex items-center justify-between font-bold text-indigo-950">
                         <span className="flex items-center gap-1.5">
-                          <span>P.O. #{opt.po_no}</span>
+                          <span>P.O. {opt.po_no}</span>
                           {opt.is_reopened ? (
                             <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 font-sans font-bold">
                               REOPENED ({opt.received_lorries || 0}/{opt.contract_lorries || 1} Lorry)

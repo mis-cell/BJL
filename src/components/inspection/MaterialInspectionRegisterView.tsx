@@ -628,11 +628,11 @@ export const MaterialInspectionRegisterView: React.FC<MaterialInspectionRegister
                           <td className="px-3 text-center border-r border-slate-200">
                             <div className="flex flex-col items-center justify-center gap-0.5">
                               <span className={`font-mono font-bold ${isRet ? "text-red-800 font-black" : "text-stone-600"}`}>
-                                {(row as any).return_po_no ? `#${(row as any).return_po_no}` : (row.po_no ? `#${row.po_no}` : "-")}
+                                {(row as any).return_po_no ? String((row as any).return_po_no).replace(/^#+/, '') : (row.po_no ? String(row.po_no).replace(/^#+/, '') : "-")}
                               </span>
                               {isRet && ((row as any).reference_po_no || row.po_no) && (
                                 <span className="inline-block bg-red-200 text-red-900 border border-red-400 text-[8px] font-black uppercase px-1 rounded tracking-wider leading-normal">
-                                  Ref: #{(row as any).reference_po_no || row.po_no}
+                                  Ref: {String((row as any).reference_po_no || row.po_no).replace(/^#+/, '')}
                                 </span>
                               )}
                               {hasFinalArrival && (
@@ -939,7 +939,7 @@ export const MaterialInspectionRegisterView: React.FC<MaterialInspectionRegister
 
                     {/* P.O. Reference */}
                     <td className="px-3 text-center font-mono text-stone-600 border-r border-slate-200">
-                      {row.po_no ? `#${row.po_no}` : "-"}
+                      {row.po_no ? String(row.po_no).replace(/^#+/, '') : "-"}
                     </td>
 
                     {/* Supplier */}

@@ -650,7 +650,7 @@ export function PaymentEntryForm({
             <div className="bg-white/90 px-2.5 py-1.5 rounded border border-orange-200 flex items-center justify-between">
               <div>
                 <span className="block text-[9px] font-black uppercase text-orange-900">Extra & Short</span>
-                <span className="text-[9px] text-slate-500">Sauda Excess Weight Deduction</span>
+                <span className="text-[9px] text-slate-500">Sauda Excess/Short (Last M.R. Only)</span>
               </div>
               <span className="font-mono font-black text-xs text-orange-800">
                 -{formatIndianCurrency(Number(masterData.val_ex_short) || 0)}

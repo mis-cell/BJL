@@ -869,7 +869,7 @@ export default function MrSettlement({ onClose, onLogEvent }: { onClose?: () => 
       const isDone = po.isCompleted || po.status === 'completed' || po.status === 'settled';
       return {
         value: po.po_no,
-        label: `#${po.po_no} (${po.supplier || 'PO'})${isDone ? ' - [COMPLETED]' : ''}`
+        label: `${String(po.po_no || '').replace(/^#+/, '')} (${po.supplier || 'PO'})${isDone ? ' - [COMPLETED]' : ''}`
       };
     });
   }, [purchaseOrders, inspections, paymentList, selectedPoNo]);

@@ -106,7 +106,7 @@ const SearchablePendingArrivalSelect: React.FC<SearchablePendingArrivalSelectPro
               autoFocus
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by Arrival #, PO #, Supplier, Lorry #..."
+              placeholder="Search by Arrival, PO, Supplier, Lorry..."
               className="w-full bg-white border border-emerald-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-400 placeholder:font-normal"
             />
             {searchTerm && (
@@ -135,7 +135,7 @@ const SearchablePendingArrivalSelect: React.FC<SearchablePendingArrivalSelectPro
                 const poNo = fa.po_no || '-';
                 const suppName = fa.supplier || fa.challan_supplier || 'Supplier';
                 const lorryNo = fa.lorry_number || '-';
-                const labelStr = `Arrival #${arrNo} | PO: ${poNo} | ${suppName} | Lorry: ${lorryNo}`;
+                const labelStr = `Arrival ${arrNo} | PO: ${poNo} | ${suppName} | Lorry: ${lorryNo}`;
 
                 return (
                   <div
@@ -149,7 +149,7 @@ const SearchablePendingArrivalSelect: React.FC<SearchablePendingArrivalSelectPro
                   >
                     <div>
                       <div className="font-bold text-slate-900 flex items-center gap-2">
-                        <span className="text-emerald-700">#{arrNo}</span>
+                        <span className="text-emerald-700">{arrNo}</span>
                         <span className="text-slate-400">|</span>
                         <span>PO: {poNo}</span>
                       </div>

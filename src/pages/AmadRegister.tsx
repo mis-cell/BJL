@@ -168,6 +168,18 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
   // 100-rows per page pagination (searches full dataset, displays paginated)
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(100);
+  const [sortField, setSortField] = useState<'date' | 'temp_arrival' | 'po_no'>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: 'date' | 'temp_arrival' | 'po_no') => {
+    if (sortField === field) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
     setCurrentPage(1);
@@ -457,13 +469,13 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
       return;
     }
 
-    if (confirm(`Are you sure you want to completely delete Arrival Voucher #${amad_no}?`)) {
+    if (confirm(`Are you sure you want to completely delete Arrival Voucher ${amad_no}?`)) {
       try {
         await Promise.all([
           dbModule.delete('temporary_material_received', 'amad_id', id),
           dbModule.delete('issue_master', 'amad_id', id).catch(() => null)
         ]);
-        alert(`Arrival Voucher #${amad_no} deleted permanently.`);
+        alert(`Arrival Voucher ${amad_no} deleted permanently.`);
         fetchAmads();
         if (selectedAmadId === id) setSelectedAmadId(null);
       } catch (e) {
@@ -518,26 +530,49 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
 
     return matchSearch && matchDateRange;
   }).sort((a, b) => {
-    // 1. Voucher Date (b.date vs a.date - descending for newest date first)
+    const dir = sortDirection === 'asc' ? 1 : -1;
+
+    if (sortField === 'date') {
+      const timeA = new Date(a.date || 0).getTime() || 0;
+      const timeB = new Date(b.date || 0).getTime() || 0;
+      if (timeA !== timeB) return (timeA - timeB) * dir;
+    } else if (sortField === 'temp_arrival') {
+      const arrA = String(a.temporary_arrival_no || a.amad_no || a.amad_id || '').replace(/^#+/, '').trim().toUpperCase();
+      const arrB = String(b.temporary_arrival_no || b.amad_no || b.amad_id || '').replace(/^#+/, '').trim().toUpperCase();
+      const numA = parseInt(arrA.replace(/[^0-9]/g, ''), 10);
+      const numB = parseInt(arrB.replace(/[^0-9]/g, ''), 10);
+      if (!isNaN(numA) && !isNaN(numB) && numA !== numB) {
+        return (numA - numB) * dir;
+      }
+      const cmp = arrA.localeCompare(arrB, undefined, { numeric: true });
+      if (cmp !== 0) return cmp * dir;
+    } else if (sortField === 'po_no') {
+      const poA = String(a.po_no || '').replace(/^#+/, '').trim().toUpperCase();
+      const poB = String(b.po_no || '').replace(/^#+/, '').trim().toUpperCase();
+      const hasPoA = Boolean(poA && poA !== '--');
+      const hasPoB = Boolean(poB && poB !== '--');
+      if (hasPoA !== hasPoB) {
+        return hasPoA ? -1 : 1;
+      }
+      const cmp = poA.localeCompare(poB, undefined, { numeric: true });
+      if (cmp !== 0) return cmp * dir;
+    }
+
+    // Fallback tie-breakers:
+    // 1. Voucher Date (newest first)
     const dateDiff = new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
     if (dateDiff !== 0) return dateDiff;
 
-    // 2. Supplier Name
+    // 2. Temp Arrival serial (descending)
+    const arrA = String(a.temporary_arrival_no || a.amad_no || '').replace(/^#+/, '').trim().toUpperCase();
+    const arrB = String(b.temporary_arrival_no || b.amad_no || '').replace(/^#+/, '').trim().toUpperCase();
+    const arrCmp = arrB.localeCompare(arrA, undefined, { numeric: true });
+    if (arrCmp !== 0) return arrCmp;
+
+    // 3. Supplier Name
     const suppA = (a.supplier || '').toUpperCase();
     const suppB = (b.supplier || '').toUpperCase();
-    const suppDiff = suppA.localeCompare(suppB);
-    if (suppDiff !== 0) return suppDiff;
-
-    // 3. Unit
-    const unitA = (a.unit_name || a.unit_code || '').toUpperCase();
-    const unitB = (b.unit_name || b.unit_code || '').toUpperCase();
-    const unitDiff = unitA.localeCompare(unitB);
-    if (unitDiff !== 0) return unitDiff;
-
-    // 4. Inspection Status
-    const inspA = inspectedSet.has(String(a.amad_no || a.temporary_arrival_no || '').trim().toUpperCase()) ? 'COMPLETED' : 'PENDING';
-    const inspB = inspectedSet.has(String(b.amad_no || b.temporary_arrival_no || '').trim().toUpperCase()) ? 'COMPLETED' : 'PENDING';
-    return inspA.localeCompare(inspB);
+    return suppA.localeCompare(suppB);
   });
 
   const handleExportToExcel = () => {
@@ -553,8 +588,8 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
 
       return {
         "Voucher Date": formattedDate,
-        "Temporary M.R No": (amad.temporary_arrival_no || amad.amad_no) ? `#${amad.temporary_arrival_no || amad.amad_no}` : '',
-        "P.O. Number": amad.po_no || '',
+        "Temporary M.R No": (amad.temporary_arrival_no || amad.amad_no) ? String(amad.temporary_arrival_no || amad.amad_no).replace(/^#+/, '') : '',
+        "P.O. Number": amad.po_no ? String(amad.po_no).replace(/^#+/, '') : '',
         "Supplier": amad.supplier || '',
         "Broker": amad.broker || 'DIRECT',
         "Lorry Number": amad.lorry_number || (amad as any).lorry_no || (amad as any).vehicle_no || '',
@@ -881,9 +916,42 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-[#D94B5A] text-white font-serif text-xs">
-                  <th className="py-3 px-3 font-semibold text-center border-r border-[#F7AFA8]/30">Voucher Date</th>
-                  <th className="py-3 px-3 font-semibold text-center border-r border-[#F7AFA8]/30">Temp Arrival #</th>
-                  <th className="py-3 px-3 font-semibold text-center border-r border-[#F7AFA8]/30">PO #</th>
+                  <th
+                    onClick={() => handleSort('date')}
+                    className="py-3 px-3 font-semibold text-center border-r border-[#F7AFA8]/30 cursor-pointer select-none hover:bg-[#E85A5A] transition-colors"
+                    title="Sort by Voucher Date"
+                  >
+                    <div className="inline-flex items-center justify-center gap-1">
+                      <span>Voucher Date</span>
+                      <span className="text-[10px] font-sans opacity-90">
+                        {sortField === 'date' ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}
+                      </span>
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('temp_arrival')}
+                    className="py-3 px-3 font-semibold text-center border-r border-[#F7AFA8]/30 cursor-pointer select-none hover:bg-[#E85A5A] transition-colors"
+                    title="Sort by Temp Arrival"
+                  >
+                    <div className="inline-flex items-center justify-center gap-1">
+                      <span>Temp Arrival</span>
+                      <span className="text-[10px] font-sans opacity-90">
+                        {sortField === 'temp_arrival' ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}
+                      </span>
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('po_no')}
+                    className="py-3 px-3 font-semibold text-center border-r border-[#F7AFA8]/30 cursor-pointer select-none hover:bg-[#E85A5A] transition-colors"
+                    title="Sort by PO"
+                  >
+                    <div className="inline-flex items-center justify-center gap-1">
+                      <span>PO</span>
+                      <span className="text-[10px] font-sans opacity-90">
+                        {sortField === 'po_no' ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}
+                      </span>
+                    </div>
+                  </th>
                   <th className="py-3 px-3 font-semibold border-r border-[#F7AFA8]/30">Supplier Name</th>
                   <th className="py-3 px-3 font-semibold border-r border-[#F7AFA8]/30">Broker Reference</th>
                   <th className="py-3 px-3 font-semibold text-center border-r border-[#F7AFA8]/30">Lorry Number</th>
@@ -914,9 +982,11 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
                     >
                       <td className="py-2 px-3 text-center text-slate-600">{formattedDate}</td>
                       <td className="py-2 px-3 text-center font-bold text-slate-900">
-                        #{amad.temporary_arrival_no || amad.amad_no || amad.amad_id || '--'}
+                        {String(amad.temporary_arrival_no || amad.amad_no || amad.amad_id || '--').replace(/^#+/, '')}
                       </td>
-                      <td className="py-2 px-3 text-center font-bold text-amber-800">{amad.po_no || '--'}</td>
+                      <td className="py-2 px-3 text-center font-bold text-amber-800">
+                        {amad.po_no ? String(amad.po_no).replace(/^#+/, '') : '--'}
+                      </td>
                       <td className="py-2 px-3 font-sans font-semibold text-slate-800 uppercase">{amad.supplier || '--'}</td>
                       <td className="py-2 px-3 font-sans text-slate-600 uppercase">{amad.broker || 'DIRECT'}</td>
                       <td className="py-2 px-3 text-center font-bold text-slate-800 uppercase">
@@ -1040,7 +1110,7 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
         <PrintModal 
           isOpen={isPrintingModalOpen} 
           onClose={() => setIsPrintingModalOpen(false)} 
-          title={`MARKS & QUALITY RECEIVED SLIP #${printData.amad_no}`}
+          title={`MARKS & QUALITY RECEIVED SLIP ${String(printData.amad_no || '').replace(/^#+/, '')}`}
         >
           <div className="bg-white p-6 rounded-lg text-slate-800 text-xs font-mono max-w-4xl mx-auto space-y-4 printable-slip">
             {/* Header */}
@@ -1055,8 +1125,8 @@ export default function AmadRegister({ onClose, onNew, onCreateFinalMr, onNaviga
             {/* Meta Details Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#FDE7E6] p-3 rounded border border-[#FBCFCB]">
               <div>
-                <span className="text-[10px] text-slate-500 uppercase font-bold block">Arrival Voucher #</span>
-                <span className="font-bold text-slate-900">#{printData.amad_no}</span>
+                <span className="text-[10px] text-slate-500 uppercase font-bold block">Arrival Voucher</span>
+                <span className="font-bold text-slate-900">{String(printData.amad_no || '').replace(/^#+/, '')}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 uppercase font-bold block">Arrival Date</span>

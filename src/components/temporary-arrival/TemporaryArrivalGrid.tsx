@@ -28,6 +28,15 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
   onDeleteRowAt,
   onDetailChange
 }) => {
+  const [focusedNettoIdx, setFocusedNettoIdx] = React.useState<number | null>(null);
+  const [editingNettoVal, setEditingNettoVal] = React.useState<string>('');
+
+  const formatThreeDecimals = (val: any): string => {
+    const num = Number(val);
+    if (val === '' || val === null || val === undefined || isNaN(num)) return '0.000';
+    return num.toFixed(3);
+  };
+
   return (
     <div className="w-full rounded-xl border border-[#F7AFA8] bg-white shadow-md overflow-hidden mt-5">
       {/* Header */}
@@ -137,35 +146,6 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
                   </datalist>
                 </td>
 
-                {/* <td className="p-0.5 border border-gray-300 w-36">
-                  <select
-                    value={detail.receipt_grade_name}
-                    onChange={(e) => onDetailChange(idx, 'receipt_grade_name', e.target.value)}
-                    className="w-full bg-white border border-gray-300 p-0 text-left font-bold text-gray-900 outline-none h-6"
-                  >
-                    <option value=""></option>
-                    {detail.receipt_grade_name && !grades.some(g => g.grade_name === detail.receipt_grade_name) && (
-                      <option value={detail.receipt_grade_name}>{detail.receipt_grade_name}</option>
-                    )}
-                    {grades
-                    .slice()
-                    .filter((g, index, arr) =>
-                      arr.findIndex(
-                        item => (item.grade_name || '').trim().toLowerCase() ===
-                                (g.grade_name || '').trim().toLowerCase()
-                      ) === index
-                    )
-                    .sort((a, b) =>
-                      (a.grade_name || '').localeCompare(b.grade_name || '')
-                    )
-                    .map(g => (
-                      <option key={g.id || g.grade_code} value={g.grade_name}>
-                        {g.grade_name}
-                      </option>
-                    ))}
-                  </select>
-                </td> */}
-
                 {/* Crop Year */}
                 <td className="p-0.5 border border-gray-300 w-24">
                   <select
@@ -251,25 +231,46 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
                   {(() => {
                     const rowUnit = (detail.unit || unitName || 'BALES').toString().trim().toUpperCase();
                     const isBales = rowUnit === 'BALES' || rowUnit.includes('BALE') || rowUnit === 'DRUMS' || rowUnit.includes('DRUM');
+                    const isFocused = !isBales && focusedNettoIdx === idx;
+                    const displayVal = isFocused ? editingNettoVal : formatThreeDecimals(detail.netto_pnto);
                     return (
                       <input
                         id={`netto_pnto_main_${idx}`}
                         name={`netto_pnto_main_${idx}`}
                         aria-label="Netto M.T"
-                        type="number"
-                        step="0.001"
+                        type="text"
+                        inputMode="decimal"
                         placeholder="0.000"
                         readOnly={isBales}
-                        value={detail.netto_pnto !== undefined && detail.netto_pnto !== null ? detail.netto_pnto : 0}
+                        value={displayVal}
+                        onFocus={(e) => {
+                          if (!isBales) {
+                            setFocusedNettoIdx(idx);
+                            const num = Number(detail.netto_pnto);
+                            setEditingNettoVal(!isNaN(num) && num > 0 ? num.toFixed(3) : '');
+                            setTimeout(() => e.target.select(), 0);
+                          }
+                        }}
                         onChange={(e) => {
                           if (!isBales) {
                             const val = e.target.value;
-                            onDetailChange(idx, 'netto_pnto', val === '' ? 0 : Number(val));
+                            if (val === '' || /^\d*\.?\d{0,3}$/.test(val)) {
+                              setEditingNettoVal(val);
+                              onDetailChange(idx, 'netto_pnto', val === '' ? 0 : Number(val));
+                            }
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!isBales) {
+                            const parsed = parseFloat(editingNettoVal);
+                            const finalNum = !isNaN(parsed) && parsed > 0 ? Number(parsed.toFixed(3)) : 0;
+                            onDetailChange(idx, 'netto_pnto', finalNum);
+                            setFocusedNettoIdx(null);
                           }
                         }}
                         title={isBales ? "Auto-calculated: (RCPT / Total RCPT) * Final Weight" : "Enter Netto Weight"}
                         className={cn(
-                          "w-full p-0 text-right font-bold outline-none pr-1 transition-colors",
+                          "w-full p-0 text-right font-bold font-mono outline-none pr-1 transition-colors",
                           isBales
                             ? "bg-amber-50/90 border border-amber-300 text-amber-950 cursor-not-allowed"
                             : "bg-white border border-gray-300 text-gray-900 focus:border-blue-600 focus:ring-1 focus:ring-blue-600"

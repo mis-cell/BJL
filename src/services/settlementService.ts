@@ -935,12 +935,19 @@ export const fetchPoAndItemDetails = async (
           r.contract_weight_mt,
           r.sauda_contract_mt,
           r.total_wt_in_ton,
-          r.quantity
+          r.weight_mt
         ];
         for (const mc of mtCands) {
           const val = parseFloat(String(mc ?? ''));
           if (!isNaN(val) && val > maxContractMt) {
             maxContractMt = val;
+          }
+        }
+        if (maxContractMt === 0 && r.quantity) {
+          const qVal = parseFloat(String(r.quantity));
+          const uStr = String(r.unit || r.unit_type || r.purchase_unit_name || '').toUpperCase();
+          if (!isNaN(qVal) && qVal > 0 && (uStr.includes('TON') || uStr === 'MT' || qVal <= 60)) {
+            maxContractMt = qVal;
           }
         }
         const wpl = parseFloat(String(r.weight_per_lorry || r.wt_per_lorry || 0));
@@ -960,16 +967,18 @@ export const fetchPoAndItemDetails = async (
     };
 
     if (supabase) {
+      const noPtfPo = cleanPo.replace(/\(PTF\)/gi, '').trim();
+      const ptfPo = `${noPtfPo}(PTF)`;
       const [pmRes, scpRes, smRes, rlRes] = await Promise.all([
-        supabase.from('purchase_master').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}"`).maybeSingle(),
-        supabase.from('sauda_check_point').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}",ptf_no.eq."${cleanPo}",sauda_no.eq."${cleanPo}"`).maybeSingle(),
-        supabase.from('sauda_master').select('*').or(`sauda_no.eq."${cleanPo}",po_no.eq."${cleanPo}",contract_no.eq."${cleanPo}"`).maybeSingle(),
-        supabase.from('return_lorry').select('*').or(`po_no.eq."${cleanPo}",new_po_no.eq."${cleanPo}",po_no.eq."${withHash}",new_po_no.eq."${withHash}"`).maybeSingle().then(r => r, () => ({ data: null }))
+        supabase.from('purchase_master').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}",po_no.eq."${noPtfPo}",po_no.eq."${ptfPo}"`).limit(1).maybeSingle(),
+        supabase.from('sauda_check_point').select('*').or(`po_no.eq."${cleanPo}",po_no.eq."${withHash}",po_no.eq."${poNo}",po_no.eq."${noPtfPo}",po_no.eq."${ptfPo}",ptf_no.eq."${cleanPo}",ptf_no.eq."${noPtfPo}",sauda_no.eq."${cleanPo}",sauda_no.eq."${noPtfPo}"`).limit(1).maybeSingle(),
+        supabase.from('sauda_master').select('*').or(`sauda_no.eq."${cleanPo}",sauda_no.eq."${noPtfPo}",session.eq."${cleanPo}",session.eq."${noPtfPo}"`).limit(1).maybeSingle().then(r => r, () => ({ data: null })),
+        supabase.from('return_lorry').select('*').or(`po_no.eq."${cleanPo}",new_po_no.eq."${cleanPo}",po_no.eq."${withHash}",new_po_no.eq."${withHash}"`).limit(1).maybeSingle().then(r => r, () => ({ data: null }))
       ]);
 
       const pm = pmRes?.data || null;
       const scp = scpRes?.data || null;
-      const sm = smRes?.data || null;
+      const sm = (smRes as any)?.data || null;
       const rl = (rlRes as any)?.data || null;
 
       if (rl) {
@@ -1378,13 +1387,20 @@ export const getPoContractLorryCount = (poData?: any): number => {
     poData.contract_weight_mt,
     poData.sauda_contract_mt,
     poData.total_wt_in_ton,
-    poData.quantity
+    poData.weight_mt
   ];
   let contractMt = 0;
   for (const mc of mtCands) {
     const val = parseFloat(String(mc ?? ''));
     if (!isNaN(val) && val > contractMt) {
       contractMt = val;
+    }
+  }
+  if (contractMt === 0 && poData.quantity) {
+    const qVal = parseFloat(String(poData.quantity));
+    const uStr = String(poData.unit || poData.unit_type || poData.purchase_unit_name || '').toUpperCase();
+    if (!isNaN(qVal) && qVal > 0 && (uStr.includes('TON') || uStr === 'MT' || qVal <= 60)) {
+      contractMt = qVal;
     }
   }
 
