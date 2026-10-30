@@ -890,17 +890,24 @@ export default function ExecutiveBiDashboard({
                   >
                     <div>
                       {/* Card Header: Month Name + Year + Pending POs Badge */}
-                      <div className="flex items-center justify-between gap-1 mb-2 pb-1.5 border-b border-[#FDE7E6]">
-                        <h3 className="text-xs sm:text-sm font-serif font-black text-[#D94B5A] flex items-center gap-1 truncate">
+                      <div className="mb-2 pb-1.5 border-b border-[#FDE7E6]">
+                        {/* Month Name Row */}
+                        <h3 className="text-xs sm:text-sm font-serif font-black text-[#D94B5A] flex items-center gap-1 mb-1">
                           <span className="w-2 h-2 rounded-full bg-emerald-700 shrink-0"></span>
+
                           <span>{m.monthName}</span>
-                          <span className="text-[10px] font-mono text-[#D94B5A] font-normal">{m.year}</span>
+
+                          <span className="text-[10px] font-mono text-[#D94B5A] font-normal">
+                            {m.year}
+                          </span>
                         </h3>
-                        
-                        <div className="flex items-center gap-1 shrink-0">
+
+                        {/* Pending POs and MR Row - Below Month Name */}
+                        <div className="flex w-full items-center justify-end gap-1 flex-wrap text-right">
+
                           {m.totalPendingPoCount > 0 ? (
-                            <span 
-                              className="text-[9.5px] font-mono font-bold px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-md shadow-2xs animate-pulse"
+                            <span
+                              className="text-[9.5px] font-mono font-bold px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-md shadow-2xs"
                               title={`${m.totalPendingPoCount} unique P.O.s currently pending at different pipeline stages in ${m.monthName} ${m.year}`}
                             >
                               ⏳ {m.totalPendingPoCount} Pending POs
@@ -910,9 +917,11 @@ export default function ExecutiveBiDashboard({
                               ✓ All Done
                             </span>
                           )}
+
                           <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 bg-slate-100 text-slate-800 border border-slate-200 rounded">
                             {m.temporaryArrivalsCount} MR
                           </span>
+
                         </div>
                       </div>
 
