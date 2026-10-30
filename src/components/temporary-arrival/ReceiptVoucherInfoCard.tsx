@@ -383,23 +383,89 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
               />
             </div>
 
-            {/* Challan */}
-            <div className="flex items-center gap-2">
-              <label htmlFor="challan_rr_no_1272" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
-                Challan No & Date. <span className="text-rose-600 font-black text-sm">*</span>
-              </label>
+            {/* Challan No & Date (Split into 2 inputs) */}
+            {(() => {
+              const parseChallanParts = (raw: string) => {
+                if (!raw) return { no: '', date: '' };
+                const str = String(raw).trim();
+                const dateMatch = str.match(/(\d{2}[-/]\d{2}[-/]\d{2,4})$/);
+                if (dateMatch) {
+                  const dateVal = dateMatch[1];
+                  const noVal = str.substring(0, str.length - dateVal.length).trim();
+                  return { no: noVal, date: dateVal };
+                }
+                return { no: str, date: '' };
+              };
 
-              <input
-                id="challan_rr_no_1272"
-                aria-label="Challan / R.R. No."
-                type="text"
-                name="challan_rr_no"
-                value={formData.challan_rr_no}
-                onChange={handleChange}
-                required
-                className="flex-1 border border-gray-400 rounded bg-white px-2.5 h-7 text-xs font-bold"
-              />
-            </div>
+              const formatChallanDate = (raw: string): string => {
+                const digits = raw.replace(/\D/g, "");
+                if (digits.length === 6) {
+                  const dd = digits.substring(0, 2);
+                  const mm = digits.substring(2, 4);
+                  const yy = digits.substring(4, 6);
+                  return `${dd}-${mm}-${yy}`;
+                }
+                if (digits.length === 8) {
+                  const dd = digits.substring(0, 2);
+                  const mm = digits.substring(2, 4);
+                  const yy = digits.substring(6, 8);
+                  return `${dd}-${mm}-${yy}`;
+                }
+                return raw;
+              };
+
+              const parts = parseChallanParts(formData.challan_rr_no || '');
+
+              return (
+                <div className="flex items-center gap-2">
+                  <label htmlFor="challan_no_input" className="w-36 text-[10px] font-bold text-gray-800 shrink-0">
+                    Challan No & Date. <span className="text-rose-600 font-black text-sm">*</span>
+                  </label>
+
+                  <div className="flex-1 flex gap-1.5">
+                    <input
+                      id="challan_no_input"
+                      aria-label="Challan No"
+                      type="text"
+                      placeholder="CHALLAN NO"
+                      value={parts.no}
+                      onChange={(e) => {
+                        const newNo = e.target.value;
+                        const combined = newNo && parts.date ? `${newNo} ${parts.date}` : (newNo || parts.date);
+                        handleChange({ target: { name: 'challan_rr_no', value: combined } });
+                      }}
+                      required
+                      className="flex-1 border border-gray-400 rounded bg-white px-2.5 h-7 text-xs font-bold uppercase font-mono"
+                    />
+
+                    <input
+                      id="challan_date_input"
+                      aria-label="Challan Date"
+                      type="text"
+                      placeholder="DD-MM-YY (e.g. 311026)"
+                      value={parts.date}
+                      onChange={(e) => {
+                        let val = e.target.value;
+                        const digits = val.replace(/\D/g, "");
+                        if (digits.length === 6 || digits.length === 8) {
+                          val = formatChallanDate(digits);
+                        }
+                        const combined = parts.no && val ? `${parts.no} ${val}` : (parts.no || val);
+                        handleChange({ target: { name: 'challan_rr_no', value: combined } });
+                      }}
+                      onBlur={(e) => {
+                        const formatted = formatChallanDate(e.target.value);
+                        if (formatted !== e.target.value) {
+                          const combined = parts.no && formatted ? `${parts.no} ${formatted}` : (parts.no || formatted);
+                          handleChange({ target: { name: 'challan_rr_no', value: combined } });
+                        }
+                      }}
+                      className="w-36 border border-gray-400 rounded bg-white px-2 h-7 text-xs font-bold text-center font-mono"
+                    />
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Lorry */}
             <div className="flex items-center gap-2">

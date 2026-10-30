@@ -91,23 +91,31 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
                 </td>
 
                 {/* Receipt Grade Code */}
-                <td className="p-0.5 border border-gray-300 w-16 bg-slate-50 text-center">
+                <td className="p-0.5 border border-gray-300 w-16 bg-white text-center">
                   <input
                     type="text"
-                    value={detail.receipt_grade_code}
-                    readOnly
-                    placeholder="--"
-                    className="w-full bg-transparent border-0 p-0 text-center font-bold text-gray-800 outline-none"
+                    value={detail.receipt_grade_code || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const match = grades.find(
+                        g => String(g.grade_code || '').trim().toUpperCase() === val.trim().toUpperCase()
+                      );
+                      onDetailChange(idx, 'receipt_grade_code', val);
+                      if (match) {
+                        onDetailChange(idx, 'receipt_grade_name', match.grade_name || match.name);
+                      }
+                    }}
+                    placeholder="Code"
+                    className="w-full bg-white text-center font-bold text-gray-900 outline-none uppercase font-mono h-6 border-0 focus:border-blue-500"
                   />
                 </td>
 
                 {/* Receipt Grade Name */}
-                
                 <td className="p-0.5 border border-gray-300 w-36">
                   <input
                     list={`grade-list-${idx}`}
                     type="text"
-                    value={detail.receipt_grade_name || detail.receipt_grade_code || ''}
+                    value={detail.receipt_grade_name || ''}
                     onChange={(e) => {
                       const val = e.target.value;
 
@@ -118,7 +126,9 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
                       );
 
                       onDetailChange(idx, 'receipt_grade_name', match ? match.grade_name : val);
-                      onDetailChange(idx, 'receipt_grade_code', match ? match.grade_code : '');
+                      if (match && match.grade_code) {
+                        onDetailChange(idx, 'receipt_grade_code', match.grade_code);
+                      }
                     }}
                     placeholder="Select Grade"
                     className="w-full h-6 px-1 bg-white border border-gray-300 text-left font-bold text-gray-900 text-xs uppercase outline-none focus:border-blue-500"
@@ -176,13 +186,22 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
                 </td>
 
                 {/* Agency Code */}
-                <td className="p-0.5 border border-gray-300 w-14 bg-slate-50 text-center">
+                <td className="p-0.5 border border-gray-300 w-14 bg-white text-center">
                   <input
                     type="text"
                     value={detail.agency_code || ''}
-                    onChange={(e) => onDetailChange(idx, 'agency_code', e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const match = agencies.find(
+                        a => String(a.agency_code || a.code || '').trim().toUpperCase() === val.trim().toUpperCase()
+                      );
+                      onDetailChange(idx, 'agency_code', val);
+                      if (match) {
+                        onDetailChange(idx, 'agency_name', match.agency_name || match.name);
+                      }
+                    }}
                     placeholder="--"
-                    className="w-full bg-transparent border-0 p-0 text-center font-bold text-gray-800 outline-none uppercase font-mono"
+                    className="w-full bg-white text-center font-bold text-gray-800 outline-none uppercase font-mono border-0 h-6"
                   />
                 </td>
 
@@ -199,19 +218,39 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
                     }
                     disabled={!formDataArea || !formDataArea.trim() || agencies.length === 0}
                     value={detail.agency_name || ''}
-                    onChange={(e) => onDetailChange(idx, 'agency_name', e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const match = agencies.find(
+                        a =>
+                          String(a.agency_name || a.name || '').trim().toUpperCase() === val.trim().toUpperCase() ||
+                          String(a.agency_code || a.code || '').trim().toUpperCase() === val.trim().toUpperCase()
+                      );
+                      onDetailChange(idx, 'agency_name', match ? (match.agency_name || match.name) : val);
+                      if (match && (match.agency_code || match.code)) {
+                        onDetailChange(idx, 'agency_code', match.agency_code || match.code);
+                      }
+                    }}
                     className="w-full bg-white text-left font-bold text-gray-900 outline-none px-1 h-6 uppercase font-mono border-0 disabled:bg-gray-100 disabled:text-gray-400"
                   />
                 </td>
 
                 {/* Challan Marka Code */}
-                <td className="p-0.5 border border-gray-300 w-14 bg-slate-50 text-center">
+                <td className="p-0.5 border border-gray-300 w-14 bg-white text-center">
                   <input
                     type="text"
-                    value={detail.challan_marka_code}
-                    readOnly
+                    value={detail.challan_marka_code || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const match = markas.find(
+                        m => String(m.marka_code || m.code || m.mark_code || '').trim().toUpperCase() === val.trim().toUpperCase()
+                      );
+                      onDetailChange(idx, 'challan_marka_code', val);
+                      if (match) {
+                        onDetailChange(idx, 'challan_marka_name', match.marka_name || match.name || match.mark_name);
+                      }
+                    }}
                     placeholder="--"
-                    className="w-full bg-transparent border-0 p-0 text-center font-bold text-gray-800 outline-none"
+                    className="w-full bg-white text-center font-bold text-gray-800 outline-none uppercase font-mono h-6 border-0"
                   />
                 </td>
 
@@ -221,7 +260,18 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
                     list="markas_list"
                     placeholder="Type/Select Marka..."
                     value={detail.challan_marka_name || ''}
-                    onChange={(e) => onDetailChange(idx, 'challan_marka_name', e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const match = markas.find(
+                        m =>
+                          String(m.marka_name || m.name || m.mark_name || '').trim().toUpperCase() === val.trim().toUpperCase() ||
+                          String(m.marka_code || m.code || m.mark_code || '').trim().toUpperCase() === val.trim().toUpperCase()
+                      );
+                      onDetailChange(idx, 'challan_marka_name', match ? (match.marka_name || match.name || match.mark_name) : val);
+                      if (match && (match.marka_code || match.code || match.mark_code)) {
+                        onDetailChange(idx, 'challan_marka_code', match.marka_code || match.code || match.mark_code);
+                      }
+                    }}
                     className="w-full bg-white text-left font-bold text-gray-900 outline-none px-1 h-6 uppercase font-mono border-0"
                   />
                 </td>
