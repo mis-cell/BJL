@@ -2316,14 +2316,14 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
         inspMaster?.weight_qtl || faMaster?.weight_qtl
       );
 
-      // Resolve "Arrival Date *" from Mill Inspection Information Entry (inspMaster.mr_date / inspMaster.arrival_date)
+      // Resolve "Arrival Date *" from Mill Inspection Information Entry (inspMaster.arrival_date)
       const resolvedInspectionArrivalDate = formatToInputDate(
-        inspMaster?.mr_date ||
         inspMaster?.arrival_date ||
         inspMaster?.date ||
-        faMaster?.date ||
+        inspMaster?.mr_date ||
         faMaster?.arrival_date ||
         faMaster?.final_arrival_date ||
+        faMaster?.date ||
         payMasterRec?.arrival_date ||
         payMasterRec?.mr_date
       ) || '';
