@@ -408,7 +408,10 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
                 prevCols
               );
 
-              const pdDedRate = Number(match.deduction_rate) >= 0 ? Number(match.deduction_rate) : sattaObj.deduction;
+              const pdDedRate = (match.deduction_rate !== undefined && match.deduction_rate !== null && !isNaN(Number(match.deduction_rate)))
+                ? Number(match.deduction_rate)
+                : sattaObj.deduction;
+
               const pdSettRate = (match.sett_rate !== undefined && match.sett_rate !== null && Number(match.sett_rate) > 0)
                 ? Number(match.sett_rate)
                 : (origRate > 0 ? Number((origRate + prem - pdDedRate).toFixed(2)) : 0);
@@ -416,7 +419,9 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
               const qtyVal = Number(col.quantity) > 0 ? Number(col.quantity) : (Number(match.quantity) > 0 ? Number(match.quantity) : 0);
               const wtMt = getColWtMt(col) > 0 ? getColWtMt(col) : (Number(match.arr_qty_wt) > 0 ? Number(match.arr_qty_wt) : 0);
               const qtyQtl = wtMt > 0 ? Number((wtMt * 10).toFixed(2)) : (Number(match.quantity_qtl) > 0 ? Number(match.quantity_qtl) : 0);
-              const colAmt = qtyQtl > 0 && pdSettRate > 0 ? Number((qtyQtl * pdSettRate).toFixed(2)) : (Number(match.amount) > 0 ? Number(match.amount) : 0);
+              const colAmt = (match.amount !== undefined && match.amount !== null && Number(match.amount) > 0)
+                ? Number(match.amount)
+                : (qtyQtl > 0 && pdSettRate > 0 ? Number((qtyQtl * pdSettRate).toFixed(2)) : 0);
 
               return {
                 ...col,

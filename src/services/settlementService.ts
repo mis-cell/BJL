@@ -654,7 +654,7 @@ export const buildAlignedSettlementColumns = (
       );
 
       let settPct = 0;
-      if (pd && pd.sett_pct !== undefined && pd.sett_pct !== null && String(pd.sett_pct).trim() !== '' && !isNaN(Number(pd.sett_pct)) && Number(pd.sett_pct) > 0) {
+      if (pd && pd.sett_pct !== undefined && pd.sett_pct !== null && String(pd.sett_pct).trim() !== '' && !isNaN(Number(pd.sett_pct))) {
         settPct = Number(pd.sett_pct);
       } else if (payGdClaim > 0) {
         settPct = payGdClaim;
@@ -675,15 +675,17 @@ export const buildAlignedSettlementColumns = (
 
       const calculatedPaymentSettRate = getColSettRate(colForPaymentCalc, diffs, poDetails || []);
       const calcDedRate = Math.max(0, Number((origRate + premium - calculatedPaymentSettRate).toFixed(2)));
-      const pdDedRate = pd && pd.deduction_rate !== undefined && pd.deduction_rate !== null ? Number(pd.deduction_rate) : 0;
-      const finalDedRate = pdDedRate > 0 ? pdDedRate : calcDedRate;
-      const pdSettRate = pd && pd.sett_rate !== undefined && pd.sett_rate !== null && Number(pd.sett_rate) > 0 ? Number(pd.sett_rate) : 0;
-      const finalSettRate = pdSettRate > 0 ? pdSettRate : Math.max(0, Number((origRate + premium - finalDedRate).toFixed(2)));
+      const pdDedRate = (pd && pd.deduction_rate !== undefined && pd.deduction_rate !== null && !isNaN(Number(pd.deduction_rate)))
+        ? Number(pd.deduction_rate)
+        : calcDedRate;
+      const pdSettRate = (pd && pd.sett_rate !== undefined && pd.sett_rate !== null && Number(pd.sett_rate) > 0)
+        ? Number(pd.sett_rate)
+        : Math.max(0, Number((origRate + premium - pdDedRate).toFixed(2)));
       
       const wtMt = Number(col.arr_qty_wt) > 0 ? Number(col.arr_qty_wt) : (Number(pd?.arr_qty_wt) || 0);
       const qtyQtl = Number(pd?.quantity_qtl) > 0 ? Number(pd.quantity_qtl) : Number((wtMt * 10).toFixed(3));
       const pdAmt = pd && pd.amount !== undefined && pd.amount !== null && Number(pd.amount) > 0 ? Number(pd.amount) : 0;
-      const rowAmount = pdAmt > 0 ? pdAmt : Number((qtyQtl * finalSettRate).toFixed(2));
+      const rowAmount = pdAmt > 0 ? pdAmt : Number((qtyQtl * pdSettRate).toFixed(2));
 
       return {
         ...col,

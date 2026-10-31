@@ -96,7 +96,7 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                 const rateVal = Number(col.rate_value) || 0;
                 const premVal = Number(col.premium) || 0;
                 const settPctVal =
-                  col.sett_pct !== undefined && col.sett_pct !== null
+                  col.sett_pct !== undefined && col.sett_pct !== null && !isNaN(Number(col.sett_pct))
                     ? Number(col.sett_pct)
                     : Number(col.gd_sett) > 0
                     ? Number(col.gd_sett)
@@ -116,12 +116,19 @@ export const SettlementSpecificationsGrid: React.FC<SettlementSpecificationsGrid
                 );
 
                 const dedVal =
-                  col.deduction_rate !== undefined && Number(col.deduction_rate) > 0
+                  col.deduction_rate !== undefined && col.deduction_rate !== null && !isNaN(Number(col.deduction_rate))
                     ? Number(col.deduction_rate)
                     : calcObj.deduction;
 
-                const settRateVal = getEffectiveColSettRate(col);
-                const amtVal = getColAmount(col);
+                const settRateVal =
+                  col.sett_rate !== undefined && col.sett_rate !== null && Number(col.sett_rate) > 0
+                    ? Number(col.sett_rate)
+                    : getEffectiveColSettRate({ ...col, deduction_rate: dedVal, sett_pct: settPctVal });
+
+                const amtVal =
+                  col.amount !== undefined && col.amount !== null && Number(col.amount) > 0
+                    ? Number(col.amount)
+                    : getColAmount({ ...col, deduction_rate: dedVal, sett_rate: settRateVal, sett_pct: settPctVal });
 
                 return (
                   <tr key={colIdx} className="hover:bg-slate-50 transition-colors">
