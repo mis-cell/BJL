@@ -3561,18 +3561,40 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
     try {
       if (!supabase) throw new Error("Supabase client is not available.");
 
-      // 1. Delete settlement records
-      await supabase.from('mr_settlement_detail').delete().eq('mr_no', targetMr);
-      await supabase.from('mr_settlement_master').delete().eq('mr_no', targetMr);
-      await supabase.from('m_r_settlement').delete().eq('mr_no', targetMr);
+      const cleanMr = String(targetMr).trim();
 
+      // 1. Delete settlement and payment records from Supabase
+      await supabase.from('mr_settlement_detail').delete().eq('mr_no', cleanMr);
+      await supabase.from('mr_settlement_master').delete().eq('mr_no', cleanMr);
+      await supabase.from('m_r_settlement').delete().eq('mr_no', cleanMr);
+      await supabase.from('payment_details').delete().or(`mr_no.eq.${cleanMr},mr_no.ilike.${cleanMr}`);
+      await supabase.from('payment_master').delete().or(`mr_no.eq.${cleanMr},mr_no.ilike.${cleanMr},arrival_no.eq.${cleanMr}`);
 
+      // Direct SQL transaction fallback
+      try {
+        const esc = (v: string) => `'${v.replace(/'/g, "''")}'`;
+        await dbModule.executeTransaction([
+          `DELETE FROM mr_settlement_detail WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
+          `DELETE FROM mr_settlement_master WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
+          `DELETE FROM m_r_settlement WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
+          `DELETE FROM payment_details WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
+          `DELETE FROM payment_master WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(arrival_no)) = LOWER(TRIM(${esc(cleanMr)}));`
+        ]);
+      } catch (_e) {}
+
+      // Clear local caches
+      await dbModule.delete('mr_settlement_detail', cleanMr, 'mr_no').catch(() => {});
+      await dbModule.delete('m_r_settlement', cleanMr, 'mr_no').catch(() => {});
+      await dbModule.delete('mr_settlement_master', cleanMr, 'mr_no').catch(() => {});
+      await dbModule.delete('payment_master', cleanMr, 'mr_no').catch(() => {});
+      await dbModule.delete('payment_details', cleanMr, 'mr_no').catch(() => {});
+      dbModule.invalidateCache();
 
       // 2. Restore P.O status in purchase_master and sauda_master back to Final P.O (pending/final)
       if (targetPoNo) {
         await supabase
           .from('purchase_master')
-          .update({ status: 'final', pending: true })
+          .update({ status: 'final', pending: true, payment_status: 'Pending' })
           .eq('po_no', targetPoNo);
 
         await supabase
@@ -3581,29 +3603,29 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
           .or(`sauda_no.eq.${targetPoNo},po_no.eq.${targetPoNo}`);
       }
 
-      // 3. Restore Final M.R data status back to Final M.R (active)
-      const filterStr = targetPoNo ? `mr_no.eq.${targetMr},po_no.eq.${targetPoNo}` : `mr_no.eq.${targetMr}`;
+      // 3. Restore Final M.R data status back to Final M.R (active / Pending)
+      const filterStr = targetPoNo ? `mr_no.eq.${cleanMr},po_no.eq.${targetPoNo}` : `mr_no.eq.${cleanMr}`;
       await supabase
         .from('mill_inspection_master')
-        .update({ status: 'active' })
+        .update({ status: 'active', payment_status: 'Pending' })
         .or(filterStr);
 
       await supabase
         .from('final_arrival')
-        .update({ status: 'active' })
+        .update({ status: 'active', payment_status: 'Pending' })
         .or(filterStr);
 
       await supabase
         .from('temporary_material_received')
-        .update({ status: 'active' })
+        .update({ status: 'active', payment_status: 'Pending' })
         .or(filterStr);
 
       if (onLogEvent) {
-        onLogEvent('MR_SETTLEMENT_REVERT', `Reverted settlement for M.R #${targetMr} / PO #${targetPoNo || 'N/A'}. P.O data restored to Final P.O and Final M.R.`);
+        onLogEvent('MR_SETTLEMENT_REVERT', `Reverted settlement for M.R #${cleanMr} / PO #${targetPoNo || 'N/A'}. P.O data restored to Final P.O and Final M.R.`);
       }
 
-      alert(`SUCCESS: Settlement for M.R. #${targetMr} has been cancelled and reverted!\n\nP.O data moved back to Final P.O and Final M.R data moved back to Final M.R.`);
-      initPage();
+      alert(`SUCCESS: Settlement for M.R. #${cleanMr} has been cancelled and reverted!\n\nP.O data moved back to Final P.O and Final M.R data moved back to Final M.R.`);
+      await initPage();
     } catch (err: any) {
       console.error("Revert error:", err);
       alert("Error reverting settlement: " + err.message);
@@ -3627,32 +3649,125 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
     setDeleteConfirmMr(null);
     setLoading(true);
     try {
-      // 1. Delete child rows and master from Supabase
+      // Find linked settlement and payment records to extract voucher numbers
+      const targetItem = settledList.find(
+        (r) => String(r?.mr_no || '').trim().toUpperCase() === cleanMr.toUpperCase()
+      );
+      const voucherNo = targetItem?.payable_bill_no || targetItem?.voucher_no;
+
+      const matchedPayments = paymentList.filter((p) => {
+        const pMr = String(p.mr_no || p.arrival_no || '').trim().toUpperCase();
+        const pVoucher = String(p.voucher_no || '').trim().toUpperCase();
+        return (
+          (cleanMr && pMr === cleanMr.toUpperCase()) ||
+          (voucherNo && pVoucher === String(voucherNo).trim().toUpperCase())
+        );
+      });
+
+      const voucherNos = Array.from(
+        new Set(
+          [voucherNo, ...matchedPayments.map((p) => p.voucher_no)]
+            .filter(Boolean)
+            .map((v) => String(v).trim())
+        )
+      );
+
+      // 1. Invalidate caches immediately
+      dbModule.invalidateCache('mr_settlement_master');
+      dbModule.invalidateCache('mr_settlement_detail');
+      dbModule.invalidateCache('m_r_settlement');
+      dbModule.invalidateCache('payment_master');
+      dbModule.invalidateCache('payment_details');
+      dbModule.invalidateCache('final_arrival');
+      dbModule.invalidateCache('material_inspection');
+      dbModule.invalidateCache('mill_inspection_master');
+      dbModule.invalidateCache();
+
+      // 2. Supabase deletions & status resets
       if (supabase) {
         await supabase.from('mr_settlement_detail').delete().eq('mr_no', cleanMr);
         await supabase.from('m_r_settlement').delete().eq('mr_no', cleanMr);
-        const { error } = await supabase
-          .from('mr_settlement_master')
-          .delete()
-          .eq('mr_no', cleanMr);
-        if (error) {
-          console.warn("Supabase mr_settlement_master delete warning:", error);
+        await supabase.from('mr_settlement_master').delete().eq('mr_no', cleanMr);
+
+        await supabase.from('payment_details').delete().or(`mr_no.eq.${cleanMr},mr_no.ilike.${cleanMr}`);
+        await supabase.from('payment_master').delete().or(`mr_no.eq.${cleanMr},mr_no.ilike.${cleanMr},arrival_no.eq.${cleanMr}`);
+
+        for (const vNo of voucherNos) {
+          await supabase.from('payment_details').delete().or(`voucher_no.eq.${vNo},voucher_no.ilike.${vNo}`);
+          await supabase.from('payment_master').delete().or(`voucher_no.eq.${vNo},voucher_no.ilike.${vNo}`);
         }
+
+        // Reset arrival status back to Pending / active
+        await supabase.from('final_arrival').update({ status: 'active', payment_status: 'Pending' }).or(`mr_no.eq.${cleanMr},final_arrival_no.eq.${cleanMr},arrival_no.eq.${cleanMr}`);
+        await supabase.from('material_inspection').update({ status: 'Completed', payment_status: 'Pending' }).or(`mr_no.eq.${cleanMr},arrival_no.eq.${cleanMr}`);
+        await supabase.from('mill_inspection_master').update({ status: 'active', payment_status: 'Pending' }).or(`mr_no.eq.${cleanMr},arrival_no.eq.${cleanMr}`);
+        await supabase.from('temporary_material_received').update({ status: 'active', payment_status: 'Pending' }).or(`mr_no.eq.${cleanMr},arrival_no.eq.${cleanMr},temporary_arrival_no.eq.${cleanMr}`);
       }
 
-      // 2. Also delete from dbModule local cache / IndexedDB
+      // 3. Fallback SQL Transaction Execution
+      try {
+        const esc = (v: string) => `'${v.replace(/'/g, "''")}'`;
+        const sqls: string[] = [
+          `DELETE FROM mr_settlement_detail WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
+          `DELETE FROM mr_settlement_master WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
+          `DELETE FROM m_r_settlement WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
+          `DELETE FROM payment_details WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
+          `DELETE FROM payment_master WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(arrival_no)) = LOWER(TRIM(${esc(cleanMr)}));`
+        ];
+
+        for (const vNo of voucherNos) {
+          sqls.push(`DELETE FROM payment_details WHERE LOWER(TRIM(voucher_no)) = LOWER(TRIM(${esc(vNo)}));`);
+          sqls.push(`DELETE FROM payment_master WHERE LOWER(TRIM(voucher_no)) = LOWER(TRIM(${esc(vNo)}));`);
+        }
+
+        sqls.push(`UPDATE final_arrival SET status = 'active', payment_status = 'Pending' WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(final_arrival_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(arrival_no)) = LOWER(TRIM(${esc(cleanMr)}));`);
+        sqls.push(`UPDATE material_inspection SET status = 'Completed', payment_status = 'Pending' WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(arrival_no)) = LOWER(TRIM(${esc(cleanMr)}));`);
+        sqls.push(`UPDATE mill_inspection_master SET status = 'active', payment_status = 'Pending' WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(arrival_no)) = LOWER(TRIM(${esc(cleanMr)}));`);
+
+        await dbModule.executeTransaction(sqls);
+      } catch (sqlErr) {
+        console.warn("SQL transaction fallback deletion notice:", sqlErr);
+      }
+
+      // 4. Also delete from dbModule local cache
       await dbModule.delete('mr_settlement_detail', cleanMr, 'mr_no').catch(() => {});
       await dbModule.delete('m_r_settlement', cleanMr, 'mr_no').catch(() => {});
       await dbModule.delete('mr_settlement_master', cleanMr, 'mr_no').catch(() => {});
+      await dbModule.delete('payment_master', cleanMr, 'mr_no').catch(() => {});
+      await dbModule.delete('payment_details', cleanMr, 'mr_no').catch(() => {});
+      for (const vNo of voucherNos) {
+        await dbModule.delete('payment_master', vNo, 'voucher_no').catch(() => {});
+        await dbModule.delete('payment_details', vNo, 'voucher_no').catch(() => {});
+      }
 
-      // 3. Immediately update settledList state so UI reflects deletion right away
-      setSettledList(prev =>
-        prev.filter(r => String(r?.mr_no || '').trim().toUpperCase() !== cleanMr.toUpperCase())
+      dbModule.invalidateCache();
+
+      // 5. Update local React states immediately
+      setSettledList((prev) =>
+        prev.filter((r) => {
+          const rMr = String(r?.mr_no || '').trim().toUpperCase();
+          const rVoucher = String(r?.payable_bill_no || r?.voucher_no || '').trim().toUpperCase();
+          if (rMr === cleanMr.toUpperCase()) return false;
+          if (voucherNos.some((v) => v.toUpperCase() === rVoucher)) return false;
+          return true;
+        })
+      );
+
+      setPaymentList((prev) =>
+        prev.filter((p) => {
+          const pMr = String(p?.mr_no || p?.arrival_no || '').trim().toUpperCase();
+          const pVoucher = String(p?.voucher_no || '').trim().toUpperCase();
+          if (pMr === cleanMr.toUpperCase()) return false;
+          if (voucherNos.some((v) => v.toUpperCase() === pVoucher)) return false;
+          return true;
+        })
       );
 
       if (onLogEvent) {
-        onLogEvent('MR_SETTLEMENT_DELETE', `Deleted settlement record for M.R. ${cleanMr}`);
+        onLogEvent('MR_SETTLEMENT_DELETE', `Deleted settlement and payment record for M.R. ${cleanMr}`);
       }
+
+      setSuccessMessage(`Settlement record for M.R. ${cleanMr} permanently deleted from database.`);
       await initPage();
     } catch (err: any) {
       console.error("Error dropping settlement record:", err);

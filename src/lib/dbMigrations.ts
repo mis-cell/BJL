@@ -4,10 +4,10 @@ export async function runDatabaseMigrations() {
   if (!supabase) return;
   try {
     if (typeof window !== 'undefined') {
-      const isPatched = localStorage.getItem('bjl_app_db_patched_v10') || sessionStorage.getItem('bjl_app_db_patched_v10');
+      const isPatched = localStorage.getItem('bjl_app_db_patched_v11') || sessionStorage.getItem('bjl_app_db_patched_v11');
       if (isPatched) return;
-      localStorage.setItem('bjl_app_db_patched_v10', '1');
-      sessionStorage.setItem('bjl_app_db_patched_v10', '1');
+      localStorage.setItem('bjl_app_db_patched_v11', '1');
+      sessionStorage.setItem('bjl_app_db_patched_v11', '1');
     }
 
 
@@ -435,8 +435,25 @@ export async function runDatabaseMigrations() {
           ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS payable_bill_no TEXT;
           ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS payable_bill_date DATE;
           ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS paid_amount NUMERIC DEFAULT 0;
+          ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS summary_delivery_claim NUMERIC DEFAULT 0;
+          ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS summary_deduction_amount NUMERIC DEFAULT 0;
+          ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS val_ex_short NUMERIC DEFAULT 0;
           ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'Completed';
           ALTER TABLE IF EXISTS payment_master ADD COLUMN IF NOT EXISTS advance_payment_done TEXT DEFAULT 'No';
+
+          -- Recalculate paid_amount for existing records using exact 93% formula: Round((Payable Net Amount - Claims) * 0.93)
+          UPDATE payment_master
+          SET paid_amount = ROUND(
+            GREATEST(
+              0,
+              COALESCE(payable_amt, total_amount, 0) - (
+                COALESCE(summary_delivery_claim, 0) +
+                COALESCE(summary_deduction_amount, 0) +
+                COALESCE(val_ex_short, 0)
+              )
+            ) * 0.93
+          )
+          WHERE COALESCE(payable_amt, total_amount, 0) > 0;
 
           ALTER TABLE IF EXISTS sauda_check_point_deductions ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT true;
           ALTER TABLE IF EXISTS sauda_check_point_deductions ADD COLUMN IF NOT EXISTS is_final BOOLEAN DEFAULT true;
