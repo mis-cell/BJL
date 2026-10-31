@@ -71,66 +71,9 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
 
       {/* Body */}
       <div className="grid grid-cols-1 lg:grid-cols-3 divide-x divide-gray-300">
-        {/* 1st: Challan Weight */}
-        <div className="p-3 space-y-2">
-          <h4 className="text-[11px] font-bold text-[#D94B5A] border-b border-gray-300 pb-1 uppercase">
-            CHALLAN WEIGHT (PARTY)
-          </h4>
+        
 
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold">CHALLAN GROSS <b> (Party)</b></span>
-            <input
-              id="actual_gross_weight_1948"
-              aria-label="actual gross weight"
-              type="text"
-              inputMode="decimal"
-              placeholder="0.000"
-              name="actual_gross_weight"
-              value={getDisplayWeight('actual_gross_weight')}
-              onFocus={(e) => handleWeightFocus('actual_gross_weight', e)}
-              onChange={(e) => handleWeightChange('actual_gross_weight', e)}
-              onBlur={() => handleWeightBlur('actual_gross_weight')}
-              className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
-            />
-          </div>
-
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold">CHALLAN TARE <b> (Party)</b></span>
-            <input
-              id="actual_tare_weight_1991"
-              aria-label="actual tare weight"
-              type="text"
-              inputMode="decimal"
-              placeholder="0.000"
-              name="actual_tare_weight"
-              value={getDisplayWeight('actual_tare_weight')}
-              onFocus={(e) => handleWeightFocus('actual_tare_weight', e)}
-              onChange={(e) => handleWeightChange('actual_tare_weight', e)}
-              onBlur={() => handleWeightBlur('actual_tare_weight')}
-              className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
-            />
-          </div>
-
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold">CHALLAN NET <b> (Party)</b> <span className="text-rose-600 font-black text-sm">*</span></span>
-            <input
-              id="challan_material_weight_1905"
-              aria-label="challan material weight"
-              type="text"
-              inputMode="decimal"
-              placeholder="0.000"
-              name="challan_material_weight"
-              value={getDisplayWeight('challan_material_weight', true)}
-              onFocus={(e) => handleWeightFocus('challan_material_weight', e)}
-              onChange={(e) => handleWeightChange('challan_material_weight', e)}
-              onBlur={() => handleWeightBlur('challan_material_weight')}
-              required
-              className="w-24 h-7 border rounded border-gray-300 bg-[#FDE7E6]/70 px-2 text-right font-bold font-mono"
-            />
-          </div>
-        </div>
-
-        {/* 2nd: Mill Weight */}
+        {/* 1st: Mill Weight */}
         <div className="p-3 space-y-2">
           <h4 className="text-[11px] font-bold text-[#D94B5A] border-b border-gray-300 pb-1 uppercase">
             MILL WEIGHT
@@ -188,6 +131,65 @@ export const TemporaryArrivalWeightCard: React.FC<TemporaryArrivalWeightCardProp
             />
           </div>
 
+        </div>
+
+        {/* 2nd: Challan Weight */}
+        <div className="p-3 space-y-2">
+          <h4 className="text-[11px] font-bold text-[#D94B5A] border-b border-gray-300 pb-1 uppercase">
+            CHALLAN WEIGHT (PARTY)
+          </h4>
+
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-bold">CHALLAN GROSS <b> (Party)</b></span>
+            <input
+              id="actual_gross_weight_1948"
+              aria-label="actual gross weight"
+              type="text"
+              inputMode="decimal"
+              placeholder="0.000"
+              name="actual_gross_weight"
+              value={getDisplayWeight('actual_gross_weight')}
+              onFocus={(e) => handleWeightFocus('actual_gross_weight', e)}
+              onChange={(e) => handleWeightChange('actual_gross_weight', e)}
+              onBlur={() => handleWeightBlur('actual_gross_weight')}
+              className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+            />
+          </div>
+
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-bold">CHALLAN TARE <b> (Party)</b></span>
+            <input
+              id="actual_tare_weight_1991"
+              aria-label="actual tare weight"
+              type="text"
+              inputMode="decimal"
+              placeholder="0.000"
+              name="actual_tare_weight"
+              value={getDisplayWeight('actual_tare_weight')}
+              onFocus={(e) => handleWeightFocus('actual_tare_weight', e)}
+              onChange={(e) => handleWeightChange('actual_tare_weight', e)}
+              onBlur={() => handleWeightBlur('actual_tare_weight')}
+              className="w-24 h-7 border rounded border-gray-300 bg-white px-2 text-right font-bold font-mono"
+            />
+          </div>
+
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-bold">CHALLAN NET <b> (Party)</b> <span className="text-rose-600 font-black text-sm">*</span></span>
+            <input
+              id="challan_material_weight_1905"
+              aria-label="challan material weight"
+              type="text"
+              inputMode="decimal"
+              placeholder="0.000"
+              name="challan_material_weight"
+              value={getDisplayWeight('challan_material_weight', true)}
+              onFocus={(e) => handleWeightFocus('challan_material_weight', e)}
+              onChange={(e) => handleWeightChange('challan_material_weight', e)}
+              onBlur={() => handleWeightBlur('challan_material_weight')}
+              required
+              className="w-24 h-7 border rounded border-gray-300 bg-[#FDE7E6]/70 px-2 text-right font-bold font-mono"
+            />
+          </div>
         </div>
 
         {/* 3rd: Electronic Weight */}
