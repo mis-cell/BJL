@@ -1479,22 +1479,63 @@ export function usePaymentData(onSaveSuccess?: () => void) {
       const targetPayment = paymentList.find(
         (p) => String(p.voucher_no || '').trim().toUpperCase() === targetVoucher.toUpperCase()
       );
+      const paymentId = targetPayment?.payment_id;
       const linkedMrNo = String(targetPayment?.mr_no || targetPayment?.arrival_no || '').trim();
       const linkedPoNo = String(targetPayment?.po_no || '').trim();
 
-      const esc = (v: string) => `'${v.replace(/'/g, "''")}'`;
-      try {
-        await dbModule.executeTransaction([
-          `DELETE FROM payment_details WHERE voucher_no = ${esc(targetVoucher)};`,
-          `DELETE FROM payment_master WHERE voucher_no = ${esc(targetVoucher)};`,
-        ]);
-      } catch (_txErr) {
-        const { error: detErr } = await supabase.from('payment_details').delete().eq('voucher_no', targetVoucher);
-        if (detErr) throw detErr;
-        await dbModule.delete('payment_master', 'voucher_no', targetVoucher);
+      // 1. Invalidate caches upfront so queries don't return stale data
+      dbModule.invalidateCache('payment_master');
+      dbModule.invalidateCache('payment_details');
+
+      // 2. Direct Supabase Deletion for payment_details & payment_master by payment_id & voucher_no
+      if (supabase) {
+        if (paymentId) {
+          await supabase.from('payment_details').delete().eq('payment_id', paymentId);
+          await supabase.from('payment_master').delete().eq('payment_id', paymentId);
+        }
+        await supabase
+          .from('payment_details')
+          .delete()
+          .or(`voucher_no.eq.${targetVoucher},voucher_no.ilike.${targetVoucher}`);
+
+        await supabase
+          .from('payment_master')
+          .delete()
+          .or(`voucher_no.eq.${targetVoucher},voucher_no.ilike.${targetVoucher}`);
       }
 
-      // Recompute linked MR & PO payment status from remaining active payments
+      // 3. Fallback SQL Transaction via exec_sql RPC
+      try {
+        const esc = (v: string) => `'${v.replace(/'/g, "''")}'`;
+        const sqls: string[] = [];
+        if (paymentId) {
+          sqls.push(`DELETE FROM payment_details WHERE payment_id = ${esc(paymentId)};`);
+          sqls.push(`DELETE FROM payment_master WHERE payment_id = ${esc(paymentId)};`);
+        }
+        sqls.push(`DELETE FROM payment_details WHERE LOWER(TRIM(voucher_no)) = LOWER(TRIM(${esc(targetVoucher)}));`);
+        sqls.push(`DELETE FROM payment_master WHERE LOWER(TRIM(voucher_no)) = LOWER(TRIM(${esc(targetVoucher)}));`);
+
+        await dbModule.executeTransaction(sqls);
+      } catch (e) {
+        console.warn("SQL transaction fallback deletion notice:", e);
+      }
+
+      // 4. Invalidate caches again and clear dataCache
+      dbModule.invalidateCache('payment_master');
+      dbModule.invalidateCache('payment_details');
+      dbModule.invalidateCache();
+
+      // 5. Optimistically update local React state
+      setPaymentList((prev) =>
+        prev.filter((p) => {
+          const vStr = String(p.voucher_no || '').trim().toUpperCase();
+          const pId = p.payment_id;
+          if (paymentId && pId && pId === paymentId) return false;
+          return vStr !== targetVoucher.toUpperCase();
+        })
+      );
+
+      // 6. Recompute linked MR & PO payment status from remaining active payments
       if (supabase && (linkedMrNo || linkedPoNo)) {
         const { data: remainingPayments } = await supabase
           .from('payment_master')
@@ -1502,7 +1543,12 @@ export function usePaymentData(onSaveSuccess?: () => void) {
 
         const activeRemaining = (remainingPayments || []).filter((p: any) => {
           const st = String(p.status || '').trim().toLowerCase();
-          return st !== 'cancelled' && st !== 'rejected' && String(p.voucher_no || '').trim().toUpperCase() !== targetVoucher.toUpperCase();
+          return (
+            st !== 'cancelled' &&
+            st !== 'rejected' &&
+            String(p.voucher_no || '').trim().toUpperCase() !== targetVoucher.toUpperCase() &&
+            (!paymentId || p.payment_id !== paymentId)
+          );
         });
 
         if (linkedMrNo) {
@@ -1538,7 +1584,7 @@ export function usePaymentData(onSaveSuccess?: () => void) {
         }
       }
 
-      setSuccessMessage(`Payment Voucher ${voucherNo} deleted and linked MR/PO statuses recomputed.`);
+      setSuccessMessage(`Payment Voucher ${voucherNo} deleted from Database.`);
       await initPage();
     } catch (e: any) {
       setErrorMessage(e.message || "Failed to delete payment.");

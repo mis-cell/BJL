@@ -1036,6 +1036,9 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
         <PaymentReportDashboard
           paymentList={paymentList}
           filteredPayments={filteredPayments}
+          verifiedArrivals={verifiedArrivals}
+          purchaseOrders={purchaseOrders}
+          saudaCheckPoints={saudaCheckPoints}
           totalPaidSum={totalPaidSum}
           totalPayableSum={totalPayableSum}
           totalPendingSum={totalPendingSum}
@@ -1051,6 +1054,85 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
           pageSize={pageSize}
           setCurrentPage={setCurrentPage}
           setPageSize={setPageSize}
+          onEdit={(p) => {
+            setMasterData(p);
+            setIsEdit(true);
+            setViewMode('entry');
+          }}
+          onViewLedger={(partyName) => {
+            setSelectedLedgerParty(partyName);
+            setViewMode('ledger');
+          }}
+          onDelete={async (voucherNo) => {
+            if (!window.confirm(`Are you sure you want to delete Payment Voucher ${voucherNo}?`)) return;
+            setLoading(true);
+            try {
+              const targetVoucher = String(voucherNo || '').trim();
+              const targetPayment = paymentList.find(
+                (p) => String(p.voucher_no || '').trim().toUpperCase() === targetVoucher.toUpperCase()
+              );
+              const paymentId = targetPayment?.payment_id;
+              const linkedMrNo = String(targetPayment?.mr_no || targetPayment?.arrival_no || '').trim();
+
+              dbModule.invalidateCache('payment_master');
+              dbModule.invalidateCache('payment_details');
+
+              if (supabase) {
+                if (paymentId) {
+                  await supabase.from('payment_details').delete().eq('payment_id', paymentId);
+                  await supabase.from('payment_master').delete().eq('payment_id', paymentId);
+                }
+                await supabase
+                  .from('payment_details')
+                  .delete()
+                  .or(`voucher_no.eq.${targetVoucher},voucher_no.ilike.${targetVoucher}`);
+
+                await supabase
+                  .from('payment_master')
+                  .delete()
+                  .or(`voucher_no.eq.${targetVoucher},voucher_no.ilike.${targetVoucher}`);
+
+                if (linkedMrNo) {
+                  await supabase.from('final_arrival').update({ payment_status: 'Pending' }).eq('mr_no', linkedMrNo);
+                }
+              }
+
+              try {
+                const esc = (v: string) => `'${v.replace(/'/g, "''")}'`;
+                const sqls: string[] = [];
+                if (paymentId) {
+                  sqls.push(`DELETE FROM payment_details WHERE payment_id = ${esc(paymentId)};`);
+                  sqls.push(`DELETE FROM payment_master WHERE payment_id = ${esc(paymentId)};`);
+                }
+                sqls.push(`DELETE FROM payment_details WHERE LOWER(TRIM(voucher_no)) = LOWER(TRIM(${esc(targetVoucher)}));`);
+                sqls.push(`DELETE FROM payment_master WHERE LOWER(TRIM(voucher_no)) = LOWER(TRIM(${esc(targetVoucher)}));`);
+
+                await dbModule.executeTransaction(sqls);
+              } catch (e) {
+                console.warn("SQL transaction fallback deletion notice:", e);
+              }
+
+              dbModule.invalidateCache('payment_master');
+              dbModule.invalidateCache('payment_details');
+              dbModule.invalidateCache();
+
+              setPaymentList((prev) =>
+                prev.filter((p) => {
+                  const vStr = String(p.voucher_no || '').trim().toUpperCase();
+                  if (paymentId && p.payment_id && p.payment_id === paymentId) return false;
+                  return vStr !== targetVoucher.toUpperCase();
+                })
+              );
+
+              setSuccessMessage(`Payment Voucher ${voucherNo} deleted from Database.`);
+              await initPage();
+            } catch (e: any) {
+              console.error('Delete error:', e);
+              setErrorMessage(e?.message || 'Failed to delete record from Database.');
+            } finally {
+              setLoading(false);
+            }
+          }}
         />
       )}
 
