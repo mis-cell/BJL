@@ -425,10 +425,10 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
 
               return {
                 ...col,
-                grade: col.grade || match.grade,
-                area: col.area || match.area,
-                agency: col.agency || match.agency,
-                marka_crop: col.marka_crop || match.marka_crop,
+                grade: match.grade || col.grade,
+                area: match.area || col.area,
+                agency: match.agency || col.agency,
+                marka_crop: match.marka_crop || col.marka_crop,
                 quantity: qtyVal,
                 arr_qty_wt: wtMt,
                 min_qty_wt: Number(col.min_qty_wt) > 0 ? Number(col.min_qty_wt) : (wtMt > 0 ? Number((wtMt * 0.97).toFixed(3)) : 0),
@@ -441,9 +441,9 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
                 sett_rate: pdSettRate,
                 quantity_qtl: qtyQtl,
                 amount: colAmt,
-                lower_grade: match.lower_grade || col.lower_grade || sattaObj.targetGradeName,
+                lower_grade: match.lower_grade || sattaObj.targetGradeName || col.lower_grade,
                 target_lower_grade: sattaObj.targetGradeName,
-                lower_grade_rate: match.lower_grade_rate ?? col.lower_grade_rate ?? sattaObj.lowerRate,
+                lower_grade_rate: match.lower_grade_rate ?? sattaObj.lowerRate ?? col.lower_grade_rate,
                 grade_diff: sattaObj.diff
               };
             }
