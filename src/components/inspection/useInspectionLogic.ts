@@ -151,7 +151,7 @@ export function useInspectionLogic() {
       unit: "BALES",
       quantity: 0,
       challan_gross_wt: 0,
-      tolerable: "Yes",
+      tolerable: "No",
       expanded: false
     }
   ]);
@@ -835,7 +835,7 @@ export function useInspectionLogic() {
             settlement_moisture: Number(item.settlement_moisture !== undefined ? item.settlement_moisture : rowMoistureAct),
             settlement_dust: Number(item.settlement_dust !== undefined ? item.settlement_dust : rowDustAct),
             settlement_ncv: Number(item.settlement_ncv !== undefined ? item.settlement_ncv : rowNcvAct),
-            tolerable: "Yes",
+            tolerable: "No",
             expanded: false,
             is_auto: true
           };
@@ -1075,7 +1075,7 @@ export function useInspectionLogic() {
             chotta_weight: Number(item.chotta_weight || 0),
             chotta_tot_wt_grd: Number(item.chotta_tot_wt_grd || 0),
             chotta_grade: item.chotta_grade || "",
-            tolerable: item.tolerable || "Yes",
+            tolerable: item.tolerable || "No",
             premium: item.premium || "",
             is_premium: Boolean(item.is_premium),
             row_remarks: item.row_remarks || "",
@@ -1317,7 +1317,7 @@ export function useInspectionLogic() {
         unit: headerForm.unit_name || "BALES",
         quantity: 0,
         challan_gross_wt: 0,
-        tolerable: "Yes",
+        tolerable: "No",
         expanded: false
       }
     ]);
@@ -1354,7 +1354,7 @@ export function useInspectionLogic() {
         unit: "BALES",
         quantity: 0,
         challan_gross_wt: 0,
-        tolerable: "Yes",
+        tolerable: "No",
         expanded: false
       }
     ]);
@@ -1493,7 +1493,7 @@ export function useInspectionLogic() {
               chotta_weight: Number(d.chotta_weight || 0),
               chotta_tot_wt_grd: Number(d.chotta_tot_wt_grd || 0),
               chotta_grade: d.chotta_grade || "",
-              tolerable: d.tolerable || "Yes",
+              tolerable: d.tolerable || "No",
               premium: d.premium || "",
               is_premium: Boolean(d.is_premium),
               row_remarks: d.row_remarks || "",

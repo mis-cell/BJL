@@ -677,7 +677,7 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
       </td>
 
       {/* Tolerable */}
-      <td className="p-1.5 border-r border-slate-200">
+      {/* <td className="p-1.5 border-r border-slate-200">
         <select
           value={row.tolerable || "Yes"}
           onChange={(e) => onDetailChange(index, "tolerable", e.target.value)}
@@ -686,6 +686,16 @@ export const InspectionDetailRowItem: React.FC<InspectionDetailRowItemProps> = m
           <option value="Yes">Yes</option>
           <option value="No">No</option>
         </select>
+      </td> */}
+      <td className="p-1.5 border-r border-slate-200 text-center">
+        <input
+          type="checkbox"
+          checked={row.tolerable === "Yes"}
+          onChange={(e) =>
+            onDetailChange(index, "tolerable", e.target.checked ? "Yes" : "No")
+          }
+          className="h-4 w-4 cursor-pointer accent-blue-600"
+        />
       </td>
 
       {/* Premium (Manual Input / Qty in MT) */}
