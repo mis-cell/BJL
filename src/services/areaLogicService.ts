@@ -78,6 +78,7 @@ export async function seedAreaLogicToSupabase(): Promise<boolean> {
       console.log('[areaLogicService] Seeding agency_master table with AREA_LOGIC_MASTER_DATA...');
       const agencyRecords = AREA_LOGIC_MASTER_DATA.map(r => ({
         area_code: String(r.AREA_CODE).trim(),
+        area_name: String(r.AREA_NAME).trim().toUpperCase(),
         agency_code: String(r.AGENCY_CODE).trim(),
         agency_name: String(r.AGENCY_NAME).trim()
       }));

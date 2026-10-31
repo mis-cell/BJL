@@ -1041,6 +1041,10 @@ export async function runDatabaseMigrations() {
           CREATE INDEX IF NOT EXISTS idx_scp_details_po ON sauda_check_point_details(po_no);
           CREATE INDEX IF NOT EXISTS idx_sauda_check_point_po ON sauda_check_point(po_no);
 
+          -- Ensure agency_master table has area_name and area_code columns
+          ALTER TABLE IF EXISTS agency_master ADD COLUMN IF NOT EXISTS area_name TEXT;
+          ALTER TABLE IF EXISTS agency_master ADD COLUMN IF NOT EXISTS area_code TEXT;
+
           -- Performance Indexes to prevent Disk I/O depletion
           CREATE INDEX IF NOT EXISTS idx_sauda_master_no ON sauda_master(sauda_no);
           CREATE INDEX IF NOT EXISTS idx_sauda_master_created ON sauda_master(created_at DESC);

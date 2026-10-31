@@ -982,15 +982,32 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         [field]: value
       };
 
-      // Auto-update grade labels and code when selected by Name
+      // Auto-update grade labels and code when selected by Name or Code
+      if (field === 'receipt_grade_code') {
+        const inputCode = (value || '').trim().toUpperCase();
+        const foundGrade = grades.find(g => String(g.grade_code || '').trim().toUpperCase() === inputCode);
+        if (foundGrade) {
+          updated[index].receipt_grade_code = foundGrade.grade_code || inputCode;
+          updated[index].receipt_grade_name = foundGrade.grade_name || updated[index].receipt_grade_name;
+          updated[index].challan_grade_name = foundGrade.grade_name || updated[index].challan_grade_name;
+        } else {
+          updated[index].receipt_grade_code = inputCode;
+        }
+      }
+
       if (field === 'receipt_grade_name') {
-        const foundGrade = grades.find(g => g.grade_name === value);
+        const inputVal = (value || '').trim().toUpperCase();
+        const foundGrade = grades.find(g =>
+          String(g.grade_name || '').trim().toUpperCase() === inputVal ||
+          String(g.grade_code || '').trim().toUpperCase() === inputVal
+        );
         if (foundGrade) {
           updated[index].receipt_grade_code = foundGrade.grade_code || '';
-          updated[index].challan_grade_name = foundGrade.grade_name || '';
+          updated[index].receipt_grade_name = foundGrade.grade_name || inputVal;
+          updated[index].challan_grade_name = foundGrade.grade_name || updated[index].challan_grade_name;
         } else {
-          updated[index].receipt_grade_code = '';
-          updated[index].challan_grade_name = '';
+          updated[index].receipt_grade_code = updated[index].receipt_grade_code || '';
+          updated[index].receipt_grade_name = value ? inputVal : '';
         }
       }
 
@@ -1002,25 +1019,43 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
         updated[index].quantity_chln = Number(value) || 0;
       }
 
-      // Auto-update marka labels and code when selected by Name
+      // Auto-update marka labels and code when selected by Name or Code
+      if (field === 'challan_marka_code') {
+        const inputCode = (value || '').trim().toUpperCase();
+        const foundMarka = markas.find(m => String(m.marka_code || m.code || '').trim().toUpperCase() === inputCode);
+        if (foundMarka) {
+          updated[index].challan_marka_code = foundMarka.marka_code || inputCode;
+          updated[index].challan_marka_name = foundMarka.marka_name || updated[index].challan_marka_name;
+        } else {
+          updated[index].challan_marka_code = inputCode;
+        }
+      }
+
       if (field === 'challan_marka_name') {
         const inputVal = (value || '').trim().toUpperCase();
-        const foundMarka = markas.find(m => (m.marka_name || '').trim().toUpperCase() === inputVal);
+        const foundMarka = markas.find(m =>
+          String(m.marka_name || '').trim().toUpperCase() === inputVal ||
+          String(m.marka_code || '').trim().toUpperCase() === inputVal
+        );
         if (foundMarka) {
           updated[index].challan_marka_code = foundMarka.marka_code || '';
-          updated[index].challan_marka_name = foundMarka.marka_name; // preserve the standard casing
+          updated[index].challan_marka_name = foundMarka.marka_name;
         } else {
-          updated[index].challan_marka_code = ''; // manually typed entry - code will be assigned on save
-          updated[index].challan_marka_name = value ? value.toUpperCase() : ''; // keep as uppercase custom marka
+          updated[index].challan_marka_code = updated[index].challan_marka_code || '';
+          updated[index].challan_marka_name = value ? inputVal : '';
         }
       }
 
       if (field === 'agency_name') {
         const inputVal = (value || '').trim().replace(/\s*\(Code\s*\d+\)$/i, '').replace(/\s*Code\s*\d+$/i, '').trim().toUpperCase();
-        const foundAgency = agencies.find(a => (a.agency_name || a.AGENCY_NAME || '').trim().replace(/\s*\(Code\s*\d+\)$/i, '').toUpperCase() === inputVal);
+        const activeAgencies = filteredArrivalAgencies.length > 0 ? filteredArrivalAgencies : agencies;
+        const foundAgency = activeAgencies.find(a =>
+          String(a.agency_name || a.AGENCY_NAME || a.name || '').trim().replace(/\s*\(Code\s*\d+\)$/i, '').toUpperCase() === inputVal ||
+          String(a.agency_code || a.AGENCY_CODE || a.code || '').trim().toUpperCase() === inputVal
+        );
         if (foundAgency) {
-          updated[index].agency_code = foundAgency.agency_code || foundAgency.AGENCY_CODE || '';
-          updated[index].agency_name = foundAgency.agency_name || foundAgency.AGENCY_NAME;
+          updated[index].agency_code = foundAgency.agency_code || foundAgency.AGENCY_CODE || foundAgency.code || '';
+          updated[index].agency_name = foundAgency.agency_name || foundAgency.AGENCY_NAME || foundAgency.name || inputVal;
         } else {
           updated[index].agency_code = updated[index].agency_code || '';
           updated[index].agency_name = value ? inputVal : '';
@@ -1029,10 +1064,13 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
       if (field === 'agency_code') {
         const inputCode = (value || '').trim().toUpperCase();
-        const foundAgency = agencies.find(a => String(a.agency_code || '').trim().toUpperCase() === inputCode);
+        const activeAgencies = filteredArrivalAgencies.length > 0 ? filteredArrivalAgencies : agencies;
+        const foundAgency = activeAgencies.find(a =>
+          String(a.agency_code || a.AGENCY_CODE || a.code || '').trim().toUpperCase() === inputCode
+        );
         if (foundAgency) {
-          updated[index].agency_code = foundAgency.agency_code || inputCode;
-          updated[index].agency_name = foundAgency.agency_name || updated[index].agency_name;
+          updated[index].agency_code = foundAgency.agency_code || foundAgency.AGENCY_CODE || foundAgency.code || inputCode;
+          updated[index].agency_name = foundAgency.agency_name || foundAgency.AGENCY_NAME || foundAgency.name || updated[index].agency_name;
         } else {
           updated[index].agency_code = inputCode;
         }

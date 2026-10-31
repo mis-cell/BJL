@@ -6,12 +6,6 @@
     "AGENCY_NAME": "No agency"
   },
   {
-    "AREA_CODE": "10",
-    "AREA_NAME": "BANGLADESH",
-    "AGENCY_CODE": "425",
-    "AGENCY_NAME": "No agency"
-  },
-  {
     "AREA_CODE": "20",
     "AREA_NAME": "BIHAR",
     "AGENCY_CODE": "1",
@@ -122,12 +116,6 @@
   {
     "AREA_CODE": "20",
     "AREA_NAME": "BIHAR",
-    "AGENCY_CODE": "174",
-    "AGENCY_NAME": "FORBISGUNJ"
-  },
-  {
-    "AREA_CODE": "20",
-    "AREA_NAME": "BIHAR",
     "AGENCY_CODE": "175",
     "AGENCY_NAME": "GARBANAILI"
   },
@@ -224,20 +212,8 @@
   {
     "AREA_CODE": "20",
     "AREA_NAME": "BIHAR",
-    "AGENCY_CODE": "191",
-    "AGENCY_NAME": "THAKURGAUNG"
-  },
-  {
-    "AREA_CODE": "20",
-    "AREA_NAME": "BIHAR",
     "AGENCY_CODE": "192",
     "AGENCY_NAME": "TRIBENIGANJ"
-  },
-  {
-    "AREA_CODE": "20",
-    "AREA_NAME": "BIHAR",
-    "AGENCY_CODE": "391",
-    "AGENCY_NAME": "MURLIGUNJ"
   },
   {
     "AREA_CODE": "20",
@@ -248,20 +224,8 @@
   {
     "AREA_CODE": "20",
     "AREA_NAME": "BIHAR",
-    "AGENCY_CODE": "426",
-    "AGENCY_NAME": "No agency"
-  },
-  {
-    "AREA_CODE": "20",
-    "AREA_NAME": "BIHAR",
     "AGENCY_CODE": "445",
     "AGENCY_NAME": "KARJANBAZAR"
-  },
-  {
-    "AREA_CODE": "20",
-    "AREA_NAME": "BIHAR",
-    "AGENCY_CODE": "465",
-    "AGENCY_NAME": "ARARIA"
   },
   {
     "AREA_CODE": "20",
@@ -280,24 +244,6 @@
     "AREA_NAME": "BIHAR",
     "AGENCY_CODE": "508",
     "AGENCY_NAME": "SIMRAHIBAZAR"
-  },
-  {
-    "AREA_CODE": "20",
-    "AREA_NAME": "BIHAR",
-    "AGENCY_CODE": "509",
-    "AGENCY_NAME": "SAHARSA"
-  },
-  {
-    "AREA_CODE": "20",
-    "AREA_NAME": "BIHAR",
-    "AGENCY_CODE": "529",
-    "AGENCY_NAME": "KISHANGANJ"
-  },
-  {
-    "AREA_CODE": "20",
-    "AREA_NAME": "BIHAR",
-    "AGENCY_CODE": "571",
-    "AGENCY_NAME": "TRIBENIGANJ"
   },
   {
     "AREA_CODE": "20",
@@ -962,12 +908,6 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "219",
-    "AGENCY_NAME": "DOMKAL"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "220",
     "AGENCY_NAME": "DOMKALI"
   },
@@ -1304,12 +1244,6 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "392",
-    "AGENCY_NAME": "GOUSH"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "393",
     "AGENCY_NAME": "SANKRAIL"
   },
@@ -1346,18 +1280,6 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "402",
-    "AGENCY_NAME": "BASIRHAT"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "414",
-    "AGENCY_NAME": "KALITALA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "415",
     "AGENCY_NAME": "BIRNAGAR"
   },
@@ -1382,38 +1304,8 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "419",
-    "AGENCY_NAME": "JIRAT"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "420",
-    "AGENCY_NAME": "KARIMPUR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "422",
-    "AGENCY_NAME": "BETHUADAHARI"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "424",
     "AGENCY_NAME": "SWORNA KALI"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "427",
-    "AGENCY_NAME": "No agency"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "436",
-    "AGENCY_NAME": "SANTIPUR"
   },
   {
     "AREA_CODE": "30",
@@ -1424,25 +1316,7 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "440",
-    "AGENCY_NAME": "JANGIPARA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "441",
-    "AGENCY_NAME": "GOLABARI"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "442",
-    "AGENCY_NAME": "SINGUR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "443",
     "AGENCY_NAME": "SINGUR"
   },
   {
@@ -1472,62 +1346,14 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "456",
-    "AGENCY_NAME": "JIAGANJ"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "460",
     "AGENCY_NAME": "SULANTU"
   },
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "461",
-    "AGENCY_NAME": "BARA ANDULIA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "462",
-    "AGENCY_NAME": "KOLAGHAT"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "463",
     "AGENCY_NAME": "PARULIA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "466",
-    "AGENCY_NAME": "CHAPRA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "467",
-    "AGENCY_NAME": "HARIPAL"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "468",
-    "AGENCY_NAME": "SHEORAPHULLY"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "469",
-    "AGENCY_NAME": "KALIGANJ"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "470",
-    "AGENCY_NAME": "JALANGI"
   },
   {
     "AREA_CODE": "30",
@@ -1540,18 +1366,6 @@
     "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "472",
     "AGENCY_NAME": "SUJNIPUR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "473",
-    "AGENCY_NAME": "BHAGIRATHPUR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "474",
-    "AGENCY_NAME": "BELDANGA"
   },
   {
     "AREA_CODE": "30",
@@ -1580,92 +1394,14 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "480",
-    "AGENCY_NAME": "KATWA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "481",
-    "AGENCY_NAME": "GOURA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "482",
-    "AGENCY_NAME": "BHABTA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "487",
-    "AGENCY_NAME": "DAINHAT"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "489",
-    "AGENCY_NAME": "RANINAGAR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "493",
-    "AGENCY_NAME": "SAHEBNAGAR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "494",
-    "AGENCY_NAME": "MAJDIA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "495",
-    "AGENCY_NAME": "BHIMPUR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "496",
-    "AGENCY_NAME": "TEHATTA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "497",
     "AGENCY_NAME": "BANKURA"
   },
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "499",
-    "AGENCY_NAME": "CHAKDAH"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "500",
-    "AGENCY_NAME": "NAZIRPUR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "506",
     "AGENCY_NAME": "ACHINTOLA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "507",
-    "AGENCY_NAME": "GOPALNAGAR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "510",
-    "AGENCY_NAME": "AURANGABAD"
   },
   {
     "AREA_CODE": "30",
@@ -1706,12 +1442,6 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "523",
-    "AGENCY_NAME": "DEVNATHPUR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "525",
     "AGENCY_NAME": "BHALUKA"
   },
@@ -1725,12 +1455,6 @@
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "531",
-    "AGENCY_NAME": "KALYANI"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "533",
     "AGENCY_NAME": "KALYANI"
   },
   {
@@ -1772,12 +1496,6 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "542",
-    "AGENCY_NAME": "AMDANGA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "543",
     "AGENCY_NAME": "GAOS"
   },
@@ -1786,12 +1504,6 @@
     "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "544",
     "AGENCY_NAME": "NANDANGHAT"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "545",
-    "AGENCY_NAME": "COSSIMBAZAR"
   },
   {
     "AREA_CODE": "30",
@@ -1814,50 +1526,14 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "549",
-    "AGENCY_NAME": "TRIMOHINI"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "550",
     "AGENCY_NAME": "BANJETIA"
   },
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "551",
-    "AGENCY_NAME": "DEBAGRAM"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "552",
-    "AGENCY_NAME": "LALBAGH"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "554",
-    "AGENCY_NAME": "NAGARUKHRA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "555",
     "AGENCY_NAME": "DABIPUR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "557",
-    "AGENCY_NAME": "PATULI"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "558",
-    "AGENCY_NAME": "BHAGWANGOLA"
   },
   {
     "AREA_CODE": "30",
@@ -1886,12 +1562,6 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "570",
-    "AGENCY_NAME": "NADIA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "573",
     "AGENCY_NAME": "KALADANGA"
   },
@@ -1916,19 +1586,7 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "584",
-    "AGENCY_NAME": "KALNA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "588",
-    "AGENCY_NAME": "DEBNATHPUR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "589",
     "AGENCY_NAME": "DEBNATHPUR"
   },
   {
@@ -1946,12 +1604,6 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "592",
-    "AGENCY_NAME": "GANGAPUR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "593",
     "AGENCY_NAME": "NAGADIBAZAR"
   },
@@ -1960,12 +1612,6 @@
     "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "594",
     "AGENCY_NAME": "GOAS"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "595",
-    "AGENCY_NAME": "PATIKABARI"
   },
   {
     "AREA_CODE": "30",
@@ -2006,20 +1652,8 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "606",
-    "AGENCY_NAME": "PURBASTHALI"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "607",
     "AGENCY_NAME": "NABIPUR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "608",
-    "AGENCY_NAME": "NABADWIP"
   },
   {
     "AREA_CODE": "30",
@@ -2031,12 +1665,6 @@
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "611",
-    "AGENCY_NAME": "MALIPARA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "612",
     "AGENCY_NAME": "MALIPARA"
   },
   {
@@ -2090,44 +1718,14 @@
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "621",
-    "AGENCY_NAME": "KAZISAHA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "622",
     "AGENCY_NAME": "PANIGHATA"
   },
   {
     "AREA_CODE": "30",
     "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "623",
-    "AGENCY_NAME": "KESHABPUR"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "625",
-    "AGENCY_NAME": "KAZISAHA"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
     "AGENCY_CODE": "626",
     "AGENCY_NAME": "JAGATDAL"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "627",
-    "AGENCY_NAME": "JAGATDAL"
-  },
-  {
-    "AREA_CODE": "30",
-    "AREA_NAME": "DAISEE",
-    "AGENCY_CODE": "629",
-    "AGENCY_NAME": "HARIHARPARA"
   },
   {
     "AREA_CODE": "30",
@@ -2342,12 +1940,6 @@
   {
     "AREA_CODE": "40",
     "AREA_NAME": "JUNGLE",
-    "AGENCY_CODE": "428",
-    "AGENCY_NAME": "No agency"
-  },
-  {
-    "AREA_CODE": "40",
-    "AREA_NAME": "JUNGLE",
     "AGENCY_CODE": "452",
     "AGENCY_NAME": "BIHARIJUNG"
   },
@@ -2372,12 +1964,6 @@
   {
     "AREA_CODE": "40",
     "AREA_NAME": "JUNGLE",
-    "AGENCY_CODE": "562",
-    "AGENCY_NAME": "MALDA"
-  },
-  {
-    "AREA_CODE": "40",
-    "AREA_NAME": "JUNGLE",
     "AGENCY_CODE": "600",
     "AGENCY_NAME": "DHULIAN"
   },
@@ -2392,12 +1978,6 @@
     "AREA_NAME": "JUNGLE",
     "AGENCY_CODE": "602",
     "AGENCY_NAME": "BHULBHULCHANDI"
-  },
-  {
-    "AREA_CODE": "40",
-    "AREA_NAME": "JUNGLE",
-    "AGENCY_CODE": "603",
-    "AGENCY_NAME": "DHULIAN"
   },
   {
     "AREA_CODE": "50",
@@ -2654,48 +2234,6 @@
   {
     "AREA_CODE": "50",
     "AREA_NAME": "LOWER ASSAM",
-    "AGENCY_CODE": "429",
-    "AGENCY_NAME": "No agency"
-  },
-  {
-    "AREA_CODE": "50",
-    "AREA_NAME": "LOWER ASSAM",
-    "AGENCY_CODE": "437",
-    "AGENCY_NAME": "DHUBRI"
-  },
-  {
-    "AREA_CODE": "50",
-    "AREA_NAME": "LOWER ASSAM",
-    "AGENCY_CODE": "459",
-    "AGENCY_NAME": "GOURIPUR"
-  },
-  {
-    "AREA_CODE": "50",
-    "AREA_NAME": "LOWER ASSAM",
-    "AGENCY_CODE": "464",
-    "AGENCY_NAME": "HOWLY"
-  },
-  {
-    "AREA_CODE": "50",
-    "AREA_NAME": "LOWER ASSAM",
-    "AGENCY_CODE": "478",
-    "AGENCY_NAME": "KHARUPETIA"
-  },
-  {
-    "AREA_CODE": "50",
-    "AREA_NAME": "LOWER ASSAM",
-    "AGENCY_CODE": "501",
-    "AGENCY_NAME": "LAKHIPUR"
-  },
-  {
-    "AREA_CODE": "50",
-    "AREA_NAME": "LOWER ASSAM",
-    "AGENCY_CODE": "560",
-    "AGENCY_NAME": "GUWAHATI"
-  },
-  {
-    "AREA_CODE": "50",
-    "AREA_NAME": "LOWER ASSAM",
     "AGENCY_CODE": "561",
     "AGENCY_NAME": "GUWAGACHA"
   },
@@ -2930,30 +2468,6 @@
   {
     "AREA_CODE": "60",
     "AREA_NAME": "NORTHERN",
-    "AGENCY_CODE": "430",
-    "AGENCY_NAME": "No agency"
-  },
-  {
-    "AREA_CODE": "60",
-    "AREA_NAME": "NORTHERN",
-    "AGENCY_CODE": "435",
-    "AGENCY_NAME": "KAMAKHYAGURI"
-  },
-  {
-    "AREA_CODE": "60",
-    "AREA_NAME": "NORTHERN",
-    "AGENCY_CODE": "453",
-    "AGENCY_NAME": "HALDIBARI"
-  },
-  {
-    "AREA_CODE": "60",
-    "AREA_NAME": "NORTHERN",
-    "AGENCY_CODE": "485",
-    "AGENCY_NAME": "FALAKATA"
-  },
-  {
-    "AREA_CODE": "60",
-    "AREA_NAME": "NORTHERN",
     "AGENCY_CODE": "486",
     "AGENCY_NAME": "PUNDIBARI"
   },
@@ -2966,38 +2480,14 @@
   {
     "AREA_CODE": "60",
     "AREA_NAME": "NORTHERN",
-    "AGENCY_CODE": "491",
-    "AGENCY_NAME": "SILIGURI"
-  },
-  {
-    "AREA_CODE": "60",
-    "AREA_NAME": "NORTHERN",
     "AGENCY_CODE": "498",
     "AGENCY_NAME": "MAYNAGURI"
   },
   {
     "AREA_CODE": "60",
     "AREA_NAME": "NORTHERN",
-    "AGENCY_CODE": "503",
-    "AGENCY_NAME": "DINHATA"
-  },
-  {
-    "AREA_CODE": "60",
-    "AREA_NAME": "NORTHERN",
     "AGENCY_CODE": "504",
     "AGENCY_NAME": "SITAI"
-  },
-  {
-    "AREA_CODE": "60",
-    "AREA_NAME": "NORTHERN",
-    "AGENCY_CODE": "512",
-    "AGENCY_NAME": "BAMANHAT"
-  },
-  {
-    "AREA_CODE": "60",
-    "AREA_NAME": "NORTHERN",
-    "AGENCY_CODE": "513",
-    "AGENCY_NAME": "DEWANHAT"
   },
   {
     "AREA_CODE": "60",
@@ -3034,12 +2524,6 @@
     "AREA_NAME": "NORTHERN",
     "AGENCY_CODE": "587",
     "AGENCY_NAME": "CHANGRA BANDHA"
-  },
-  {
-    "AREA_CODE": "60",
-    "AREA_NAME": "NORTHERN",
-    "AGENCY_CODE": "624",
-    "AGENCY_NAME": "DHUPGURI"
   },
   {
     "AREA_CODE": "70",
@@ -3192,12 +2676,6 @@
     "AGENCY_NAME": "TARAPUR"
   },
   {
-    "AREA_CODE": "70",
-    "AREA_NAME": "ORISSA",
-    "AGENCY_CODE": "431",
-    "AGENCY_NAME": "No agency"
-  },
-  {
     "AREA_CODE": "80",
     "AREA_NAME": "OTHERS",
     "AGENCY_CODE": "1",
@@ -3328,12 +2806,6 @@
     "AREA_NAME": "OTHERS",
     "AGENCY_CODE": "399",
     "AGENCY_NAME": "AGARTALA"
-  },
-  {
-    "AREA_CODE": "80",
-    "AREA_NAME": "OTHERS",
-    "AGENCY_CODE": "432",
-    "AGENCY_NAME": "No agency"
   },
   {
     "AREA_CODE": "80",
@@ -3602,12 +3074,6 @@
   {
     "AREA_CODE": "90",
     "AREA_NAME": "SEMI NORTHERN",
-    "AGENCY_CODE": "405",
-    "AGENCY_NAME": "SAMSI"
-  },
-  {
-    "AREA_CODE": "90",
-    "AREA_NAME": "SEMI NORTHERN",
     "AGENCY_CODE": "406",
     "AGENCY_NAME": "SILIGURI"
   },
@@ -3622,30 +3088,6 @@
     "AREA_NAME": "SEMI NORTHERN",
     "AGENCY_CODE": "412",
     "AGENCY_NAME": "BILASHPUR"
-  },
-  {
-    "AREA_CODE": "90",
-    "AREA_NAME": "SEMI NORTHERN",
-    "AGENCY_CODE": "421",
-    "AGENCY_NAME": "DALKHOLA"
-  },
-  {
-    "AREA_CODE": "90",
-    "AREA_NAME": "SEMI NORTHERN",
-    "AGENCY_CODE": "423",
-    "AGENCY_NAME": "HILLI"
-  },
-  {
-    "AREA_CODE": "90",
-    "AREA_NAME": "SEMI NORTHERN",
-    "AGENCY_CODE": "433",
-    "AGENCY_NAME": "No agency"
-  },
-  {
-    "AREA_CODE": "90",
-    "AREA_NAME": "SEMI NORTHERN",
-    "AGENCY_CODE": "438",
-    "AGENCY_NAME": "PANJIPARA"
   },
   {
     "AREA_CODE": "90",
@@ -3680,18 +3122,6 @@
   {
     "AREA_CODE": "90",
     "AREA_NAME": "SEMI NORTHERN",
-    "AGENCY_CODE": "457",
-    "AGENCY_NAME": "CHANCHAL"
-  },
-  {
-    "AREA_CODE": "90",
-    "AREA_NAME": "SEMI NORTHERN",
-    "AGENCY_CODE": "488",
-    "AGENCY_NAME": "ISLAMPUR"
-  },
-  {
-    "AREA_CODE": "90",
-    "AREA_NAME": "SEMI NORTHERN",
     "AGENCY_CODE": "511",
     "AGENCY_NAME": "BULBULCHANDI"
   },
@@ -3704,20 +3134,8 @@
   {
     "AREA_CODE": "90",
     "AREA_NAME": "SEMI NORTHERN",
-    "AGENCY_CODE": "515",
-    "AGENCY_NAME": "RAMPUR"
-  },
-  {
-    "AREA_CODE": "90",
-    "AREA_NAME": "SEMI NORTHERN",
     "AGENCY_CODE": "524",
     "AGENCY_NAME": "FARAKKA"
-  },
-  {
-    "AREA_CODE": "90",
-    "AREA_NAME": "SEMI NORTHERN",
-    "AGENCY_CODE": "528",
-    "AGENCY_NAME": "BULBULCHANDI"
   },
   {
     "AREA_CODE": "90",
@@ -3729,12 +3147,6 @@
     "AREA_CODE": "90",
     "AREA_NAME": "SEMI NORTHERN",
     "AGENCY_CODE": "532",
-    "AGENCY_NAME": "BUNIYADPUR"
-  },
-  {
-    "AREA_CODE": "90",
-    "AREA_NAME": "SEMI NORTHERN",
-    "AGENCY_CODE": "534",
     "AGENCY_NAME": "BUNIYADPUR"
   },
   {
@@ -3890,38 +3302,8 @@
   {
     "AREA_CODE": "100",
     "AREA_NAME": "UPPER ASSAM",
-    "AGENCY_CODE": "410",
-    "AGENCY_NAME": "BHURAGAON"
-  },
-  {
-    "AREA_CODE": "100",
-    "AREA_NAME": "UPPER ASSAM",
-    "AGENCY_CODE": "434",
-    "AGENCY_NAME": "No agency"
-  },
-  {
-    "AREA_CODE": "100",
-    "AREA_NAME": "UPPER ASSAM",
-    "AGENCY_CODE": "458",
-    "AGENCY_NAME": "RUPAHI"
-  },
-  {
-    "AREA_CODE": "100",
-    "AREA_NAME": "UPPER ASSAM",
-    "AGENCY_CODE": "553",
-    "AGENCY_NAME": "MOIRABARI"
-  },
-  {
-    "AREA_CODE": "100",
-    "AREA_NAME": "UPPER ASSAM",
     "AGENCY_CODE": "556",
     "AGENCY_NAME": "UPARHALI"
-  },
-  {
-    "AREA_CODE": "100",
-    "AREA_NAME": "UPPER ASSAM",
-    "AGENCY_CODE": "565",
-    "AGENCY_NAME": "RAHA"
   },
   {
     "AREA_CODE": "100",
