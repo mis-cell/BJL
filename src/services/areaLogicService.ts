@@ -62,40 +62,51 @@ export async function fetchAreaLogic(): Promise<AreaLogicRecord[]> {
 }
 
 /**
- * Seeds bundled Area-Agency master mappings to Supabase area_logic table if empty or missing.
+  * Seeds bundled Area-Agency master mappings to Supabase area_logic and agency_master tables if empty or missing.
  */
 export async function seedAreaLogicToSupabase(): Promise<boolean> {
   if (!supabase) return false;
 
   try {
+    // 1. Seed agency_master
+    const { data: existingAgencies } = await supabase
+      .from('agency_master')
+      .select('id')
+      .limit(10);
+
+    if (!existingAgencies || existingAgencies.length < 50) {
+      console.log('[areaLogicService] Seeding agency_master table with AREA_LOGIC_MASTER_DATA...');
+      const agencyRecords = AREA_LOGIC_MASTER_DATA.map(r => ({
+        area_code: String(r.AREA_CODE).trim(),
+        agency_code: String(r.AGENCY_CODE).trim(),
+        agency_name: String(r.AGENCY_NAME).trim()
+      }));
+
+      const batchSize = 100;
+      for (let i = 0; i < agencyRecords.length; i += batchSize) {
+        const batch = agencyRecords.slice(i, i + batchSize);
+        await supabase.from('agency_master').insert(batch).catch(() => {});
+      }
+    }
+
+    // 2. Seed area_logic if table exists
     const { data: existing, error: checkErr } = await supabase
       .from('area_logic')
       .select('id')
       .limit(1);
 
-    if (checkErr) {
-      console.warn('[areaLogicService] Cannot seed: area_logic table may not exist yet in Supabase schema.');
-      return false;
-    }
-
-    if (existing && existing.length > 0) {
-      // Table already populated
-      return true;
-    }
-
-    console.log('[areaLogicService] Seeding 657 Area-Agency records into Supabase area_logic table...');
-    const batchSize = 100;
-    for (let i = 0; i < AREA_LOGIC_MASTER_DATA.length; i += batchSize) {
-      const batch = AREA_LOGIC_MASTER_DATA.slice(i, i + batchSize);
-      const { error: insertErr } = await supabase
-        .from('area_logic')
-        .upsert(batch, { onConflict: 'AREA_CODE,AGENCY_CODE' });
-
-      if (insertErr) {
-        console.error('[areaLogicService] Error inserting batch into area_logic:', insertErr.message);
+    if (!checkErr && (!existing || existing.length === 0)) {
+      console.log('[areaLogicService] Seeding 657 Area-Agency records into Supabase area_logic table...');
+      const batchSize = 100;
+      for (let i = 0; i < AREA_LOGIC_MASTER_DATA.length; i += batchSize) {
+        const batch = AREA_LOGIC_MASTER_DATA.slice(i, i + batchSize);
+        await supabase
+          .from('area_logic')
+          .upsert(batch, { onConflict: 'AREA_CODE,AGENCY_CODE' })
+          .catch(() => {});
       }
     }
-    console.log('[areaLogicService] Seeding completed successfully.');
+
     return true;
   } catch (err) {
     console.error('[areaLogicService] Seeding error:', err);

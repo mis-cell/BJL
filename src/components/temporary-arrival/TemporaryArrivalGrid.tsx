@@ -408,6 +408,24 @@ export const TemporaryArrivalGrid: React.FC<TemporaryArrivalGridProps> = ({
           </tbody>
         </table>
       </div>
+
+      <datalist id="agencies_list">
+        {agencies.map((a, aIdx) => {
+          const agName = a.agency_name || a.AGENCY_NAME || a.name || '';
+          const agCode = a.agency_code || a.AGENCY_CODE || a.code || '';
+          return (
+            <option key={a.id || `${agCode}_${aIdx}`} value={agName}>
+              {agCode ? `Code: ${agCode}` : ''}
+            </option>
+          );
+        })}
+      </datalist>
+
+      <datalist id="markas_list">
+        {markas.map((m, mIdx) => (
+          <option key={m.id || m.marka_code || mIdx} value={m.marka_name || m.name || m.mark_name} />
+        ))}
+      </datalist>
     </div>
   );
 };

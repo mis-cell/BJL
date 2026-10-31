@@ -537,7 +537,34 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
 
         setBrokers((brokData || []).map((b: any) => ({ ...b, brok_name: (b.brok_name || '').toUpperCase() })));
         setSuppliers((suppData || []).map((s: any) => ({ ...s, supp_name: (s.supp_name || '').toUpperCase() })));
-        setAreas((areaData || []).map((a: any) => ({ ...a, area_name: (a.area_name || '').toUpperCase() })));
+
+        const defaultAreasList = [
+          { area_code: '10', area_name: 'BANGLADESH' },
+          { area_code: '20', area_name: 'BIHAR' },
+          { area_code: '30', area_name: 'DAISEE' },
+          { area_code: '40', area_name: 'JUNGLE' },
+          { area_code: '50', area_name: 'LOWER ASSAM' },
+          { area_code: '60', area_name: 'NORTHERN' },
+          { area_code: '70', area_name: 'ORISSA' },
+          { area_code: '80', area_name: 'OTHERS' },
+          { area_code: '90', area_name: 'SEMI NORTHERN' },
+          { area_code: '100', area_name: 'UPPER ASSAM' }
+        ];
+
+        const mergedAreasMap = new Map<string, any>();
+        defaultAreasList.forEach(a => mergedAreasMap.set(a.area_name, a));
+        (areaData || []).forEach((a: any) => {
+          const name = String(a.area_name || '').trim().toUpperCase();
+          if (name) {
+            mergedAreasMap.set(name, {
+              id: a.id,
+              area_code: String(a.area_code || a.code || '').trim(),
+              area_name: name
+            });
+          }
+        });
+        setAreas(Array.from(mergedAreasMap.values()).sort((a, b) => a.area_name.localeCompare(b.area_name)));
+
         setAgencies(agcData || []);
         setGrades(gradeData || []);
 
