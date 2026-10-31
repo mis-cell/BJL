@@ -204,18 +204,48 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
     // Search filter
     if (searchFilter.trim()) {
       const term = searchFilter.toLowerCase().trim();
+      const termDigits = term.replace(/[^0-9]/g, '').replace(/^0+/, '');
 
       filtered = filtered.filter((s) => {
-        return (
-          (s.mr_no && String(s.mr_no).toLowerCase().includes(term)) ||
-          (s.po_no && String(s.po_no).toLowerCase().includes(term)) ||
-          (s.supplier && String(s.supplier).toLowerCase().includes(term)) ||
-          (s.broker && String(s.broker).toLowerCase().includes(term)) ||
-          (s.lorry_number &&
-            String(s.lorry_number).toLowerCase().includes(term)) ||
-          (s.payable_bill_no &&
-            String(s.payable_bill_no).toLowerCase().includes(term))
-        );
+        const mrStr = String(s.mr_no || '').toLowerCase();
+        const poStr = String(s.po_no || '').toLowerCase();
+        const supStr = String(s.supplier || '').toLowerCase();
+        const brokStr = String(s.broker || '').toLowerCase();
+        const lorryStr = String(s.lorry_number || '').toLowerCase();
+        const billStr = String(s.payable_bill_no || s.voucher_no || '').toLowerCase();
+        const arrStr = String(s.arrival_no || '').toLowerCase();
+
+        // Direct substring search
+        if (
+          mrStr.includes(term) ||
+          poStr.includes(term) ||
+          supStr.includes(term) ||
+          brokStr.includes(term) ||
+          lorryStr.includes(term) ||
+          billStr.includes(term) ||
+          arrStr.includes(term)
+        ) {
+          return true;
+        }
+
+        // Robust digit token matching (e.g., '1058' matching 'MR01058' or '01058')
+        if (termDigits.length >= 2) {
+          const mrDigits = mrStr.replace(/[^0-9]/g, '').replace(/^0+/, '');
+          const poDigits = poStr.replace(/[^0-9]/g, '').replace(/^0+/, '');
+          const billDigits = billStr.replace(/[^0-9]/g, '').replace(/^0+/, '');
+          const arrDigits = arrStr.replace(/[^0-9]/g, '').replace(/^0+/, '');
+
+          if (
+            mrDigits.includes(termDigits) ||
+            poDigits.includes(termDigits) ||
+            billDigits.includes(termDigits) ||
+            arrDigits.includes(termDigits)
+          ) {
+            return true;
+          }
+        }
+
+        return false;
       });
     }
 

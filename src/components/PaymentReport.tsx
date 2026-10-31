@@ -1036,6 +1036,9 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
         <PaymentReportDashboard
           paymentList={paymentList}
           filteredPayments={filteredPayments}
+          verifiedArrivals={verifiedArrivals}
+          purchaseOrders={purchaseOrders}
+          saudaCheckPoints={saudaCheckPoints}
           totalPaidSum={totalPaidSum}
           totalPayableSum={totalPayableSum}
           totalPendingSum={totalPendingSum}
@@ -1051,6 +1054,29 @@ export default function PaymentReport({ onClose }: { onClose?: () => void }) {
           pageSize={pageSize}
           setCurrentPage={setCurrentPage}
           setPageSize={setPageSize}
+          onEdit={(p) => {
+            setMasterData(p);
+            setIsEdit(true);
+            setViewMode('entry');
+          }}
+          onViewLedger={(partyName) => {
+            setSelectedLedgerParty(partyName);
+            setViewMode('ledger');
+          }}
+          onDelete={async (voucherNo) => {
+            if (window.confirm(`Are you sure you want to delete payment voucher ${voucherNo}?`)) {
+              try {
+                if (supabase) {
+                  await supabase.from('payment_details').delete().eq('voucher_no', voucherNo);
+                  await supabase.from('payment_master').delete().eq('voucher_no', voucherNo);
+                }
+                await dbModule.delete('payment_master', 'voucher_no', voucherNo);
+                initPage();
+              } catch (e) {
+                console.error('Delete error:', e);
+              }
+            }
+          }}
         />
       )}
 

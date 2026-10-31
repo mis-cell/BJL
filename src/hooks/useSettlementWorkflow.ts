@@ -1093,7 +1093,6 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
           const k = String(s?.mr_no || s?.settlement_id || '').trim();
           if (k) mergedSettledMap.set(k, s);
         });
-        setSettledList(Array.from(mergedSettledMap.values()));
 
         const mergedPayMap = new Map<string, any>();
         [...(Array.isArray(dbPayRes) ? dbPayRes : []), ...(payRes || [])].forEach((p: any) => {
@@ -1102,6 +1101,51 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
         });
         const payList = Array.from(mergedPayMap.values());
         setPaymentList(payList);
+
+        // Map payment_master rows into settlement records so any paid MR in payment_master is visible on Settlement Dashboard & Search
+        payList.forEach((pay: any) => {
+          const mrNo = String(pay.mr_no || pay.arrival_no || '').trim();
+          if (!mrNo || mrNo.toUpperCase() === 'NO' || mrNo.toUpperCase() === 'N/A' || mrNo === '-') return;
+          const mrUpper = mrNo.toUpperCase();
+
+          const existingKey = Array.from(mergedSettledMap.keys()).find(k => k.toUpperCase() === mrUpper);
+          const existing = existingKey ? mergedSettledMap.get(existingKey) : null;
+
+          if (!existing) {
+            mergedSettledMap.set(mrNo, {
+              settlement_id: pay.payment_id || `PAY_SETTL_${mrNo}`,
+              mr_no: mrNo,
+              sett_date: pay.payment_date || pay.date || pay.created_at || new Date().toISOString().split('T')[0],
+              mr_date: pay.mr_date || pay.payment_date || pay.date || '',
+              arrival_date: pay.arrival_date || pay.payment_date || pay.date || '',
+              po_no: pay.po_no || '',
+              supplier: pay.party_name || pay.supplier_name || pay.supplier || '',
+              broker: pay.broker_name || pay.broker || '',
+              lorry_number: pay.lorry_number || pay.lorry_no || '',
+              payable_amt: pay.paid_amount !== undefined && pay.paid_amount !== null && !isNaN(Number(pay.paid_amount)) && Number(pay.paid_amount) > 0
+                ? Number(pay.paid_amount)
+                : (Number(pay.payable_net_amount) || Number(pay.total_amount) || 0),
+              payable_bill_no: pay.voucher_no || pay.bill_no || pay.invoice_no || '',
+              payable_bill_date: pay.payment_date || pay.date || '',
+              payment_status: pay.paid_amount ? 'Paid' : (pay.status || 'Settled'),
+              status: pay.status || 'settled',
+              created_at: pay.created_at || new Date().toISOString(),
+              is_from_payment_master: true
+            });
+          } else {
+            if (!existing.payable_bill_no && pay.voucher_no) {
+              existing.payable_bill_no = pay.voucher_no;
+            }
+            if (!existing.payable_amt && pay.paid_amount) {
+              existing.payable_amt = Number(pay.paid_amount);
+            }
+            if (!existing.payment_status && pay.status) {
+              existing.payment_status = pay.status;
+            }
+          }
+        });
+
+        setSettledList(Array.from(mergedSettledMap.values()));
 
         // 2. Fetch completed inspections from Mill Inspection Section (material_inspection, final_arrival, clubbed_pomr, return_lorry)
         const [matInspRes, faRes, clubbedRes, returnLorryRes] = await Promise.all([
