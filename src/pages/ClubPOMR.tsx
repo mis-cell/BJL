@@ -39,6 +39,54 @@ import { ManualClubbingBindModal } from "../components/club-pomr/ManualClubbingB
 
 export type { ClubbingRecord };
 
+export const getArrivalWeightMt = (a: any): number => {
+  if (!a) return 0;
+  const val = parseFloat(a.final_weight_mt || a.received_weight_mt || a.electronic_net_weight || a.supplier_net_weight || a.challan_material_weight || a.net_weight || a.weight || 0);
+  if (val > 0) return val;
+  if (a.weight_qtl && Number(a.weight_qtl) > 0) return Number(a.weight_qtl) / 10;
+  return 0;
+};
+
+export const ensureClubbedPomrSchema = async () => {
+  if (!supabase) return;
+  try {
+    // Basic table sanity check if needed
+  } catch (_e) {}
+};
+
+export const mapDbRowToClubRecord = (
+  row: any,
+  allFinalArrivals: any[],
+  allPos: any[],
+  allSaudaCheck: any[]
+): ClubbingRecord => {
+  return {
+    id: String(row.id || row.club_id || `CLUB-${row.id}`),
+    clubbedAt: row.clubbed_at || row.created_at || new Date().toISOString(),
+    mrNo: row.mr_no || row.final_arrival_no || '',
+    finalArrivalNo: row.final_arrival_no || row.mr_no || '',
+    tempArrivalNo: row.temp_arrival_no || row.temporary_arrival_no || row.amad_no || '',
+    arrivalDate: row.arrival_date || row.date || '',
+    poNo: row.po_no || row.primary_po_no || row.sauda_no || '',
+    poDate: row.po_date || '',
+    supplier: row.supplier || row.challan_supplier || '',
+    broker: row.broker || '',
+    area: row.area || '',
+    lorryNumber: row.lorry_number || row.lorry_no || '',
+    challanNo: row.challan_no || '',
+    packets: Number(row.packets || row.total_packets || 0),
+    poNos: parseJsonArray(row.po_nos || row.clubbed_po_nos, row.po_no),
+    amadNos: parseJsonArray(row.amad_nos || row.clubbed_mr_nos, row.temp_arrival_no),
+    totalPoLorries: Number(row.total_po_lorries || row.contract_lorries || 1),
+    receivedLorriesCount: Number(row.received_lorries_count || row.received_lorries || 1),
+    totalPoWeight: Number(row.total_po_weight || 0),
+    totalReceivedWeight: Number(row.total_received_weight || row.total_weight_mt || 0),
+    variancePct: Number(row.variance_pct || 0),
+    recordedBy: row.recorded_by || row.clubbed_by || 'ADMIN',
+    remarks: row.remarks || ''
+  };
+};
+
 export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<string[]>([]);
@@ -56,8 +104,27 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
   const [showAllPOsInModal, setShowAllPOsInModal] = useState(false);
   const [modalPoSearch, setModalPoSearch] = useState('');
 
-  // Binding Form remarks
-  const [remarks, setRemarks] = useState('');
+  // Binding Form remarks & Deleting state
+  const [clubbingRemarks, setClubbingRemarks] = useState('');
+  const [deletingClubId, setDeletingClubId] = useState<string | null>(null);
+
+  const handleDeleteClubbingRecord = async (record: ClubbingRecord) => {
+    if (!record || !record.id) return;
+    setDeletingClubId(record.id);
+    try {
+      await dbModule.delete('clubbed_pomr', 'club_id', record.id).catch(() => {});
+      await dbModule.delete('clubbed_pomr', 'id', record.id).catch(() => {});
+      if (supabase) {
+        await supabase.from('clubbed_pomr').update({ status: 'DELETED' }).or(`id.eq.${record.id},club_id.eq.${record.id}`);
+      }
+      setClubbingHistory((prev) => prev.filter((item) => item.id !== record.id));
+      notifyDataChanged('clubbed_pomr');
+    } catch (err) {
+      console.error('Failed to delete clubbing record:', err);
+    } finally {
+      setDeletingClubId(null);
+    }
+  };
 
   // Manual Clubbed History Modal & Data (strictly from clubbed_pomr table)
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -65,8 +132,8 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
   const [clubbingHistory, setClubbingHistory] = useState<ClubbingRecord[]>([]);
 
   // Pagination for History Modal
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(50);
 
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [printingClub, setPrintingClub] = useState<ClubbingRecord | null>(null);
@@ -76,7 +143,7 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
   }, []);
 
   useEffect(() => {
-    setCurrentPage(1);
+    setHistoryPage(1);
   }, [selectedSupplier, historySearch]);
 
   // Load all initial data & master entries
@@ -663,7 +730,7 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
         variancePct: variance,
         recordedBy: currentUserName,
         remarks:
-          remarks ||
+          clubbingRemarks ||
           `Manually clubbed MR ${faNo} (Temp Arrival: ${tempArrivalNo}) with P.O ${poNo} (Lorry ${newReceivedLorriesCount}/${contractLorries})`
       };
 
@@ -716,7 +783,7 @@ export default function ClubPOMR({ onClose }: { onClose?: () => void }) {
       // Reset modal state
       setSelectedArrivalForBind(null);
       setChosenPoForBind(null);
-      setRemarks('');
+      setClubbingRemarks('');
       setShowAllPOsInModal(false);
       setModalPoSearch('');
 
