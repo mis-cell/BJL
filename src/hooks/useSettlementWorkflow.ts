@@ -1599,12 +1599,11 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
       if (isLastMr) {
         const saudaDed = await fetchSaudaCheckpointDeduction(cleanPoNo);
         setSaudaDeductionRecord(saudaDed);
-        if (saudaDed && Number(saudaDed.deduction_amount) > 0) {
-          setMasterData(prev => ({
-            ...prev,
-            val_ex_short: Number(saudaDed.deduction_amount)
-          }));
-        }
+        const dedAmt = saudaDed ? Math.max(0, Number(saudaDed.deduction_amount) || 0) : 0;
+        setMasterData(prev => ({
+          ...prev,
+          val_ex_short: dedAmt
+        }));
       } else {
         setSaudaDeductionRecord(null);
         setMasterData(prev => (prev.val_ex_short !== 0 ? { ...prev, val_ex_short: 0 } : prev));
@@ -2421,7 +2420,7 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
               ? existingMaster.val_premium_amt
               : calculatedPremTotalAmt,
             val_ex_short: isLastMr
-              ? (Number(existingMaster.val_ex_short) > 0 ? existingMaster.val_ex_short : Number(saudaDedRecord?.deduction_amount || 0))
+              ? (saudaDedRecord ? Math.max(0, Number(saudaDedRecord.deduction_amount) || 0) : Number(existingMaster.val_ex_short || 0))
               : 0,
             val_less_amt: Number(existingMaster.val_less_amt || 0),
             summary_delivery_claim: (existingMaster.summary_delivery_claim === 5550) ? 0 : (Number(existingMaster.summary_delivery_claim) || 0),

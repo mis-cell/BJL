@@ -248,8 +248,9 @@ export function calculateWeightTolerance(
 
 /**
  * Penalty calculation on Excess Quantity:
- * Based on Sauda Date (P.O Date) TD5 base rate and Temporary Arrival Date TD5 base rate:
- * Formula: Penalty = |TD5 Arrival Date Rate − TD5 Sauda Date Rate| * Excess Quantity (in Quintals)
+ * Based on Sauda Date (P.O Date) TD5 base rate and Last MR / Arrival Date TD5 base rate:
+ * - If Arrival/Last MR Date Rate >= Sauda Date Rate: Do NOT deduct (₹0, Applicable for Sauda).
+ * - If Sauda Date Rate > Arrival/Last MR Date Rate: Deduct (Sauda Date Rate − Arrival Date Rate) * Excess Quantity (in Quintals).
  */
 export function calculateExcessPenalty(
   excessQtl: number,
@@ -265,7 +266,7 @@ export function calculateExcessPenalty(
 } {
   const sRate = Math.max(0, Number(saudaTd5BaseRate) || 0);
   const aRate = Math.max(0, Number(arrivalTd5BaseRate) || 0);
-  const rateDifference = Math.abs(aRate - sRate);
+  const rateDifference = sRate > aRate ? (sRate - aRate) : 0;
   const eq = Math.max(0, Number(excessQtl) || 0);
   const penaltyAmount = Math.round(rateDifference * eq * 100) / 100;
   return {
@@ -274,6 +275,8 @@ export function calculateExcessPenalty(
     rateDifference,
     excessQtl: eq,
     penaltyAmount,
-    formula: `|TD5 Arrival Rate (₹${aRate.toLocaleString()}) − TD5 Sauda Date Rate (₹${sRate.toLocaleString()})| = ₹${rateDifference.toLocaleString()}/Qtl × ${eq.toFixed(2)} Qtl = ₹${penaltyAmount.toLocaleString()}`
+    formula: aRate >= sRate
+      ? `Last MR Rate (₹${aRate.toLocaleString()}) ≥ Sauda Rate (₹${sRate.toLocaleString()}) → Applicable for Sauda (₹0 Deduction)`
+      : `(Sauda Rate ₹${sRate.toLocaleString()} − Last MR Rate ₹${aRate.toLocaleString()}) = ₹${rateDifference.toLocaleString()}/Qtl × ${eq.toFixed(2)} Qtl = ₹${penaltyAmount.toLocaleString()}`
   };
 }

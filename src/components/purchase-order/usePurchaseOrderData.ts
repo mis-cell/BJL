@@ -585,7 +585,12 @@ export function usePurchaseOrderData({
 
         const poNoStr = String(p.po_no || p.contract_po_no || '').trim();
         const saudaNoStr = String(p.sauda_no || p.sauda_ref || p.contract_po_no || p.po_no || '').trim();
-        const matchedArrivalForWt = matchingTempArrivals[0] || matchingTemp[0] || matchingFinal[0];
+        const allMatchedArrivalsSorted = [...matchingFinal, ...matchingTempArrivals].sort((a: any, b: any) => {
+          const dA = normalizeDateYMD(a?.date || a?.arrival_date || a?.created_at || '');
+          const dB = normalizeDateYMD(b?.date || b?.arrival_date || b?.created_at || '');
+          return dB.localeCompare(dA);
+        });
+        const matchedArrivalForWt = allMatchedArrivalsSorted[0] || matchingTempArrivals[0] || matchingTemp[0] || matchingFinal[0];
         const saudaDateStr = p.s_date || p.po_date || p.date || p.contract_date || (p.created_at ? p.created_at.slice(0, 10) : '');
         const arrivalDateStr = matchedArrivalForWt?.date || matchedArrivalForWt?.arrival_date || p.last_arrival_date || p.arrival_date || saudaDateStr;
         const normalizedArrivalDate = normalizeDateYMD(arrivalDateStr) || null;
@@ -596,12 +601,15 @@ export function usePurchaseOrderData({
 
           const saudaTd5Rate = parseFloat(p.b_rate || 0) > 0 ? parseFloat(p.b_rate) : getTd5BaseRateForDate(saudaDateStr);
           const arrivalTd5Rate = getTd5BaseRateForDate(arrivalDateStr);
-          const td5RateDiff = Math.abs((arrivalTd5Rate || 0) - (saudaTd5Rate || 0));
+          const shortRateDiff = Math.abs((arrivalTd5Rate || 0) - (saudaTd5Rate || 0));
+          // For Excess: If Last MR Date Rate >= Sauda Date Rate, do NOT deduct (Applicable for Sauda)
+          const excessRateDiff = (saudaTd5Rate || 0) > (arrivalTd5Rate || 0) ? ((saudaTd5Rate || 0) - (arrivalTd5Rate || 0)) : 0;
 
           let variationType = 'pending_arrival';
           let deductionQtyMt = 0;
           let deductionQtyQtl = 0;
           let penaltyAmount = 0;
+          let effectiveRateDiff = shortRateDiff;
           let wtStatusRemarks = 'Pending Arrival';
 
           if (totalReceivedMt > 0) {
@@ -610,18 +618,22 @@ export function usePurchaseOrderData({
               wtStatusRemarks = `✓ TOLERABLE (±${tol.toleranceMt.toFixed(2)} MT) | Diff: ${tol.diffMt >= 0 ? `+${tol.diffMt.toFixed(3)}` : tol.diffMt.toFixed(3)} MT`;
             } else if (tol.isOverDelivery) {
               variationType = 'excess';
+              effectiveRateDiff = excessRateDiff;
               const excessMt = Math.max(0, tol.excessOverToleranceMt || 0);
               const excessQtl = Math.max(0, tol.excessOverToleranceQtl || 0);
-              const rawPenalty = td5RateDiff * excessQtl;
+              const rawPenalty = excessRateDiff * excessQtl;
               penaltyAmount = isNaN(rawPenalty) || rawPenalty < 0 ? 0 : Math.round(rawPenalty * 100) / 100;
               deductionQtyMt = Number(excessMt.toFixed(3));
               deductionQtyQtl = Number(excessQtl.toFixed(2));
-              wtStatusRemarks = `+${excessMt.toFixed(3)} MT Excess | Penalty: ₹${penaltyAmount}`;
+              wtStatusRemarks = penaltyAmount > 0
+                ? `+${excessMt.toFixed(3)} MT Excess | Penalty: ₹${penaltyAmount}`
+                : `+${excessMt.toFixed(3)} MT Excess | Applicable for Sauda (₹0 Deduction)`;
             } else if (tol.isUnderDelivery) {
               variationType = 'short';
+              effectiveRateDiff = shortRateDiff;
               const shortMt = Math.max(0, tol.shortUnderToleranceMt || 0);
               const shortQtl = Math.max(0, tol.shortUnderToleranceQtl || 0);
-              const rawPenalty = td5RateDiff * shortQtl;
+              const rawPenalty = shortRateDiff * shortQtl;
               penaltyAmount = isNaN(rawPenalty) || rawPenalty < 0 ? 0 : Math.round(rawPenalty * 100) / 100;
               deductionQtyMt = Number(shortMt.toFixed(3));
               deductionQtyQtl = Number(shortQtl.toFixed(2));
@@ -658,9 +670,9 @@ export function usePurchaseOrderData({
             satta_rate: Number(arrivalTd5Rate),
             last_arrival_date: normalizedArrivalDate,
             last_mr_no: lastMrNo,
-            applicable_rate: Number(td5RateDiff),
+            applicable_rate: Number(effectiveRateDiff),
             rate_basis: 'rate_difference',
-            rate_difference: Number(td5RateDiff),
+            rate_difference: Number(effectiveRateDiff),
             deduction_qty_mt: deductionQtyMt,
             deduction_qty_qtl: deductionQtyQtl,
             deduction_amount: penaltyAmount,

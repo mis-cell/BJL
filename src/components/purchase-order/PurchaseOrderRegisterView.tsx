@@ -942,7 +942,10 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                       if (tol.isOverDelivery) {
                         const excessMt = Math.max(0, tol.excessOverToleranceMt || 0);
                         const excessQtl = Math.max(0, tol.excessOverToleranceQtl || 0);
-                        const rawPenalty = td5RateDiff * excessQtl;
+                        const excessRateDiff = (saudaTd5Rate || 0) > (arrivalTd5Rate || 0)
+                          ? ((saudaTd5Rate || 0) - (arrivalTd5Rate || 0))
+                          : 0;
+                        const rawPenalty = excessRateDiff * excessQtl;
                         const penaltyAmount = isNaN(rawPenalty) || rawPenalty < 0 ? 0 : Math.round(rawPenalty * 100) / 100;
 
                         return (
@@ -953,13 +956,16 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                               setExcessShortModalPo(item);
                             }}
                             className="inline-flex flex-col items-center justify-center leading-tight cursor-pointer"
-                            title={`Excess Weight: +${excessMt.toFixed(3)} MT | Diff: ${diffStr} | Penalty: ₹${penaltyAmount.toLocaleString()}`}
+                            title={`Excess Weight: +${excessMt.toFixed(3)} MT | Diff: ${diffStr} | ${penaltyAmount > 0 ? `Penalty: ₹${penaltyAmount.toLocaleString()}` : 'Applicable for Sauda (₹0 Deduction)'}`}
                           >
                             <span className="px-1.5 py-0.5 rounded text-[9px] font-mono tabular-nums font-bold bg-purple-50 text-purple-900 border border-purple-300">
                               +{excessMt.toFixed(2)} MT Excess
                             </span>
-                            <span className="text-[8px] font-mono tabular-nums font-semibold text-rose-700 mt-0.5">
-                              Pen: ₹{penaltyAmount.toLocaleString()}
+                            <span className={cn(
+                              "text-[8px] font-mono tabular-nums font-semibold mt-0.5",
+                              penaltyAmount > 0 ? "text-rose-700" : "text-emerald-700"
+                            )}>
+                              {penaltyAmount > 0 ? `Pen: ₹${penaltyAmount.toLocaleString()}` : 'Sauda Rate (₹0)'}
                             </span>
                           </button>
                         );

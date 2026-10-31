@@ -404,9 +404,15 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
                   {saudaDeductionRecord ? (
                     <div className="mt-1 space-y-0.5 border-t border-slate-700 pt-1">
                       <p>Variation: <span className="text-amber-300 font-bold uppercase">{saudaDeductionRecord.variation_type || "short"}</span></p>
-                      <p>Total Short Weight Deduction Amount: <span className="text-emerald-300 font-black font-mono">₹{Number(saudaDeductionRecord.deduction_amount || masterData.val_ex_short || 0).toFixed(2)}</span></p>
+                      <p>
+                        {saudaDeductionRecord.variation_type === "excess" ? "Total Excess Weight Deduction Amount: " : "Total Short Weight Deduction Amount: "}
+                        <span className="text-emerald-300 font-black font-mono">₹{Number(saudaDeductionRecord.deduction_amount ?? masterData.val_ex_short ?? 0).toFixed(2)}</span>
+                      </p>
                       {saudaDeductionRecord.deduction_qty_mt && (
                         <p>Quantity: <span className="text-white">{saudaDeductionRecord.deduction_qty_mt} MT ({saudaDeductionRecord.deduction_qty_qtl} Qtl)</span></p>
+                      )}
+                      {saudaDeductionRecord.variation_type === "excess" && Number(saudaDeductionRecord.deduction_amount || 0) === 0 && (
+                        <p className="text-emerald-300 text-[8px] mt-0.5 font-semibold">✓ Applicable for Sauda Rate (Last MR Satta Rate ≥ Sauda Satta Rate — No Deduction)</p>
                       )}
                       <p className="text-emerald-200 text-[8px] mt-1 italic font-semibold">✓ Applied strictly on the Last Lorry of the contract once all lorries are received</p>
                     </div>
@@ -420,10 +426,16 @@ export const SettlementValuationCard: React.FC<SettlementValuationCardProps> = (
                 <span className={cn(
                   "text-[7.5px] font-black px-1.5 py-0.2 rounded uppercase border shrink-0",
                   saudaDeductionRecord.variation_type === "excess"
-                    ? "bg-amber-100 text-amber-900 border-amber-300"
+                    ? Number(saudaDeductionRecord.deduction_amount || 0) === 0
+                      ? "bg-emerald-100 text-emerald-900 border-emerald-300"
+                      : "bg-amber-100 text-amber-900 border-amber-300"
                     : "bg-rose-100 text-rose-900 border-rose-300"
                 )}>
-                  {saudaDeductionRecord.variation_type === "excess" ? "Excess Wt" : "Short Wt Deduction"}
+                  {saudaDeductionRecord.variation_type === "excess"
+                    ? Number(saudaDeductionRecord.deduction_amount || 0) === 0
+                      ? "Excess Wt (Sauda Rate)"
+                      : "Excess Wt Deduction"
+                    : "Short Wt Deduction"}
                 </span>
               )}
             </div>
