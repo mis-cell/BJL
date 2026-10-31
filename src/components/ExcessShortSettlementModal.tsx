@@ -447,8 +447,12 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     matchingInsps.forEach((insp: any) => {
       const num = String(insp.mr_no || '').trim();
       if (num && num.toUpperCase() !== 'NO' && num.toUpperCase() !== 'N/A' && num !== '-') {
-        const rawD = normalizeToYMD(insp.mr_date || insp.date || insp.inspection_date || insp.arrival_date || insp.created_at || '');
-        uniqueMrMap.set(num.toUpperCase(), { mrNo: num, date: formatDisplayDate(rawD), rawDate: rawD, source: insp });
+        const rawD = normalizeToYMD(insp.arrival_date || insp.mr_date || insp.inspection_date || insp.date || insp.created_at || '');
+        const key = num.toUpperCase();
+        const existing = uniqueMrMap.get(key);
+        if (!existing || (!existing.rawDate && rawD)) {
+          uniqueMrMap.set(key, { mrNo: num, date: formatDisplayDate(rawD), rawDate: rawD, source: insp });
+        }
       }
     });
 
@@ -459,8 +463,8 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
     const latestMr = mrEntries.length > 0 ? mrEntries[0] : {
       mrNo: String(po.last_arrival_mr_no || po.mr_no || 'MR-001').trim(),
-      date: formatDisplayDate(po.last_arrival_date || po.arrival_date || po.date),
-      rawDate: normalizeToYMD(po.last_arrival_date || po.arrival_date || po.date),
+      date: formatDisplayDate(po.arrival_date || po.last_arrival_date || po.mr_date || po.date),
+      rawDate: normalizeToYMD(po.arrival_date || po.last_arrival_date || po.mr_date || po.date),
       source: null
     };
 
