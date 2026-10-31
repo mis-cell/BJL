@@ -340,20 +340,10 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
 
         (activeInsps || []).forEach((insp: any) => {
           if (matchesTarget(insp.po_no, insp.sauda_no || insp.contract_po_no || insp.po_contract)) {
-            const num = String(insp.mr_no || insp.arrival_no || insp.final_arrival_no || '').trim();
-            if (num) matchedMrSet.add(num);
-          }
-        });
-        (activeTemp || []).forEach((ar: any) => {
-          if (matchesTarget(ar.po_no, ar.sauda_no || ar.contract_po_no)) {
-            const num = String(ar.temporary_arrival_no || ar.amad_no || ar.mr_no || ar.temp_mr_no || ar.chalan_no || ar.arrival_no || '').trim();
-            if (num) matchedMrSet.add(num);
-          }
-        });
-        (activeFinal || []).forEach((ar: any) => {
-          if (matchesTarget(ar.po_no, ar.sauda_no || ar.contract_po_no)) {
-            const num = String(ar.final_arrival_no || ar.mr_no || ar.arrival_no || '').trim();
-            if (num) matchedMrSet.add(num);
+            const num = String(insp.mr_no || '').trim();
+            if (num && num.toUpperCase() !== 'NO' && num.toUpperCase() !== 'N/A' && num !== '-') {
+              matchedMrSet.add(num);
+            }
           }
         });
 
@@ -441,7 +431,7 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
     const targetPo = clean(poNo);
     const targetSauda = clean(saudaNo);
 
-    // Find all matching inspections for this PO
+    // Find all matching inspections for this PO strictly from Mill Inspection Section
     const poolInspections = liveInspections.length > 0 ? liveInspections : allInspections;
     const matchingInsps = (poolInspections || []).filter((insp: any) => {
       const iPo = clean(insp.po_no);
@@ -451,47 +441,14 @@ export const ExcessShortSettlementModal: React.FC<ExcessShortSettlementModalProp
       return false;
     });
 
-    // Also collect from Temporary & Final Arrivals linked to this PO
-    const poolTemp = liveTempArrivals.length > 0 ? liveTempArrivals : allTempArrivals;
-    const matchingTempArrivals = (poolTemp || []).filter((ar: any) => {
-      const arPo = clean(ar.po_no);
-      const arSauda = clean(ar.sauda_no || ar.contract_po_no || ar.po_no);
-      return (arPo && (arPo === targetPo || arPo === targetSauda)) ||
-             (arSauda && (arSauda === targetPo || arSauda === targetSauda));
-    });
-
-    const poolFinal = liveFinalArrivals.length > 0 ? liveFinalArrivals : allFinalArrivals;
-    const matchingFinalArrivals = (poolFinal || []).filter((ar: any) => {
-      const arPo = clean(ar.po_no);
-      const arSauda = clean(ar.sauda_no || ar.contract_po_no);
-      return (arPo && (arPo === targetPo || arPo === targetSauda)) ||
-             (arSauda && (arSauda === targetPo || arSauda === targetSauda));
-    });
-
-    // Extract all unique MR numbers
+    // Extract all unique MR numbers strictly from Mill Inspection Section using field "mr_no"
     const uniqueMrMap = new Map<string, { mrNo: string; date: string; rawDate: string; source: any }>();
 
     matchingInsps.forEach((insp: any) => {
-      const num = String(insp.mr_no || insp.arrival_no || insp.final_arrival_no || '').trim();
-      if (num) {
-        const rawD = normalizeToYMD(insp.date || insp.inspection_date || insp.created_at || '');
+      const num = String(insp.mr_no || '').trim();
+      if (num && num.toUpperCase() !== 'NO' && num.toUpperCase() !== 'N/A' && num !== '-') {
+        const rawD = normalizeToYMD(insp.mr_date || insp.date || insp.inspection_date || insp.arrival_date || insp.created_at || '');
         uniqueMrMap.set(num.toUpperCase(), { mrNo: num, date: formatDisplayDate(rawD), rawDate: rawD, source: insp });
-      }
-    });
-
-    matchingTempArrivals.forEach((ar: any) => {
-      const num = String(ar.temporary_arrival_no || ar.amad_no || ar.mr_no || ar.temp_mr_no || ar.chalan_no || ar.arrival_no || '').trim();
-      if (num && !uniqueMrMap.has(num.toUpperCase())) {
-        const rawD = normalizeToYMD(ar.date || ar.arrival_date || ar.voucher_date || ar.lorry_arrival_date || ar.created_at || '');
-        uniqueMrMap.set(num.toUpperCase(), { mrNo: num, date: formatDisplayDate(rawD), rawDate: rawD, source: ar });
-      }
-    });
-
-    matchingFinalArrivals.forEach((ar: any) => {
-      const num = String(ar.final_arrival_no || ar.mr_no || ar.arrival_no || '').trim();
-      if (num && !uniqueMrMap.has(num.toUpperCase())) {
-        const rawD = normalizeToYMD(ar.date || ar.arrival_date || ar.created_at || '');
-        uniqueMrMap.set(num.toUpperCase(), { mrNo: num, date: formatDisplayDate(rawD), rawDate: rawD, source: ar });
       }
     });
 
