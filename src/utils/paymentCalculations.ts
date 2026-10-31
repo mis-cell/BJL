@@ -62,8 +62,8 @@ export const calculateDeliveryClaimPenalty = (
 
 /**
  * Calculates Paid Amount (₹) based on user formula:
- * Step 1: Net Payment Amount = Payable Net Amount (₹) - Delivery Claim (-) - Total Deductions & Penalties - Extra & Short
- * Step 2: Paid Amount (₹) = Net Payment Amount * 93% (with last three digits rounded down)
+ * Step 1: Net Payment Amount = Payable Net Amount (₹) - (Delivery Claim (-) + Total Deductions & Penalties + Extra & Short)
+ * Step 2: Paid Amount (₹) = Math.round(Net Payment Amount * 93%)
  */
 export const calculateNetPaidAmountAfterDeductions = (
   payableNetAmount: number,
@@ -78,7 +78,7 @@ export const calculateNetPaidAmountAfterDeductions = (
   const exShort = Math.max(0, Number(extraAndShort) || 0);
   const netPaymentAmount = Math.max(0, gross - dClaim - totDed - exShort);
   const paidAmount93Pct = netPaymentAmount * 0.93;
-  return Math.floor(paidAmount93Pct / 1000) * 1000;
+  return Math.round(paidAmount93Pct);
 };
 
 export interface PaymentDeductionsBreakdown {

@@ -259,15 +259,15 @@ export function calculateFloor1000(val: number | string | null | undefined): num
 }
 
 /**
- * Calculates default 93% Paid Amount rounded DOWN to the nearest ₹1,000.
- * Formula: FLOOR((Payable Net Amount * 0.93) / 1000) * 1000
+ * Calculates default 93% Paid Amount rounded to the nearest integer.
+ * Formula: Math.round(Payable Net Amount * 0.93)
  */
 export function calculate93PctPaidAmount(payableAmt: number | string | null | undefined): number {
   if (payableAmt === null || payableAmt === undefined || payableAmt === '') return 0;
   const num = typeof payableAmt === 'number' ? payableAmt : parseFloat(String(payableAmt).replace(/,/g, ''));
   if (isNaN(num) || num <= 0) return 0;
   const raw93 = num * 0.93;
-  return calculateFloor1000(raw93);
+  return Math.round(raw93);
 }
 
 export function canDeleteData(): boolean {
