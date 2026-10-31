@@ -1102,49 +1102,6 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
         const payList = Array.from(mergedPayMap.values());
         setPaymentList(payList);
 
-        // Map payment_master rows into settlement records so any paid MR in payment_master is visible on Settlement Dashboard & Search
-        payList.forEach((pay: any) => {
-          const mrNo = String(pay.mr_no || pay.arrival_no || '').trim();
-          if (!mrNo || mrNo.toUpperCase() === 'NO' || mrNo.toUpperCase() === 'N/A' || mrNo === '-') return;
-          const mrUpper = mrNo.toUpperCase();
-
-          const existingKey = Array.from(mergedSettledMap.keys()).find(k => k.toUpperCase() === mrUpper);
-          const existing = existingKey ? mergedSettledMap.get(existingKey) : null;
-
-          if (!existing) {
-            mergedSettledMap.set(mrNo, {
-              settlement_id: pay.payment_id || `PAY_SETTL_${mrNo}`,
-              mr_no: mrNo,
-              sett_date: pay.payment_date || pay.date || pay.created_at || new Date().toISOString().split('T')[0],
-              mr_date: pay.mr_date || pay.payment_date || pay.date || '',
-              arrival_date: pay.arrival_date || pay.payment_date || pay.date || '',
-              po_no: pay.po_no || '',
-              supplier: pay.party_name || pay.supplier_name || pay.supplier || '',
-              broker: pay.broker_name || pay.broker || '',
-              lorry_number: pay.lorry_number || pay.lorry_no || '',
-              payable_amt: pay.paid_amount !== undefined && pay.paid_amount !== null && !isNaN(Number(pay.paid_amount)) && Number(pay.paid_amount) > 0
-                ? Number(pay.paid_amount)
-                : (Number(pay.payable_net_amount) || Number(pay.total_amount) || 0),
-              payable_bill_no: pay.voucher_no || pay.bill_no || pay.invoice_no || '',
-              payable_bill_date: pay.payment_date || pay.date || '',
-              payment_status: pay.paid_amount ? 'Paid' : (pay.status || 'Settled'),
-              status: pay.status || 'settled',
-              created_at: pay.created_at || new Date().toISOString(),
-              is_from_payment_master: true
-            });
-          } else {
-            if (!existing.payable_bill_no && pay.voucher_no) {
-              existing.payable_bill_no = pay.voucher_no;
-            }
-            if (!existing.payable_amt && pay.paid_amount) {
-              existing.payable_amt = Number(pay.paid_amount);
-            }
-            if (!existing.payment_status && pay.status) {
-              existing.payment_status = pay.status;
-            }
-          }
-        });
-
         setSettledList(Array.from(mergedSettledMap.values()));
 
         // 2. Fetch completed inspections from Mill Inspection Section (material_inspection, final_arrival, clubbed_pomr, return_lorry)
@@ -3563,12 +3520,10 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
 
       const cleanMr = String(targetMr).trim();
 
-      // 1. Delete settlement and payment records from Supabase
+      // 1. Delete settlement records from Supabase
       await supabase.from('mr_settlement_detail').delete().eq('mr_no', cleanMr);
       await supabase.from('mr_settlement_master').delete().eq('mr_no', cleanMr);
       await supabase.from('m_r_settlement').delete().eq('mr_no', cleanMr);
-      await supabase.from('payment_details').delete().or(`mr_no.eq.${cleanMr},mr_no.ilike.${cleanMr}`);
-      await supabase.from('payment_master').delete().or(`mr_no.eq.${cleanMr},mr_no.ilike.${cleanMr},arrival_no.eq.${cleanMr}`);
 
       // Direct SQL transaction fallback
       try {
@@ -3576,9 +3531,7 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
         await dbModule.executeTransaction([
           `DELETE FROM mr_settlement_detail WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
           `DELETE FROM mr_settlement_master WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
-          `DELETE FROM m_r_settlement WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
-          `DELETE FROM payment_details WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
-          `DELETE FROM payment_master WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(arrival_no)) = LOWER(TRIM(${esc(cleanMr)}));`
+          `DELETE FROM m_r_settlement WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`
         ]);
       } catch (_e) {}
 
@@ -3586,8 +3539,6 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
       await dbModule.delete('mr_settlement_detail', cleanMr, 'mr_no').catch(() => {});
       await dbModule.delete('m_r_settlement', cleanMr, 'mr_no').catch(() => {});
       await dbModule.delete('mr_settlement_master', cleanMr, 'mr_no').catch(() => {});
-      await dbModule.delete('payment_master', cleanMr, 'mr_no').catch(() => {});
-      await dbModule.delete('payment_details', cleanMr, 'mr_no').catch(() => {});
       dbModule.invalidateCache();
 
       // 2. Restore P.O status in purchase_master and sauda_master back to Final P.O (pending/final)
@@ -3649,53 +3600,20 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
     setDeleteConfirmMr(null);
     setLoading(true);
     try {
-      // Find linked settlement and payment records to extract voucher numbers
-      const targetItem = settledList.find(
-        (r) => String(r?.mr_no || '').trim().toUpperCase() === cleanMr.toUpperCase()
-      );
-      const voucherNo = targetItem?.payable_bill_no || targetItem?.voucher_no;
-
-      const matchedPayments = paymentList.filter((p) => {
-        const pMr = String(p.mr_no || p.arrival_no || '').trim().toUpperCase();
-        const pVoucher = String(p.voucher_no || '').trim().toUpperCase();
-        return (
-          (cleanMr && pMr === cleanMr.toUpperCase()) ||
-          (voucherNo && pVoucher === String(voucherNo).trim().toUpperCase())
-        );
-      });
-
-      const voucherNos = Array.from(
-        new Set(
-          [voucherNo, ...matchedPayments.map((p) => p.voucher_no)]
-            .filter(Boolean)
-            .map((v) => String(v).trim())
-        )
-      );
-
-      // 1. Invalidate caches immediately
+      // 1. Invalidate settlement caches immediately
       dbModule.invalidateCache('mr_settlement_master');
       dbModule.invalidateCache('mr_settlement_detail');
       dbModule.invalidateCache('m_r_settlement');
-      dbModule.invalidateCache('payment_master');
-      dbModule.invalidateCache('payment_details');
       dbModule.invalidateCache('final_arrival');
       dbModule.invalidateCache('material_inspection');
       dbModule.invalidateCache('mill_inspection_master');
       dbModule.invalidateCache();
 
-      // 2. Supabase deletions & status resets
+      // 2. Supabase deletions & status resets (ONLY Settlement tables!)
       if (supabase) {
         await supabase.from('mr_settlement_detail').delete().eq('mr_no', cleanMr);
         await supabase.from('m_r_settlement').delete().eq('mr_no', cleanMr);
         await supabase.from('mr_settlement_master').delete().eq('mr_no', cleanMr);
-
-        await supabase.from('payment_details').delete().or(`mr_no.eq.${cleanMr},mr_no.ilike.${cleanMr}`);
-        await supabase.from('payment_master').delete().or(`mr_no.eq.${cleanMr},mr_no.ilike.${cleanMr},arrival_no.eq.${cleanMr}`);
-
-        for (const vNo of voucherNos) {
-          await supabase.from('payment_details').delete().or(`voucher_no.eq.${vNo},voucher_no.ilike.${vNo}`);
-          await supabase.from('payment_master').delete().or(`voucher_no.eq.${vNo},voucher_no.ilike.${vNo}`);
-        }
 
         // Reset arrival status back to Pending / active
         await supabase.from('final_arrival').update({ status: 'active', payment_status: 'Pending' }).or(`mr_no.eq.${cleanMr},final_arrival_no.eq.${cleanMr},arrival_no.eq.${cleanMr}`);
@@ -3704,41 +3622,27 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
         await supabase.from('temporary_material_received').update({ status: 'active', payment_status: 'Pending' }).or(`mr_no.eq.${cleanMr},arrival_no.eq.${cleanMr},temporary_arrival_no.eq.${cleanMr}`);
       }
 
-      // 3. Fallback SQL Transaction Execution
+      // 3. Fallback SQL Transaction Execution (Settlement tables only!)
       try {
         const esc = (v: string) => `'${v.replace(/'/g, "''")}'`;
         const sqls: string[] = [
           `DELETE FROM mr_settlement_detail WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
           `DELETE FROM mr_settlement_master WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
           `DELETE FROM m_r_settlement WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
-          `DELETE FROM payment_details WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
-          `DELETE FROM payment_master WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(arrival_no)) = LOWER(TRIM(${esc(cleanMr)}));`
+          `UPDATE final_arrival SET status = 'active', payment_status = 'Pending' WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(final_arrival_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(arrival_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
+          `UPDATE material_inspection SET status = 'Completed', payment_status = 'Pending' WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(arrival_no)) = LOWER(TRIM(${esc(cleanMr)}));`,
+          `UPDATE mill_inspection_master SET status = 'active', payment_status = 'Pending' WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(arrival_no)) = LOWER(TRIM(${esc(cleanMr)}));`
         ];
-
-        for (const vNo of voucherNos) {
-          sqls.push(`DELETE FROM payment_details WHERE LOWER(TRIM(voucher_no)) = LOWER(TRIM(${esc(vNo)}));`);
-          sqls.push(`DELETE FROM payment_master WHERE LOWER(TRIM(voucher_no)) = LOWER(TRIM(${esc(vNo)}));`);
-        }
-
-        sqls.push(`UPDATE final_arrival SET status = 'active', payment_status = 'Pending' WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(final_arrival_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(arrival_no)) = LOWER(TRIM(${esc(cleanMr)}));`);
-        sqls.push(`UPDATE material_inspection SET status = 'Completed', payment_status = 'Pending' WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(arrival_no)) = LOWER(TRIM(${esc(cleanMr)}));`);
-        sqls.push(`UPDATE mill_inspection_master SET status = 'active', payment_status = 'Pending' WHERE LOWER(TRIM(mr_no)) = LOWER(TRIM(${esc(cleanMr)})) OR LOWER(TRIM(arrival_no)) = LOWER(TRIM(${esc(cleanMr)}));`);
 
         await dbModule.executeTransaction(sqls);
       } catch (sqlErr) {
         console.warn("SQL transaction fallback deletion notice:", sqlErr);
       }
 
-      // 4. Also delete from dbModule local cache
+      // 4. Also delete from dbModule local cache for settlement tables
       await dbModule.delete('mr_settlement_detail', cleanMr, 'mr_no').catch(() => {});
       await dbModule.delete('m_r_settlement', cleanMr, 'mr_no').catch(() => {});
       await dbModule.delete('mr_settlement_master', cleanMr, 'mr_no').catch(() => {});
-      await dbModule.delete('payment_master', cleanMr, 'mr_no').catch(() => {});
-      await dbModule.delete('payment_details', cleanMr, 'mr_no').catch(() => {});
-      for (const vNo of voucherNos) {
-        await dbModule.delete('payment_master', vNo, 'voucher_no').catch(() => {});
-        await dbModule.delete('payment_details', vNo, 'voucher_no').catch(() => {});
-      }
 
       dbModule.invalidateCache();
 
@@ -3746,28 +3650,15 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
       setSettledList((prev) =>
         prev.filter((r) => {
           const rMr = String(r?.mr_no || '').trim().toUpperCase();
-          const rVoucher = String(r?.payable_bill_no || r?.voucher_no || '').trim().toUpperCase();
-          if (rMr === cleanMr.toUpperCase()) return false;
-          if (voucherNos.some((v) => v.toUpperCase() === rVoucher)) return false;
-          return true;
-        })
-      );
-
-      setPaymentList((prev) =>
-        prev.filter((p) => {
-          const pMr = String(p?.mr_no || p?.arrival_no || '').trim().toUpperCase();
-          const pVoucher = String(p?.voucher_no || '').trim().toUpperCase();
-          if (pMr === cleanMr.toUpperCase()) return false;
-          if (voucherNos.some((v) => v.toUpperCase() === pVoucher)) return false;
-          return true;
+          return rMr !== cleanMr.toUpperCase();
         })
       );
 
       if (onLogEvent) {
-        onLogEvent('MR_SETTLEMENT_DELETE', `Deleted settlement and payment record for M.R. ${cleanMr}`);
+        onLogEvent('MR_SETTLEMENT_DELETE', `Deleted settlement record for M.R. ${cleanMr}`);
       }
 
-      setSuccessMessage(`Settlement record for M.R. ${cleanMr} permanently deleted from database.`);
+      setSuccessMessage(`Settlement record for M.R. ${cleanMr} permanently deleted from settlement database.`);
       await initPage();
     } catch (err: any) {
       console.error("Error dropping settlement record:", err);
