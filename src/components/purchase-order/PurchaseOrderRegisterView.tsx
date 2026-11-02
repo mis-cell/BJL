@@ -530,22 +530,6 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
       {/* Desktop & Laptop Compact 14-Column Single-Screen Table */}
       <div className="hidden md:block bg-white border border-slate-200 rounded-xl shadow-2xs overflow-x-auto overflow-y-auto max-h-[calc(100vh-235px)] min-h-[380px] w-full">
         <table className="w-full table-fixed min-w-[1180px] xl:min-w-0 border-collapse text-[11px] text-slate-900">
-           <colgroup>
-              <col style={{ width: "14%" }} /> {/* PO / PTF */}
-              <col style={{ width: "5.5%" }} />  {/* Date */}
-              <col style={{ width: "6%" }} />    {/* Type */}
-              <col style={{ width: "7%" }} />  {/* Broker */}
-              <col style={{ width: "4.5%" }} />  {/* Unit */}
-              <col style={{ width: "5.5%" }} />  {/* Count */}
-              <col style={{ width: "7%" }} />  {/* Weight */}
-              <col style={{ width: "6%" }} />    {/* Status */}
-              <col style={{ width: "7%" }} />    {/* Lorry Status */}
-              <col style={{ width: "8.5%" }} />    {/* WT Status */}
-              <col style={{ width: "5%" }} />    {/* Pass/MIS */}
-              <col style={{ width: "7%" }} />    {/* Stage */}
-              <col style={{ width: "4%" }} />    {/* Chart */}
-              <col style={{ width: "6%" }} />   {/* Actions */}
-            </colgroup>
           <thead className="bg-[#FDE7E6] sticky top-0 z-20 border-b-2 border-[#D94B5A] shadow-2xs">
             <tr className="h-9 text-[#111111] text-[10.5px] font-black uppercase tracking-tight select-none">
               {/* 1. PO / PTF No */}
@@ -762,24 +746,11 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                   )}
                 >
                   {/* 1. PO / PTF No */}
-                 {/*  <td
+                  <td
                     className={cn(
                       'px-2 py-1 font-mono font-bold text-[11px] whitespace-nowrap truncate border-r border-slate-200/80 select-text',
                       isVoid ? 'text-rose-400' : 'text-slate-900'
                     )}
-                    title={item.po_no}
-                  >
-                    {item.po_no}
-                  </td> */}
-                  <td
-                    className={cn(
-                      'px-2 py-1 font-mono font-bold whitespace-normal break-all border-r border-slate-200/80 select-text',
-                      isVoid ? 'text-rose-400' : 'text-slate-700'
-                    )}
-                    style={{
-                      fontSize: '8px',
-                      lineHeight: '10px',
-                    }}
                     title={item.po_no}
                   >
                     {item.po_no}
