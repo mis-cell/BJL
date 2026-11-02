@@ -772,9 +772,10 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                     {item.po_no}
                   </td> */}
                   <td className={cn(
-                      'px-2 py-1 font-mono font-bold text-[9px] whitespace-normal break-all border-r border-slate-200/80 select-text',
+                      'px-2 py-1 font-mono whitespace-normal break-all border-r border-slate-200/80 select-text',
                       isVoid ? 'text-rose-400' : 'text-slate-900'
                     )}
+                    style={{ fontSize: '9px' }}
                     title={item.po_no}
                   >
                     {item.po_no}
