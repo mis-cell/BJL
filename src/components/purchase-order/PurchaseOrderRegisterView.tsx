@@ -531,7 +531,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
       <div className="hidden md:block bg-white border border-slate-200 rounded-xl shadow-2xs overflow-x-auto overflow-y-auto max-h-[calc(100vh-235px)] min-h-[380px] w-full">
         <table className="w-full table-fixed min-w-[1180px] xl:min-w-0 border-collapse text-[11px] text-slate-900">
            <colgroup>
-              <col style={{ width: "13.5%" }} /> {/* PO / PTF */}
+              <col style={{ width: "14%" }} /> {/* PO / PTF */}
               <col style={{ width: "5.5%" }} />  {/* Date */}
               <col style={{ width: "6%" }} />    {/* Type */}
               <col style={{ width: "7%" }} />  {/* Broker */}
@@ -540,7 +540,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
               <col style={{ width: "7%" }} />  {/* Weight */}
               <col style={{ width: "6%" }} />    {/* Status */}
               <col style={{ width: "7%" }} />    {/* Lorry Status */}
-              <col style={{ width: "9%" }} />    {/* WT Status */}
+              <col style={{ width: "8.5%" }} />    {/* WT Status */}
               <col style={{ width: "5%" }} />    {/* Pass/MIS */}
               <col style={{ width: "7%" }} />    {/* Stage */}
               <col style={{ width: "4%" }} />    {/* Chart */}
@@ -774,7 +774,7 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                   <td
                     className={cn(
                       'px-2 py-1 font-mono font-bold whitespace-normal break-all border-r border-slate-200/80 select-text',
-                      isVoid ? 'text-rose-400' : 'text-slate-900'
+                      isVoid ? 'text-rose-400' : 'text-slate-700'
                     )}
                     style={{
                       fontSize: '8px',
