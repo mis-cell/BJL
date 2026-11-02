@@ -534,9 +534,9 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
               <col style={{ width: "12.5%" }} /> {/* PO / PTF */}
               <col style={{ width: "5.5%" }} />  {/* Date */}
               <col style={{ width: "6%" }} />    {/* Type */}
-              <col style={{ width: "8.5%" }} />  {/* Broker */}
+              <col style={{ width: "7.5%" }} />  {/* Broker */}
               <col style={{ width: "4.5%" }} />  {/* Unit */}
-              <col style={{ width: "4.5%" }} />  {/* Count */}
+              <col style={{ width: "5.5%" }} />  {/* Count */}
               <col style={{ width: "7.5%" }} />  {/* Weight */}
               <col style={{ width: "6%" }} />    {/* Status */}
               <col style={{ width: "7%" }} />    {/* Lorry Status */}
