@@ -134,12 +134,22 @@ export const calculateClaimMoisture = (
 
   let threshold = isDaisee ? (isWetSeason ? 18 : 20) : (isWetSeason ? 16 : 18);
 
-  const allRules = rules && rules.length > 0 ? rules : [
+  /* const allRules = rules && rules.length > 0 ? rules : [
     { season: "JULY TO DECEMBER (DRY SEASON)", operating_area: "DAISEE Operating Areas", threshold_limit: "Moisture threshold limit is 20%" },
     { season: "JANUARY TO JUNE (WET SEASON)", operating_area: "DAISEE Operating Areas", threshold_limit: "Moisture threshold limit is 18%" },
     { season: "JULY TO DECEMBER (DRY SEASON)", operating_area: "Standard / Non-DAISEE", threshold_limit: "Moisture threshold limit is 18%" },
     { season: "JANUARY TO JUNE (WET SEASON)", operating_area: "Standard / Non-DAISEE", threshold_limit: "Moisture threshold limit is 16%" },
+  ]; */
+  const activeRules = rules && rules.length > 0 ? rules : [
+    { season: "JULY TO DECEMBER (DRY SEASON)", operating_area: "DAISEE Operating Areas", threshold_limit: "Moisture threshold limit is 20%", "status":"Active"},
+    { season: "JANUARY TO JUNE (WET SEASON)", operating_area: "DAISEE Operating Areas", threshold_limit: "Moisture threshold limit is 18%", "status":"Active" },
+    { season: "JULY TO DECEMBER (DRY SEASON)", operating_area: "Standard / Non-DAISEE", threshold_limit: "Moisture threshold limit is 18%", "status":"Active" },
+    { season: "JANUARY TO JUNE (WET SEASON)", operating_area: "Standard / Non-DAISEE", threshold_limit: "Moisture threshold limit is 16%", "status":"Active" },
   ];
+
+  const allRules = activeRules?.filter(
+    (r) => (r.status || "").toUpperCase() === "ACTIVE"
+  ) || [];
 
   const exactMatch = allRules.find((r) => {
     const rSeason = (r.season || "").toUpperCase();
