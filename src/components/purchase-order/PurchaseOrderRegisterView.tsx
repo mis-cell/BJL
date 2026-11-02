@@ -531,13 +531,13 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
       <div className="hidden md:block bg-white border border-slate-200 rounded-xl shadow-2xs overflow-x-auto overflow-y-auto max-h-[calc(100vh-235px)] min-h-[380px] w-full">
         <table className="w-full table-fixed min-w-[1180px] xl:min-w-0 border-collapse text-[11px] text-slate-900">
            <colgroup>
-              <col style={{ width: "12.5%" }} /> {/* PO / PTF */}
+              <col style={{ width: "13.5%" }} /> {/* PO / PTF */}
               <col style={{ width: "5.5%" }} />  {/* Date */}
               <col style={{ width: "6%" }} />    {/* Type */}
-              <col style={{ width: "7.5%" }} />  {/* Broker */}
+              <col style={{ width: "7%" }} />  {/* Broker */}
               <col style={{ width: "4.5%" }} />  {/* Unit */}
               <col style={{ width: "5.5%" }} />  {/* Count */}
-              <col style={{ width: "7.5%" }} />  {/* Weight */}
+              <col style={{ width: "7%" }} />  {/* Weight */}
               <col style={{ width: "6%" }} />    {/* Status */}
               <col style={{ width: "7%" }} />    {/* Lorry Status */}
               <col style={{ width: "9%" }} />    {/* WT Status */}
@@ -771,15 +771,14 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                   >
                     {item.po_no}
                   </td> */}
-                  <td
-  className={cn(
-    'px-2 py-1 font-mono font-bold text-[9px] whitespace-normal break-all border-r border-slate-200/80 select-text',
-    isVoid ? 'text-rose-400' : 'text-slate-900'
-  )}
-  title={item.po_no}
->
-  {item.po_no}
-</td>
+                  <td className={cn(
+                      'px-2 py-1 font-mono font-bold text-[9px] whitespace-normal break-all border-r border-slate-200/80 select-text',
+                      isVoid ? 'text-rose-400' : 'text-slate-900'
+                    )}
+                    title={item.po_no}
+                  >
+                    {item.po_no}
+                  </td>
 
                   {/* 2. Date */}
                   <td className="px-1.5 py-1 text-center font-mono tabular-nums text-[10.5px] text-slate-700 whitespace-nowrap border-r border-slate-200/80">
