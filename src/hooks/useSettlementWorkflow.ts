@@ -3291,10 +3291,15 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
     try {
       if (!supabase) throw new Error("Supabase client is not available.");
 
+      const rawSettDate = String(masterData.sett_date || '').trim();
+      const validSettDate = (rawSettDate && !/^000\d/.test(rawSettDate) && !/^00\d{2}/.test(rawSettDate))
+        ? rawSettDate
+        : (masterData.arrival_date || masterData.payable_bill_date || masterData.po_date || new Date().toISOString().split('T')[0]);
+
       // 1. Insert or Update Master via resilient dbModule.upsert
       const masterPayload = {
         mr_no: targetMrNo,
-        sett_date: masterData.sett_date,
+        sett_date: validSettDate,
         po_type: masterData.po_type,
         broker: masterData.broker,
         supplier: masterData.supplier,

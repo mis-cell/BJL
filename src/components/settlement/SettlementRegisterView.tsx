@@ -56,12 +56,39 @@ const MONTH_SHORT_NAMES = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 ];
 
+function sanitizeDateVal(d: any): string {
+  if (!d) return '';
+  const str = String(d).trim();
+  if (!str) return '';
+  // Reject corrupt or zero-padded years like 0009-09-12 or 0000-00-00
+  if (/^000\d/.test(str) || /^00\d{2}/.test(str)) return '';
+  return str;
+}
+
 function getSettlementDate(item: any): string {
-  return item.sett_date || item.audit_date || item.date || item.payable_bill_date || item.arrival_date || item.po_date || item.created_at || '';
+  if (!item) return '';
+  return (
+    sanitizeDateVal(item.sett_date) ||
+    sanitizeDateVal(item.arrival_date) ||
+    sanitizeDateVal(item.payable_bill_date) ||
+    sanitizeDateVal(item.po_date) ||
+    sanitizeDateVal(item.audit_date) ||
+    sanitizeDateVal(item.date) ||
+    sanitizeDateVal(item.created_at) ||
+    ''
+  );
 }
 
 function getInspectionDate(item: any): string {
-  return item.arrival_date || item.date || item.unloading_date || item.mr_date || item.created_at || '';
+  if (!item) return '';
+  return (
+    sanitizeDateVal(item.arrival_date) ||
+    sanitizeDateVal(item.date) ||
+    sanitizeDateVal(item.unloading_date) ||
+    sanitizeDateVal(item.mr_date) ||
+    sanitizeDateVal(item.created_at) ||
+    ''
+  );
 }
 
 export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
@@ -164,30 +191,18 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
     return Math.max(0, scopedInspections.length - yearMonthFilteredSettles.length);
   }, [scopedInspections, yearMonthFilteredSettles]);
 
-  // Combined with text search
-  /* const finalFilteredSettles = useMemo(() => {
-    if (!searchFilter.trim()) return yearMonthFilteredSettles;
-    const term = searchFilter.toLowerCase().trim();
-    return yearMonthFilteredSettles.filter(s => {
-      return (
-        (s.mr_no && String(s.mr_no).toLowerCase().includes(term)) ||
-        (s.po_no && String(s.po_no).toLowerCase().includes(term)) ||
-        (s.supplier && String(s.supplier).toLowerCase().includes(term)) ||
-        (s.broker && String(s.broker).toLowerCase().includes(term)) ||
-        (s.lorry_number && String(s.lorry_number).toLowerCase().includes(term)) ||
-        (s.payable_bill_no && String(s.payable_bill_no).toLowerCase().includes(term))
-      );
-    });
-  }, [yearMonthFilteredSettles, searchFilter]); */
+  // Search filter across settled records
   const finalFilteredSettles = useMemo(() => {
-    let filtered = yearMonthFilteredSettles;
+    // If a search query is active, search across all settled records so no matched MR is hidden by year filters
+    let filtered = searchFilter.trim() ? settledList : yearMonthFilteredSettles;
 
     // Date filter
     if (startDateFilter || endDateFilter) {
       filtered = filtered.filter((s) => {
-        if (!s.sett_date) return false;
+        const dStr = getSettlementDate(s);
+        if (!dStr) return false;
 
-        const settleDate = String(s.sett_date).slice(0, 10);
+        const settleDate = String(dStr).slice(0, 10);
 
         if (startDateFilter && settleDate < startDateFilter) {
           return false;

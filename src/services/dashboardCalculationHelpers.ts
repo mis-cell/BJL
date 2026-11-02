@@ -147,12 +147,18 @@ export function parseRecordDate(rawDate: any): { dateObj: Date; dateStr: string;
   }
   
   // Handle YYYY-MM-DD or YYYY/MM/DD or ISO prefix
-  if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(str)) {
+  if (/^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}/.test(str)) {
     const cleanDatePart = str.split('T')[0];
     const parts = cleanDatePart.split(/[-/]/);
-    const year = parseInt(parts[0], 10);
+    let year = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10) - 1; // 0-indexed
     const day = parseInt(parts[2], 10);
+
+    // Sanitize corrupted/truncated years (e.g. 0009 -> 2009 or 2026 if year < 100)
+    if (year < 100 && year >= 0) {
+      year = year < 50 ? 2000 + year : 1900 + year;
+    }
+
     const d = new Date(year, month, day);
     if (!isNaN(d.getTime())) {
       return {
@@ -166,11 +172,16 @@ export function parseRecordDate(rawDate: any): { dateObj: Date; dateStr: string;
   }
 
   // Handle DD-MM-YYYY or DD/MM/YYYY
-  if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(str)) {
+  if (/^\d{1,2}[-/]\d{1,2}[-/]\d{1,4}/.test(str)) {
     const parts = str.split(/[-/]/);
     const day = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10) - 1; // 0-indexed
-    const year = parseInt(parts[2], 10);
+    let year = parseInt(parts[2], 10);
+
+    if (year < 100 && year >= 0) {
+      year = year < 50 ? 2000 + year : 1900 + year;
+    }
+
     const d = new Date(year, month, day);
     if (!isNaN(d.getTime())) {
       return {
@@ -186,10 +197,14 @@ export function parseRecordDate(rawDate: any): { dateObj: Date; dateStr: string;
   // Standard ISO or YYYY-MM-DD
   const parsed = new Date(str);
   if (!isNaN(parsed.getTime())) {
+    let year = parsed.getFullYear();
+    if (year < 100 && year >= 0) {
+      year = year < 50 ? 2000 + year : 1900 + year;
+    }
     return {
       dateObj: parsed,
       dateStr: parsed.toISOString().slice(0, 10),
-      year: parsed.getFullYear(),
+      year,
       month: parsed.getMonth(),
       isValid: true
     };
