@@ -47,6 +47,9 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
     const num = Number(masterData[field]);
     return num > 0 ? num.toFixed(3) : "";
   };
+  const mrOnlyOptions = faOptionsForSelectedPo.filter((option) =>
+    String(option.value || "").trim().toUpperCase().startsWith("MR")
+  );
 
   return (
     <div className="space-y-3 font-sans">
@@ -86,7 +89,7 @@ export const SettlementMasterHeaderCard: React.FC<SettlementMasterHeaderCardProp
                   handleMasterChange("mr_no", mrVal);
                   handleProceedWithMrNo(mrVal);
                 }}
-                options={faOptionsForSelectedPo}
+                options={mrOnlyOptions}
                 placeholder={selectedPoNo ? "-- CHOOSE MR --" : "-- SELECT MR --"}
                 compact={true}
                 inputClassName="font-mono text-xs font-bold text-rose-800 bg-white border-0 py-0.5"
