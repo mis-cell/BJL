@@ -28,69 +28,7 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
       </div>
 
       {/* Body */}
-      <div
-  className="p-3"
-  onKeyDownCapture={(e) => {
-    if (e.key !== "Enter") return;
-
-    const target = e.target as HTMLElement;
-
-    // Do not interfere with textarea
-    if (target.tagName === "TEXTAREA") return;
-
-    const currentField = target.closest<HTMLElement>(
-      "input, select, textarea"
-    );
-
-    if (!currentField) return;
-
-    const skipIds = new Set([
-      "consignment_note_no_1368",
-      "di_no_1385",
-      "di_date_1394",
-      "invoice_no_1413",
-      "invoice_date_1422",
-      "ptf_1439",
-      "lorry_returned_1458",
-      "lorry_returned_other_mill_1468",
-      "way_bill_no_1596",
-      "way_bill_date_1605",
-    ]);
-
-    const fields = Array.from(
-      e.currentTarget.querySelectorAll<HTMLElement>(
-        "input, select, textarea"
-      )
-    ).filter((el) => {
-      const input = el as HTMLInputElement;
-
-      return (
-        el.offsetParent !== null &&
-        input.type !== "hidden" &&
-        !input.disabled &&
-        !input.readOnly &&
-        el.tabIndex >= 0
-      );
-    });
-
-    const currentIndex = fields.indexOf(currentField);
-
-    if (currentIndex < 0) return;
-
-    // Find next valid field
-    const nextField = fields
-      .slice(currentIndex + 1)
-      .find((field) => !skipIds.has(field.id));
-
-    e.preventDefault();
-    e.stopPropagation();
-    e.nativeEvent.stopImmediatePropagation();
-
-    if (nextField) {
-      nextField.focus();
-    }
-  }}
->
+      <div className="p-3">
         <div className="grid grid-cols-2 gap-x-6 gap-y-2">
 
           {/* ================= LEFT ================= */}
