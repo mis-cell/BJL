@@ -28,7 +28,69 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
       </div>
 
       {/* Body */}
-      <div className="p-3">
+      <div
+  className="p-3"
+  onKeyDownCapture={(e) => {
+    if (e.key !== "Enter") return;
+
+    const target = e.target as HTMLElement;
+
+    // Do not interfere with textarea
+    if (target.tagName === "TEXTAREA") return;
+
+    const currentField = target.closest<HTMLElement>(
+      "input, select, textarea"
+    );
+
+    if (!currentField) return;
+
+    const skipIds = new Set([
+      "consignment_note_no_1368",
+      "di_no_1385",
+      "di_date_1394",
+      "invoice_no_1413",
+      "invoice_date_1422",
+      "ptf_1439",
+      "lorry_returned_1458",
+      "lorry_returned_other_mill_1468",
+      "way_bill_no_1596",
+      "way_bill_date_1605",
+    ]);
+
+    const fields = Array.from(
+      e.currentTarget.querySelectorAll<HTMLElement>(
+        "input, select, textarea"
+      )
+    ).filter((el) => {
+      const input = el as HTMLInputElement;
+
+      return (
+        el.offsetParent !== null &&
+        input.type !== "hidden" &&
+        !input.disabled &&
+        !input.readOnly &&
+        el.tabIndex >= 0
+      );
+    });
+
+    const currentIndex = fields.indexOf(currentField);
+
+    if (currentIndex < 0) return;
+
+    // Find next valid field
+    const nextField = fields
+      .slice(currentIndex + 1)
+      .find((field) => !skipIds.has(field.id));
+
+    e.preventDefault();
+    e.stopPropagation();
+    e.nativeEvent.stopImmediatePropagation();
+
+    if (nextField) {
+      nextField.focus();
+    }
+  }}
+>
         <div className="grid grid-cols-2 gap-x-6 gap-y-2">
 
           {/* ================= LEFT ================= */}
@@ -48,6 +110,7 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                 value={formData.consignment_note_no}
                 onChange={handleChange}
                 readOnly={formData.jci === 'No'}
+                tabIndex={-1}
                 className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No' ? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed" : "border-gray-300 focus:border-[#F7AFA8]"}`}
               />
             </div>
@@ -68,6 +131,7 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                   value={formData.di_no}
                   onChange={handleChange}
                   readOnly={formData.jci === 'No'}
+                  tabIndex={-1}
                   className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No' ? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed" : "border-gray-300 focus:border-[#F7AFA8]"}`}
                 />
 
@@ -79,6 +143,7 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                   value={formData.di_date}
                   onChange={handleChange}
                   readOnly={formData.jci === 'No'}
+                  tabIndex={-1}
                   className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No' ? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed" : "border-gray-300 focus:border-[#F7AFA8]"}`}
                 />
               </div>
@@ -100,6 +165,7 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                   value={formData.invoice_no}
                   onChange={handleChange}
                   readOnly={formData.jci === 'No'}
+                  tabIndex={-1}
                   className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No' ? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed" : "border-gray-300 focus:border-[#F7AFA8]"}`}
                 />
 
@@ -111,6 +177,7 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                   value={formData.invoice_date}
                   onChange={handleChange}
                   readOnly={formData.jci === 'No'}
+                  tabIndex={-1}
                   className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No' ? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed" : "border-gray-300 focus:border-[#F7AFA8]"}`}
                 />
               </div>
@@ -128,6 +195,7 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                 name="ptf"
                 value={formData.ptf}
                 onChange={handleChange}
+                tabIndex={-1}
                 className="w-full h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
               >
                 <option value="No">No</option>
@@ -148,6 +216,7 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                   name="lorry_returned"
                   value={formData.lorry_returned}
                   onChange={handleChange}
+                  tabIndex={-1}
                   className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                 >
                   <option value="No">No</option>
@@ -160,6 +229,7 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                   name="lorry_returned_other_mill"
                   value={formData.lorry_returned_other_mill}
                   onChange={handleChange}
+                  tabIndex={-1}
                   className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                 >
                   <option value="No">Ret. Other Mill : No</option>
@@ -338,6 +408,7 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                   onChange={handleChange}
                   placeholder="Way Bill No."
                   readOnly={formData.jci === 'No'}
+                  tabIndex={-1}
                   className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No' ? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed" : "border-gray-300 focus:border-[#F7AFA8]"}`}
                 />
 
@@ -349,6 +420,7 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                   value={formData.way_bill_date}
                   onChange={handleChange}
                   readOnly={formData.jci === 'No'}
+                  tabIndex={-1}
                   className={`w-full h-7 rounded border px-2 text-xs font-semibold outline-none ${formData.jci === 'No' ? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed" : "border-gray-300 focus:border-[#F7AFA8]"}`}
                 />
               </div>
@@ -388,6 +460,7 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                 value={formData.remarks}
                 onChange={handleChange}
                 placeholder="Enter Remarks..."
+                tabIndex={-1}
                 className="w-full rounded border border-gray-300 px-2 py-1 text-xs font-semibold resize-none h-14"
               />
             </div>

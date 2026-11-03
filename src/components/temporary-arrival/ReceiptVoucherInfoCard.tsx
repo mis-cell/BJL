@@ -87,7 +87,51 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
       </div>
 
       {/* Body */}
-      <div className="p-3">
+      <div
+        className="p-3"
+        /* onKeyDownCapture={(e) => {
+          if (e.key !== "Enter") return;
+
+          const target = e.target as HTMLElement;
+
+          const skipIds = ["po_no_1094", "jci_1151"];
+
+          // Find all focusable fields inside this Receipt Voucher section
+          const fields = Array.from(
+            e.currentTarget.querySelectorAll<HTMLElement>(
+              'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            )
+          ).filter((el) => {
+            return (
+              el.offsetParent !== null &&
+              el.tabIndex !== -1 &&
+              !el.hasAttribute("disabled")
+            );
+          });
+
+          const currentIndex = fields.indexOf(target);
+
+          if (currentIndex === -1) return;
+
+          // Find the next field, skipping PO and JCI
+          let nextIndex = currentIndex + 1;
+
+          while (
+            nextIndex < fields.length &&
+            skipIds.includes(fields[nextIndex].id)
+          ) {
+            nextIndex++;
+          }
+
+          if (nextIndex < fields.length) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.nativeEvent.stopImmediatePropagation();
+
+            fields[nextIndex].focus();
+          }
+        }} */
+      >
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-6 gap-y-1.5">
 
           {/* LEFT COLUMN */}
@@ -105,6 +149,7 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
                 name="arrival_no"
                 value={formData.arrival_no?.startsWith('AR0') ? formData.arrival_no : `AR0${String(formData.arrival_no || '').replace(/^(AR0?|MR0?)/i, '')}`}
                 onChange={handleChange}
+                autoComplete="off"
                 onKeyDown={(e) => {
                   const target = e.currentTarget;
                   const start = target.selectionStart ?? 0;
@@ -154,6 +199,7 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
                       setShowPoDropdown(true);
                       fetchPurchaseOrders();
                     }}
+                    tabIndex={-1}
                     onBlur={() => setTimeout(() => setShowPoDropdown(false), 200)}
                     autoComplete="off"
                     placeholder="-- TYPE OR SELECT P.O. * --"
@@ -301,6 +347,7 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
                     value={formData.jci}
                     onChange={handleChange}
                     className="border border-gray-400 rounded bg-white px-1.5 h-7 text-xs font-bold"
+                    tabIndex={-1}
                   >
                     <option value="No">No</option>
                     <option value="Yes">Yes</option>
@@ -425,6 +472,7 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
                 id="transporter_name_1257"
                 aria-label="Transporter Name"
                 type="text"
+                tabIndex={-1}
                 name="transporter_name"
                 value={formData.transporter_name}
                 onChange={handleChange}
@@ -525,6 +573,7 @@ export const ReceiptVoucherInfoCard: React.FC<ReceiptVoucherInfoCardProps> = ({
                 aria-label="Pan No."
                 type="text"
                 name="pan_no"
+                tabIndex={-1}
                 value={formData.pan_no}
                 onChange={handleChange}
                 className="flex-1 border border-gray-400 rounded bg-white px-2.5 h-7 text-xs font-bold font-mono"

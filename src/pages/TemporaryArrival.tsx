@@ -1295,7 +1295,66 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
   return (
     
     <LegacyLayout title="Temporary M.R" subtitle="ARRIVAL WORKSTATION" onClose={onCancel}>
-      <div className="flex-1 flex flex-col font-sans text-slate-800 space-y-5">
+      <div
+  className="flex-1 flex flex-col font-sans text-slate-800 space-y-5"
+  onKeyDownCapture={(e) => {
+    if (e.key !== "Enter") return;
+
+    const target = e.target as HTMLElement;
+
+    if (target.tagName === "TEXTAREA") return;
+
+    const currentField = target.closest<HTMLElement>(
+      "input, select, textarea"
+    );
+
+    if (!currentField) return;
+
+    const skipIds = new Set([
+      "po_no_1094",
+      "jci_1151",
+      "consignment_note_no_1368",
+      "di_no_1385",
+      "di_date_1394",
+      "invoice_no_1413",
+      "invoice_date_1422",
+      "ptf_1439",
+      "lorry_returned_1458",
+      "lorry_returned_other_mill_1468",
+      "way_bill_no_1596",
+      "way_bill_date_1605",
+    ]);
+
+    const fields = Array.from(
+      e.currentTarget.querySelectorAll<HTMLElement>(
+        'input:not([type="hidden"]), select, textarea'
+      )
+    ).filter((el) => {
+      const input = el as HTMLInputElement;
+
+      return (
+        el.offsetParent !== null &&
+        !input.disabled &&
+        !input.readOnly &&
+        el.tabIndex >= 0
+      );
+    });
+
+    const currentIndex = fields.indexOf(currentField);
+
+    if (currentIndex === -1) return;
+
+    const nextField = fields
+      .slice(currentIndex + 1)
+      .find((field) => !skipIds.has(field.id));
+
+    e.preventDefault();
+    e.stopPropagation();
+    e.nativeEvent.stopImmediatePropagation();
+
+    nextField?.focus();
+  }}
+>
         <div className="relative px-6 py-4 bg-[#F7AFA8] border border-[#FBCFCB] rounded-xl flex items-center justify-between shrink-0 shadow-md overflow-hidden w-full text-white">
           {/* Background Mill Illustration Artwork on the Right with light opacity */}
           <div 
