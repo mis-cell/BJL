@@ -133,7 +133,6 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                 name="ptf"
                 value={formData.ptf}
                 onChange={handleChange}
-                tabIndex={-1}
                 className="w-full h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
               >
                 <option value="No">No</option>
@@ -154,7 +153,6 @@ export const TransportDocInfoCard: React.FC<TransportDocInfoCardProps> = ({
                   name="lorry_returned"
                   value={formData.lorry_returned}
                   onChange={handleChange}
-                  tabIndex={-1}
                   className="h-7 rounded border border-gray-300 px-2 text-xs font-semibold"
                 >
                   <option value="No">No</option>

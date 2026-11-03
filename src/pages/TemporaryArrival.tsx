@@ -1317,8 +1317,6 @@ export default function TemporaryArrival({ onSave, onCancel, initialData }: { on
               "di_date_1394",
               "invoice_no_1413",
               "invoice_date_1422",
-              "ptf_1439",
-              "lorry_returned_1458",
               "lorry_returned_other_mill_1468",
               "way_bill_no_1596",
               "way_bill_date_1605",
