@@ -112,12 +112,12 @@ export const TolerancePolicyManager: React.FC = () => {
             onClick={() => {
               setEditingPolicy({
                 policy_name: 'Custom Bales Tolerance Policy',
-                tolerance_pct: 5.0,
-                max_weight_limit_kg: 1500,
-                max_weight_limit_mt: 1.5,
-                applicable_unit: 'BALES',
+                tolerance_pct: 2.0,
+                max_weight_limit_kg: 1000,
+                max_weight_limit_mt: 1,
+                applicable_unit: 'BALES || LOOSE || DRUMS || P.BALES || H.BALES',
                 is_active: true,
-                description: 'Allowed tolerance is the lower of 5% or 1,500 KG (15.00 Qtl / 1.500 MT).'
+                description: 'Allowed tolerance is the lower of 2% or 1,000 KG (15.00 Qtl / 1.000 MT).'
               });
               setIsNew(true);
             }}
