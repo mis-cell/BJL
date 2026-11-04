@@ -3674,12 +3674,13 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
   };
 
   // Export full records
-  const handleExportCsv = () => {
-    if (settledList.length === 0) {
+  const handleExportCsv = (data: any[]) => {
+    alert('1111111')
+    if (data.length === 0) {
       alert("No settlement logs available to export.");
       return;
     }
-    const dataToExport = settledList.map(row => ({
+    const dataToExport = data.map(row => ({
       "MR No": row.mr_no,
       "Date": row.sett_date,
       "PO No": row.po_no,

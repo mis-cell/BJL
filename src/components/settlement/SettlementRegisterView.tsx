@@ -454,7 +454,7 @@ export const SettlementRegisterView: React.FC<SettlementRegisterViewProps> = ({
             </button>
 
             <button
-              onClick={onExportCsv}
+              onClick={() => onExportCsv(finalFilteredSettles)}
               type="button"
               className="bg-white border border-white/50 rounded-md px-3.5 py-2 text-[10px] uppercase font-bold text-slate-700 flex items-center gap-1.5 hover:bg-blue-50 hover:text-blue-700 shadow-sm transition-all cursor-pointer"
             >
