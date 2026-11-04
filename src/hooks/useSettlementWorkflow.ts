@@ -3675,7 +3675,7 @@ export function useSettlementWorkflow({ onClose, onLogEvent }: { onClose?: () =>
 
   // Export full records
   const handleExportCsv = (data: any[]) => {
-    alert('1111111')
+    //alert('1111111')
     if (data.length === 0) {
       alert("No settlement logs available to export.");
       return;
