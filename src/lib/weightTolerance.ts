@@ -54,6 +54,9 @@ export interface WeightToleranceResult {
   shortUnderToleranceQtl: number;
   shortMt: number;
   shortQtl: number;
+  applicableShortToleranceMt: number;
+  applicableShortToleranceQtl: number;
+  isShortageOver1500Kg: boolean;
   deductibleQtyMt: number;
   deductibleQtyQtl: number;
   policyStatus: 'Within Tolerance – No Deduction' | 'Excess Deduction' | 'Short Deduction' | 'Pending Arrival';
@@ -132,22 +135,26 @@ export function calculateWeightTolerance(
   const minAcceptableQtl = Math.max(0, contractQtl - toleranceQtl);
   const maxAcceptableQtl = contractQtl + toleranceQtl;
 
-  const isWithinTolerance = contractMt > 0 && receivedMt >= (minAcceptableMt - 0.0001) && receivedMt <= (maxAcceptableMt + 0.0001);
+  const rawShortMt = contractMt > receivedMt ? Math.max(0, contractMt - receivedMt) : 0;
+  const isShortageOver1500Kg = rawShortMt > 1.5001;
+  const applicableShortToleranceMt = isShortageOver1500Kg ? 0 : toleranceMt;
+  const applicableShortToleranceQtl = applicableShortToleranceMt * 10;
+
   const isOverDelivery = contractMt > 0 && receivedMt > (maxAcceptableMt + 0.0001);
-  const isUnderDelivery = contractMt > 0 && receivedMt > 0 && receivedMt < (minAcceptableMt - 0.0001);
+  const isUnderDelivery = contractMt > 0 && receivedMt > 0 && rawShortMt > (applicableShortToleranceMt + 0.0001);
+  const isWithinTolerance = contractMt > 0 && receivedMt > 0 && !isOverDelivery && !isUnderDelivery;
 
   const excessOverToleranceMt = isOverDelivery ? Math.max(0, receivedMt - maxAcceptableMt) : 0;
   const excessOverToleranceQtl = isOverDelivery ? Math.max(0, receivedQtl - maxAcceptableQtl) : 0;
   const excessOverContractMt = receivedMt > contractMt ? Math.max(0, receivedMt - contractMt) : 0;
   const excessOverContractQtl = receivedQtl > contractQtl ? Math.max(0, receivedQtl - contractQtl) : 0;
-  const shortUnderToleranceMt = isUnderDelivery ? Math.max(0, minAcceptableMt - receivedMt) : 0;
-  const shortUnderToleranceQtl = isUnderDelivery ? Math.max(0, minAcceptableQtl - receivedQtl) : 0;
+  const shortUnderToleranceMt = isUnderDelivery ? Math.max(0, rawShortMt - applicableShortToleranceMt) : 0;
+  const shortUnderToleranceQtl = isUnderDelivery ? Math.max(0, (rawShortMt * 10) - applicableShortToleranceQtl) : 0;
 
-  // Deductible Quantity = Excess/Short Difference − Allowed Tolerance
-  // Deduct only the quantity exceeding the allowed tolerance
+  // Deductible Quantity: for excess, above 3% tolerance; for short, full shortage if > 1.5 MT, else shortage above 3% tolerance
   const deductibleQtyQtl = isWithinTolerance 
     ? 0 
-    : Math.max(0, absDiffQtl - toleranceQtl);
+    : (isOverDelivery ? excessOverToleranceQtl : shortUnderToleranceQtl);
   const deductibleQtyMt = deductibleQtyQtl / 10;
 
   let policyStatus: 'Within Tolerance – No Deduction' | 'Excess Deduction' | 'Short Deduction' | 'Pending Arrival' = 'Pending Arrival';
@@ -230,6 +237,9 @@ export function calculateWeightTolerance(
     shortUnderToleranceQtl,
     shortMt: shortUnderToleranceMt,
     shortQtl: shortUnderToleranceQtl,
+    applicableShortToleranceMt,
+    applicableShortToleranceQtl,
+    isShortageOver1500Kg,
     deductibleQtyMt,
     deductibleQtyQtl,
     policyStatus,

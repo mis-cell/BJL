@@ -576,23 +576,71 @@ export function usePurchaseOrderData({
 
         const totalFinalMt = matchingFinal.reduce((sum: number, ar: any) => sum + finalWeightOf(ar), 0);
         const totalTempMt = matchingTemp.reduce((sum: number, ar: any) => sum + tempWeightOf(ar), 0);
-        const totalReceivedMt = totalFinalMt + totalTempMt;
+        let totalReceivedMt = totalFinalMt + totalTempMt;
+
+        // 3. Check Mill Inspection early so multi-lorry Net + Last Gross weight can be evaluated for Shortage
+        const matchingInspList = queryRecordIndex(mergedInspectionsIndex, poKeys);
+        const matchingInsp = matchingInspList[0];
+        const hasInspection = Boolean(matchingInsp);
+
+        const receivedLorries = Math.max(matchingTempArrivals.length, matchingFinal.length + matchingTemp.length, matchingInspList.length);
+        const contractLorries = Math.max(1, parseInt(p.total_lorries || p.total_no_of_lorries || p.no_of_lorries || p.lorries || 1, 10) || 1);
+        const isMultiLorryPo = contractLorries > 1 || receivedLorries > 1;
+
+        // If Mill Inspection records exist, compute shortage received weight per rule:
+        // Single-lorry: Mill Inspection weight
+        // Multi-lorry: Net Weight of every lorry except last + Gross Weight of last lorry
+        let shortageEvalReceivedMt = totalReceivedMt;
+        if (matchingInspList.length > 0) {
+          const uniqueInspByMr = new Map<string, any>();
+          matchingInspList.forEach((insp: any, idx: number) => {
+            const mrKey = String(insp.mr_no || insp.arrival_no || insp.final_arrival_no || insp.lorry_no || insp.id || idx).trim().toUpperCase();
+            if (!uniqueInspByMr.has(mrKey)) uniqueInspByMr.set(mrKey, insp);
+          });
+          const sortedInspsAsc = Array.from(uniqueInspByMr.values()).sort((a: any, b: any) => {
+            const dA = normalizeDateYMD(a?.mr_date || a?.inspection_date || a?.arrival_date || a?.date || a?.created_at || '');
+            const dB = normalizeDateYMD(b?.mr_date || b?.inspection_date || b?.arrival_date || b?.date || b?.created_at || '');
+            return dA.localeCompare(dB);
+          });
+          let inspShortageSumMt = 0;
+          sortedInspsAsc.forEach((insp: any, idx: number) => {
+            const isLast = idx === sortedInspsAsc.length - 1;
+            const toMt = (v: any) => {
+              const n = Number(v || 0);
+              if (n <= 0) return 0;
+              return n > 500 ? n / 1000 : (n > 50 ? n / 10 : n);
+            };
+            const netMt = toMt(insp.total_final_receipt_wt || insp.final_receipt_wt || insp.weight_reduced || insp.reduced_weight || insp.electronic_net_weight || insp.final_weight_mt || insp.weight_qtl || insp.weight);
+            const grossMt = toMt(insp.receipt_gross_wt || insp.gross_weight_batch || insp.challan_gross_wt || insp.gross_weight || insp.electronic_gross_weight) || netMt;
+            const appliedMt = (isMultiLorryPo && sortedInspsAsc.length > 1)
+              ? (isLast ? (grossMt > 0 ? grossMt : netMt) : (netMt > 0 ? netMt : grossMt))
+              : (netMt > 0 ? netMt : grossMt);
+            inspShortageSumMt += appliedMt;
+          });
+          if (inspShortageSumMt > 0) {
+            shortageEvalReceivedMt = Math.round(inspShortageSumMt * 1000) / 1000;
+            if (totalReceivedMt <= 0) {
+              totalReceivedMt = shortageEvalReceivedMt;
+            }
+          }
+        }
 
         const unit = p.purchase_unit_name || p.unit_type || p.unit || 'BALES';
-        const tol = calculateWeightTolerance(contractWeight, totalReceivedMt, unit);
+        const effectiveEvalMt = shortageEvalReceivedMt < contractWeight ? shortageEvalReceivedMt : totalReceivedMt;
+        const tol = calculateWeightTolerance(contractWeight, effectiveEvalMt, unit);
         const isExplicitCompleted = p.status === 'completed' || p.status === 'settled';
         const isWeightCompleted = tol.isCompleted;
 
         const poNoStr = String(p.po_no || p.contract_po_no || '').trim();
         const saudaNoStr = String(p.sauda_no || p.sauda_ref || p.contract_po_no || p.po_no || '').trim();
-        const allMatchedArrivalsSorted = [...matchingFinal, ...matchingTempArrivals].sort((a: any, b: any) => {
-          const dA = normalizeDateYMD(a?.date || a?.arrival_date || a?.created_at || '');
-          const dB = normalizeDateYMD(b?.date || b?.arrival_date || b?.created_at || '');
+        const allMatchedArrivalsSorted = [...matchingInspList, ...matchingFinal, ...matchingTempArrivals].sort((a: any, b: any) => {
+          const dA = normalizeDateYMD(a?.mr_date || a?.inspection_date || a?.date || a?.arrival_date || a?.created_at || '');
+          const dB = normalizeDateYMD(b?.mr_date || b?.inspection_date || b?.date || b?.arrival_date || b?.created_at || '');
           return dB.localeCompare(dA);
         });
         const matchedArrivalForWt = allMatchedArrivalsSorted[0] || matchingTempArrivals[0] || matchingTemp[0] || matchingFinal[0];
         const saudaDateStr = p.s_date || p.po_date || p.date || p.contract_date || (p.created_at ? p.created_at.slice(0, 10) : '');
-        const arrivalDateStr = matchedArrivalForWt?.date || matchedArrivalForWt?.arrival_date || p.last_arrival_date || p.arrival_date || saudaDateStr;
+        const arrivalDateStr = matchedArrivalForWt?.mr_date || matchedArrivalForWt?.inspection_date || matchedArrivalForWt?.date || matchedArrivalForWt?.arrival_date || p.last_arrival_date || p.arrival_date || saudaDateStr;
         const normalizedArrivalDate = normalizeDateYMD(arrivalDateStr) || null;
 
         if (poNoStr && contractWeight > 0) {
@@ -601,7 +649,8 @@ export function usePurchaseOrderData({
 
           const saudaTd5Rate = parseFloat(p.b_rate || 0) > 0 ? parseFloat(p.b_rate) : getTd5BaseRateForDate(saudaDateStr);
           const arrivalTd5Rate = getTd5BaseRateForDate(arrivalDateStr);
-          const shortRateDiff = Math.abs((arrivalTd5Rate || 0) - (saudaTd5Rate || 0));
+          // For Short: Apply monetary deduction ONLY when Final MR-received-date Satta rate > Sauda-date Satta rate
+          const shortRateDiff = (arrivalTd5Rate || 0) > (saudaTd5Rate || 0) ? ((arrivalTd5Rate || 0) - (saudaTd5Rate || 0)) : 0;
           // For Excess: If Last MR Date Rate >= Sauda Date Rate, do NOT deduct (Applicable for Sauda)
           const excessRateDiff = (saudaTd5Rate || 0) > (arrivalTd5Rate || 0) ? ((saudaTd5Rate || 0) - (arrivalTd5Rate || 0)) : 0;
 
@@ -612,7 +661,9 @@ export function usePurchaseOrderData({
           let effectiveRateDiff = shortRateDiff;
           let wtStatusRemarks = 'Pending Arrival';
 
-          if (totalReceivedMt > 0) {
+          const isWaitingForLorries = contractLorries > 1 && receivedLorries < contractLorries && p.status !== 'closed' && !p.is_closed && !p.sauda_closed;
+
+          if (effectiveEvalMt > 0) {
             if (tol.isWithinTolerance) {
               variationType = 'within_tolerance';
               wtStatusRemarks = `✓ TOLERABLE (±${tol.toleranceMt.toFixed(2)} MT) | Diff: ${tol.diffMt >= 0 ? `+${tol.diffMt.toFixed(3)}` : tol.diffMt.toFixed(3)} MT`;
@@ -631,13 +682,19 @@ export function usePurchaseOrderData({
             } else if (tol.isUnderDelivery) {
               variationType = 'short';
               effectiveRateDiff = shortRateDiff;
-              const shortMt = Math.max(0, tol.shortUnderToleranceMt || 0);
-              const shortQtl = Math.max(0, tol.shortUnderToleranceQtl || 0);
+              const shortMt = isWaitingForLorries ? 0 : Math.max(0, tol.shortUnderToleranceMt || 0);
+              const shortQtl = isWaitingForLorries ? 0 : Math.max(0, tol.shortUnderToleranceQtl || 0);
               const rawPenalty = shortRateDiff * shortQtl;
               penaltyAmount = isNaN(rawPenalty) || rawPenalty < 0 ? 0 : Math.round(rawPenalty * 100) / 100;
               deductionQtyMt = Number(shortMt.toFixed(3));
               deductionQtyQtl = Number(shortQtl.toFixed(2));
-              wtStatusRemarks = `-${shortMt.toFixed(3)} MT Short | Beyond Tol. | Penalty: ₹${penaltyAmount}`;
+              if (isWaitingForLorries) {
+                wtStatusRemarks = `Awaiting All Lorries (${receivedLorries}/${contractLorries}) | Interim Short: -${Math.max(0, contractWeight - effectiveEvalMt).toFixed(3)} MT`;
+              } else if (shortRateDiff <= 0) {
+                wtStatusRemarks = `-${shortMt.toFixed(3)} MT Chargeable Short | No Deduction (Final MR Rate ≤ Sauda Rate)`;
+              } else {
+                wtStatusRemarks = `-${shortMt.toFixed(3)} MT Chargeable Short (${tol.applicableShortToleranceMt > 0 ? '3% Tol. Applied' : '>1.5 MT No Tol.'}) | Penalty: ₹${penaltyAmount}`;
+              }
             } else {
               variationType = 'within_tolerance';
               wtStatusRemarks = 'Exact (0.00 MT)';
@@ -645,6 +702,7 @@ export function usePurchaseOrderData({
           }
 
           const linkedMrs = Array.from(new Set([
+            ...matchingInspList.map((insp: any) => String(insp.mr_no || insp.arrival_no || insp.final_arrival_no || '').trim()),
             ...matchingFinal.map((ar: any) => String(ar.final_arrival_no || ar.mr_no || ar.arrival_no || '').trim()),
             ...matchingTemp.map((ar: any) => String(ar.temporary_arrival_no || ar.amad_no || ar.mr_no || '').trim())
           ].filter(Boolean)));
@@ -657,14 +715,16 @@ export function usePurchaseOrderData({
             supplier: String(p.supplier || p.supplier_name || p.supp_name || '').trim(),
             broker: String(p.broker || p.broker_name || '').trim(),
             contract_weight_mt: Number(contractWeight.toFixed(3)),
-            tolerance_pct: 3.0,
-            tolerance_mt: Number(tol.toleranceMt.toFixed(3)),
-            tolerance_type: '3% Sauda Total Contract Execution Exemption',
+            tolerance_pct: tol.isUnderDelivery && tol.applicableShortToleranceMt === 0 ? 0 : 3.0,
+            tolerance_mt: Number((tol.isUnderDelivery ? tol.applicableShortToleranceMt : tol.toleranceMt).toFixed(3)),
+            tolerance_type: tol.isUnderDelivery
+              ? (tol.applicableShortToleranceMt === 0 ? 'Shortage > 1.5 MT (No 3% Tolerance - Full Shortage Chargeable)' : 'Shortage ≤ 1.5 MT (3% Sauda Tolerance Applied)')
+              : '3% Sauda Total Contract Execution Exemption',
             min_acceptable_mt: Number(tol.minAcceptableMt.toFixed(3)),
             max_acceptable_mt: Number(tol.maxAcceptableMt.toFixed(3)),
-            total_received_mt: Number(totalReceivedMt.toFixed(3)),
+            total_received_mt: Number(effectiveEvalMt.toFixed(3)),
             variation_type: variationType,
-            variation_mt: Number((contractWeight - totalReceivedMt).toFixed(3)),
+            variation_mt: Number((contractWeight - effectiveEvalMt).toFixed(3)),
             selected_grade: p.selected_grade || p.grade || 'TD6',
             sauda_rate: Number(saudaTd5Rate),
             satta_rate: Number(arrivalTd5Rate),
@@ -676,7 +736,7 @@ export function usePurchaseOrderData({
             deduction_qty_mt: deductionQtyMt,
             deduction_qty_qtl: deductionQtyQtl,
             deduction_amount: penaltyAmount,
-            status: totalReceivedMt > 0 ? 'approved' : 'pending',
+            status: effectiveEvalMt > 0 ? 'approved' : 'pending',
             remarks: wtStatusRemarks,
             arrival_numbers: arrivalNumbersStr,
             approved_by: 'System Auto-Calculated',
@@ -699,11 +759,6 @@ export function usePurchaseOrderData({
 
         // 2. Check Final Arrival Dashboard
         const hasFinalArrival = matchingFinal.length > 0 || totalReceivedMt > 0;
-
-        // 3. Check Mill Inspection
-        const matchingInspList = queryRecordIndex(mergedInspectionsIndex, poKeys);
-        const matchingInsp = matchingInspList[0];
-        const hasInspection = Boolean(matchingInsp);
 
         // 4. Check Mismatch
         const isCleared = checkPoMismatchResolvedInternal(p, localResolvedTokens);
@@ -737,9 +792,6 @@ export function usePurchaseOrderData({
         if (p.ptf_no) nextMatchResults[p.ptf_no] = headerMatchRes;
 
         const isMismatch = !isCleared && (hasDbMismatch || mismatchFields.length > 0 || (p.pass_status === 'mismatch' && !isCleared));
-
-        const receivedLorries = Math.max(matchingTempArrivals.length, matchingFinal.length + matchingTemp.length);
-        const contractLorries = Math.max(1, parseInt(p.total_lorries || p.total_no_of_lorries || p.no_of_lorries || p.lorries || 1, 10) || 1);
 
         const cleanPoKey = String(p.po_no || '').trim().toUpperCase();
         const cleanSaudaKey = String(p.sauda_no || p.contract_po_no || '').trim().toUpperCase();

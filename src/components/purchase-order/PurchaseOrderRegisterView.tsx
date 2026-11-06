@@ -993,6 +993,13 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
 
                       if (tol.isUnderDelivery) {
                         const shortMt = Math.max(0, tol.shortUnderToleranceMt || 0);
+                        const shortQtl = Math.max(0, tol.shortUnderToleranceQtl || 0);
+                        const shortRateDiff = (arrivalTd5Rate || 0) > (saudaTd5Rate || 0)
+                          ? ((arrivalTd5Rate || 0) - (saudaTd5Rate || 0))
+                          : 0;
+                        const rawPenalty = shortRateDiff * shortQtl;
+                        const penaltyAmount = isNaN(rawPenalty) || rawPenalty < 0 ? 0 : Math.round(rawPenalty * 100) / 100;
+                        const tolRuleLabel = tol.applicableShortToleranceMt > 0 ? '3% Tol. Applied' : '>1.5 MT (Full Short)';
                         return (
                           <button
                             type="button"
@@ -1001,13 +1008,16 @@ export const PurchaseOrderRegisterView: React.FC<PurchaseOrderRegisterViewProps>
                               setExcessShortModalPo(item);
                             }}
                             className="inline-flex flex-col items-center justify-center leading-tight cursor-pointer"
-                            title={`Short Weight: -${shortMt.toFixed(3)} MT | Diff: ${diffStr}`}
+                            title={`Chargeable Short: -${shortMt.toFixed(3)} MT (${tolRuleLabel}) | Total Short: ${diffStr} | ${penaltyAmount > 0 ? `Deduction: ₹${penaltyAmount.toLocaleString()}` : 'No Deduction (Final MR Rate ≤ Sauda Rate)'}`}
                           >
                             <span className="px-1.5 py-0.5 rounded text-[9px] font-mono tabular-nums font-bold bg-amber-50 text-amber-900 border border-amber-300">
                               -{shortMt.toFixed(2)} MT Short
                             </span>
-                            <span className="text-[8px] font-mono tabular-nums text-amber-700 mt-0.5">
-                              Diff: {diffStr}
+                            <span className={cn(
+                              "text-[8px] font-mono tabular-nums font-semibold mt-0.5",
+                              penaltyAmount > 0 ? "text-rose-700" : "text-emerald-700"
+                            )}>
+                              {penaltyAmount > 0 ? `Ded: ₹${penaltyAmount.toLocaleString()}` : 'MR ≤ Sauda (₹0)'}
                             </span>
                           </button>
                         );
